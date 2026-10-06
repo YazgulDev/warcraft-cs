@@ -1,11 +1,18 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 — 2026-10-06
 
 - Windows client EXE with game-folder selection, explicit download/install consent, live setup log and Play.
 - Embedded audited source payload; clients do not need Git or a separate source archive.
 - Install missing Python and signed Microsoft C++ tools/Windows SDK; reuse existing dependencies.
 - Preserve owned game installations through the private-runtime setup pipeline.
+- English installation guide with exact folder examples, first launch, updates, saves and removal.
+- Support Unicode/space/ampersand/apostrophe installation paths in the background setup and native build.
+- Merge release/0.2.0 into master before starting release/0.3.0; retain previous branches and tags.
+
+Validation: launcher consent/path/source-payload tests and all seven C++ logic suites pass;
+complete isolated client setup passed using existing Python/MSVC/SDK. Fresh vendor installation
+on a clean Windows machine and complete campaign compatibility remain unverified.
 
 ## 0.2.0 — 2026-10-06
 

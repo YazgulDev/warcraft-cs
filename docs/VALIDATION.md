@@ -55,7 +55,7 @@ The complete English README includes requirements, setup, controls, settings, li
 and legal references. Linked relative documents remain in the release tree.
 No fresh automated input was sent to the user's active game for this documentation/tooling update.
 
-## Standalone Windows client launcher
+## 0.3.0 standalone Windows client launcher
 
 The WinForms EXE was built with the Windows .NET Framework compiler. Its embedded ZIP
 contains the audited project source, without game assets, downloaded dependencies or build output.
@@ -82,3 +82,6 @@ PowerShell UTF-8 JSON decoding and Unicode paths in the native build command fil
 The user's active Warcraft session was left running and received no automated input.
 Play was checked through its installed configuration; a fresh game launch was not performed
 for this installer feature. Native gameplay behavior is unchanged by the launcher.
+All seven independent C++ logic suites and launcher regression checks passed again
+when preparing 0.3.0. The release EXE reports assembly version 0.3.0.0 and includes
+the English installation guide and source-only release tree.

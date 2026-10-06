@@ -1,4 +1,4 @@
-# Warcraft CS by Yazgul — 0.2.0
+# Warcraft CS by Yazgul — 0.3.0
 
 Counter-Strike 1.6 inside Warcraft III: control your own hero or unit in first person,
 shoot, and play regular maps, campaigns and compatible custom maps.
@@ -12,6 +12,7 @@ Created by Yazgul with assistance from Codex (GPT-6). This is an early prototype
 
 ## Features
 
+- Windows EXE launcher with game-folder selection, consent before dependency setup, live logs and Play.
 - F6 switches between FPS and RTS; fullscreen launch, relative mouse look and hidden player-unit model.
 - WASD, jumping, crouching, acceleration, friction and weapon movement speeds inspired by CS.
 - Unsilenced AK47, M4A1 and USP, AWP with two zoom levels, knife, C4 and a greatsword.
@@ -69,7 +70,7 @@ Run in PowerShell, replacing the game paths with your own:
 ```powershell
 git clone https://github.com/YazgulDev/warcraft-cs.git
 cd warcraft-cs
-git switch release/0.2.0
+git switch release/0.3.0
 .\setup.cmd -WarcraftDirectory "E:\Warcraft III" -CounterStrikeDirectory "C:\SteamGames\steamapps\common\Half-Life\cstrike"
 .\play.cmd
 ```
