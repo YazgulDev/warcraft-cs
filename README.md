@@ -8,14 +8,13 @@ An unofficial single-player fan project, unaffiliated with Blizzard Entertainmen
 **This Git repository contains source code. The release launcher contains project-owned code
 source and ready-to-use native mod modules; it does not include game files, models, sounds, maps or saves.
 You need your own installed copies of both games.**
-Created by Yazgul with assistance from Codex (GPT-6). This is an early prototype with known limitations.
+This is an early prototype with known limitations.
 
 ## Features
 
 - Windows EXE launcher with game-folder selection, consent before dependency setup, live logs and Play.
 - F6 switches between FPS and RTS; fullscreen launch, relative mouse look and hidden player-unit model.
 - WASD, jumping, crouching, acceleration, friction and weapon movement speeds inspired by CS.
-- Unsilenced AK47, M4A1 and USP, AWP with two zoom levels, knife, C4 and a greatsword.
 - Classic AK/M4 and USP/AWP punch calculations, recoil recovery and burst behavior.
 - Primary and secondary melee attacks, locally imported CS sounds and a blood-free hit indicator.
 - Damage to units, buildings and gates; allies receive 50% damage. C4 deals 2500 base area damage.
@@ -24,7 +23,6 @@ Created by Yazgul with assistance from Codex (GPT-6). This is an early prototype
 - H recruits your own units to follow and fight, O makes them follow without attacking, J releases them.
 - INI settings for ammunition recovery, damage and squad behavior, reloaded with F8.
 - Mouse-wheel weapon cycling through all seven slots, with high-resolution wheel support.
-- Tree shots use trunk surfaces rather than canopy boxes, leaving enemies beside trunks hittable.
 
 ## Requirements
 
@@ -139,14 +137,13 @@ weapon damage in `hero` mode. C4 uses its fixed `[C4] Damage` value.
 
 ## Compatibility and limitations
 
-**Offline single player only.** Multiplayer is not supported. The mod hooks the game globally,
+**Offline single player only.** Multiplayer is not supported for now. The mod hooks the game globally,
 but the complete campaign and every custom map have not been verified.
 Map scripts can conflict with camera or unit control. Maps without living owned units cannot provide
 an FPS character. Hitboxes approximate model bounds rather than individual bones.
 
 The recoil calculations are adapted, but **complete CS bullet spread/accuracy and the GoldSrc client
 are not implemented**. CS economy, rounds and weapon purchasing are also absent.
-See [TROUBLESHOOTING.md](TROUBLESHOOTING.md), currently in Russian.
 
 ## TODO
 
@@ -184,10 +181,7 @@ Adapted calculations and external components retain their terms: ReGameDLL_CS/Re
 MinHook/HDE is obtained separately under BSD-2-Clause.
 
 Native Warcraft integration facts were researched with JassSpyEngine, RenderEdge and UjAPI;
-their implementations are not bundled. Valve/Blizzard game materials and downloaded sword models
-are excluded and are not covered by the code licenses.
+their implementations are not bundled. Valve/Blizzard game materials are excluded and are not covered by the code licenses.
 
 For the full list of references, adaptations and license terms, see [NOTICE](NOTICE),
 [LICENSE-MIT](LICENSE-MIT), [LICENSE-APACHE](LICENSE-APACHE) and `licenses/`.
-The source-only release layout and local preparation of owned game files were inspired by
-[World of Skatecraft](https://github.com/Kimmo3223/world-of-skatecraft); its code and text were not copied.
