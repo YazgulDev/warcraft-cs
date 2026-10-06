@@ -9,7 +9,7 @@ See [REQUIREMENTS.md](REQUIREMENTS.md) for the complete system, owned-file and d
 ## Windows EXE: recommended for clients
 
 Download `WarcraftCSLauncher.exe` from [GitHub Releases](https://github.com/YazgulDev/warcraft-cs/releases/latest).
-Use Windows 10/11 x64. The EXE embeds project source and uses Windows' .NET Framework/PowerShell;
+Use Windows 10/11 x64. The EXE embeds project source and ready-to-use mod DLLs and uses Windows' .NET Framework/PowerShell;
 you do not need Git, Python or Visual Studio installed in advance.
 The launcher is unsigned; downloaded Python/Microsoft installers have verified vendor signatures.
 
@@ -39,12 +39,19 @@ plus `sound/weapons` and `sound/player`. CS is required for your local hands, an
 ### 2. Agree and install
 
 Read the download summary and linked terms. Tick **I agree to download and install...**
-(the checkbox starts unchecked), then click **Install / Update**.
+(the checkbox starts unchecked), then choose one of the two buttons:
+
+| Button | For whom | What is installed |
+| --- | --- | --- |
+| **Install / Update — Player** | Players | Bundled project DLLs; no Build Tools or Windows SDK. Python/NumPy may be prepared for owned asset conversion. |
+| **Install / Update — Developer** | Developers | Missing Microsoft Build Tools/SDK and pinned MinHook source, then a local DLL build. Existing compatible tools are reused. |
+
 No download or installation starts before agreement.
 
-Setup reuses compatible installed dependencies. Missing Python is installed privately;
-Microsoft C++ Build Tools/Windows SDK may require several GB, administrator approval and a restart.
-NumPy and checksum-verified MinHook are prepared locally. The original games remain unchanged.
+Setup reuses compatible installed dependencies. Both modes prepare missing Python privately;
+Developer mode alone prepares Microsoft C++ Build Tools/Windows SDK and checksum-verified MinHook source;
+Microsoft setup may require several GB, administrator approval and a restart. Both modes prepare NumPy
+for local asset conversion. The original games remain unchanged.
 
 Wait until the launcher reports **Ready**. Errors appear in the log, also saved as
 `<installation folder>\install.log`. If Microsoft asks for a Windows restart, restart,
@@ -76,7 +83,9 @@ The EXE creates these files inside your selected installation folder:
 - `install.log`: setup diagnostics; `downloads`/`dependencies`: installer cache/private Python when needed.
 
 To update, save your progress, close the private Warcraft window and run **Install / Update**
-with the same destination. The setup only updates its marked private runtime and preserves saves.
+with the same destination. The setup only updates its marked private runtime and preserves saves. At startup, a new-release dialog
+shows its version/notes and offers **Update** or **Not now**. Confirmation installs in your existing
+Player/Developer mode; selecting an installation button lets you change modes.
 Back up `Game\save` before updates or removal. If you want existing progress, copy your own original
 `save` files into the private runtime while both games are closed, keeping a backup.
 

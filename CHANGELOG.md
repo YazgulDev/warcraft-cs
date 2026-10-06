@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Show a release-version/notes confirmation dialog; declining leaves the current installation untouched.
+- Add Player and Developer installation buttons, with explicit dependency information.
+- Embed verified x86 project modules and their notices for Player setup without Build Tools/SDK.
+- Keep original Warcraft libraries local; bind the Player payload to its source snapshot and supported Miles ABI.
+- Fall back to GitHub latest-asset manifest downloads on API rate limits.
+
 - Remove the automatic-install checkbox; always check releases at launcher startup and install discovered updates through Install / Update after consent.
 - Restore saved folders without inheriting legacy automatic-install permission.
 

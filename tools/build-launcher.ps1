@@ -1,4 +1,4 @@
-param([string]$OutputDirectory='')
+param([string]$OutputDirectory='',[string]$WarcraftDirectory='')
 $ErrorActionPreference='Stop'
 $root=Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'paths.ps1')
@@ -16,13 +16,22 @@ if ($LASTEXITCODE) { throw 'Could not snapshot staged sources.' }
 $payload=Join-Path $build 'Source.zip'
 & git -c "safe.directory=$($root.Replace('\','/'))" -C $root archive --format=zip "--output=$payload" $tree
 if ($LASTEXITCODE) { throw 'Could not create source payload.' }
+# Native modules are a separate embedded resource: Git and the exact source ZIP remain source-only.
+$sourceHash=(Get-FileHash -LiteralPath $payload -Algorithm SHA256).Hash.ToLowerInvariant()
+# Native compilation must use the same reviewed sources/notices that were put into the staged ZIP.
+& git -c "safe.directory=$($root.Replace('\','/'))" -C $root diff --quiet -- src tools/build.ps1 tools/build-runtime-package.ps1 tools/miles_exports.py config NOTICE licenses LICENSE-MIT LICENSE-APACHE
+if ($LASTEXITCODE) { throw 'Stage native build sources and notices before packaging Player modules.' }
+$runtimeArchive=Join-Path $OutputDirectory 'WarcraftCS-runtime.zip'
+& (Join-Path $PSScriptRoot 'build-runtime-package.ps1') -SourceRevision $sourceHash -OutputFile $runtimeArchive -WarcraftDirectory $WarcraftDirectory
+if ($LASTEXITCODE) { throw 'Runtime packaging failed.' }
+$runtimeHash=(Get-FileHash -LiteralPath $runtimeArchive -Algorithm SHA256).Hash.ToLowerInvariant()
 $version=(Get-Content -LiteralPath (Join-Path $root 'VERSION') -Raw).Trim()
 $assembly=Join-Path $build 'LauncherVersion.cs'
 ('[assembly: System.Reflection.AssemblyTitle("Warcraft CS by Yazgul Launcher")]'+[Environment]::NewLine+
  '[assembly: System.Reflection.AssemblyVersion("'+$version+'.0")]') | Set-Content -LiteralPath $assembly -Encoding utf8
 $sources=@(Get-ChildItem -LiteralPath (Join-Path $root 'launcher') -Filter '*.cs' -File | ForEach-Object { $_.FullName })
 $exe=Join-Path $OutputDirectory 'WarcraftCSLauncher.exe'
-& $compiler /nologo /target:winexe /platform:x64 /optimize+ "/out:$exe" "/resource:$payload,WarcraftCS.Source.zip" /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll /r:System.Web.Extensions.dll $assembly $sources
+& $compiler /nologo /target:winexe /platform:x64 /optimize+ "/out:$exe" "/resource:$payload,WarcraftCS.Source.zip" "/resource:$runtimeArchive,WarcraftCS.Runtime.zip" /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll /r:System.Web.Extensions.dll $assembly $sources
 if ($LASTEXITCODE) { throw 'Launcher compilation failed.' }
 Get-Item -LiteralPath $exe | Select-Object FullName,Length
 Get-FileHash -LiteralPath $exe -Algorithm SHA256 | Select-Object Hash
@@ -31,7 +40,7 @@ $sourceArchive=Join-Path $OutputDirectory 'WarcraftCS-sources.zip'
 Copy-Item -LiteralPath $payload -Destination $sourceArchive -Force
 $sourceHash=(Get-FileHash -LiteralPath $sourceArchive -Algorithm SHA256).Hash.ToLowerInvariant()
 $launcherHash=(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
-@{Version=$version;Revision=$sourceHash;SourceSha256=$sourceHash;LauncherSha256=$launcherHash} |
+@{Version=$version;Revision=$sourceHash;SourceSha256=$sourceHash;LauncherSha256=$launcherHash;RuntimeSha256=$runtimeHash} |
     ConvertTo-Json | Set-Content -LiteralPath (Join-Path $OutputDirectory 'WarcraftCS-update.json') -Encoding UTF8
 ($launcherHash+'  WarcraftCSLauncher.exe') | Set-Content -LiteralPath ($exe+'.sha256') -Encoding ascii
 $distribution=Join-Path $OutputDirectory ('WarcraftCS-'+$version+'-dist.zip')
@@ -39,4 +48,4 @@ if (Test-Path -LiteralPath $distribution) { Remove-Item -LiteralPath $distributi
 # Let players read all prerequisites before launching setup or extracting the source archive.
 $requirements=Join-Path $OutputDirectory 'REQUIREMENTS.md'
 Copy-Item -LiteralPath (Join-Path $root 'REQUIREMENTS.md') -Destination $requirements -Force
-Compress-Archive -LiteralPath $exe,($exe+'.sha256'),$sourceArchive,(Join-Path $OutputDirectory 'WarcraftCS-update.json'),$requirements -DestinationPath $distribution
+Compress-Archive -LiteralPath $exe,($exe+'.sha256'),$sourceArchive,$runtimeArchive,(Join-Path $OutputDirectory 'WarcraftCS-update.json'),$requirements -DestinationPath $distribution

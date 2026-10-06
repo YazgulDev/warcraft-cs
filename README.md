@@ -6,7 +6,7 @@ The world, enemies, quests and health remain governed by Warcraft.
 
 An unofficial single-player fan project, unaffiliated with Blizzard Entertainment or Valve.
 **This Git repository contains source code. The release launcher contains project-owned code
-and source; it does not include game files, models, sounds, maps or saves.
+source and ready-to-use native mod modules; it does not include game files, models, sounds, maps or saves.
 You need your own installed copies of both games.**
 Created by Yazgul with assistance from Codex (GPT-6). This is an early prototype with known limitations.
 
@@ -30,8 +30,8 @@ Created by Yazgul with assistance from Codex (GPT-6). This is an early prototype
 
 - Windows x64 and **Warcraft III 1.26a x86**, with `Game.dll` version `1.26.0.6401`.
 - Installed Counter-Strike 1.6 with loose files in `cstrike/models` and `cstrike/sound`.
-- Internet access for dependency downloads. The EXE installs missing Python and C++ build tools
-  after your agreement; clients do not need Git or development tools beforehand.
+- Player installation needs no C++ Build Tools or Windows SDK. Python/NumPy may be prepared
+  after agreement to convert your locally owned CS assets. Developer mode builds the DLLs from source.
 - For manual source setup: Git, Python 3.10–3.14, Visual Studio 2022 or Build Tools with
   **Desktop development with C++**, MSVC x86 and Windows SDK.
 - OpenGL support and enough disk space for a separate copy of Warcraft.
@@ -57,17 +57,18 @@ Choose these folders using **Browse...** (the examples are illustrative):
 1. Select your installed Warcraft III 1.26a folder and CS 1.6 folder (`cstrike` or its Half-Life parent).
 2. Select a separate installation folder for Warcraft CS.
 3. Read the download details and agree to downloading/installing the dependencies and their terms.
-4. Click **Install / Update**. Missing Python, Microsoft C++ tools/Windows SDK, NumPy and MinHook are prepared automatically.
+4. Click **Install / Update — Player** for bundled DLLs without Build Tools/SDK. Developers can choose **Install / Update — Developer** to prepare missing C++ tools/SDK and compile locally.
 5. Click **Play**, select your own living unit and press F6.
 
 The launcher checks new stable GitHub releases automatically at every startup; **Check for updates**
-retries the check. Accept the download agreement and click **Install / Update** to install a discovered
-update while Warcraft is closed. This downloads verified sources and the launcher, rebuilds the private
-mod/assets and restarts the launcher if needed. Saves, INI settings and private sword selections are
+retries the check. A window shows the new version and release notes: **Update** confirms installation
+in your existing mode; **Not now** postpones it. The dialog explains download requirements and consent.
+Warcraft must be closed. Player installs verified bundled DLLs; Developer rebuilds them locally. Both
+modes convert owned assets and update the launcher if needed. Saves, INI settings and private sword selections are
 retained. Each session requires the download agreement. Offline Play remains available.
 
 No download or installation starts before agreement. Microsoft tools may need administrator approval,
-several GB of space and a Windows restart. The launcher includes only project source, never game files.
+several GB of space and a Windows restart in Developer mode. The launcher includes mod modules and source, never game files.
 The launcher itself is unsigned; dependency installers have verified vendor signatures.
 Detailed folder examples, first launch, updates and removal: [INSTALL.md](INSTALL.md).
 Developer build instructions: [Client launcher](docs/CLIENT-LAUNCHER.md).

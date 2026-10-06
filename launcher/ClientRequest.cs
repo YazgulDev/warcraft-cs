@@ -10,8 +10,13 @@ namespace WarcraftCSLauncher {
         public string PythonExecutable { get; set; }
         // Retain the old JSON field for client compatibility; it no longer authorizes automatic installation.
         public bool AutomaticUpdates { get; set; }
+        public string InstallMode { get; set; }
+        public string LauncherExecutable { get; set; }
+        public ClientRequest() { InstallMode="Player"; }
 
         public void ValidateDestination() {
+            // Missing legacy mode selects bundled Player modules; only an explicit Developer choice builds locally.
+            if (InstallMode!="Player" && InstallMode!="Developer") throw new InvalidOperationException("Choose Player or Developer mode.");
             if (!Directory.Exists(WarcraftDirectory) || !Directory.Exists(CounterStrikeDirectory))
                 throw new InvalidOperationException("Select your installed Warcraft III and Counter-Strike folders.");
             var target = Path.GetFullPath(InstallDirectory).TrimEnd(Path.DirectorySeparatorChar);
