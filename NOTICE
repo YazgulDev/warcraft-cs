@@ -1,0 +1,114 @@
+Warcraft CS by Yazgul, initial release 0.1.0
+Copyright (c) 2026 Yazgul
+
+PROJECT CODE
+Original project source/documentation is available under MIT OR Apache-2.0 at your
+option (LICENSE-MIT and LICENSE-APACHE). This does not relicense upstream works,
+game content, trademarks or the private user-supplied custom sword. Preserve the
+following notices with source copies. External dependencies are obtained separately;
+no third-party engine/library source tree or binary is vendored in this repository.
+
+ADAPTED MECHANICS AND RESEARCH REFERENCES
+
+1. ReGameDLL_CS — https://github.com/rehlds/ReGameDLL_CS
+   MIT; Copyright (c) 2015–2025 ReGameDLL_CS Contributors.
+   Reference: classic AK47/M4A1 KickBack stance constants/growth/caps and lateral
+   reversal rules, USP/AWP punch, rifle release counters/timers, PM_DropPunchAngle,
+   weapon timing and GoldSrc-style movement/surface-sound behavior.
+   Relevant project implementation: src/WeaponRecoil.cpp, src/MovementPhysics.cpp,
+   src/ShooterController.cpp; numerical behavior is adapted for Warcraft coordinates
+   and native ticks. No full CS engine or complete accuracy/spread implementation is
+   distributed. The MIT notice is in licenses/ReGameDLL_CS-MIT.txt.
+
+2. ReHLDS — https://github.com/rehlds/ReHLDS
+   MIT; Copyright (c) 2014–2025 ReHLDS Contributors.
+   Reference: ran1 and RandomLong behavior in engine/pr_cmds.cpp. The project-owned
+   src/GoldSrcRandom.hpp implements shuffled Park-Miller/Schrage/rejection-sampling
+   mathematics with its own isolated state. Not an embedded HLDS engine or a copy
+   of its global RNG state. MIT notice: licenses/ReHLDS-MIT.txt.
+   Both ReHLDS and ReGameDLL_CS publish LICENSE-TRANSITION.md documenting the
+   July 2025 MIT transition; older checked source headers can still mention GPL.
+   https://github.com/rehlds/ReHLDS/blob/master/LICENSE-TRANSITION.md
+   https://github.com/rehlds/ReGameDLL_CS/blob/master/LICENSE-TRANSITION.md
+
+3. Native Warcraft research: JassSpyEngine/JassSpyCode, RenderEdge and UjAPI.
+   Their native function names, offsets/signatures and integration findings were
+   cross-checked against the owner's Warcraft III 1.26a and private native tests.
+   NativeOffsets.inc contains this project's own declarations of factual addresses;
+   no game/decompiler dump, upstream implementation source or headers are included.
+   JassSpyEngine's checked checkout uses the Unlicense/public-domain dedication;
+   its separately embedded MinHook has its own BSD terms. UjAPI's checked license
+   is MIT, Copyright (c) 2022 Sandro Takaishvili. RenderEdge has no root license
+   identified during this audit, so no RenderEdge code is copied or distributed.
+   https://github.com/UnrealKaraulov/JassSpyEngine
+   https://github.com/ENAleksey/RenderEdge
+   https://github.com/UnryzeC/UjAPI
+
+4. Valve Half-Life SDK — https://github.com/ValveSoftware/halflife
+   Research reference for GoldSrc studio-model layout, animation/event encoding,
+   movement and view behavior. The SDK has Valve's own noncommercial HL1-engine
+   modification license, not MIT/Apache. No SDK code/header/runtime is bundled or
+   asserted relicensed here. The model parser/exporter is project-owned and reads
+   the user's installed models; the recoil implementation cites the MIT projects
+   above. https://github.com/ValveSoftware/halflife/blob/master/LICENSE
+
+EXTERNAL BUILD DEPENDENCIES (NOT VENDORED)
+
+5. MinHook v1.3.4 — https://github.com/TsudaKageyu/minhook
+   Revision c3fcafdc10146beb5919319d0683e44e3c30d537, downloaded only during local setup.
+   BSD-2-Clause; Copyright (C) 2009–2017 Tsuda Kageyu. Includes Hacker Disassembler
+   Engine 32, Copyright (c) 2008–2009 Vyacheslav Patkov, under BSD-2-Clause terms.
+   The combined upstream notice is licenses/MinHook-BSD-2-Clause.txt.
+   Used for this project's native hooks. Local binaries statically link MinHook;
+   any permitted distribution of those binaries must preserve this notice.
+
+6. NumPy — https://numpy.org / https://github.com/numpy/numpy
+   BSD-3-Clause; installed in a private Python venv, used only for mesh/animation
+   conversion. NumPy and its bundled dependencies are not redistributed in Git.
+   Python, PowerShell, Git, MSVC and Windows SDK are separate development tools
+   used under their respective licenses; none is bundled in the source release.
+
+7. Universal Modder — https://github.com/rehan-remade/universal-modder
+   MIT; Copyright (c) 2026 Rehan and universal-modder contributors.
+   Modding research/test workflow tooling used during development, alongside
+   Capstone, Pillow/NumPy and FFmpeg for private investigation/capture.
+   No Universal Modder/plugin/decompiler/capture binaries or source are shipped.
+   The standalone build/install scripts do not require Universal Modder.
+
+PRESENTATION INSPIRATION
+
+8. World of Skatecraft — https://github.com/Kimmo3223/world-of-skatecraft
+   Presentation/reference pattern: source release, separate setup using owned game
+   installs, requirements/install/play/help/credits/legal documentation.
+   Upstream reports MIT OR Apache-2.0 with exceptions in its NOTICE. This repository
+   does not use benilla, its Skate engine, WoW client, server, code, assets or text.
+   Inspiration is credited; this project implements a different Warcraft/CS mashup.
+
+GAME CONTENT AND CUSTOM ASSETS (EXCLUDED)
+
+Warcraft III is a Blizzard Entertainment title/trademark. Counter-Strike and
+Half-Life are Valve titles/trademarks. Original Warcraft executable/DLL/MPQ/map/
+campaign data and CS viewmodels, hands, skins, animations and sounds are proprietary
+materials from the owner's installations. Miles Sound System Mss32.dll is an
+original proprietary sound library; this project's proxy forwards its exports,
+which are generated locally from the owner's DLL. No original DLL/export dump or
+game file is distributed. The code licenses do not grant rights to game content.
+
+The user's grudge_and_poison_sword.zip contains v_grudge_sword.mdl and two poison
+models, without author/license/readme information. The user imported the grudge
+skin/rig/animations privately. It is not included, downloaded or licensed by this
+release. Users supplying their own -SwordModel must establish their own permission.
+Without it, project-authored procedural blade geometry uses the owner's CS knife
+hands/animation; its resulting converted assets still remain private.
+
+AI DISCLOSURE
+Yazgul designed/requested the features and tested the gameplay. Codex (GPT-6)
+assisted with source implementation, investigation, documentation and verification.
+No fal/image-generation content was introduced for this source release.
+
+PROVENANCE RULE
+Source-only Git commits include project source, tests, setup/configuration and
+these required notices. All .local data, downloaded dependencies, generated
+forwarders/binaries, private mod logs, game assets, saves and recordings are excluded.
+Version guards target offline Warcraft III 1.26a only; there is no affiliation with
+or endorsement by Blizzard, Valve, SDK/library authors or referenced fan projects.

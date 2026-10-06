@@ -1,0 +1,40 @@
+---
+name: feature-release-workflow
+description: Apply Yazgul's feature/release/master branch workflow when adding features, merging into a release, preparing a new release, or committing this project's source-only publication. Does not apply to unrelated repositories.
+---
+
+# Feature and release workflow
+
+Use for repositories whose AGENTS.md adopts this skill. Preserve all existing branches.
+
+## Adding features
+
+- Before editing for one or several new features requested together, identify the current release and create one branch `feature/add-<feature-or-features>` from it. Use a concise lowercase hyphenated description, for example `feature/add-recoil-and-squad-release`.
+- Reuse the branch if continuing the same feature task. If that name already belongs to other work, choose a unique descriptive suffix without resetting its history.
+- Keep unrelated local changes intact. Do not mix them into the feature commit.
+- Keep feature work on its branch, run relevant checks, and commit only reviewed project-owned files. Merge into the current release when the user requests the merge; never merge features directly into master.
+
+## Identifying the current release
+
+- Read VERSION and available local/remote `release/<semver>` branches. Fetch origin when available before an externally requested merge.
+- Compare versions numerically (including SemVer prerelease ordering), not lexically or by commit date. The latest versioned release branch is the target of an unqualified "merge into release" request.
+- Use repository metadata to detect inconsistency; resolve a mismatch instead of silently merging into an older release or assuming a hardcoded version.
+- Merge the feature with `--no-ff` so its history remains visible. Resolve and verify conflicts before completing the merge. Never delete the feature or old release branch.
+
+## Starting a new release
+
+1. Ask the user for the new version number, even when a plausible next version exists. Suggest one if useful, but do not treat silence as an answer. The explicitly requested initial `0.1.0` is already supplied.
+2. Verify the version is valid and newer than the current release and its branch does not already represent another release.
+3. Complete the current release checks and merge the current release into `master` with `--no-ff`.
+4. Create `release/<new-version>` from the updated master, then update VERSION and the changelog for the new release.
+5. Retain every old release and feature branch. Do not move published tags, rewrite shared history, or force-push. A release tag identifies an immutable published snapshot, while its release branch may continue to receive features.
+
+Initial source-only publication may bootstrap an empty master commit, create `release/0.1.0`, and merge the initial publication feature into it. Keep the active release as the repository's default branch until master contains a released baseline.
+
+## Source-only commits and publication
+
+- Inspect `git status`, the staged file list and the staged diff. Stage explicit paths instead of indiscriminate `git add .`.
+- Exclude secrets/credentials, local configs, logs, saves, extracted or converted game content, proprietary game/SDK files, decompiler dumps, downloaded dependencies, binaries, recordings and build output. Include only owned source, tests, necessary configuration/tooling and requested docs/license notices.
+- Identify adaptations/references accurately in NOTICE. A user's code license does not relicense upstream code or game assets. Obtain third-party build dependencies separately and preserve their notices.
+- Run `tools/audit_sources.py --staged` when provided, plus relevant build/tests. Verify the release/tag tree and archive before uploading.
+- Local commits are reversible. Push/create repositories or publish releases only within explicit user authorization for that GitHub destination; the skill itself does not authorize publication elsewhere. Never request a password/token in chat; use supported login flows and stored credentials.
