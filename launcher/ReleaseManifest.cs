@@ -9,12 +9,16 @@ namespace WarcraftCSLauncher {
         public string Revision { get; set; }
         public string SourceSha256 { get; set; }
         public string LauncherSha256 { get; set; }
+        public string RuntimeSha256 { get; set; }
+        public bool SupportsPlayer { get { return !String.IsNullOrEmpty(RuntimeSha256); } }
 
         public void Validate(string tag) {
             // A published stable tag and its manifest must identify the same version and source payload.
             ParseVersion(Version);
             if (tag != "v" + Version || !IsHash(Revision) || Revision != SourceSha256 || !IsHash(LauncherSha256))
                 throw new InvalidDataException("Invalid release version or package checksums.");
+            // Legacy source-build releases remain valid for Developer mode; Player bundles require their own digest.
+            if (SupportsPlayer && !IsHash(RuntimeSha256)) throw new InvalidDataException("Invalid native runtime checksum.");
         }
         public bool IsNewer(string currentVersion, string currentRevision, string installedRevision) {
             int comparison = ParseVersion(Version).CompareTo(ParseVersion(currentVersion));

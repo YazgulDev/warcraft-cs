@@ -2,15 +2,29 @@
 
 ## Unreleased
 
+- Show a release-version/notes confirmation dialog; declining leaves the current installation untouched.
+- Add Player and Developer installation buttons, with explicit dependency information.
+- Embed verified x86 project modules and their notices for Player setup without Build Tools/SDK.
+- Keep original Warcraft libraries local; bind the Player payload to its source snapshot and supported Miles ABI.
+- Fall back to GitHub latest-asset manifest downloads on API rate limits.
+
+- Remove the automatic-install checkbox; always check releases at launcher startup and install discovered updates through Install / Update after consent.
+- Restore saved folders without inheriting legacy automatic-install permission.
+
+## 0.4.0 — 2026-10-06
+
 - Add a complete requirements file for users, source builds and release updater assets.
 - Pick authored tree trunk triangles instead of canopy boxes; preserve ordinary gate/model-bound behavior.
 - Add mouse-wheel weapon cycling with wraparound, high-resolution fractions and focus/status reset.
 - Fix Warcraft sound initialization by copying the owner's `redist/miles` providers/codecs during setup.
 - Repair missing Miles files in existing marked private runtimes; detect incomplete source installs before dependency downloads.
-- Merge private sword selection/preservation and Miles repair into release/0.3.0.
+- Include remembered private sword selection and the Miles audio runtime repair.
 - Add launcher startup release checks, saved opt-in automatic updates, SHA256 verification and safe EXE replacement/restart.
 - Update complete source/build assets while preserving saves, settings and remembered private sword paths; refuse updates during a running match.
 - Publish an exact source payload, updater manifest and distribution ZIP as release assets; retain immutable tags and source-only Git history.
+
+Validation: all nine C++ suites and a disposable native tree/gate/wheel session pass.
+Requirements are included in both the source snapshot and distribution ZIP.
 
 ## 0.3.0 — 2026-10-06
 

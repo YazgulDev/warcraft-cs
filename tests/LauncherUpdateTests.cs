@@ -37,7 +37,7 @@ public static class LauncherUpdateTests {
         if (args.Length==2 && args[0]=="--idle-fixture") { File.WriteAllText(args[1],"ready"); Thread.Sleep(30000); return 0; }
         string root=Path.GetFullPath(args[0]); Directory.CreateDirectory(root);
         string wc=Path.Combine(root,"Original WC"),cs=Path.Combine(root,"Original CS");Directory.CreateDirectory(wc);Directory.CreateDirectory(cs);
-        var request=new ClientRequest {WarcraftDirectory=wc,CounterStrikeDirectory=cs,InstallDirectory=Path.Combine(root,"Client")};
+        var request=new ClientRequest {WarcraftDirectory=wc,CounterStrikeDirectory=cs,InstallDirectory=Path.Combine(root,"Client"),InstallMode="Developer"};
         byte[] source=Archive(),exe=Encoding.ASCII.GetBytes("MZ-owned-executable-fixture"); var update=Package(source,exe);
         update.Manifest.Validate("v0.3.0");
         Require(update.Manifest.IsNewer("0.2.0",update.Manifest.Revision,null),"New release skipped");
@@ -52,6 +52,11 @@ public static class LauncherUpdateTests {
         int downloads=0; Func<string,byte[]> fetch=url=> { downloads++; return url.EndsWith(".zip") ? source : exe; };
         Reject(()=>ReleaseUpdater.Prepare(update,request,false,fetch),"No-consent update allowed");
         Require(downloads==0 && !Directory.Exists(request.InstallDirectory),"No-consent update wrote/downloaded");
+        // A legacy release must not silently turn Player installation into compiler/SDK downloads.
+        request.InstallMode="Player";
+        Reject(()=>ReleaseUpdater.Prepare(update,request,true,fetch),"Legacy release accepted as Player");
+        Require(downloads==0 && !Directory.Exists(request.InstallDirectory),"Legacy Player rejection downloaded packages");
+        request.InstallMode="Developer";
         Reject(()=>ReleaseUpdater.Prepare(update,request,true,url=>new byte[] {1,2,3}),"Corrupt package accepted");
         Require(!Directory.Exists(request.InstallDirectory),"Corrupt package touched the installation");
         var unsafeSource=Archive(true);var unsafeUpdate=Package(unsafeSource,exe);
@@ -65,6 +70,13 @@ public static class LauncherUpdateTests {
         // Windows PowerShell emits a UTF-8 BOM; verify the real manifest format works in the client parser.
         var parsed=ReleaseClient.Parse(metadata,url=>Encoding.UTF8.GetBytes("\uFEFF"+serializer.Serialize(update.Manifest)));
         Require(parsed.Manifest.Revision==update.Manifest.Revision,"Release API/manifest parsing failed");
+        // The rate-limit fallback must preserve the stable-version/checksum contract and canonical package URLs.
+        var fallback=ReleaseClient.ParseLatestManifest(Encoding.UTF8.GetBytes("\uFEFF"+serializer.Serialize(update.Manifest)));
+        Require(fallback.SourceUrl==update.SourceUrl && fallback.LauncherUrl==update.LauncherUrl,"Fallback changes package origin");
+        Reject(()=>ReleaseClient.ParseLatestManifest(Encoding.UTF8.GetBytes("{\"Version\":\"0.3.0-beta\"}")),"Fallback permits unstable manifest");
+        var runtimeDigest=update.Manifest.RuntimeSha256;
+        update.Manifest.RuntimeSha256="invalid";Reject(()=>update.Manifest.Validate("v0.3.0"),"Malformed Player hash accepted");
+        update.Manifest.RuntimeSha256=runtimeDigest;
         Require(ReleaseClient.Parse("{\"draft\":false,\"prerelease\":true}",fetch)==null,"Prerelease offered");
         Require(ReleaseClient.Parse("{\"draft\":false,\"prerelease\":false,\"tag_name\":\"v0.3.0\",\"assets\":[]}",fetch)==null,"Legacy release rejected");
         var prepared=ReleaseUpdater.Prepare(update,request,true,fetch);

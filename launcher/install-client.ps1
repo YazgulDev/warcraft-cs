@@ -8,15 +8,29 @@ $request=Get-Content -LiteralPath $RequestFile -Raw -Encoding UTF8 | ConvertFrom
 $source=Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'client-dependencies.ps1')
 . (Join-Path $PSScriptRoot 'client-validation.ps1')
+. (Join-Path $source 'setup/prebuilt-runtime.ps1')
 $paths=Get-ClientPaths $request
 $runtime=Join-Path $paths.install 'Game'
 Assert-ClientGames $paths.warcraft $paths.cstrike
+# Older updater requests default to Player: its verified downloaded EXE supplies the native modules.
+$mode=if ($request.InstallMode) { [string]$request.InstallMode } else { 'Player' }
+if ($mode -cnotin @('Player','Developer')) { throw 'Choose Player or Developer installation mode.' }
+$prebuilt=''
 if (Test-Path -LiteralPath $runtime) {
     foreach ($process in @(Get-Process war3 -ErrorAction SilentlyContinue)) {
         if (!$process.Path -or [IO.Path]::GetDirectoryName($process.Path) -eq $runtime) {
             throw 'Close Warcraft in this client installation before updating it. Save your match first.'
         }
     }
+}
+# Do not even extract the embedded runtime until the marked game's running-process guard has passed.
+if ($mode -eq 'Player') {
+    $candidate=Join-Path $paths.install ('updates/'+(Split-Path -Leaf $source)+'/WarcraftCSLauncher.exe')
+    if (!(Test-Path -LiteralPath $candidate)) { $candidate=$request.LauncherExecutable }
+    if (!$candidate -or !(Test-Path -LiteralPath $candidate)) { throw 'Player mode needs the new launcher with bundled native modules.' }
+    $prebuilt=Join-Path $source '.local/prebuilt'
+    Expand-LauncherRuntime $candidate $source $prebuilt
+    Assert-PrebuiltHost $prebuilt $paths.warcraft
 }
 New-Item -ItemType Directory -Path $paths.install -Force | Out-Null
 $log=Join-Path $paths.install 'install.log'
@@ -46,11 +60,13 @@ try {
     }
     Write-Output 'Checking local dependencies...'
     $python=Get-ClientPython $paths.install $request.PythonExecutable
-    Install-ClientBuildTools $paths.install
-    # Reuse the same owned-game setup pipeline as source users; no prebuilt game DLLs are shipped.
-    & (Join-Path $source 'setup/setup.ps1') -WarcraftDirectory $paths.warcraft -CounterStrikeDirectory $paths.cstrike -RuntimeDirectory $runtime -PythonExecutable $python -SwordModel $swordModel
+    # Player never invokes the Build Tools installer; both modes convert the owner's game assets locally.
+    if ($mode -eq 'Developer') { Install-ClientBuildTools $paths.install }
+    $modeInfo=if ($mode -eq 'Player') { 'Player mode: installing bundled modules; no Build Tools or Windows SDK.' } else { 'Developer mode: building modules locally with C++ tools and Windows SDK.' }
+    Write-Output $modeInfo
+    & (Join-Path $source 'setup/setup.ps1') -WarcraftDirectory $paths.warcraft -CounterStrikeDirectory $paths.cstrike -RuntimeDirectory $runtime -PythonExecutable $python -SwordModel $swordModel -InstallMode $mode -PrebuiltDirectory $prebuilt
     if ($LASTEXITCODE) { throw 'Game setup failed.' }
-    @{source=$source;runtime=$runtime;version=(Get-Content (Join-Path $source 'VERSION') -Raw).Trim();revision=(Split-Path -Leaf $source);sword_model=$swordModel} |
+    @{source=$source;runtime=$runtime;version=(Get-Content (Join-Path $source 'VERSION') -Raw).Trim();revision=(Split-Path -Leaf $source);sword_model=$swordModel;install_mode=$mode} |
         ConvertTo-Json | Set-Content -LiteralPath (Join-Path $paths.install 'client-installed.json') -Encoding utf8
     Write-Output 'Installation complete. You can now press Play.'
 } finally { Stop-Transcript | Out-Null }
