@@ -1,4 +1,4 @@
-Warcraft CS by Yazgul, initial release 0.1.0
+Warcraft CS by Yazgul, release 0.2.0
 Copyright (c) 2026 Yazgul
 
 PROJECT CODE
@@ -95,11 +95,12 @@ which are generated locally from the owner's DLL. No original DLL/export dump or
 game file is distributed. The code licenses do not grant rights to game content.
 
 The user's grudge_and_poison_sword.zip contains v_grudge_sword.mdl and two poison
-models, without author/license/readme information. The user imported the grudge
-skin/rig/animations privately. It is not included, downloaded or licensed by this
-release. Users supplying their own -SwordModel must establish their own permission.
-Without it, project-authored procedural blade geometry uses the owner's CS knife
-hands/animation; its resulting converted assets still remain private.
+models, without author/license/readme information. Earlier private experiments
+imported its Grudge skin/rig/animations. These models are not included, downloaded,
+licensed or imported by this release. The release uses the project's original
+procedural silver blade, gold guard and leather grip in tools/greatsword.py.
+It attaches this geometry to the owner's CS knife hands/animation; the resulting
+converted asset still contains private game content and must not be redistributed.
 
 AI DISCLOSURE
 Yazgul designed/requested the features and tested the gameplay. Codex (GPT-6)

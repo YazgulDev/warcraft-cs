@@ -39,3 +39,18 @@ The complete staged tree passed the source allowlist/credential/binary/path audi
 Adversarial audit checks rejected fake credentials, renamed binaries, game assets,
 private paths and decompiler headers. An early audit pattern matched its own pattern
 text; anchoring the header check fixed that false positive before publication.
+
+## 0.2.0 original sword and English README
+
+The release converter always generates the project's original straight silver blade,
+gold guard and leather grip. An existing private Grudge model is not selected or read.
+External sword parameters/imports were removed from both setup and conversion.
+An owned-CS conversion produced the original procedural sword cache successfully;
+its rig/animation data and audio timeline come from the owner's knife as before.
+The sword geometry itself is unchanged from the previously verified original sword.
+Runtime C++ and combat behavior are unchanged in this update.
+
+PowerShell/Python syntax checks and source-tree audits were run for the changed tooling.
+The complete English README includes requirements, setup, controls, settings, limitations
+and legal references. Linked relative documents remain in the release tree.
+No fresh automated input was sent to the user's active game for this documentation/tooling update.

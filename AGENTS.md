@@ -3,7 +3,7 @@
 For feature work, commits, release merges and publication, read and apply
 [feature-release-workflow](skills/feature-release-workflow/SKILL.md).
 
-Current initial release: `release/0.1.0`; VERSION is the project version.
+Current release: `release/0.2.0`; VERSION is the project version.
 Feature branches use `feature/add-<feature-or-features>` and merge into the latest
 release only when requested. A new release requires asking for its version, merging
 the previous release into master, then creating the new release branch. Keep old branches.

@@ -1,11 +1,11 @@
-# Установка Warcraft CS 0.1.0
+# Установка Warcraft CS 0.2.0
 
 Нужны собственные Warcraft III **1.26a x86** и Counter-Strike 1.6.
 Проект не скачивает игры, не поставляет их контент и не изменяет оригинальную установку.
 
 1. Установите Git for Windows, Python 3.10+ с доступным `python`, Visual Studio 2022
    или Build Tools: workload **Desktop development with C++**, MSVC x86/x64 и Windows SDK.
-2. Клонируйте `https://github.com/whitestridee/warcraft-cs.git` в отдельную папку,
+2. Клонируйте `https://github.com/YazgulDev/warcraft-cs.git` в отдельную папку,
    например `C:\Warcraft-CS`, и откройте PowerShell в ней.
 3. Убедитесь, что `Game.dll` в вашей игре имеет версию **1.26.0.6401**.
    Reforged и другие патчи не поддерживаются. Требуются также оригинальные `Mss32.dll`,
@@ -33,11 +33,10 @@ NumPy устанавливается в `.local/venv`. Machine-specific пути
 .\setup\setup.ps1 -WarcraftDirectory "E:\Warcraft III" -CounterStrikeDirectory "C:\SteamGames\steamapps\common\Half-Life\cstrike" -PythonExecutable "C:\Python312\python.exe"
 ```
 
-Скин из `grudge_and_poison_sword.zip` не распространяется. Если у вас есть право пользоваться
-своей копией, распакуйте её локально и добавьте
-`-SwordModel "C:\PrivateModels\v_grudge_sword.mdl"`. Импортируются его скин, кости и анимации.
-Без аргумента используется процедурный меч с руками/анимацией из вашей модели ножа CS.
-Права на стороннюю модель, её происхождение и разрешения определяются отдельно от лицензии кода.
+Релиз использует первый прямой меч с серым клинком, золотой гардой и кожаной рукоятью.
+Его геометрия создаётся нашим `tools/greatsword.py`; руки и анимации берутся из вашей
+модели ножа CS. Модель из `grudge_and_poison_sword.zip` не импортируется и не распространяется.
+Параметр `-SwordModel` удалён. Конвертированный меч остаётся в приватной папке `.local`.
 
 Запуск:
 
