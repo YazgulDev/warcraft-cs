@@ -1,4 +1,4 @@
-"""Build a steel greatsword on the owner's animated knife grip, retaining the original hands."""
+"""Generate the project's original silver blade and gold guard on the owner's animated knife grip."""
 import struct
 from pathlib import Path
 

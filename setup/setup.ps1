@@ -2,8 +2,7 @@ param(
     [Parameter(Mandatory=$true)][string]$WarcraftDirectory,
     [Parameter(Mandatory=$true)][string]$CounterStrikeDirectory,
     [string]$RuntimeDirectory='',
-    [string]$PythonExecutable='python',
-    [string]$SwordModel=''
+    [string]$PythonExecutable='python'
 )
 $ErrorActionPreference='Stop'
 $root=Split-Path -Parent $PSScriptRoot
@@ -60,8 +59,7 @@ if ($LASTEXITCODE) { throw 'Could not install the local Python dependency.' }
 & (Join-Path $root 'tools/fetch-dependencies.ps1')
 $assets=Join-Path $runtime 'WarcraftCS/assets'
 $arguments=@((Join-Path $root 'tools/export_models.py'),'--cstrike',$cstrike,'--output',$assets)
-if ($SwordModel) { $arguments+=@('--sword-model',(Resolve-Path -LiteralPath $SwordModel).Path) }
-# Models and audio are converted from the owner's game only; optional custom sword stays private too.
+# Convert owned CS hands/animations and generate the project's original sword geometry locally.
 & $python @arguments
 if ($LASTEXITCODE) { throw 'Private asset conversion failed.' }
 & (Join-Path $root 'tools/build.ps1') -OutputDirectory $runtime -MinHookDirectory (Join-Path $root '.local/dependencies/minhook')
