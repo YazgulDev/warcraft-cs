@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
@@ -10,29 +11,34 @@ namespace WarcraftCSLauncher {
     public sealed class LauncherForm : Form {
         private readonly TextBox warcraft = new TextBox(), cs = new TextBox(), destination = new TextBox();
         private readonly CheckBox consent = new CheckBox();
-        private readonly Button install = new Button(), play = new Button();
+        private readonly CheckBox automatic = new CheckBox();
+        private readonly Button install = new Button(), play = new Button(), check = new Button();
         private readonly TextBox log = new TextBox();
         private readonly Label status = new Label();
         private readonly ProgressBar progress = new ProgressBar();
         private bool busy;
+        private bool checking;
+        private ReleaseUpdate latest;
         private readonly bool preview;
         protected override bool ShowWithoutActivation { get { return preview; } }
 
         public LauncherForm(bool preview=false) {
             this.preview=preview;
             Text = "Warcraft CS by Yazgul - Launcher";
-            ClientSize = new Size(780, 730); MinimumSize = Size; MaximizeBox = false;
+            ClientSize = new Size(780, 790); MinimumSize = Size; MaximizeBox = false;
             Font = new Font("Segoe UI", 10); AutoScaleMode = AutoScaleMode.Dpi;
             StartPosition = FormStartPosition.CenterScreen;
             // Keep the agreement/actions reachable on small displays and Windows display scaling.
             AutoScroll=true;
-            Shown += (s,e) => {
+            Shown += async (s,e) => {
                 if (preview) return;
                 var area=Screen.FromControl(this).WorkingArea;
                 if (Height > area.Height-30) { MinimumSize=new Size(500,400); Height=area.Height-30; Top=area.Top+15; }
+                // Startup checks metadata only; packages require the current agreement or saved explicit opt-in.
+                await CheckUpdates();
             };
             AddLabel("WARCRAFT CS", 22, 18, 730, 36, new Font("Segoe UI", 22, FontStyle.Bold));
-            AddLabel("Select your own games. Setup creates a separate copy for offline play.", 24, 62, 730, 28, Font);
+            AddLabel("Version "+CurrentVersion+" — separate offline installation; updates preserve saves/settings.", 24, 62, 730, 28, Font);
             FolderRow("Warcraft III 1.26a folder", warcraft, 100);
             FolderRow("Counter-Strike 1.6 folder (cstrike or Half-Life)", cs, 172);
             FolderRow("Install Warcraft CS here", destination, 244);
@@ -52,25 +58,34 @@ namespace WarcraftCSLauncher {
             AddLink("Project notices", "https://github.com/YazgulDev/warcraft-cs/blob/release/0.3.0/NOTICE", 310, 456);
             consent.SetBounds(24, 489, 732, 36);
             consent.Name="DownloadConsent";
-            consent.Text="I agree to download and install the listed dependencies under their license terms.";
+            consent.Text="I agree to download/install project updates and the listed dependencies under their terms.";
             consent.Checked=false; consent.CheckedChanged += (s,e) => RefreshActions(); Controls.Add(consent);
-            install.Name="InstallButton"; install.Text="Install / Update"; install.SetBounds(24, 538, 180, 38); install.Click += async (s,e) => await Install(); Controls.Add(install);
-            play.Name="PlayButton"; play.Text="Play"; play.SetBounds(218, 538, 140, 38); play.Click += async (s,e) => await Play(); Controls.Add(play);
-            progress.SetBounds(378, 548, 378, 18); Controls.Add(progress);
-            status.SetBounds(24, 587, 732, 26); status.Text="Choose folders and agree to downloads to enable Install."; Controls.Add(status);
-            log.SetBounds(24, 620, 732, 90); log.Multiline=true; log.ReadOnly=true; log.ScrollBars=ScrollBars.Vertical;
+            automatic.Name="AutomaticUpdates"; automatic.Text="Automatically apply future project updates when Warcraft is closed.";
+            automatic.SetBounds(24,532,732,30); automatic.Checked=false; Controls.Add(automatic);
+            install.Name="InstallButton"; install.Text="Install / Update"; install.SetBounds(24, 578, 180, 38); install.Click += async (s,e) => await Install(); Controls.Add(install);
+            play.Name="PlayButton"; play.Text="Play"; play.SetBounds(218, 578, 140, 38); play.Click += async (s,e) => await Play(); Controls.Add(play);
+            check.Name="CheckUpdatesButton"; check.Text="Check for updates"; check.SetBounds(378,578,180,38); check.Click+=async(s,e)=>await CheckUpdates(); Controls.Add(check);
+            progress.SetBounds(578, 588, 178, 18); Controls.Add(progress);
+            status.SetBounds(24, 633, 732, 32); status.Text="Choose folders and agree to downloads to enable Install."; Controls.Add(status);
+            log.SetBounds(24, 675, 732, 90); log.Multiline=true; log.ReadOnly=true; log.ScrollBars=ScrollBars.Vertical;
             log.Font=new Font("Consolas", 9); Controls.Add(log);
             foreach (var box in new[] {warcraft,cs,destination}) box.TextChanged += (s,e) => RefreshActions();
             FormClosing += (s,e) => { if (busy) { e.Cancel=true; MessageBox.Show(this,"Wait for installation to finish. Vendor installers must not be interrupted."); } };
-            LoadPrevious(); RefreshActions();
+            if (!preview) LoadPrevious();
+            automatic.CheckedChanged+=(s,e)=>SaveUpdatePreference();
+            consent.CheckedChanged+=(s,e)=> { if (!consent.Checked) automatic.Checked=false; };
+            RefreshActions();
         }
 
         private static string Preferences { get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WarcraftCSLauncher", "last-install.json"); } }
+        private static string CurrentVersion { get { return Assembly.GetExecutingAssembly().GetName().Version.ToString(3); } }
         private void LoadPrevious() {
             try {
                 if (!File.Exists(Preferences)) return;
                 var saved=new JavaScriptSerializer().Deserialize<ClientRequest>(File.ReadAllText(Preferences));
                 warcraft.Text=saved.WarcraftDirectory; cs.Text=saved.CounterStrikeDirectory; destination.Text=saved.InstallDirectory;
+                // Only the explicit future-update opt-in carries download permission across launcher sessions.
+                automatic.Checked=saved.AutomaticUpdates; consent.Checked=saved.AutomaticUpdates;
             } catch { status.Text="Previous folder settings could not be loaded. Select folders again."; }
         }
         private void FolderRow(string title, TextBox box, int y) {
@@ -90,9 +105,10 @@ namespace WarcraftCSLauncher {
         private void RefreshActions() {
             install.Enabled=!busy && consent.Checked && Directory.Exists(warcraft.Text) && Directory.Exists(cs.Text) && !String.IsNullOrWhiteSpace(destination.Text);
             play.Enabled=!busy && File.Exists(Path.Combine(destination.Text,"client-installed.json"));
+            check.Enabled=!busy && !checking;
         }
         private void SetBusy(bool value) {
-            busy=value; foreach (var box in new[] {warcraft,cs,destination}) box.Enabled=!value; consent.Enabled=!value;
+            busy=value; foreach (var box in new[] {warcraft,cs,destination}) box.Enabled=!value; consent.Enabled=!value; automatic.Enabled=!value;
             progress.Style=value ? ProgressBarStyle.Marquee : ProgressBarStyle.Blocks; RefreshActions();
         }
         private void Report(string line) {
@@ -101,14 +117,71 @@ namespace WarcraftCSLauncher {
         }
         private async Task Install() {
             if (!consent.Checked) return;
+            // Install uses the discovered latest package, avoiding an old embedded payload after an update check.
+            if (latest!=null) { await ApplyUpdate(); return; }
             SetBusy(true); log.Clear(); status.Text="Installing... Progress and errors appear below.";
-            var request=new ClientRequest {WarcraftDirectory=warcraft.Text,CounterStrikeDirectory=cs.Text,InstallDirectory=destination.Text};
+            var request=CurrentRequest();
             try {
                 await SetupRunner.Install(request, consent.Checked, Report);
                 Directory.CreateDirectory(Path.GetDirectoryName(Preferences)); request.Save(Preferences);
                 status.Text="Ready. Press Play, select a living owned unit and press F6.";
             } catch (Exception error) { Report(error.Message); status.Text="Installation incomplete. Check the log and try again."; }
             finally { SetBusy(false); }
+        }
+        private ClientRequest CurrentRequest() {
+            return new ClientRequest {WarcraftDirectory=warcraft.Text,CounterStrikeDirectory=cs.Text,
+                InstallDirectory=destination.Text,AutomaticUpdates=automatic.Checked && consent.Checked};
+        }
+        private void SaveUpdatePreference() {
+            // Revoking auto-update immediately changes the saved policy, without starting setup or downloads.
+            if (preview) return;
+            try {
+                if (File.Exists(Preferences)) {
+                    var saved=new JavaScriptSerializer().Deserialize<ClientRequest>(File.ReadAllText(Preferences));
+                    saved.AutomaticUpdates=automatic.Checked && consent.Checked; saved.Save(Preferences);
+                }
+            } catch (Exception error) { Report("Could not save update preference: "+error.Message); }
+        }
+        private string InstalledRevision() {
+            var marker=Path.Combine(destination.Text,"client-installed.json");
+            if (!File.Exists(marker)) return null;
+            var saved=new JavaScriptSerializer().Deserialize<System.Collections.Generic.Dictionary<string,string>>(File.ReadAllText(marker));
+            return saved.ContainsKey("revision") ? saved["revision"] : Path.GetFileName(saved["source"]);
+        }
+        private async Task CheckUpdates() {
+            if (checking || busy || preview) return;
+            checking=true; RefreshActions();
+            try {
+                var candidate=await Task.Run(()=>ReleaseClient.Latest());
+                // The metadata request may finish after the user closes the window.
+                if (IsDisposed) return;
+                latest=candidate!=null && candidate.Manifest.IsNewer(CurrentVersion,SourcePayload.Revision,InstalledRevision()) ? candidate : null;
+                if (busy) return;
+                status.Text=latest==null ? "Up to date. Play and offline installation remain available." :
+                    "Update available: "+latest.Manifest.Version+". Agree to downloads and click Install / Update.";
+                Report(status.Text);
+            } catch (Exception error) {
+                // API outages/rate limits never disable an existing installation or trigger an unverified download.
+                if (IsDisposed) return;
+                latest=null; Report("Update check unavailable: "+error.Message);
+                if (!busy) status.Text="Update check unavailable. You can still Play or install the embedded version.";
+            } finally { checking=false; if (!IsDisposed) RefreshActions(); }
+            if (!busy && latest!=null && automatic.Checked && consent.Checked && install.Enabled && play.Enabled) await ApplyUpdate();
+        }
+        private async Task ApplyUpdate() {
+            if (busy || !consent.Checked || latest==null) return;
+            var selected=latest; var request=CurrentRequest(); SetBusy(true);
+            status.Text="Downloading and verifying the release, then updating the private installation...";
+            try {
+                var package=await Task.Run(()=>ReleaseUpdater.Prepare(selected,request,true,ReleaseClient.Download));
+                Report("Verified release "+selected.Manifest.Version+" source and launcher SHA256.");
+                await Task.Run(()=>SetupRunner.InstallSource(request,package.SourceDirectory,true,Report));
+                Directory.CreateDirectory(Path.GetDirectoryName(Preferences)); request.Save(Preferences);
+                latest=null; status.Text="Updated. Saves, settings and original games were preserved.";
+                // Restart only after successful runtime setup; a failed setup never replaces the working launcher.
+                if (LauncherSelfUpdate.Schedule(package)) { SetBusy(false); Close(); return; }
+            } catch (Exception error) { Report(error.Message); status.Text="Update not completed. Check the log; retry when Warcraft is closed."; }
+            finally { if (!IsDisposed) SetBusy(false); }
         }
         private async Task Play() {
             SetBusy(true);

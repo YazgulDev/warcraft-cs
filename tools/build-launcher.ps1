@@ -26,3 +26,14 @@ $exe=Join-Path $OutputDirectory 'WarcraftCSLauncher.exe'
 if ($LASTEXITCODE) { throw 'Launcher compilation failed.' }
 Get-Item -LiteralPath $exe | Select-Object FullName,Length
 Get-FileHash -LiteralPath $exe -Algorithm SHA256 | Select-Object Hash
+# Publish the exact embedded source snapshot and a manifest last, after its packages are available.
+$sourceArchive=Join-Path $OutputDirectory 'WarcraftCS-sources.zip'
+Copy-Item -LiteralPath $payload -Destination $sourceArchive -Force
+$sourceHash=(Get-FileHash -LiteralPath $sourceArchive -Algorithm SHA256).Hash.ToLowerInvariant()
+$launcherHash=(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+@{Version=$version;Revision=$sourceHash;SourceSha256=$sourceHash;LauncherSha256=$launcherHash} |
+    ConvertTo-Json | Set-Content -LiteralPath (Join-Path $OutputDirectory 'WarcraftCS-update.json') -Encoding UTF8
+($launcherHash+'  WarcraftCSLauncher.exe') | Set-Content -LiteralPath ($exe+'.sha256') -Encoding ascii
+$distribution=Join-Path $OutputDirectory ('WarcraftCS-'+$version+'-dist.zip')
+if (Test-Path -LiteralPath $distribution) { Remove-Item -LiteralPath $distribution -Force }
+Compress-Archive -LiteralPath $exe,($exe+'.sha256'),$sourceArchive,(Join-Path $OutputDirectory 'WarcraftCS-update.json') -DestinationPath $distribution

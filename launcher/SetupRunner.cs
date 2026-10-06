@@ -11,12 +11,20 @@ namespace WarcraftCSLauncher {
             if (!consent) throw new InvalidOperationException("Agree to downloads and installation before continuing.");
             request.ValidateDestination();
             return Task.Run(() => {
+                ReleaseUpdater.RequireIdle(request.InstallDirectory);
                 var source = SourcePayload.Extract(request.InstallDirectory, consent);
-                var requestFile = Path.Combine(request.InstallDirectory, "install-request.json");
-                request.Save(requestFile);
-                Run(Path.Combine(source, "launcher", "install-client.ps1"),
-                    "-RequestFile " + Quote(requestFile) + " -DownloadConsent", report);
+                InstallSource(request,source,consent,report);
             });
+        }
+
+        public static void InstallSource(ClientRequest request, string source, bool consent, Action<string> report) {
+            // Both embedded setup and release updates share the same permission, idle-game and path checks.
+            if (!consent) throw new InvalidOperationException("Download/install consent is required.");
+            request.ValidateDestination(); ReleaseUpdater.RequireIdle(request.InstallDirectory);
+            string allowed=Path.GetFullPath(Path.Combine(request.InstallDirectory,"sources"))+Path.DirectorySeparatorChar;
+            if (!Path.GetFullPath(source).StartsWith(allowed,StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("Invalid update source path.");
+            var requestFile=Path.Combine(request.InstallDirectory,"install-request.json"); request.Save(requestFile);
+            Run(Path.Combine(source,"launcher","install-client.ps1"),"-RequestFile "+Quote(requestFile)+" -DownloadConsent",report);
         }
 
         public static void Run(string script, string arguments, Action<string> report) {

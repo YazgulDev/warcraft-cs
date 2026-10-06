@@ -96,9 +96,11 @@ game file is distributed. The code licenses do not grant rights to game content.
 
 The user's grudge_and_poison_sword.zip contains v_grudge_sword.mdl and two poison
 models, without author/license/readme information. Earlier private experiments
-imported its Grudge skin/rig/animations. These models are not included, downloaded,
-licensed or imported by this release. The release uses the project's original
-procedural silver blade, gold guard and leather grip in tools/greatsword.py.
+imported its Grudge skin/rig/animations. These models are not included, downloaded
+or licensed by this release. Setup optionally imports an owner-selected private model and
+preserves its path during updates; permissions remain the owner's responsibility.
+Without a selected model, setup uses the project's original procedural silver blade,
+gold guard and leather grip in tools/greatsword.py.
 It attaches this geometry to the owner's CS knife hands/animation; the resulting
 converted asset still contains private game content and must not be redistributed.
 
@@ -115,6 +117,9 @@ It uses Windows' .NET Framework and PowerShell. After explicit user consent it m
 download the PSF Python installer (Python license), NumPy (BSD-3-Clause), signed
 Microsoft Build Tools/Windows SDK (Microsoft terms) and pinned MinHook (BSD-2-Clause).
 Those dependencies are installed separately and retain their upstream licenses.
+The launcher also checks the project's GitHub release metadata and, with current or
+saved explicit automatic-update permission, downloads SHA256-verified project source
+and launcher assets. Original game files and owner-provided models remain local.
 Warcraft's redist/miles codecs and providers are read from the owner's installation
 and copied only into their private runtime. They are not embedded, downloaded or redistributed.
 https://docs.python.org/3/license.html

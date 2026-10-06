@@ -8,11 +8,17 @@ namespace WarcraftCSLauncher {
         public string CounterStrikeDirectory { get; set; }
         public string InstallDirectory { get; set; }
         public string PythonExecutable { get; set; }
+        public bool AutomaticUpdates { get; set; }
 
         public void ValidateDestination() {
             if (!Directory.Exists(WarcraftDirectory) || !Directory.Exists(CounterStrikeDirectory))
                 throw new InvalidOperationException("Select your installed Warcraft III and Counter-Strike folders.");
             var target = Path.GetFullPath(InstallDirectory).TrimEnd(Path.DirectorySeparatorChar);
+            // Junctions must not redirect a selected update destination into the original games.
+            for (var parent=target; parent!=null; parent=Path.GetDirectoryName(parent)) {
+                if ((File.Exists(parent) || Directory.Exists(parent)) && (File.GetAttributes(parent)&FileAttributes.ReparsePoint)!=0)
+                    throw new InvalidOperationException("Install into a real directory, not through a junction.");
+            }
             if (target == Path.GetPathRoot(target).TrimEnd(Path.DirectorySeparatorChar))
                 throw new InvalidOperationException("Select a dedicated client folder, not a drive root.");
             // Extracting source must not modify an original game before the PowerShell validator can run.

@@ -47,6 +47,36 @@ Downloads/installation cannot start without consent: the UI, setup runner, paylo
 and PowerShell entry point all enforce the agreement. Play never installs dependencies.
 Existing game saves are not imported automatically; preserve your progress before updates.
 
+## Release updates
+
+Startup checks the latest stable release of `YazgulDev/warcraft-cs`; **Check for updates** retries it.
+Checks read metadata only. Installation requires the download agreement. The separate automatic-update
+checkbox is off by default; enabling it during an agreed installation saves that permission for future
+launcher sessions. Unchecking it immediately revokes the saved automatic-update policy.
+
+The updater downloads `WarcraftCS-update.json`, `WarcraftCS-sources.zip` and `WarcraftCSLauncher.exe`
+from that repository's release assets. It validates version/tag, SHA256, archive paths and the source
+version, then installs all new project sources in a revision-specific folder and rebuilds the private
+mod/assets. Existing saves, maps and INI settings are kept; a remembered private sword remains selected.
+The launcher refuses an update while its Warcraft runtime is running. Save and close the game, then retry.
+It never terminates a match to install an update.
+
+After successful setup, a detached helper waits for the old launcher to exit, atomically replaces its EXE,
+retains `<launcher>.previous` and restarts it. If the original launch folder is read-only, the verified
+cached launcher starts instead; details are in `updates/<revision>/launcher-replacement.log`.
+
+GitHub/network failures leave offline Play and embedded setup available. Invalid/corrupt packages are not
+installed. Setup failures are reported and must be retried; the launcher is replaced only after successful
+setup. Package hashes check integrity over HTTPS; the project executable remains unsigned.
+
+Version comparisons prevent downgrades. Source revisions also detect repaired assets of the same version,
+so release/0.3.0 can receive fixes without moving its published v0.3.0 tag. Use the attached sources ZIP for
+the updated build; GitHub's automatic tag archives continue to represent the original tag snapshot.
+
+The `dist` folder remains generated/untracked. Release assets include the EXE, checksum, exact embedded
+sources ZIP, updater manifest and `WarcraftCS-<version>-dist.zip`. Upload the manifest last so clients never
+start an update against an incomplete package set.
+
 ## Dependencies
 
 - Python: reuse a compatible local/registered interpreter with pip/venv; otherwise download
