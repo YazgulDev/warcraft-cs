@@ -126,3 +126,11 @@ variants still require map-specific verification.
 
 REQUIREMENTS.md accompanies the source and distribution packages and documents
 owned game files, dependencies, manual builds and the release updater contract.
+
+The original 0.3.0 launcher assembly accepted the verified 0.4.0 package and completed
+source installation, local dependency setup, owned-asset conversion and the ordinary
+native build in a disposable client. Its save sentinel, custom INI values and remembered
+private sword were preserved. Launcher regressions also passed release/version checks,
+corrupt package rejection, archive/junction protection, running-game refusal and delayed
+EXE replacement with backup/restart. The 0.4.0 UI preview displayed the correct version.
+Publication lint reported 147 source files, zero failures and zero warnings.

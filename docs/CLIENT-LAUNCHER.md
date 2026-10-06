@@ -70,11 +70,11 @@ installed. Setup failures are reported and must be retried; the launcher is repl
 setup. Package hashes check integrity over HTTPS; the project executable remains unsigned.
 
 Version comparisons prevent downgrades. Source revisions also detect repaired assets of the same version,
-so release/0.3.0 can receive fixes without moving its published v0.3.0 tag. Use the attached sources ZIP for
+so release/0.4.0 can receive fixes without moving its published v0.4.0 tag. Use the attached sources ZIP for
 the updated build; GitHub's automatic tag archives continue to represent the original tag snapshot.
 
 The `dist` folder remains generated/untracked. Release assets include the EXE, checksum, exact embedded
-sources ZIP, updater manifest and `WarcraftCS-<version>-dist.zip`. Upload the manifest last so clients never
+sources ZIP, readable `REQUIREMENTS.md`, updater manifest and `WarcraftCS-<version>-dist.zip`. Upload the manifest last so clients never
 start an update against an incomplete package set.
 
 ## Dependencies

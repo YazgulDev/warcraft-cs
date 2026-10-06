@@ -55,7 +55,8 @@ namespace WarcraftCSLauncher {
             AddLink("Python terms", "https://docs.python.org/3/license.html", 24, 456);
             AddLink("Microsoft terms", "https://visualstudio.microsoft.com/license-terms/", 157, 456);
             // Match the distributed launcher's release when presenting dependency and project notices.
-            AddLink("Project notices", "https://github.com/YazgulDev/warcraft-cs/blob/release/0.3.0/NOTICE", 310, 456);
+            // Keep notices tied to the version actually running after a launcher update.
+            AddLink("Project notices", "https://github.com/YazgulDev/warcraft-cs/blob/v"+CurrentVersion+"/NOTICE", 310, 456);
             consent.SetBounds(24, 489, 732, 36);
             consent.Name="DownloadConsent";
             consent.Text="I agree to download/install project updates and the listed dependencies under their terms.";

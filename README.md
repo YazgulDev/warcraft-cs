@@ -1,4 +1,4 @@
-# Warcraft CS by Yazgul — 0.3.0
+# Warcraft CS by Yazgul — 0.4.0
 
 Counter-Strike 1.6 inside Warcraft III: control your own hero or unit in first person,
 shoot, and play regular maps, campaigns and compatible custom maps.
@@ -79,7 +79,7 @@ Run in PowerShell, replacing the game paths with your own:
 ```powershell
 git clone https://github.com/YazgulDev/warcraft-cs.git
 cd warcraft-cs
-git switch release/0.3.0
+git switch release/0.4.0
 .\setup.cmd -WarcraftDirectory "E:\Warcraft III" -CounterStrikeDirectory "C:\SteamGames\steamapps\common\Half-Life\cstrike"
 .\play.cmd
 ```
