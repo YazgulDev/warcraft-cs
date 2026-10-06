@@ -186,6 +186,10 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--sword-model", type=Path, help="Import an authored GoldSrc sword with its complete rig and sequences")
     args = parser.parse_args()
+    # Prefer the owner's private Grudge sword even when invoking the converter outside setup.
+    preferred_sword = Path(__file__).resolve().parents[1] / '.local/models/v_grudge_sword.mdl'
+    if args.sword_model is None and preferred_sword.is_file():
+        args.sword_model = preferred_sword
     args.output.mkdir(parents=True, exist_ok=True)
     manifest = []
     weapon_sounds = set()

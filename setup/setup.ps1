@@ -7,6 +7,9 @@ param(
 )
 $ErrorActionPreference='Stop'
 $root=Split-Path -Parent $PSScriptRoot
+. (Join-Path $root 'tools/sword-model.ps1')
+# Keep the owner's Grudge model and full authored animation set across repeated setup runs.
+$SwordModel=Get-WarcraftCsSwordModel $root $SwordModel
 $warcraft=(Resolve-Path -LiteralPath $WarcraftDirectory).Path
 $cstrike=(Resolve-Path -LiteralPath $CounterStrikeDirectory).Path
 if (!$RuntimeDirectory) { $RuntimeDirectory=Join-Path $root '.local/warcraft-cs' }
@@ -66,5 +69,5 @@ if ($SwordModel) { $arguments+=@('--sword-model',(Resolve-Path -LiteralPath $Swo
 if ($LASTEXITCODE) { throw 'Private asset conversion failed.' }
 & (Join-Path $root 'tools/build.ps1') -OutputDirectory $runtime -MinHookDirectory (Join-Path $root '.local/dependencies/minhook')
 # Store machine-specific paths outside source control; launch resolves this owner-only configuration.
-@{runtime=$runtime;warcraft=$warcraft;cstrike=$cstrike} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $root '.local/setup.json') -Encoding utf8
+@{runtime=$runtime;warcraft=$warcraft;cstrike=$cstrike;sword_model=$SwordModel} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $root '.local/setup.json') -Encoding utf8
 Write-Output 'Setup complete. Run play.cmd. Game files and converted assets must remain private.'
