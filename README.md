@@ -155,12 +155,12 @@ Planned work:
 - [ ] Improve movement.
 - [ ] Fix gameplay and camera bugs.
 - [ ] Add drivable vehicles.
-- [ ] Add pilotable airplanes.
 - [x] Add an installer that is easy to use.
 - [ ] Test the full campaign.
-- [ ] Expose more gameplay values in configuration.
-- [ ] Improve hitboxes and hit registration.
+- [x] Improve hitboxes and hit registration.
 - [ ] Make further improvements based on playtesting and feedback.
+- [ ] Add multiplayer support(possibly)
+- [ ] Add Warcraft Reforge support(possibly)
 
 ## Source layout and validation
 
