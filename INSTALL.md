@@ -105,6 +105,13 @@ If Python is not on PATH:
 .\setup\setup.ps1 -WarcraftDirectory "E:\Warcraft III" -CounterStrikeDirectory "C:\SteamGames\steamapps\common\Half-Life\cstrike" -PythonExecutable "C:\Python312\python.exe"
 ```
 
+An external sword model is not distributed. If you have permission to use your own copy,
+source setup accepts `-SwordModel "C:\PrivateModels\v_grudge_sword.mdl"` and remembers the
+private path for later updates. Alternatively, place it in the checkout's
+`.local/models/v_grudge_sword.mdl`. Without a selected private model, setup generates the
+original sword using your CS knife hands/animations. External model permissions are separate
+from the project's code license; keep the model outside Git.
+
 Optional launch arguments:
 
 ```powershell
