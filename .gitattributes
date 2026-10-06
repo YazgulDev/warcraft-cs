@@ -1,0 +1,8 @@
+* text=auto
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+*.py text eol=lf
+*.cpp text eol=lf
+*.hpp text eol=lf
+*.inc text eol=lf
+*.md text eol=lf

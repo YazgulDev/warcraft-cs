@@ -1,0 +1,6 @@
+interface:
+  display_name: "Feature and Release Workflow"
+  short_description: "Yazgul's source-only feature/release/master workflow"
+  default_prompt: "Use $feature-release-workflow to handle this project's feature branches, release merges and source-only commits."
+policy:
+  allow_implicit_invocation: true
