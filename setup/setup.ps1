@@ -68,7 +68,8 @@ if ($LASTEXITCODE) { throw 'Could not install the local Python dependency.' }
 & (Join-Path $root 'tools/fetch-dependencies.ps1')
 $assets=Join-Path $runtime 'WarcraftCS/assets'
 $arguments=@((Join-Path $root 'tools/export_models.py'),'--cstrike',$cstrike,'--output',$assets)
-# Convert owned CS hands/animations and generate the project's original sword geometry locally.
+# Convert owned CS hands/animations with the selected private sword or original generated geometry.
+if ($SwordModel) { $arguments+=@('--sword-model',$SwordModel) }
 & $python @arguments
 if ($LASTEXITCODE) { throw 'Private asset conversion failed.' }
 & (Join-Path $root 'tools/build.ps1') -OutputDirectory $runtime -MinHookDirectory (Join-Path $root '.local/dependencies/minhook')

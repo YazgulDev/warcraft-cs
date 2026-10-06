@@ -6,6 +6,15 @@ using System.Security.Cryptography;
 
 namespace WarcraftCSLauncher {
     public static class SourcePayload {
+        public static string Revision {
+            get {
+                using (var resource=Assembly.GetExecutingAssembly().GetManifestResourceStream("WarcraftCS.Source.zip"))
+                using (var memory=new MemoryStream()) {
+                    if (resource==null) throw new InvalidOperationException("Source payload is missing.");
+                    resource.CopyTo(memory); return ReleaseManifest.Hash(memory.ToArray());
+                }
+            }
+        }
         public static string Extract(string installDirectory, bool consent) {
             if (!consent) throw new InvalidOperationException("Download/install consent is required.");
             using (var resource = Assembly.GetExecutingAssembly().GetManifestResourceStream("WarcraftCS.Source.zip")) {
@@ -32,13 +41,7 @@ namespace WarcraftCSLauncher {
                 if (!output.StartsWith(root, StringComparison.OrdinalIgnoreCase) || entry.FullName.Contains(":"))
                     throw new InvalidDataException("Unsafe source archive path.");
                 // An existing directory junction must not redirect extraction into an original game or other files.
-                var component=output;
-                while (component != null) {
-                    if ((File.Exists(component) || Directory.Exists(component)) &&
-                        (File.GetAttributes(component) & FileAttributes.ReparsePoint) != 0)
-                        throw new InvalidDataException("Source extraction through a junction is not allowed.");
-                    component=Path.GetDirectoryName(component);
-                }
+                RequireOrdinaryPath(output);
                 total += entry.Length;
                 if (total > 10000000) throw new InvalidDataException("Source archive is too large.");
             }
@@ -49,6 +52,13 @@ namespace WarcraftCSLauncher {
                 Directory.CreateDirectory(Path.GetDirectoryName(output));
                 using (var input = entry.Open()) using (var file = File.Create(output)) input.CopyTo(file);
             }
+        }
+        public static void RequireOrdinaryPath(string path) {
+            // Apply the same junction protection to extracted sources and executable update caches.
+            for (var component=Path.GetFullPath(path);component!=null;component=Path.GetDirectoryName(component))
+                if ((File.Exists(component) || Directory.Exists(component)) &&
+                    (File.GetAttributes(component)&FileAttributes.ReparsePoint)!=0)
+                    throw new InvalidDataException("Writing through a junction is not allowed.");
         }
     }
 }

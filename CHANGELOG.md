@@ -4,6 +4,10 @@
 
 - Fix Warcraft sound initialization by copying the owner's `redist/miles` providers/codecs during setup.
 - Repair missing Miles files in existing marked private runtimes; detect incomplete source installs before dependency downloads.
+- Merge private sword selection/preservation and Miles repair into release/0.3.0.
+- Add launcher startup release checks, saved opt-in automatic updates, SHA256 verification and safe EXE replacement/restart.
+- Update complete source/build assets while preserving saves, settings and remembered private sword paths; refuse updates during a running match.
+- Publish an exact source payload, updater manifest and distribution ZIP as release assets; retain immutable tags and source-only Git history.
 
 ## 0.3.0 — 2026-10-06
 
