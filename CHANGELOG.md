@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0 — 2026-10-06
+
+- Use the project's original straight silver sword with a gold guard and leather grip.
+- Generate sword geometry from project-owned source; import hands/animations only from the owner's CS knife.
+- Remove external sword-model selection/import from this release; no downloaded sword asset is distributed.
+- Translate the complete README to English and update repository/installation links.
+- Start release/0.2.0 after merging the 0.1.0 baseline into master; retain all old branches and tags.
+
 ## 0.1.0 — 2026-10-06
 
 Initial source-only release of Warcraft CS by Yazgul.
