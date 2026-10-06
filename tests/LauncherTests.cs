@@ -20,12 +20,14 @@ public static class LauncherTests {
         using (var form=new LauncherForm(true)) {
             var agreement=(CheckBox)form.Controls["DownloadConsent"];
             var install=(Button)form.Controls["InstallButton"];
-            Require(!agreement.Checked && !install.Enabled,"UI grants consent by default");
+            var developer=(Button)form.Controls["DeveloperInstallButton"];
+            // Neither installation mode may inherit download permission from valid folders alone.
+            Require(!agreement.Checked && !install.Enabled && !developer.Enabled,"UI grants consent by default");
             form.Controls["WarcraftDirectory"].Text=wc; form.Controls["CounterStrikeDirectory"].Text=cs;
             form.Controls["InstallDirectory"].Text=destination;
-            Require(!install.Enabled,"Folders alone enable install");
-            agreement.Checked=true; Require(install.Enabled,"Valid agreement/folders do not enable install");
-            agreement.Checked=false; Require(!install.Enabled,"Revoked agreement did not disable install");
+            Require(!install.Enabled && !developer.Enabled,"Folders alone enable install");
+            agreement.Checked=true; Require(install.Enabled && developer.Enabled,"Valid agreement/folders do not enable install");
+            agreement.Checked=false; Require(!install.Enabled && !developer.Enabled,"Revoked agreement did not disable install");
         }
         // Consent must prevent even extraction/requests, not merely disable a visual control.
         Reject(() => SetupRunner.Install(request,false,Console.WriteLine),"No-consent runner started work");
@@ -49,6 +51,17 @@ public static class LauncherTests {
         // Clients must receive the audio-copy policy, while the codecs themselves stay owner-supplied.
         Require(File.Exists(Path.Combine(source,"setup","audio-runtime.ps1")),"Embedded Miles setup missing");
         Require(!Directory.Exists(Path.Combine(source,".local")),"Private assets embedded");
+        // Cancel/close declines updates; the prompt exposes both the release information and mode-specific downloads.
+        var release=new ReleaseUpdate {Manifest=new ReleaseManifest {Version="0.5.0",RuntimeSha256=new string('a',64)},Notes="New tree and weapon fixes."};
+        using(var prompt=new UpdateAvailableForm(release,"Player",true)) {
+            Require(((TextBox)prompt.Controls["ReleaseNotes"]).Text==release.Notes,"Release notes missing");
+            Require(((Label)prompt.Controls["ModeDetails"]).Text.Contains("No Build Tools"),"Player prompt hides dependencies");
+            Require(((Button)prompt.Controls["DeclineUpdate"]).DialogResult==DialogResult.Cancel,"Decline confirms update");
+            Require(((Button)prompt.Controls["ConfirmUpdate"]).DialogResult==DialogResult.OK,"Confirm does not accept update");
+        }
+        release.Manifest.RuntimeSha256=null;
+        using(var legacy=new UpdateAvailableForm(release,"Player",true)) Require(!((Button)legacy.Controls["ConfirmUpdate"]).Enabled,"Player prompt offers legacy source build");
+        using(var dev=new UpdateAvailableForm(release,"Developer",true)) Require(((Label)dev.Controls["ModeDetails"]).Text.Contains("several GB"),"Developer prompt hides SDK download");
         Console.WriteLine("PASS launcher consent, original-directory protection, special-character paths, ZIP traversal and source payload");
         return 0;
     }

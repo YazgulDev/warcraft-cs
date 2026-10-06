@@ -8,8 +8,28 @@ using System.Web.Script.Serialization;
 namespace WarcraftCSLauncher {
     public static class ReleaseClient {
         public const string LatestUrl = "https://api.github.com/repos/YazgulDev/warcraft-cs/releases/latest";
+        public const string LatestManifestUrl = "https://github.com/YazgulDev/warcraft-cs/releases/latest/download/WarcraftCS-update.json";
         public static ReleaseUpdate Latest() {
-            return Parse(Encoding.UTF8.GetString(Download(LatestUrl)), Download);
+            return Latest(Download);
+        }
+        public static ReleaseUpdate Latest(Func<string,byte[]> download) {
+            try { return Parse(Encoding.UTF8.GetString(download(LatestUrl)),download); }
+            catch (WebException error) {
+                var response=error.Response as HttpWebResponse;
+                if (response==null) throw;
+                int status=(int)response.StatusCode;response.Close();
+                if (status!=403 && status!=429) throw;
+                // GitHub's latest-asset redirect avoids the public API limit without a token or weaker package checks.
+                return ParseLatestManifest(download(LatestManifestUrl));
+            }
+        }
+        public static ReleaseUpdate ParseLatestManifest(byte[] data) {
+            var manifest=ReadManifest(data);manifest.Validate("v"+manifest.Version);
+            string root="https://github.com/YazgulDev/warcraft-cs/releases/download/v"+manifest.Version+"/";
+            return new ReleaseUpdate {Manifest=manifest,SourceUrl=root+"WarcraftCS-sources.zip",LauncherUrl=root+"WarcraftCSLauncher.exe"};
+        }
+        private static ReleaseManifest ReadManifest(byte[] data) {
+            return new JavaScriptSerializer().Deserialize<ReleaseManifest>(Encoding.UTF8.GetString(data).TrimStart('\uFEFF'));
         }
         public static ReleaseUpdate Parse(string json, Func<string, byte[]> download) {
             var serializer = new JavaScriptSerializer();
@@ -30,9 +50,11 @@ namespace WarcraftCSLauncher {
             if (!assets.ContainsKey("WarcraftCS-update.json")) return null;
             if (!assets.ContainsKey("WarcraftCS-sources.zip") || !assets.ContainsKey("WarcraftCSLauncher.exe"))
                 throw new InvalidDataException("Release upload is incomplete. Retry the update check later.");
-            var manifest = serializer.Deserialize<ReleaseManifest>(Encoding.UTF8.GetString(download(assets["WarcraftCS-update.json"])).TrimStart('\uFEFF'));
+            var manifest = ReadManifest(download(assets["WarcraftCS-update.json"]));
             manifest.Validate(tag);
-            return new ReleaseUpdate {Manifest=manifest, SourceUrl=assets["WarcraftCS-sources.zip"], LauncherUrl=assets["WarcraftCSLauncher.exe"]};
+            object notes;
+            return new ReleaseUpdate {Manifest=manifest, SourceUrl=assets["WarcraftCS-sources.zip"], LauncherUrl=assets["WarcraftCSLauncher.exe"],
+                Notes=release.TryGetValue("body",out notes) ? notes as string : null};
         }
         public static void ValidateAssetUrl(string url, string tag, string name) {
             // Restrict executable/source downloads to this repository's canonical GitHub release assets.

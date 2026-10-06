@@ -134,3 +134,28 @@ private sword were preserved. Launcher regressions also passed release/version c
 corrupt package rejection, archive/junction protection, running-game refusal and delayed
 EXE replacement with backup/restart. The 0.4.0 UI preview displayed the correct version.
 Publication lint reported 147 source files, zero failures and zero warnings.
+
+## Launcher Player/Developer installation and update confirmation
+
+The launcher embeds a separate native-runtime ZIP containing two project-built x86 modules,
+their SHA256/source-version/Miles-ABI manifest and the project/MinHook/mechanics notices.
+DLL import inspection found only inbox Windows libraries; no Visual Studio runtime DLL,
+compiler, SDK or proprietary Warcraft library is distributed. Git and the source ZIP remain
+source-only. Player needs Python/NumPy to convert the owner's game assets locally.
+
+A real Player installation/update completed with compiler detection and Build Tools installation
+replaced by failing test sentinels. Installed DLL bytes matched the embedded package; no MinHook
+source was fetched. A fresh installation also succeeded directly from the EXE without an update
+cache. Explicit Developer installation fetched pinned MinHook and rebuilt locally using installed
+MSVC/SDK. The original updater-enabled 0.3.0 assembly also completed installation of this new
+bundle through the verified update cache. Save sentinel bytes, custom INI values and remembered
+private sword selection were preserved across the mode changes.
+
+Launcher regressions cover consent for both mode buttons, update prompt confirmation/refusal,
+legacy source-only release rejection in Player mode, manifest/package hashes and extraction
+guards. Native-payload tests reject corruption, traversal and source/version mismatches.
+Offscreen previews verified both installation buttons and Player/Developer update dialogs.
+GitHub latest release lookup succeeded; rate-limit fallback manifest parsing preserves canonical
+repository URLs and stable-version/checksum validation. No new campaign or interactive game
+session was opened for these installer changes. Fresh vendor-tool installation on a clean Windows
+machine remains unverified; Developer mode reused installed tools in the integration test.

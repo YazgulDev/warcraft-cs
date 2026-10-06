@@ -3,11 +3,14 @@ param(
     [Parameter(Mandatory=$true)][string]$CounterStrikeDirectory,
     [string]$RuntimeDirectory='',
     [string]$PythonExecutable='python',
-    [string]$SwordModel=''
+    [string]$SwordModel='',
+    [ValidateSet('Player','Developer')][string]$InstallMode='Developer',
+    [string]$PrebuiltDirectory=''
 )
 $ErrorActionPreference='Stop'
 $root=Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'audio-runtime.ps1')
+. (Join-Path $PSScriptRoot 'prebuilt-runtime.ps1')
 . (Join-Path $root 'tools/sword-model.ps1')
 # Keep the owner's Grudge model and full authored animation set across repeated setup runs.
 $SwordModel=Get-WarcraftCsSwordModel $root $SwordModel
@@ -28,6 +31,8 @@ if ($version.FileMajorPart -ne 1 -or $version.FileMinorPart -ne 26 -or $version.
 }
 # Detect an incomplete owned install before creating a private copy or downloading dependencies.
 Assert-WarcraftAudioRuntime $warcraft
+# Reject mismatched Player modules before copying a runtime or installing Python dependencies.
+if ($InstallMode -eq 'Player') { Assert-PrebuiltHost $PrebuiltDirectory $warcraft }
 foreach ($weapon in @('ak47','m4a1','usp','awp','knife','c4')) {
     if (!(Test-Path -LiteralPath (Join-Path $cstrike "models/v_$weapon.mdl"))) { throw "Missing owned CS model v_$weapon.mdl. Supply the cstrike folder with its loose model files." }
 }
@@ -65,14 +70,22 @@ if (!(Test-Path -LiteralPath (Join-Path $venv 'Scripts/python.exe'))) {
 $python=Join-Path $venv 'Scripts/python.exe'
 & $python -m pip install -r (Join-Path $root 'requirements.txt')
 if ($LASTEXITCODE) { throw 'Could not install the local Python dependency.' }
-& (Join-Path $root 'tools/fetch-dependencies.ps1')
+# Only source developers need MinHook sources and the compiler; Player uses bundled x86 modules.
+if ($InstallMode -eq 'Developer') { & (Join-Path $root 'tools/fetch-dependencies.ps1') }
 $assets=Join-Path $runtime 'WarcraftCS/assets'
 $arguments=@((Join-Path $root 'tools/export_models.py'),'--cstrike',$cstrike,'--output',$assets)
 # Convert owned CS hands/animations with the selected private sword or original generated geometry.
 if ($SwordModel) { $arguments+=@('--sword-model',$SwordModel) }
 & $python @arguments
 if ($LASTEXITCODE) { throw 'Private asset conversion failed.' }
-& (Join-Path $root 'tools/build.ps1') -OutputDirectory $runtime -MinHookDirectory (Join-Path $root '.local/dependencies/minhook')
+if ($InstallMode -eq 'Developer') {
+    & (Join-Path $root 'tools/build.ps1') -OutputDirectory $runtime -MinHookDirectory (Join-Path $root '.local/dependencies/minhook') -PythonExecutable $python
+} else {
+    Install-PrebuiltRuntime $PrebuiltDirectory $runtime $warcraft
+    # Match the ordinary build's first-install policy without replacing the owner's customized INI.
+    $config=Join-Path $runtime 'WarcraftCS/WarcraftCS.ini'
+    if (!(Test-Path -LiteralPath $config)) { Copy-Item -LiteralPath (Join-Path $root 'config/WarcraftCS.ini') -Destination $config }
+}
 # Store machine-specific paths outside source control; launch resolves this owner-only configuration.
 @{runtime=$runtime;warcraft=$warcraft;cstrike=$cstrike;sword_model=$SwordModel} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $root '.local/setup.json') -Encoding utf8
 Write-Output 'Setup complete. Run play.cmd. Game files and converted assets must remain private.'

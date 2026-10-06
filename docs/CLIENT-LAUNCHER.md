@@ -2,7 +2,7 @@
 
 `WarcraftCSLauncher.exe` is a standalone launcher/installer for Windows 10/11 x64.
 It uses the .NET Framework and Windows PowerShell included with supported Windows installs.
-It embeds the project's source and notices; clients do not need Git, a compiler or Python beforehand.
+It embeds the project's source, prebuilt x86 mod DLLs and notices; clients do not need Git, a compiler or Python beforehand.
 
 ## Install and play
 
@@ -12,7 +12,8 @@ It embeds the project's source and notices; clients do not need Git, a compiler 
 3. Choose the client installation folder. Default: `%LOCALAPPDATA%/WarcraftCS`.
    It must be outside both original game folders. Allow enough space for another Warcraft copy.
 4. Read the dependency summary/linked terms and tick the agreement box, initially unchecked.
-5. Press **Install / Update**. Progress and failures appear in the log.
+5. Press **Install / Update — Player** to install bundled DLLs without Build Tools/SDK.
+   **Install / Update — Developer** prepares missing C++ tools/SDK and builds from source. Progress appears in the log.
 6. Press **Play**. Select your own living unit in a single-player map/campaign and press F6.
 
 ### Folder examples
@@ -50,14 +51,17 @@ Existing game saves are not imported automatically; preserve your progress befor
 ## Release updates
 
 Startup checks the latest stable release of `YazgulDev/warcraft-cs`; **Check for updates** retries it.
-Checks read metadata only. Installation requires the download agreement. The separate automatic-update
-checkbox is off by default; enabling it during an agreed installation saves that permission for future
-launcher sessions. Unchecking it immediately revokes the saved automatic-update policy.
+Checks always read metadata automatically, regardless of installation consent. When an update is found,
+a dialog shows the version and notes. **Update** confirms downloads/installation in your saved Player or
+Developer mode; **Not now** or closing the window postpones it. The dialog explains its dependencies and
+acceptance of terms. Warcraft must be closed. There is no automatic-install checkbox. Previous folder selections are remembered; legacy automatic-install
+preferences do not grant consent or start installation in this launcher.
 
 The updater downloads `WarcraftCS-update.json`, `WarcraftCS-sources.zip` and `WarcraftCSLauncher.exe`
 from that repository's release assets. It validates version/tag, SHA256, archive paths and the source
-version, then installs all new project sources in a revision-specific folder and rebuilds the private
-mod/assets. Existing saves, maps and INI settings are kept; a remembered private sword remains selected.
+version, then installs all new project sources in a revision-specific folder. Player validates the EXE’s
+embedded native runtime and installs its two mod modules. Developer rebuilds the modules locally.
+Both convert owned game assets. Existing saves, maps and INI settings are kept; a remembered private sword remains selected.
 The launcher refuses an update while its Warcraft runtime is running. Save and close the game, then retry.
 It never terminates a match to install an update.
 
@@ -65,7 +69,9 @@ After successful setup, a detached helper waits for the old launcher to exit, at
 retains `<launcher>.previous` and restarts it. If the original launch folder is read-only, the verified
 cached launcher starts instead; details are in `updates/<revision>/launcher-replacement.log`.
 
-GitHub/network failures leave offline Play and embedded setup available. Invalid/corrupt packages are not
+If GitHub API checks return 403/429, the launcher retries through GitHub’s documented latest-asset
+manifest URL without a token, retaining version/SHA256 verification. Release notes are linked when
+the API cannot provide their text. GitHub/network failures leave offline Play and embedded setup available. Invalid/corrupt packages are not
 installed. Setup failures are reported and must be retried; the launcher is replaced only after successful
 setup. Package hashes check integrity over HTTPS; the project executable remains unsigned.
 
@@ -74,7 +80,7 @@ so release/0.4.0 can receive fixes without moving its published v0.4.0 tag. Use 
 the updated build; GitHub's automatic tag archives continue to represent the original tag snapshot.
 
 The `dist` folder remains generated/untracked. Release assets include the EXE, checksum, exact embedded
-sources ZIP, readable `REQUIREMENTS.md`, updater manifest and `WarcraftCS-<version>-dist.zip`. Upload the manifest last so clients never
+sources ZIP, native `WarcraftCS-runtime.zip`, readable `REQUIREMENTS.md`, updater manifest and `WarcraftCS-<version>-dist.zip`. Upload the manifest last so clients never
 start an update against an incomplete package set.
 
 ## Dependencies
@@ -82,12 +88,12 @@ start an update against an incomplete package set.
 - Python: reuse a compatible local/registered interpreter with pip/venv; otherwise download
   the pinned PSF Python 3.12.10 x64 installer into the client cache and install privately without PATH changes.
   SHA256 and the PSF Authenticode signature are checked before execution.
-- Microsoft Visual Studio 2022 C++ Build Tools/Windows SDK: reuse installed tools; otherwise obtain
+- Microsoft Visual Studio 2022 C++ Build Tools/Windows SDK (**Developer only**): reuse installed tools; otherwise obtain
   Microsoft's signed bootstrapper and request its C++ workload with recommended SDK components.
   This can consume several GB. Windows may request administrator approval. If a restart is required,
   restart Windows and click Install again. The launcher does not bypass UAC or force a reboot.
 - NumPy: installed into the source payload's private Python venv through PyPI.
-- MinHook: immutable v1.3.4 revision with SHA256 verification, downloaded into the private cache.
+- MinHook: statically linked into Player’s bundled module with its BSD notice. Developer obtains immutable v1.3.4 revision with SHA256 verification, downloaded into the private cache.
 
 Vendor references: [Python Windows installer](https://docs.python.org/3.12/using/windows.html),
 [Microsoft installer options](https://learn.microsoft.com/en-us/visualstudio/install/use-command-line-parameters-to-install-visual-studio?view=vs-2022).
@@ -107,14 +113,16 @@ Back up any saves from `Game/save` before removing your client copy.
 
 ## Build and verify the EXE
 
-Developers need Git, Python and the Windows .NET Framework C# compiler. Stage the reviewed source first:
+Developers need Git, Python, Visual Studio x86 C++ tools/SDK, owned Warcraft III 1.26a and the Windows .NET Framework C# compiler. Stage the reviewed source first:
 
 ```powershell
 python tools/audit_sources.py --staged
-.\tools\build-launcher.ps1
+.\tools\build-launcher.ps1 -WarcraftDirectory "E:\Warcraft III"
 .\tools\test-launcher.ps1
+$manifest=Get-Content dist/WarcraftCS-update.json -Raw | ConvertFrom-Json
+.\tools\test-prebuilt-runtime.ps1 -Package dist/WarcraftCS-runtime.zip -SourceRevision $manifest.Revision -Launcher (Resolve-Path dist/WarcraftCSLauncher.exe).Path
 ```
 
-Output: `dist/WarcraftCSLauncher.exe` (ignored by Git). The build embeds exactly the audited staged tree.
+Output: `dist/WarcraftCSLauncher.exe` (ignored by Git). The build embeds exactly the audited staged source tree plus a separate native-runtime resource. Git and the source ZIP contain no binaries.
 Only launcher source/scripts/docs are committed; the own-code EXE can be shared separately.
 The EXE is not Authenticode-signed by Yazgul; dependency installers are verified using their vendor signatures.

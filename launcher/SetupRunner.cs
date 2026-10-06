@@ -23,6 +23,8 @@ namespace WarcraftCSLauncher {
             request.ValidateDestination(); ReleaseUpdater.RequireIdle(request.InstallDirectory);
             string allowed=Path.GetFullPath(Path.Combine(request.InstallDirectory,"sources"))+Path.DirectorySeparatorChar;
             if (!Path.GetFullPath(source).StartsWith(allowed,StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("Invalid update source path.");
+            // The Player installer reads embedded module data from this EXE or the verified update-cache EXE.
+            request.LauncherExecutable=System.Reflection.Assembly.GetExecutingAssembly().Location;
             var requestFile=Path.Combine(request.InstallDirectory,"install-request.json"); request.Save(requestFile);
             Run(Path.Combine(source,"launcher","install-client.ps1"),"-RequestFile "+Quote(requestFile)+" -DownloadConsent",report);
         }
