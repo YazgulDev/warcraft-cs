@@ -11,7 +11,6 @@ namespace WarcraftCSLauncher {
     public sealed class LauncherForm : Form {
         private readonly TextBox warcraft = new TextBox(), cs = new TextBox(), destination = new TextBox();
         private readonly CheckBox consent = new CheckBox();
-        private readonly CheckBox automatic = new CheckBox();
         private readonly Button install = new Button(), play = new Button(), check = new Button();
         private readonly TextBox log = new TextBox();
         private readonly Label status = new Label();
@@ -34,7 +33,7 @@ namespace WarcraftCSLauncher {
                 if (preview) return;
                 var area=Screen.FromControl(this).WorkingArea;
                 if (Height > area.Height-30) { MinimumSize=new Size(500,400); Height=area.Height-30; Top=area.Top+15; }
-                // Startup checks metadata only; packages require the current agreement or saved explicit opt-in.
+                // Every startup checks release metadata; installation remains an explicit button action.
                 await CheckUpdates();
             };
             AddLabel("WARCRAFT CS", 22, 18, 730, 36, new Font("Segoe UI", 22, FontStyle.Bold));
@@ -61,8 +60,8 @@ namespace WarcraftCSLauncher {
             consent.Name="DownloadConsent";
             consent.Text="I agree to download/install project updates and the listed dependencies under their terms.";
             consent.Checked=false; consent.CheckedChanged += (s,e) => RefreshActions(); Controls.Add(consent);
-            automatic.Name="AutomaticUpdates"; automatic.Text="Automatically apply future project updates when Warcraft is closed.";
-            automatic.SetBounds(24,532,732,30); automatic.Checked=false; Controls.Add(automatic);
+            // Describe the unconditional check without presenting an automatic-install preference.
+            AddLabel("New releases are checked automatically when the launcher starts.",24,532,732,30,Font);
             install.Name="InstallButton"; install.Text="Install / Update"; install.SetBounds(24, 578, 180, 38); install.Click += async (s,e) => await Install(); Controls.Add(install);
             play.Name="PlayButton"; play.Text="Play"; play.SetBounds(218, 578, 140, 38); play.Click += async (s,e) => await Play(); Controls.Add(play);
             check.Name="CheckUpdatesButton"; check.Text="Check for updates"; check.SetBounds(378,578,180,38); check.Click+=async(s,e)=>await CheckUpdates(); Controls.Add(check);
@@ -73,8 +72,6 @@ namespace WarcraftCSLauncher {
             foreach (var box in new[] {warcraft,cs,destination}) box.TextChanged += (s,e) => RefreshActions();
             FormClosing += (s,e) => { if (busy) { e.Cancel=true; MessageBox.Show(this,"Wait for installation to finish. Vendor installers must not be interrupted."); } };
             if (!preview) LoadPrevious();
-            automatic.CheckedChanged+=(s,e)=>SaveUpdatePreference();
-            consent.CheckedChanged+=(s,e)=> { if (!consent.Checked) automatic.Checked=false; };
             RefreshActions();
         }
 
@@ -84,9 +81,8 @@ namespace WarcraftCSLauncher {
             try {
                 if (!File.Exists(Preferences)) return;
                 var saved=new JavaScriptSerializer().Deserialize<ClientRequest>(File.ReadAllText(Preferences));
+                // Restore saved folders only; legacy automatic-install preferences never grant permission.
                 warcraft.Text=saved.WarcraftDirectory; cs.Text=saved.CounterStrikeDirectory; destination.Text=saved.InstallDirectory;
-                // Only the explicit future-update opt-in carries download permission across launcher sessions.
-                automatic.Checked=saved.AutomaticUpdates; consent.Checked=saved.AutomaticUpdates;
             } catch { status.Text="Previous folder settings could not be loaded. Select folders again."; }
         }
         private void FolderRow(string title, TextBox box, int y) {
@@ -109,7 +105,7 @@ namespace WarcraftCSLauncher {
             check.Enabled=!busy && !checking;
         }
         private void SetBusy(bool value) {
-            busy=value; foreach (var box in new[] {warcraft,cs,destination}) box.Enabled=!value; consent.Enabled=!value; automatic.Enabled=!value;
+            busy=value; foreach (var box in new[] {warcraft,cs,destination}) box.Enabled=!value; consent.Enabled=!value;
             progress.Style=value ? ProgressBarStyle.Marquee : ProgressBarStyle.Blocks; RefreshActions();
         }
         private void Report(string line) {
@@ -131,17 +127,7 @@ namespace WarcraftCSLauncher {
         }
         private ClientRequest CurrentRequest() {
             return new ClientRequest {WarcraftDirectory=warcraft.Text,CounterStrikeDirectory=cs.Text,
-                InstallDirectory=destination.Text,AutomaticUpdates=automatic.Checked && consent.Checked};
-        }
-        private void SaveUpdatePreference() {
-            // Revoking auto-update immediately changes the saved policy, without starting setup or downloads.
-            if (preview) return;
-            try {
-                if (File.Exists(Preferences)) {
-                    var saved=new JavaScriptSerializer().Deserialize<ClientRequest>(File.ReadAllText(Preferences));
-                    saved.AutomaticUpdates=automatic.Checked && consent.Checked; saved.Save(Preferences);
-                }
-            } catch (Exception error) { Report("Could not save update preference: "+error.Message); }
+                InstallDirectory=destination.Text};
         }
         private string InstalledRevision() {
             var marker=Path.Combine(destination.Text,"client-installed.json");
@@ -167,7 +153,6 @@ namespace WarcraftCSLauncher {
                 latest=null; Report("Update check unavailable: "+error.Message);
                 if (!busy) status.Text="Update check unavailable. You can still Play or install the embedded version.";
             } finally { checking=false; if (!IsDisposed) RefreshActions(); }
-            if (!busy && latest!=null && automatic.Checked && consent.Checked && install.Enabled && play.Enabled) await ApplyUpdate();
         }
         private async Task ApplyUpdate() {
             if (busy || !consent.Checked || latest==null) return;

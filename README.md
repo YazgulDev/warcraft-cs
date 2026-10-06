@@ -60,11 +60,11 @@ Choose these folders using **Browse...** (the examples are illustrative):
 4. Click **Install / Update**. Missing Python, Microsoft C++ tools/Windows SDK, NumPy and MinHook are prepared automatically.
 5. Click **Play**, select your own living unit and press F6.
 
-The launcher checks GitHub release metadata on startup. **Install / Update** downloads verified
-latest sources and the launcher, rebuilds the private mod/assets and restarts the launcher if needed.
-Enable **Automatically apply future project updates** to remember download permission and update
-on later launches when Warcraft is closed. Saves, INI settings and private sword selections are retained.
-Without that opt-in, each session requires the download agreement. Offline Play remains available.
+The launcher checks new stable GitHub releases automatically at every startup; **Check for updates**
+retries the check. Accept the download agreement and click **Install / Update** to install a discovered
+update while Warcraft is closed. This downloads verified sources and the launcher, rebuilds the private
+mod/assets and restarts the launcher if needed. Saves, INI settings and private sword selections are
+retained. Each session requires the download agreement. Offline Play remains available.
 
 No download or installation starts before agreement. Microsoft tools may need administrator approval,
 several GB of space and a Windows restart. The launcher includes only project source, never game files.

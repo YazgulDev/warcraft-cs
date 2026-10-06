@@ -50,9 +50,10 @@ Existing game saves are not imported automatically; preserve your progress befor
 ## Release updates
 
 Startup checks the latest stable release of `YazgulDev/warcraft-cs`; **Check for updates** retries it.
-Checks read metadata only. Installation requires the download agreement. The separate automatic-update
-checkbox is off by default; enabling it during an agreed installation saves that permission for future
-launcher sessions. Unchecking it immediately revokes the saved automatic-update policy.
+Checks always read metadata automatically, regardless of installation consent. When an update is found,
+accept the download agreement and click **Install / Update** while Warcraft is closed. There is no
+automatic-install checkbox. Previous folder selections are remembered; legacy automatic-install
+preferences do not grant consent or start installation in this launcher.
 
 The updater downloads `WarcraftCS-update.json`, `WarcraftCS-sources.zip` and `WarcraftCSLauncher.exe`
 from that repository's release assets. It validates version/tag, SHA256, archive paths and the source

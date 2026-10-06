@@ -8,6 +8,7 @@ namespace WarcraftCSLauncher {
         public string CounterStrikeDirectory { get; set; }
         public string InstallDirectory { get; set; }
         public string PythonExecutable { get; set; }
+        // Retain the old JSON field for client compatibility; it no longer authorizes automatic installation.
         public bool AutomaticUpdates { get; set; }
 
         public void ValidateDestination() {

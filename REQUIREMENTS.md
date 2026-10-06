@@ -58,4 +58,4 @@ Set `VERSION` to the new stable `major.minor.patch` version, build the launcher 
 
 Attach `WarcraftCSLauncher.exe`, `WarcraftCS-sources.zip` and **`WarcraftCS-update.json`** to that stable release. Upload the manifest last, after its matching packages are available. Also attach the generated EXE checksum, `REQUIREMENTS.md` and `WarcraftCS-<version>-dist.zip` for direct downloads. The updater validates the tag/version and package hashes; drafts and prereleases are skipped.
 
-Users enable the separate automatic-update checkbox while agreeing to downloads. The launcher checks releases on startup; updates require Warcraft to be closed. Existing saves and INI settings are preserved. See [INSTALL.md](INSTALL.md) and the [launcher guide](docs/CLIENT-LAUNCHER.md) for folders, recovery and updates.
+The launcher automatically checks releases on every startup, without requiring a checkbox. Users accept the download agreement and click **Install / Update** to install a discovered update while Warcraft is closed. Existing saves and INI settings are preserved. See [INSTALL.md](INSTALL.md) and the [launcher guide](docs/CLIENT-LAUNCHER.md) for folders, recovery and updates.

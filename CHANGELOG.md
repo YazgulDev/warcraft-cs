@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Remove the automatic-install checkbox; always check releases at launcher startup and install discovered updates through Install / Update after consent.
+- Restore saved folders without inheriting legacy automatic-install permission.
+
 ## 0.4.0 — 2026-10-06
 
 - Add a complete requirements file for users, source builds and release updater assets.
