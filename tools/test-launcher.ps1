@@ -10,6 +10,9 @@ $tests=Join-Path $build 'LauncherTests.exe'
 if ($LASTEXITCODE) { throw 'Launcher test compilation failed.' }
 & $tests (Join-Path $root ('.local/launcher-tests-'+[guid]::NewGuid().ToString('N')))
 if ($LASTEXITCODE) { throw 'Launcher regression checks failed.' }
+# The embedded setup must retain the codec/provider folder in both new and previously installed clients.
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root 'tools/test-audio-runtime.ps1')
+if ($LASTEXITCODE) { throw 'Audio runtime installation checks failed.' }
 # Parse every script for Windows PowerShell and enforce a backend consent denial before any side effects.
 foreach ($script in @(Get-ChildItem -LiteralPath (Join-Path $root 'launcher') -Filter '*.ps1')) {
     $tokens=$null;$errors=$null

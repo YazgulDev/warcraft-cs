@@ -30,6 +30,10 @@ save folder, individual EXE or the `models` subfolder.
 `%LOCALAPPDATA%` denotes your Windows user account's local application-data directory;
 the launcher fills in its full path automatically. Keep this default if unsure.
 
+Warcraft's game root must retain `redist/miles` (including `Mssfast.m3d`, `Mp3dec.asi`,
+`Reverb3.flt`). Setup copies these owned codecs/providers on first install and on updates,
+repairing clients whose older installer omitted the folder. No audio codec is embedded or downloaded.
+
 Warcraft opens in fullscreen. Choose **Single Player → Custom Game** or **Campaign**,
 start a map, select your own living unit and press **F6**. Repeat after changing maps.
 Use WASD/mouse to move/aim, left mouse to shoot, R to reload, 1–7 to select weapons,
