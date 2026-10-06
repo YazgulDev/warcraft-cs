@@ -184,7 +184,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cstrike", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--sword-model", type=Path)
     args = parser.parse_args()
+    # Prefer the owner's private Grudge sword even when invoking the converter outside setup.
+    preferred_sword = Path(__file__).resolve().parents[1] / '.local/models/v_grudge_sword.mdl'
+    if args.sword_model is None and preferred_sword.is_file():
+        args.sword_model = preferred_sword
     args.output.mkdir(parents=True, exist_ok=True)
     manifest = []
     weapon_sounds = set()
@@ -194,9 +199,14 @@ def main():
         excluded = ("silencer.bmp",) if weapon in ("m4a1", "usp") else ()
         manifest.append(model.export(args.output / f"{weapon}.wcg", excluded))
         weapon_sounds.update(model.audio_timeline(args.output / f"{weapon}.wca"))
-    # The release uses our original silver blade/gold guard; no downloaded sword model is imported.
-    manifest.append(export_greatsword(args.output / "knife.wcg", args.output / "sword.wcg"))
-    shutil.copy2(args.output / "knife.wca", args.output / "sword.wca")
+    # Import only an explicitly selected/private model; public packages contain no external sword asset.
+    if args.sword_model:
+        sword = StudioModel(args.sword_model)
+        manifest.append(sword.export(args.output / "sword.wcg"))
+        weapon_sounds.update(sword.audio_timeline(args.output / "sword.wca"))
+    else:
+        manifest.append(export_greatsword(args.output / "knife.wcg", args.output / "sword.wcg"))
+        shutil.copy2(args.output / "knife.wca", args.output / "sword.wca")
     # Keep retail-derived files in the private lab, with their source fingerprints.
     sounds = args.output / "sounds"
     sounds.mkdir(exist_ok=True)

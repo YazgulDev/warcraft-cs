@@ -1,5 +1,31 @@
 # Changelog
 
+## Unreleased
+
+- Add a complete requirements file for users, source builds and release updater assets.
+- Pick authored tree trunk triangles instead of canopy boxes; preserve ordinary gate/model-bound behavior.
+- Add mouse-wheel weapon cycling with wraparound, high-resolution fractions and focus/status reset.
+- Fix Warcraft sound initialization by copying the owner's `redist/miles` providers/codecs during setup.
+- Repair missing Miles files in existing marked private runtimes; detect incomplete source installs before dependency downloads.
+- Merge private sword selection/preservation and Miles repair into release/0.3.0.
+- Add launcher startup release checks, saved opt-in automatic updates, SHA256 verification and safe EXE replacement/restart.
+- Update complete source/build assets while preserving saves, settings and remembered private sword paths; refuse updates during a running match.
+- Publish an exact source payload, updater manifest and distribution ZIP as release assets; retain immutable tags and source-only Git history.
+
+## 0.3.0 — 2026-10-06
+
+- Windows client EXE with game-folder selection, explicit download/install consent, live setup log and Play.
+- Embedded audited source payload; clients do not need Git or a separate source archive.
+- Install missing Python and signed Microsoft C++ tools/Windows SDK; reuse existing dependencies.
+- Preserve owned game installations through the private-runtime setup pipeline.
+- English installation guide with exact folder examples, first launch, updates, saves and removal.
+- Support Unicode/space/ampersand/apostrophe installation paths in the background setup and native build.
+- Merge release/0.2.0 into master before starting release/0.3.0; retain previous branches and tags.
+
+Validation: launcher consent/path/source-payload tests and all seven C++ logic suites pass;
+complete isolated client setup passed using existing Python/MSVC/SDK. Fresh vendor installation
+on a clean Windows machine and complete campaign compatibility remain unverified.
+
 ## 0.2.0 — 2026-10-06
 
 - Use the project's original straight silver sword with a gold guard and leather grip.

@@ -1,16 +1,18 @@
-# Warcraft CS by Yazgul — 0.2.0
+# Warcraft CS by Yazgul — 0.3.0
 
 Counter-Strike 1.6 inside Warcraft III: control your own hero or unit in first person,
 shoot, and play regular maps, campaigns and compatible custom maps.
 The world, enemies, quests and health remain governed by Warcraft.
 
 An unofficial single-player fan project, unaffiliated with Blizzard Entertainment or Valve.
-**This repository contains source code. Game files, models, sounds, maps, saves and compiled
-binaries are not distributed. You need your own installed copies of both games.**
+**This Git repository contains source code. The release launcher contains project-owned code
+and source; it does not include game files, models, sounds, maps or saves.
+You need your own installed copies of both games.**
 Created by Yazgul with assistance from Codex (GPT-6). This is an early prototype with known limitations.
 
 ## Features
 
+- Windows EXE launcher with game-folder selection, consent before dependency setup, live logs and Play.
 - F6 switches between FPS and RTS; fullscreen launch, relative mouse look and hidden player-unit model.
 - WASD, jumping, crouching, acceleration, friction and weapon movement speeds inspired by CS.
 - Unsilenced AK47, M4A1 and USP, AWP with two zoom levels, knife, C4 and a greatsword.
@@ -21,33 +23,72 @@ Created by Yazgul with assistance from Codex (GPT-6). This is an early prototype
 - E picks up items/runes through the real inventory; a successful rune restores 20% ammunition by default.
 - H recruits your own units to follow and fight, O makes them follow without attacking, J releases them.
 - INI settings for ammunition recovery, damage and squad behavior, reloaded with F8.
+- Mouse-wheel weapon cycling through all seven slots, with high-resolution wheel support.
+- Tree shots use trunk surfaces rather than canopy boxes, leaving enemies beside trunks hittable.
 
 ## Requirements
 
 - Windows x64 and **Warcraft III 1.26a x86**, with `Game.dll` version `1.26.0.6401`.
 - Installed Counter-Strike 1.6 with loose files in `cstrike/models` and `cstrike/sound`.
-- Git, Python 3.10+, Visual Studio 2022 or Build Tools with **Desktop development with C++**,
-  MSVC x86 and Windows SDK.
+- Internet access for dependency downloads. The EXE installs missing Python and C++ build tools
+  after your agreement; clients do not need Git or development tools beforehand.
+- For manual source setup: Git, Python 3.10–3.14, Visual Studio 2022 or Build Tools with
+  **Desktop development with C++**, MSVC x86 and Windows SDK.
 - OpenGL support and enough disk space for a separate copy of Warcraft.
 
 Reforged and other Warcraft patches are not supported.
+The full game-file, system, build-dependency and updater requirements are in [REQUIREMENTS.md](REQUIREMENTS.md).
 
 ## Setup and play
+
+### Windows client launcher
+
+Download **[WarcraftCSLauncher.exe from Releases](https://github.com/YazgulDev/warcraft-cs/releases/latest)**.
+Run the EXE; clients do not need Git or a separate source checkout.
+
+Choose these folders using **Browse...** (the examples are illustrative):
+
+| Launcher field | Which folder to choose | Example |
+| --- | --- | --- |
+| Warcraft III 1.26a folder | The game root containing `war3.exe`, `Game.dll`, `Mss32.dll` and the Warcraft MPQ archives. Do not choose `Maps` or `save`. | `E:\Warcraft III` |
+| Counter-Strike 1.6 folder | `cstrike`, containing `models/v_knife.mdl` and `sound`; the launcher also accepts its `Half-Life` parent. Do not choose the Steam library root or `models` alone. | `C:\SteamGames\steamapps\common\Half-Life\cstrike` |
+| Install Warcraft CS here | A dedicated writable folder outside both game installations. This receives a separate Warcraft copy. | Default: `%LOCALAPPDATA%\WarcraftCS`, or `D:\WarcraftCS` |
+
+1. Select your installed Warcraft III 1.26a folder and CS 1.6 folder (`cstrike` or its Half-Life parent).
+2. Select a separate installation folder for Warcraft CS.
+3. Read the download details and agree to downloading/installing the dependencies and their terms.
+4. Click **Install / Update**. Missing Python, Microsoft C++ tools/Windows SDK, NumPy and MinHook are prepared automatically.
+5. Click **Play**, select your own living unit and press F6.
+
+The launcher checks GitHub release metadata on startup. **Install / Update** downloads verified
+latest sources and the launcher, rebuilds the private mod/assets and restarts the launcher if needed.
+Enable **Automatically apply future project updates** to remember download permission and update
+on later launches when Warcraft is closed. Saves, INI settings and private sword selections are retained.
+Without that opt-in, each session requires the download agreement. Offline Play remains available.
+
+No download or installation starts before agreement. Microsoft tools may need administrator approval,
+several GB of space and a Windows restart. The launcher includes only project source, never game files.
+The launcher itself is unsigned; dependency installers have verified vendor signatures.
+Detailed folder examples, first launch, updates and removal: [INSTALL.md](INSTALL.md).
+Developer build instructions: [Client launcher](docs/CLIENT-LAUNCHER.md).
+
+### Source setup
 
 Run in PowerShell, replacing the game paths with your own:
 
 ```powershell
 git clone https://github.com/YazgulDev/warcraft-cs.git
 cd warcraft-cs
-git switch release/0.2.0
+git switch release/0.3.0
 .\setup.cmd -WarcraftDirectory "E:\Warcraft III" -CounterStrikeDirectory "C:\SteamGames\steamapps\common\Half-Life\cstrike"
 .\play.cmd
 ```
 
 Setup downloads a pinned MinHook dependency separately, installs NumPy in a local environment,
-reads your CS models/sounds, generates the original sword and builds the mod in a private Warcraft copy.
+reads your CS models/sounds, uses an optional privately supplied sword or generates the original sword,
+and builds the mod in a private Warcraft copy.
 Your original installations remain unchanged. Additional installation and removal details are in
-[INSTALL.md](INSTALL.md), currently in Russian.
+[INSTALL.md](INSTALL.md).
 
 Choose **Single Player → Custom Game** or **Campaign**, select your own living unit and press F6.
 Individual maps do not need editing. Enable FPS again after changing maps.
@@ -72,6 +113,7 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 | Right mouse button | Knife/sword: strong attack; AWP: cycle two zoom levels and normal view |
 | R / F7 | Reload / refill all ammunition, including C4 |
 | 1 / 2 / 3 / 4 / 5 / 6 / 7 | AK47 / M4A1 / USP / AWP / knife / C4 / original greatsword |
+| Mouse wheel up / down | Previous / next weapon; wraps through all seven slots |
 | Hold left mouse button with C4 | Plant for 3 seconds while standing on the ground |
 | E | Pick up the nearest item/rune if the unit has an available inventory |
 | H / O / J | Your units: follow and fight / follow without attacking / release squad |
@@ -79,7 +121,8 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 
 ## Configuration
 
-Default file: `.local/warcraft-cs/WarcraftCS/WarcraftCS.ini`.
+EXE installation: `<installation folder>/Game/WarcraftCS/WarcraftCS.ini`.
+Default source installation: `.local/warcraft-cs/WarcraftCS/WarcraftCS.ini`.
 Edit it and press F8 in FPS.
 
 - `[Runes] AmmoPercent=20`; `AmmoWeapons=all` or `current`.
@@ -112,7 +155,7 @@ Planned work:
 - [ ] Fix gameplay and camera bugs.
 - [ ] Add drivable vehicles.
 - [ ] Add pilotable airplanes.
-- [ ] Add an installer that is easy to use.
+- [x] Add an installer that is easy to use.
 - [ ] Test the full campaign.
 - [ ] Expose more gameplay values in configuration.
 - [ ] Improve hitboxes and hit registration.

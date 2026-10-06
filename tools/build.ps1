@@ -1,4 +1,4 @@
-param([string]$OutputDirectory = '',[string]$MinHookDirectory='',[string]$PythonExecutable='', [switch]$TestStatusEffects,[switch]$TestGameplay)
+param([string]$OutputDirectory = '',[string]$MinHookDirectory='',[string]$PythonExecutable='', [switch]$TestStatusEffects,[switch]$TestGameplay,[switch]$TestTreeAndWheel)
 $ErrorActionPreference = 'Stop'
 $modRoot = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'paths.ps1')
@@ -21,6 +21,8 @@ $sources = @('WarcraftApi.cpp', 'MouseLook.cpp', 'MovementPhysics.cpp', 'Warcraf
 # Native spell fixtures are opt-in and are excluded from the installed normal build.
 # Item pickup and temporary native squad policies remain independent of shooter input/rendering.
 $sources += @('GameplaySettings.cpp','ItemPickup.cpp','SquadController.cpp','FpsCombatGuard.cpp') | ForEach-Object { '"' + (Join-Path $modRoot "src/$_") + '"' }
+# Tree narrow-phase geometry is decoded independently of native widget enumeration and the controller.
+$sources += '"' + (Join-Path $modRoot 'src/TreeTrunkMesh.cpp') + '"'
 # Install defaults only once so rebuilds preserve the player's customized settings.
 $configDirectory=Join-Path $OutputDirectory 'WarcraftCS'
 New-Item -ItemType Directory -Path $configDirectory -Force | Out-Null
@@ -35,6 +37,11 @@ if ($TestStatusEffects) {
 if ($TestGameplay) {
     $sources += '"' + (Join-Path $modRoot 'tests/RuneCombatScene.cpp') + '"'
     $testDefine += ' /DWCS_GAMEPLAY_TEST'
+}
+if ($TestTreeAndWheel) {
+    # Tree/input fixtures require an explicit test build and request; release binaries exclude them.
+    $sources += '"' + (Join-Path $modRoot 'tests/TreeAndWheelScene.cpp') + '"'
+    $testDefine += ' /DWCS_TREE_WHEEL_TEST'
 }
 $buildDirectory = Join-Path $modRoot 'build'
 New-Item -ItemType Directory -Path $buildDirectory -Force | Out-Null
@@ -55,20 +62,23 @@ New-Item -ItemType Directory -Path $hookBuild -Force | Out-Null
 $hookLibrary=Join-Path $hookBuild 'libMinHook.x86.lib'
 $hookSources=@('src/buffer.c','src/hook.c','src/trampoline.c','src/hde/hde32.c') | ForEach-Object { '"'+(Join-Path $MinHookDirectory $_)+'"' }
 $hookScript=Join-Path $hookBuild 'compile.cmd'
-@('@echo off',('call "'+$compilerEnvironment+'" >nul'),'if errorlevel 1 exit /b 1',
+$hookCommands=@('@echo off','chcp 65001 >nul',('call "'+$compilerEnvironment+'" >nul'),'if errorlevel 1 exit /b 1',
     ('cl /nologo /c /MT /O2 /W3 /DWIN32_LEAN_AND_MEAN /I"'+$hookRoot+'" '+($hookSources -join ' ')),
-    'if errorlevel 1 exit /b 1',('lib /nologo /OUT:"'+$hookLibrary+'" buffer.obj hook.obj trampoline.obj hde32.obj')) |
-    Set-Content -LiteralPath $hookScript -Encoding ascii
+    'if errorlevel 1 exit /b 1',('lib /nologo /OUT:"'+$hookLibrary+'" buffer.obj hook.obj trampoline.obj hde32.obj'))
+# Client folders can contain Unicode: write BOM-free UTF-8 and select the matching cmd code page.
+[IO.File]::WriteAllLines($hookScript,$hookCommands,[Text.UTF8Encoding]::new($false))
 Push-Location $hookBuild
-try { & $env:COMSPEC /d /c $hookScript; if ($LASTEXITCODE) { throw 'MinHook x86 build failed.' } } finally { Pop-Location }
+# The working directory owns this fixed filename, avoiding cmd parsing of user-chosen path characters.
+try { & $env:COMSPEC /d /c compile.cmd; if ($LASTEXITCODE) { throw 'MinHook x86 build failed.' } } finally { Pop-Location }
 $compileCommand = 'cl /nologo /LD /MT /std:c++17 /EHsc /W4 /O2 /DWIN32_LEAN_AND_MEAN /DNOMINMAX' + $testDefine + ' /I"' + $hookRoot + '" ' + ($sources -join ' ') + ' /link /OUT:"' + (Join-Path $OutputDirectory 'WarcraftCS.mix') + '" "' + $hookLibrary + '" user32.lib gdi32.lib opengl32.lib version.lib winmm.lib ole32.lib'
 # A saved batch file avoids nested cmd/PowerShell quoting around Visual Studio paths.
 $buildScript = Join-Path $buildDirectory 'compile.cmd'
 $loaderCommand = 'cl /nologo /LD /MT /O2 /W4 /DWIN32_LEAN_AND_MEAN "' + (Join-Path $modRoot 'src/MilesLoader.cpp') + '" "' + [System.IO.Path]::ChangeExtension($exports, '.cpp') + '" /link /DEF:"' + $exports + '" /OUT:"' + (Join-Path $OutputDirectory 'Mss32.dll') + '"'
-@('@echo off', 'rem Initialize the x86 compiler, then build the project-owned mod.', ('call "' + $compilerEnvironment + '" >nul'), 'if errorlevel 1 exit /b 1', $compileCommand, 'if errorlevel 1 exit /b 1', $loaderCommand) | Set-Content -LiteralPath $buildScript -Encoding ascii
+$commands=@('@echo off','chcp 65001 >nul', 'rem Initialize the x86 compiler, then build the project-owned mod.', ('call "' + $compilerEnvironment + '" >nul'), 'if errorlevel 1 exit /b 1', $compileCommand, 'if errorlevel 1 exit /b 1', $loaderCommand)
+[IO.File]::WriteAllLines($buildScript,$commands,[Text.UTF8Encoding]::new($false))
 Push-Location $buildDirectory
 try {
-    & $env:COMSPEC /d /c $buildScript
+    & $env:COMSPEC /d /c compile.cmd
     if ($LASTEXITCODE) { throw "Build failed: $LASTEXITCODE" }
 } finally { Pop-Location }
 Get-Item -LiteralPath (Join-Path $OutputDirectory 'WarcraftCS.mix') | Select-Object FullName, Length
