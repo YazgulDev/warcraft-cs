@@ -15,6 +15,30 @@ It embeds the project's source and notices; clients do not need Git, a compiler 
 5. Press **Install / Update**. Progress and failures appear in the log.
 6. Press **Play**. Select your own living unit in a single-player map/campaign and press F6.
 
+### Folder examples
+
+| Field | Example | Files to look for |
+| --- | --- | --- |
+| Warcraft III 1.26a folder | `E:\Warcraft III` | `war3.exe`, `Game.dll` (1.26.0.6401), `Mss32.dll`, `Storm.dll`, `War3.mpq`, `War3x.mpq`, `War3Patch.mpq`, `War3xlocal.mpq` |
+| Counter-Strike 1.6 folder | `C:\SteamGames\steamapps\common\Half-Life\cstrike` | `models/v_ak47.mdl`, the other weapon models, `sound/weapons`, `sound/player` |
+| Install Warcraft CS here | `D:\WarcraftCS` | A dedicated writable folder outside Warcraft, Half-Life and `cstrike`; setup creates `Game` and `sources` inside it. |
+
+Steam can use another drive or library name. In Steam, open Counter-Strike's
+**Manage → Browse local files**, then select its `cstrike` folder (or the containing `Half-Life` folder).
+Selecting `C:\SteamGames` or `steamapps` alone is insufficient. Do not select a map,
+save folder, individual EXE or the `models` subfolder.
+`%LOCALAPPDATA%` denotes your Windows user account's local application-data directory;
+the launcher fills in its full path automatically. Keep this default if unsure.
+
+Warcraft opens in fullscreen. Choose **Single Player → Custom Game** or **Campaign**,
+start a map, select your own living unit and press **F6**. Repeat after changing maps.
+Use WASD/mouse to move/aim, left mouse to shoot, R to reload, 1–7 to select weapons,
+and F6 to return to RTS. See the [complete controls](../README.md#controls).
+
+After a Windows restart requested by Microsoft setup, open this EXE again, select the
+same folders, accept the agreement and retry **Install / Update**. Successful installation
+enables **Play**; consent is not required just to play an already prepared installation.
+
 Downloads/installation cannot start without consent: the UI, setup runner, payload extractor
 and PowerShell entry point all enforce the agreement. Play never installs dependencies.
 Existing game saves are not imported automatically; preserve your progress before updates.
