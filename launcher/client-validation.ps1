@@ -1,4 +1,5 @@
 # Accept either cstrike itself or its Half-Life parent, while keeping generated files outside both games.
+. (Join-Path (Split-Path -Parent $PSScriptRoot) 'setup/audio-runtime.ps1')
 function Get-ClientPaths($Request) {
     $warcraft=(Resolve-Path -LiteralPath $Request.WarcraftDirectory).Path.TrimEnd('\')
     $cstrike=(Resolve-Path -LiteralPath $Request.CounterStrikeDirectory).Path.TrimEnd('\')
@@ -18,6 +19,8 @@ function Assert-ClientGames([string]$Warcraft,[string]$CounterStrike) {
     }
     $version=(Get-Item -LiteralPath (Join-Path $Warcraft 'Game.dll')).VersionInfo
     if ($version.FileMajorPart -ne 1 -or $version.FileMinorPart -ne 26 -or $version.FileBuildPart -ne 0 -or $version.FilePrivatePart -ne 6401) { throw 'Only Warcraft III 1.26a (Game.dll 1.26.0.6401) is supported.' }
+    # Reject missing Miles codecs/providers before the launcher downloads or installs dependencies.
+    Assert-WarcraftAudioRuntime $Warcraft
     foreach ($weapon in @('ak47','m4a1','usp','awp','knife','c4')) {
         if (!(Test-Path -LiteralPath (Join-Path $CounterStrike "models/v_$weapon.mdl") -PathType Leaf)) { throw "CS folder is required; missing models/v_$weapon.mdl." }
     }

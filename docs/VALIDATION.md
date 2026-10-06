@@ -85,3 +85,25 @@ for this installer feature. Native gameplay behavior is unchanged by the launche
 All seven independent C++ logic suites and launcher regression checks passed again
 when preparing 0.3.0. The release EXE reports assembly version 0.3.0.0 and includes
 the English installation guide and source-only release tree.
+
+## Miles provider setup repair
+
+A user's first client launch reported "Unable to initialize base sound services".
+The sound proxy/original DLL checksums and standalone device-open tests passed, but
+the new private runtime lacked the owned `redist/miles` folder. The older working
+development runtime included it. The installer had copied only selected top-level
+files and Maps/Campaigns/Movies/AI Scripts, omitting the actual Miles codec/providers.
+
+The warning reproduced in the affected client and an isolated ASCII-path copy,
+including a control run with the proxy/mod disabled. Restoring `redist/miles`
+from the owner's original installation removed the warning. The affected client
+then launched with its normal mod: 43 CS clips initialized, and process-only capture
+confirmed Warcraft menu music (RMS about 0.214, versus effectively zero before repair).
+No sound-device/registry settings, original game files or saved progress were changed.
+
+The shared audio setup helper runs for both fresh and existing marked runtimes.
+Regression checks cover all five provider/codec fixtures, repeat installation,
+legacy missing-folder repair, preservation of unrelated runtime files, missing-source
+rejection before writes, and rejection of original/unmarked destinations.
+Launcher payload/consent tests and Windows PowerShell audio checks passed.
+Only owned source is embedded in the rebuilt EXE; the audio components remain local game data.

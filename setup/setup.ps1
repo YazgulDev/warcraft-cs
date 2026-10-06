@@ -2,10 +2,12 @@ param(
     [Parameter(Mandatory=$true)][string]$WarcraftDirectory,
     [Parameter(Mandatory=$true)][string]$CounterStrikeDirectory,
     [string]$RuntimeDirectory='',
-    [string]$PythonExecutable='python'
+    [string]$PythonExecutable='python',
+    [string]$SwordModel=''
 )
 $ErrorActionPreference='Stop'
 $root=Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot 'audio-runtime.ps1')
 . (Join-Path $root 'tools/sword-model.ps1')
 # Keep the owner's Grudge model and full authored animation set across repeated setup runs.
 $SwordModel=Get-WarcraftCsSwordModel $root $SwordModel
@@ -24,6 +26,8 @@ $version=(Get-Item -LiteralPath (Join-Path $warcraft 'Game.dll')).VersionInfo
 if ($version.FileMajorPart -ne 1 -or $version.FileMinorPart -ne 26 -or $version.FileBuildPart -ne 0 -or $version.FilePrivatePart -ne 6401) {
     throw 'Only Warcraft III 1.26a x86 (Game.dll 1.26.0.6401) is supported.'
 }
+# Detect an incomplete owned install before creating a private copy or downloading dependencies.
+Assert-WarcraftAudioRuntime $warcraft
 foreach ($weapon in @('ak47','m4a1','usp','awp','knife','c4')) {
     if (!(Test-Path -LiteralPath (Join-Path $cstrike "models/v_$weapon.mdl"))) { throw "Missing owned CS model v_$weapon.mdl. Supply the cstrike folder with its loose model files." }
 }
@@ -51,6 +55,8 @@ if (Test-Path -LiteralPath $runtime) {
     Copy-Item -LiteralPath (Join-Path $runtime 'Mss32.dll') -Destination (Join-Path $runtime 'WarcraftOriginalMss.dll')
     Set-Content -LiteralPath $marker -Value 'Private owned Warcraft runtime; do not redistribute.' -Encoding ascii
 }
+# Keep this outside first-install copying so updates repair the missing providers in older clients.
+Copy-WarcraftAudioRuntime $warcraft $runtime
 $venv=Join-Path $root '.local/venv'
 if (!(Test-Path -LiteralPath (Join-Path $venv 'Scripts/python.exe'))) {
     & $PythonExecutable -m venv $venv

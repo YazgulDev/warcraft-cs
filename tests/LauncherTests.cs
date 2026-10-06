@@ -46,6 +46,8 @@ public static class LauncherTests {
         var source=SourcePayload.Extract(destination,true);
         Require(File.Exists(Path.Combine(source,"launcher","install-client.ps1")),"Embedded installer missing");
         Require(File.Exists(Path.Combine(source,"src","Plugin.cpp")),"Embedded owned sources missing");
+        // Clients must receive the audio-copy policy, while the codecs themselves stay owner-supplied.
+        Require(File.Exists(Path.Combine(source,"setup","audio-runtime.ps1")),"Embedded Miles setup missing");
         Require(!Directory.Exists(Path.Combine(source,".local")),"Private assets embedded");
         Console.WriteLine("PASS launcher consent, original-directory protection, special-character paths, ZIP traversal and source payload");
         return 0;

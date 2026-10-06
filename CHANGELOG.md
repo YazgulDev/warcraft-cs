@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Fix Warcraft sound initialization by copying the owner's `redist/miles` providers/codecs during setup.
+- Repair missing Miles files in existing marked private runtimes; detect incomplete source installs before dependency downloads.
+
 ## 0.3.0 — 2026-10-06
 
 - Windows client EXE with game-folder selection, explicit download/install consent, live setup log and Play.

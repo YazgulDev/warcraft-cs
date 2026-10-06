@@ -29,6 +29,8 @@ or an individual `.exe` file. The last field is the destination for the mod, not
 The launcher automatically expands the default local application-data path for your Windows account.
 
 Expected Warcraft archives: `War3.mpq`, `War3x.mpq`, `War3Patch.mpq`, `War3xlocal.mpq`.
+The game root must also include `redist/miles` with `Mssfast.m3d`, `Mp3dec.asi` and `Reverb3.flt`.
+These owned audio components are copied locally; `Mss32.dll` alone is insufficient for Warcraft sound.
 Check the version in `Game.dll` file properties. CS must have
 `models/v_ak47.mdl`, `v_m4a1.mdl`, `v_usp.mdl`, `v_awp.mdl`, `v_knife.mdl`, `v_c4.mdl`,
 plus `sound/weapons` and `sound/player`. CS is required for your local hands, animations and audio.
@@ -76,6 +78,11 @@ To update, save your progress, close the private Warcraft window and run **Insta
 with the same destination. The setup only updates its marked private runtime and preserves saves.
 Back up `Game\save` before updates or removal. If you want existing progress, copy your own original
 `save` files into the private runtime while both games are closed, keeping a backup.
+
+If an older client reports "Unable to initialize base sound services", close Warcraft and
+run **Install / Update** with a launcher containing the Miles setup fix, using the same destination.
+Setup restores missing `Game/redist/miles` files from your selected complete Warcraft installation.
+It does not download or distribute proprietary audio codecs.
 
 To remove the client, close Warcraft, back up saves and delete the selected installation folder
 using Windows. Original game installations remain. Shared Microsoft build tools are removed

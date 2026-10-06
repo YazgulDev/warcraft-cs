@@ -115,6 +115,8 @@ It uses Windows' .NET Framework and PowerShell. After explicit user consent it m
 download the PSF Python installer (Python license), NumPy (BSD-3-Clause), signed
 Microsoft Build Tools/Windows SDK (Microsoft terms) and pinned MinHook (BSD-2-Clause).
 Those dependencies are installed separately and retain their upstream licenses.
+Warcraft's redist/miles codecs and providers are read from the owner's installation
+and copied only into their private runtime. They are not embedded, downloaded or redistributed.
 https://docs.python.org/3/license.html
 https://visualstudio.microsoft.com/license-terms/
 
