@@ -34,6 +34,22 @@ Reforged and other Warcraft patches are not supported.
 
 ## Setup and play
 
+### Windows client launcher
+
+With `WarcraftCSLauncher.exe`, clients do not need Git or a separate source checkout:
+
+1. Select your installed Warcraft III 1.26a folder and CS 1.6 folder (`cstrike` or its Half-Life parent).
+2. Select a separate installation folder for Warcraft CS.
+3. Read the download details and agree to downloading/installing the dependencies and their terms.
+4. Click **Install / Update**. Missing Python, Microsoft C++ tools/Windows SDK, NumPy and MinHook are prepared automatically.
+5. Click **Play**, select your own living unit and press F6.
+
+No download or installation starts before agreement. Microsoft tools may need administrator approval,
+several GB of space and a Windows restart. The launcher includes only project source, never game files.
+Details and developer build instructions: [Client launcher](docs/CLIENT-LAUNCHER.md).
+
+### Source setup
+
 Run in PowerShell, replacing the game paths with your own:
 
 ```powershell
@@ -112,7 +128,7 @@ Planned work:
 - [ ] Fix gameplay and camera bugs.
 - [ ] Add drivable vehicles.
 - [ ] Add pilotable airplanes.
-- [ ] Add an installer that is easy to use.
+- [x] Add an installer that is easy to use.
 - [ ] Test the full campaign.
 - [ ] Expose more gameplay values in configuration.
 - [ ] Improve hitboxes and hit registration.
