@@ -1,4 +1,4 @@
-param([string]$OutputDirectory = '',[string]$MinHookDirectory='',[string]$PythonExecutable='', [switch]$TestStatusEffects,[switch]$TestGameplay)
+param([string]$OutputDirectory = '',[string]$MinHookDirectory='',[string]$PythonExecutable='', [switch]$TestStatusEffects,[switch]$TestGameplay,[switch]$TestTreeAndWheel)
 $ErrorActionPreference = 'Stop'
 $modRoot = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'paths.ps1')
@@ -21,6 +21,8 @@ $sources = @('WarcraftApi.cpp', 'MouseLook.cpp', 'MovementPhysics.cpp', 'Warcraf
 # Native spell fixtures are opt-in and are excluded from the installed normal build.
 # Item pickup and temporary native squad policies remain independent of shooter input/rendering.
 $sources += @('GameplaySettings.cpp','ItemPickup.cpp','SquadController.cpp','FpsCombatGuard.cpp') | ForEach-Object { '"' + (Join-Path $modRoot "src/$_") + '"' }
+# Tree narrow-phase geometry is decoded independently of native widget enumeration and the controller.
+$sources += '"' + (Join-Path $modRoot 'src/TreeTrunkMesh.cpp') + '"'
 # Install defaults only once so rebuilds preserve the player's customized settings.
 $configDirectory=Join-Path $OutputDirectory 'WarcraftCS'
 New-Item -ItemType Directory -Path $configDirectory -Force | Out-Null
@@ -35,6 +37,11 @@ if ($TestStatusEffects) {
 if ($TestGameplay) {
     $sources += '"' + (Join-Path $modRoot 'tests/RuneCombatScene.cpp') + '"'
     $testDefine += ' /DWCS_GAMEPLAY_TEST'
+}
+if ($TestTreeAndWheel) {
+    # Tree/input fixtures require an explicit test build and request; release binaries exclude them.
+    $sources += '"' + (Join-Path $modRoot 'tests/TreeAndWheelScene.cpp') + '"'
+    $testDefine += ' /DWCS_TREE_WHEEL_TEST'
 }
 $buildDirectory = Join-Path $modRoot 'build'
 New-Item -ItemType Directory -Path $buildDirectory -Force | Out-Null

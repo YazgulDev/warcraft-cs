@@ -140,7 +140,8 @@ void Overlay::Draw(HDC dc, const ShooterController& controller) {
         char message[80]; sprintf_s(message, "C4  %.0f SEC", double(std::ceil(controller.BombRemaining())));
         Text(float(width - statusSize * 9), statusY, message, statusFont_);
     }
-    Text(25, 59, "1-5: GUNS / KNIFE | 6: C4 (HOLD FIRE) | 7: GREATSWORD | MELEE RMB: THRUST | E: ITEM | F8: CONFIG");
+    // Advertise wheel switching beside the existing direct-selection slots.
+    Text(25, 59, "1-7 / WHEEL: WEAPONS | 6: C4 (HOLD FIRE) | 7: SWORD | MELEE RMB: THRUST | E: ITEM | F8: CONFIG");
     // The squad mode/count remains visible after its short confirmation disappears.
     // Show the independent release key beside both recruitment policies.
     char squad[128];sprintf_s(squad,"H: FIGHT | O: FOLLOW | J: RELEASE | SQUAD %u %s",unsigned(controller.SquadCount()),controller.SquadCount() ? (controller.SquadPassive() ? "FOLLOW" : "COMBAT") : "");

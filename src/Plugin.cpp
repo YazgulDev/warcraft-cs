@@ -12,6 +12,9 @@
 #ifdef WCS_GAMEPLAY_TEST
 #include "../tests/RuneCombatScene.hpp"
 #endif
+#ifdef WCS_TREE_WHEEL_TEST
+#include "../tests/TreeAndWheelScene.hpp"
+#endif
 
 static ShooterController controller;
 static Overlay overlay;
@@ -58,6 +61,11 @@ static LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM key, LPARAM
     }
     // Consume FPS inputs so Warcraft does not also issue RTS orders or select units.
     if (healthy && controller.Visible()) {
+        // Queue each signed wheel packet for the game tick; Warcraft must not also zoom its RTS camera.
+        if (message == WM_MOUSEWHEEL) {
+            if (GetForegroundWindow() == window) controller.RequestWeaponWheel(GET_WHEEL_DELTA_WPARAM(key));
+            return 0;
+        }
         // Consume F7 before Warcraft can interpret it as a strategy shortcut.
         if (key == VK_F7 && (message == WM_KEYDOWN || message == WM_KEYUP)) {
             if (message == WM_KEYDOWN && !(data & (1L << 30))) controller.RequestRefill();
@@ -83,7 +91,7 @@ static LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM key, LPARAM
             (key == 'W' || key == 'A' || key == 'S' || key == 'D' || key == 'R' ||
              key == VK_F6 || key == VK_SPACE || key == VK_CONTROL || key == VK_SHIFT || (key >= '1' && key <= '1' + WeaponSlots::Count - 1))) return 0;
         if (message == WM_LBUTTONDOWN || message == WM_LBUTTONUP || message == WM_RBUTTONDOWN ||
-            message == WM_RBUTTONUP || message == WM_MOUSEMOVE || message == WM_MOUSEWHEEL) return 0;
+            message == WM_RBUTTONUP || message == WM_MOUSEMOVE) return 0;
     }
     return CallWindowProcA(originalWindow, window, message, key, data);
 }
@@ -130,6 +138,10 @@ static int __fastcall WorldHook(uintptr_t ui, uintptr_t unused) {
 #endif
 #ifdef WCS_GAMEPLAY_TEST
     if (healthy && gameUI) RuneCombatScene::Tick(controller,gameBase,root);
+#endif
+#ifdef WCS_TREE_WHEEL_TEST
+    // Dedicated tree/input oracles never run in ordinary release builds.
+    if (healthy && gameUI) TreeAndWheelScene::Tick(controller,gameBase,root);
 #endif
     // Keep layout evaluation running while hiding its final graphics after the world pass.
     nativeUIPhase = false;

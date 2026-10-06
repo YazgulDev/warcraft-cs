@@ -4,6 +4,7 @@ You need your own installed Warcraft III **1.26a x86** (Game.dll **1.26.0.6401**
 and Counter-Strike 1.6. Reforged and other Warcraft patches are unsupported.
 This offline, single-player prototype does not download games or redistribute their content.
 Full campaign/custom-map compatibility has not been verified.
+See [REQUIREMENTS.md](REQUIREMENTS.md) for the complete system, owned-file and dependency checklist.
 
 ## Windows EXE: recommended for clients
 
@@ -58,7 +59,7 @@ Maps do not need editing. Enable FPS again after changing maps.
 
 - WASD/mouse: move and aim; Space: jump; Ctrl: crouch; Shift: walk.
 - Left mouse: shoot or melee; right mouse: strong melee attack or AWP zoom.
-- 1–7: choose weapons; R: reload; F7: refill all ammunition.
+- 1–7: choose weapons; mouse wheel: previous/next weapon; R: reload; F7: refill all ammunition.
 - E: pick up items/runes; H/O: recruit your units; J: release them.
 - F6: return to RTS; F10: pause menu; F8: reload configuration.
 

@@ -1,5 +1,6 @@
 #include "ModelBounds.hpp"
 #include "WarcraftApi.hpp"
+#include "TreeTrunkMesh.hpp"
 #include <cstring>
 #include <vector>
 
@@ -49,12 +50,15 @@ bool Extents(const std::vector<unsigned char>& bytes, Bounds3& result) {
     return found;
 }
 }
-bool ModelBounds::Load(std::string path, Bounds3& result) {
+bool ModelBounds::Load(std::string path, Bounds3& result, TreeTrunkMesh* tree) {
     // Warcraft object files may name MDL sources; installed archives contain the compiled MDX.
     path = path.substr(0, path.find(','));
     size_t extension = path.find_last_of('.');
     if (extension != std::string::npos) path.resize(extension);
     path += ".mdx";
     std::vector<unsigned char> bytes;
-    return ModelBytes(path, bytes) && Extents(bytes, result);
+    if (!ModelBytes(path, bytes) || !Extents(bytes, result)) return false;
+    // Decode trunk surfaces from the same active-map model snapshot used for broad bounds.
+    if (tree) tree->Load(path,bytes,result);
+    return true;
 }

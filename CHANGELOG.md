@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add a complete requirements file for users, source builds and release updater assets.
+- Pick authored tree trunk triangles instead of canopy boxes; preserve ordinary gate/model-bound behavior.
+- Add mouse-wheel weapon cycling with wraparound, high-resolution fractions and focus/status reset.
 - Fix Warcraft sound initialization by copying the owner's `redist/miles` providers/codecs during setup.
 - Repair missing Miles files in existing marked private runtimes; detect incomplete source installs before dependency downloads.
 - Merge private sword selection/preservation and Miles repair into release/0.3.0.
