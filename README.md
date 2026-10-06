@@ -1,4 +1,4 @@
-# Warcraft CS by Yazgul — 0.5.0
+# Warcraft CS by — 0.5.0
 
 Counter-Strike 1.6 inside Warcraft III: control your own hero or unit in first person,
 shoot, and play regular maps, campaigns and compatible custom maps.
