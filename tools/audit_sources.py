@@ -9,7 +9,7 @@ ROOT=Path(__file__).resolve().parents[1]
 
 ROOT_FILES = {'README.md','INSTALL.md','TROUBLESHOOTING.md','NOTICE','LICENSE-MIT','LICENSE-APACHE',
               'AGENTS.md','CONTRIBUTING.md','CHANGELOG.md','VERSION','requirements.txt','.gitignore',
-              '.gitattributes','setup.cmd','play.cmd'}
+              '.gitattributes','setup.cmd','play.cmd','REQUIREMENTS.md'}
 ROOTS = {'src','tests','tools','setup','config','skills','licenses','docs','launcher'}
 EXTENSIONS = {'.cpp','.hpp','.inc','.py','.ps1','.ini','.md','.yaml','.txt','.cs'}
 RULES = {

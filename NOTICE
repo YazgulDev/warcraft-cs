@@ -120,6 +120,12 @@ Those dependencies are installed separately and retain their upstream licenses.
 The launcher also checks the project's GitHub release metadata and, with current or
 saved explicit automatic-update permission, downloads SHA256-verified project source
 and launcher assets. Original game files and owner-provided models remain local.
+
+The original tree-trunk decoder uses the documented classic MDX GEOS array layout,
+cross-checked against the open-source mdx-m3-viewer parser; no viewer code or game
+model data is included. Connected-component selection and triangle picking are
+implemented in this project's source.
+https://github.com/flowtsohg/mdx-m3-viewer/blob/master/src/parsers/mdlx/geoset.ts
 Warcraft's redist/miles codecs and providers are read from the owner's installation
 and copied only into their private runtime. They are not embedded, downloaded or redistributed.
 https://docs.python.org/3/license.html

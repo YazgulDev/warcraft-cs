@@ -14,6 +14,7 @@
 #include "WeaponRecoil.hpp"
 #include "MeleeAttack.hpp"
 #include "MouseLook.hpp"
+#include "WeaponWheel.hpp"
 #include "GameplaySettings.hpp"
 #include "AmmoRecovery.hpp"
 #include "ItemPickup.hpp"
@@ -42,7 +43,8 @@ public:
     // Native window input feeds the dedicated relative-look collector on the same game thread.
     void AttachWindow(HWND window) { mouseLook_.Attach(window); }
     void MouseInput(LPARAM packet,bool accept) { mouseLook_.Input(packet,accept); }
-    void ResetMouse() { mouseLook_.Reset(); }
+    void ResetMouse() { mouseLook_.Reset(); weaponWheel_.Reset(); }
+    void RequestWeaponWheel(int delta) { weaponWheel_.Add(delta); }
     void RequestToggle() { toggleRequested_ = true; }
     void RequestMenu() { menuRequested_ = true; }
     void RequestRefill() { refillRequested_ = true; }
@@ -68,7 +70,7 @@ public:
     float Recoil() const { return recoil_.Magnitude(); }
     bool Scoped() const { return scopeLevel_ != 0; }
     const UnitStatus& Status() const { return status_; }
-#if defined(WCS_STATUS_TEST) || defined(WCS_GAMEPLAY_TEST)
+#if defined(WCS_STATUS_TEST) || defined(WCS_GAMEPLAY_TEST) || defined(WCS_TREE_WHEEL_TEST)
     // Expose the active unit only to the separate, opt-in native spell test build.
     wc3::Handle TestUnit() const { return Visible() ? unit_ : 0; }
 #endif
@@ -101,6 +103,7 @@ private:
     void Fire(bool secondary = false);
     void Strike();
     void Reload();
+    void SwitchWeapon(int slot);
     void PlantC4(float dt);
     void CancelPlant();
     void RefillAmmo();
@@ -139,6 +142,7 @@ private:
     WarcraftCollision collision_;
     FirstPersonCamera camera_;
     MouseLook mouseLook_;
+    WeaponWheel weaponWheel_;
     GameplaySettings settings_;
     AmmoRecovery ammoRecovery_;
     ItemPickup itemPickup_;

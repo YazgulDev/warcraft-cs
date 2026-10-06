@@ -93,11 +93,13 @@ void ShooterController::Disable(bool restoreCamera) {
     hits_.Clear(); refillRequested_ = false; refillTick_ = 0;
     itemRequested_=settingsRequested_=itemNearby_=false;squadRequested_=0;
     movement_.Stop();
+    weaponWheel_.Reset(); // A partial notch must not survive leaving FPS.
     status_ = {};
     wc3::Log("FPS disabled");
 }
 void ShooterController::ResetMap() {
     mouseLook_.Reset();
+    weaponWheel_.Reset();
     squad_.Reset(); // Forget unloaded handles without issuing commands into the next map.
     // Never dereference a unit handle after a map unload: campaign transitions reuse IDs.
     hitboxes_.Reset(); destructableHitboxes_.Reset(); bomb_.Reset(); plantProgress_ = 0;
@@ -121,6 +123,7 @@ void ShooterController::Toggle() {
     // F6 begins a fresh capture rather than applying the RTS cursor's distance from the center.
     mouseLook_.Reset();
     // Begin physics on the actual terrain, independent of the RTS unit's move-speed cap.
+    weaponWheel_.Reset();
     movement_.Reset(wc3::Ground(wc3::Real(wc3::GetUnitX(unit_)), wc3::Real(wc3::GetUnitY(unit_))));
     wc3::IssueImmediateOrderById(unit_, 851972);  // stop autonomous attack/movement orders
     wc3::SetUnitVertexColor(unit_, 255, 255, 255, 0);
@@ -232,6 +235,13 @@ void ShooterController::RefillAmmo() {
     refillTick_ = GetTickCount();
     ammoRecovery_.Reset();ammoMessage_="ALL AMMO RESTORED";
     wc3::Log("F7 ammo refill: AK47=30/90 M4A1=30/90 USP=12/100 AWP=10/30 C4=1");
+}
+void ShooterController::SwitchWeapon(int slot) {
+    if (weapon_ == slot) return;
+    // Number keys and the wheel share deployment: cancel reload, scope, planting and pending melee cues.
+    CancelPlant(); audio_.CancelAnimation(); meleeContact_ = meleeReady_ = 0;
+    recoil_.ResetBurst(); weapon_ = slot; reloadEnd_ = 0; scopeLevel_ = 0; Play("draw");
+    wc3::Log("weapon selected=%s slot=%d", weapons[slot].name, slot + 1);
 }
 void ShooterController::ReloadSettings() {
     // Replace one complete snapshot; stale fractional credit must not survive a percentage/scope change.
@@ -387,6 +397,7 @@ void ShooterController::Tick(uintptr_t ui) {
     if (foregroundPid != GetCurrentProcessId()) {
         // Drop background packets; refocusing establishes a fresh cursor anchor without a view jump.
         mouseLook_.Reset();
+        weaponWheel_.Reset();
         itemRequested_=false;squadRequested_=0; // Commands pressed before losing focus must not execute on return.
         CancelPlant(); meleeContact_ = 0;
         // Cancel queued animation events rather than releasing delayed reload sounds on return.
@@ -425,7 +436,7 @@ void ShooterController::Tick(uintptr_t ui) {
     }
     toggleRequested_ = false;
     fullscreen_.Update(ui_, Visible());
-    if (!active_ || suspended_) { mouseLook_.Reset();itemRequested_=false;squadRequested_=0;return; }
+    if (!active_ || suspended_) { mouseLook_.Reset();weaponWheel_.Reset();itemRequested_=false;squadRequested_=0;return; }
     if (settingsRequested_) { settingsRequested_=false;ReloadSettings(); }
     // An explicit local test request creates one stationary target for damage verification.
     // Normal launches never create units; the request is consumed once on the game thread.
@@ -545,6 +556,8 @@ void ShooterController::Tick(uintptr_t ui) {
     }
     recoil_.Step(dt, Down(VK_LBUTTON) && !status_.incapacitated && !status_.disarmed, weapon_);
     if (status_.incapacitated) {
+        // Discard scrolling during disabled states rather than replaying a switch after recovery.
+        weaponWheel_.Reset();
         // Disabled leaders cannot queue pickup/recruitment for later; existing followers retain their chosen policy.
         itemRequested_=false;squadRequested_=0;
         squad_.Tick(unit_,settings_,now,!status_.contained && !status_.hidden);
@@ -556,9 +569,9 @@ void ShooterController::Tick(uintptr_t ui) {
         return;
     }
     if (refillRequested_) { refillRequested_ = false; RefillAmmo(); }
-    // Cancel only the previous weapon's pending animation cues when changing equipment.
-    // CS deployment resets the new weapon's shot count, while the player's existing punch continues recovering.
-    for (int i = 0; i < WeaponSlots::Count; ++i) if (Pressed('1' + i) && weapon_ != i) { CancelPlant(); audio_.CancelAnimation(); meleeContact_ = meleeReady_ = 0; recoil_.ResetBurst(); weapon_ = i; reloadEnd_ = 0; scopeLevel_ = 0; Play("draw"); }
+    // Wheel packets are consumed once; an explicit number key takes precedence in the same frame.
+    SwitchWeapon(weaponWheel_.Take(weapon_));
+    for (int i = 0; i < WeaponSlots::Count; ++i) if (Pressed('1' + i)) SwitchWeapon(i);
     if (Pressed('R')) Reload();
     // Consume the right-click edge for every weapon so holding it across a switch never scopes or stabs.
     bool secondaryPressed = Pressed(VK_RBUTTON);

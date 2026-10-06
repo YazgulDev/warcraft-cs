@@ -107,3 +107,22 @@ legacy missing-folder repair, preservation of unrelated runtime files, missing-s
 rejection before writes, and rejection of original/unmarked destinations.
 Launcher payload/consent tests and Windows PowerShell audio checks passed.
 Only owned source is embedded in the rebuilt EXE; the audio components remain local game data.
+
+## 0.4.0 tree targeting, wheel input and requirements
+
+All nine C++ regression suites pass. New synthetic MDX fixtures verify that rays beside
+the trunk miss the old canopy box, trunk faces remain solid from either side, short
+death stumps are excluded, nearer targets win and scaled rays retain world distance.
+The owner's Lordaeron/Cityscape tree models each decode twelve trunk triangles.
+Malformed geometry is rejected without falling back to the oversized tree box.
+
+An isolated Lost Temple session on Warcraft III 1.26a verified six native geometry
+checks: direct tree trunk hits, adjacent misses and preserved elf gate hits. Separate
+wheel notches selected slots 7 -> 1 -> 7 -> 1 -> 2 -> 3 in the real FPS controller.
+The screenshot showed the new wheel control hint and functioning weapon rendering.
+The fixture was opt-in; ordinary builds exclude it. Existing INI values were unchanged.
+No campaign/save was opened. Arbitrary imported tree models and animated model
+variants still require map-specific verification.
+
+REQUIREMENTS.md accompanies the source and distribution packages and documents
+owned game files, dependencies, manual builds and the release updater contract.

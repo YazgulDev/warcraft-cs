@@ -36,4 +36,7 @@ $launcherHash=(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInv
 ($launcherHash+'  WarcraftCSLauncher.exe') | Set-Content -LiteralPath ($exe+'.sha256') -Encoding ascii
 $distribution=Join-Path $OutputDirectory ('WarcraftCS-'+$version+'-dist.zip')
 if (Test-Path -LiteralPath $distribution) { Remove-Item -LiteralPath $distribution -Force }
-Compress-Archive -LiteralPath $exe,($exe+'.sha256'),$sourceArchive,(Join-Path $OutputDirectory 'WarcraftCS-update.json') -DestinationPath $distribution
+# Let players read all prerequisites before launching setup or extracting the source archive.
+$requirements=Join-Path $OutputDirectory 'REQUIREMENTS.md'
+Copy-Item -LiteralPath (Join-Path $root 'REQUIREMENTS.md') -Destination $requirements -Force
+Compress-Archive -LiteralPath $exe,($exe+'.sha256'),$sourceArchive,(Join-Path $OutputDirectory 'WarcraftCS-update.json'),$requirements -DestinationPath $distribution

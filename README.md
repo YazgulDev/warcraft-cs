@@ -23,6 +23,8 @@ Created by Yazgul with assistance from Codex (GPT-6). This is an early prototype
 - E picks up items/runes through the real inventory; a successful rune restores 20% ammunition by default.
 - H recruits your own units to follow and fight, O makes them follow without attacking, J releases them.
 - INI settings for ammunition recovery, damage and squad behavior, reloaded with F8.
+- Mouse-wheel weapon cycling through all seven slots, with high-resolution wheel support.
+- Tree shots use trunk surfaces rather than canopy boxes, leaving enemies beside trunks hittable.
 
 ## Requirements
 
@@ -35,6 +37,7 @@ Created by Yazgul with assistance from Codex (GPT-6). This is an early prototype
 - OpenGL support and enough disk space for a separate copy of Warcraft.
 
 Reforged and other Warcraft patches are not supported.
+The full game-file, system, build-dependency and updater requirements are in [REQUIREMENTS.md](REQUIREMENTS.md).
 
 ## Setup and play
 
@@ -110,6 +113,7 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 | Right mouse button | Knife/sword: strong attack; AWP: cycle two zoom levels and normal view |
 | R / F7 | Reload / refill all ammunition, including C4 |
 | 1 / 2 / 3 / 4 / 5 / 6 / 7 | AK47 / M4A1 / USP / AWP / knife / C4 / original greatsword |
+| Mouse wheel up / down | Previous / next weapon; wraps through all seven slots |
 | Hold left mouse button with C4 | Plant for 3 seconds while standing on the ground |
 | E | Pick up the nearest item/rune if the unit has an available inventory |
 | H / O / J | Your units: follow and fight / follow without attacking / release squad |
