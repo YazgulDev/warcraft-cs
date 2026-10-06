@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Windows client EXE with game-folder selection, explicit download/install consent, live setup log and Play.
+- Embedded audited source payload; clients do not need Git or a separate source archive.
+- Install missing Python and signed Microsoft C++ tools/Windows SDK; reuse existing dependencies.
+- Preserve owned game installations through the private-runtime setup pipeline.
+
 ## 0.2.0 — 2026-10-06
 
 - Use the project's original straight silver sword with a gold guard and leather grip.

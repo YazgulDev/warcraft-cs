@@ -54,3 +54,31 @@ PowerShell/Python syntax checks and source-tree audits were run for the changed 
 The complete English README includes requirements, setup, controls, settings, limitations
 and legal references. Linked relative documents remain in the release tree.
 No fresh automated input was sent to the user's active game for this documentation/tooling update.
+
+## Standalone Windows client launcher
+
+The WinForms EXE was built with the Windows .NET Framework compiler. Its embedded ZIP
+contains the audited project source, without game assets, downloaded dependencies or build output.
+An offscreen preview verified the complete folder-selection, consent and progress layout.
+UI tests confirm that valid folders alone cannot enable Install: explicit agreement is required,
+and revoking agreement disables it again. Runner/extractor and PowerShell no-consent tests
+reject installation before creating files. Path/JSON tests include archive traversal rejection
+and protection against installing into the original game folders or a drive root.
+
+The real pinned Python installer passed SHA256 and PSF signature verification, and the real
+Microsoft bootstrapper passed Microsoft signature verification. Negative checksum/publisher
+checks rejected untrusted downloads. Existing Python and Visual Studio/SDK were reused for
+the complete installation tests; fresh vendor installation on a clean Windows machine has
+not been tested.
+
+A complete C# runner installation extracted its embedded source into a separate client folder,
+created an owned Warcraft copy, installed NumPy in a private venv, verified/downloaded MinHook,
+converted the owner's CS models and built the normal 372736-byte native mod. The selected
+installation path included Cyrillic characters, spaces, an ampersand and an apostrophe.
+The completion marker and Play configuration point inside that client folder.
+This test exposed and verified fixes for inherited PowerShell Core module paths, Windows
+PowerShell UTF-8 JSON decoding and Unicode paths in the native build command file.
+
+The user's active Warcraft session was left running and received no automated input.
+Play was checked through its installed configuration; a fresh game launch was not performed
+for this installer feature. Native gameplay behavior is unchanged by the launcher.

@@ -107,6 +107,17 @@ Yazgul designed/requested the features and tested the gameplay. Codex (GPT-6)
 assisted with source implementation, investigation, documentation and verification.
 No fal/image-generation content was introduced for this source release.
 
+CLIENT LAUNCHER
+The optional WarcraftCSLauncher.exe is compiled from this project's C# source and
+embeds only an audited source ZIP plus existing project notices. It does not bundle
+game data, Python, NumPy, Microsoft build tools, MinHook binaries or .NET libraries.
+It uses Windows' .NET Framework and PowerShell. After explicit user consent it may
+download the PSF Python installer (Python license), NumPy (BSD-3-Clause), signed
+Microsoft Build Tools/Windows SDK (Microsoft terms) and pinned MinHook (BSD-2-Clause).
+Those dependencies are installed separately and retain their upstream licenses.
+https://docs.python.org/3/license.html
+https://visualstudio.microsoft.com/license-terms/
+
 PROVENANCE RULE
 Source-only Git commits include project source, tests, setup/configuration and
 these required notices. All .local data, downloaded dependencies, generated
