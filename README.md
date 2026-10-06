@@ -176,7 +176,7 @@ Never commit or redistribute `.local`, game content, converted caches or proprie
 
 ## Credits and licenses
 
-Original Yazgul source code is available under **MIT OR Apache-2.0**.
+Original source code is available under **MIT OR Apache-2.0**.
 Adapted calculations and external components retain their terms: ReGameDLL_CS/ReHLDS use MIT;
 MinHook/HDE is obtained separately under BSD-2-Clause.
 
