@@ -135,7 +135,7 @@ corrupt package rejection, archive/junction protection, running-game refusal and
 EXE replacement with backup/restart. The 0.4.0 UI preview displayed the correct version.
 Publication lint reported 147 source files, zero failures and zero warnings.
 
-## Launcher Player/Developer installation and update confirmation
+## 0.5.0 launcher Player/Developer installation and update confirmation
 
 The launcher embeds a separate native-runtime ZIP containing two project-built x86 modules,
 their SHA256/source-version/Miles-ABI manifest and the project/MinHook/mechanics notices.

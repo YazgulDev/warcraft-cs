@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.0 — 2026-10-06
 
 - Show a release-version/notes confirmation dialog; declining leaves the current installation untouched.
 - Add Player and Developer installation buttons, with explicit dependency information.
@@ -8,8 +8,11 @@
 - Keep original Warcraft libraries local; bind the Player payload to its source snapshot and supported Miles ABI.
 - Fall back to GitHub latest-asset manifest downloads on API rate limits.
 
-- Remove the automatic-install checkbox; always check releases at launcher startup and install discovered updates through Install / Update after consent.
+- Remove the automatic-install checkbox; always check releases at launcher startup and offer discovered updates through an explicit confirmation dialog.
 - Restore saved folders without inheriting legacy automatic-install permission.
+
+Validation: launcher/payload regressions and isolated Player/Developer installs pass.
+Older updater-enabled launchers accept the new bundle; saves and settings are preserved.
 
 ## 0.4.0 — 2026-10-06
 
