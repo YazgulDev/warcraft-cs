@@ -22,6 +22,8 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.runeAmmoAllWeapons=_stricmp(text("Runes","AmmoWeapons","all").c_str(),"current")!=0;
     result.heroDamage=_stricmp(text("Damage","Mode","weapon").c_str(),"hero")==0;
     result.awpOneShot=_stricmp(text("Damage","AWPOneShot","true").c_str(),"false")!=0;
+    // Old configs retain 50%; zero disables allied damage and full damage is capped at 100%.
+    result.friendlyFirePercent=number("Damage","FriendlyFirePercent",50,100);
     // Keep formation spacing positive and leash beyond it so units can finish nearby fights.
     result.squadRadius=number("Squad","RecruitRadius",600,2000);
     result.squadFollowDistance=std::max(80.0f,number("Squad","FollowDistance",180,500));

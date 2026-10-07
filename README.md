@@ -1,37 +1,37 @@
-# Warcraft CS by Yazgul — 0.4.0
+# Warcraft CS — 0.5.0
 
 Counter-Strike 1.6 inside Warcraft III: control your own hero or unit in first person,
 shoot, and play regular maps, campaigns and compatible custom maps.
 The world, enemies, quests and health remain governed by Warcraft.
 
 An unofficial single-player fan project, unaffiliated with Blizzard Entertainment or Valve.
-**This Git repository contains source code. The release launcher contains project-owned code
-source and ready-to-use native mod modules; it does not include game files, models, sounds, maps or saves.
+**This Git repository contains source code. The standard launcher and release ZIPs contain
+project source without prebuilt DLLs. A separate DLL-included EXE supplies ready-to-use project modules.
+Neither variant includes game files, models, sounds, maps or saves.
 You need your own installed copies of both games.**
-Created by Yazgul with assistance from Codex (GPT-6). This is an early prototype with known limitations.
+This is an early prototype with known limitations.
 
 ## Features
 
 - Windows EXE launcher with game-folder selection, consent before dependency setup, live logs and Play.
 - F6 switches between FPS and RTS; fullscreen launch, relative mouse look and hidden player-unit model.
 - WASD, jumping, crouching, acceleration, friction and weapon movement speeds inspired by CS.
-- Unsilenced AK47, M4A1 and USP, AWP with two zoom levels, knife, C4 and a greatsword.
 - Classic AK/M4 and USP/AWP punch calculations, recoil recovery and burst behavior.
 - Primary and secondary melee attacks, locally imported CS sounds and a blood-free hit indicator.
-- Damage to units, buildings and gates; allies receive 50% damage. C4 deals 2500 base area damage.
+- Damage to units, buildings and gates; configurable allied damage (50% by default). C4 deals 2500 base area damage.
 - Warcraft stuns, roots, slows and attack restrictions also limit FPS actions.
 - E picks up items/runes through the real inventory; a successful rune restores 20% ammunition by default.
 - H recruits your own units to follow and fight, O makes them follow without attacking, J releases them.
 - INI settings for ammunition recovery, damage and squad behavior, reloaded with F8.
 - Mouse-wheel weapon cycling through all seven slots, with high-resolution wheel support.
-- Tree shots use trunk surfaces rather than canopy boxes, leaving enemies beside trunks hittable.
 
 ## Requirements
 
 - Windows x64 and **Warcraft III 1.26a x86**, with `Game.dll` version `1.26.0.6401`.
 - Installed Counter-Strike 1.6 with loose files in `cstrike/models` and `cstrike/sound`.
-- Player installation needs no C++ Build Tools or Windows SDK. Python/NumPy may be prepared
-  after agreement to convert your locally owned CS assets. Developer mode builds the DLLs from source.
+- Standard `WarcraftCSLauncher.exe` builds locally and needs C++ Build Tools / Windows SDK.
+  The separate `WarcraftCSLauncher_DLL_Included.exe` offers Player setup without those tools.
+  Both may prepare Python/NumPy after agreement to convert your locally owned CS assets.
 - For manual source setup: Git, Python 3.10–3.14, Visual Studio 2022 or Build Tools with
   **Desktop development with C++**, MSVC x86 and Windows SDK.
 - OpenGL support and enough disk space for a separate copy of Warcraft.
@@ -43,8 +43,16 @@ The full game-file, system, build-dependency and updater requirements are in [RE
 
 ### Windows client launcher
 
-Download **[WarcraftCSLauncher.exe from Releases](https://github.com/YazgulDev/warcraft-cs/releases/latest)**.
-Run the EXE; clients do not need Git or a separate source checkout.
+Choose a launcher from **[Releases](https://github.com/YazgulDev/warcraft-cs/releases/latest)**:
+
+| Download | Installation |
+| --- | --- |
+| `WarcraftCSLauncher.exe` or the distribution ZIP | Source-only EXE; **Install** compiles the mod locally and may prepare missing Build Tools / SDK (several GB). |
+| `WarcraftCSLauncher_DLL_Included.exe` | Separate EXE with ready mod DLLs; **Install — Player** avoids Build Tools / SDK. **Install — Developer** builds locally. |
+
+Clients do not need Git or a separate source checkout. All public ZIPs exclude prebuilt mod DLLs.
+Both EXEs remain unsigned; the bundled module has triggered antivirus detection in 0.5.0.
+Source-only packaging is not a guarantee that the locally built module will be accepted by antivirus.
 
 Choose these folders using **Browse...** (the examples are illustrative):
 
@@ -57,21 +65,27 @@ Choose these folders using **Browse...** (the examples are illustrative):
 1. Select your installed Warcraft III 1.26a folder and CS 1.6 folder (`cstrike` or its Half-Life parent).
 2. Select a separate installation folder for Warcraft CS.
 3. Read the download details and agree to downloading/installing the dependencies and their terms.
-4. Click **Install / Update — Player** for bundled DLLs without Build Tools/SDK. Developers can choose **Install / Update — Developer** to prepare missing C++ tools/SDK and compile locally.
+4. Click **Install** in the standard launcher, or choose **Install — Player / Developer** in the DLL-included launcher. Install uses the version embedded in that EXE.
 5. Click **Play**, select your own living unit and press F6.
 
 The launcher checks new stable GitHub releases automatically at every startup; **Check for updates**
-retries the check. A window shows the new version and release notes: **Update** confirms installation
-in your existing mode; **Not now** postpones it. The dialog explains download requirements and consent.
+retries the check. The separate **Update** button fetches the latest stable project release from GitHub.
+A window shows its version and notes: **Update** confirms installation; **Not now** postpones it.
+The source-only launcher keeps source-only updates and builds locally, including when updating a previous
+Player installation. The DLL-included launcher retains its variant and saved Player/Developer mode.
+The dialog explains download requirements and consent.
 Warcraft must be closed. Player installs verified bundled DLLs; Developer rebuilds them locally. Both
 modes convert owned assets and update the launcher if needed. Saves, INI settings and private sword selections are
 retained. Each session requires the download agreement. Offline Play remains available.
 
 No download or installation starts before agreement. Microsoft tools may need administrator approval,
-several GB of space and a Windows restart in Developer mode. The launcher includes mod modules and source, never game files.
+several GB of space and a Windows restart for local compilation. Only the separately named EXE includes prebuilt modules.
 The launcher itself is unsigned; dependency installers have verified vendor signatures.
 Detailed folder examples, first launch, updates and removal: [INSTALL.md](INSTALL.md).
 Developer build instructions: [Client launcher](docs/CLIENT-LAUNCHER.md).
+
+If the old 0.5.0 Player updater reports that this release requires a source build, download the new
+DLL-included EXE directly and select your existing installation folder. No compiler download is silently enabled.
 
 ### Source setup
 
@@ -80,7 +94,7 @@ Run in PowerShell, replacing the game paths with your own:
 ```powershell
 git clone https://github.com/YazgulDev/warcraft-cs.git
 cd warcraft-cs
-git switch release/0.4.0
+git switch release/0.5.0
 .\setup.cmd -WarcraftDirectory "E:\Warcraft III" -CounterStrikeDirectory "C:\SteamGames\steamapps\common\Half-Life\cstrike"
 .\play.cmd
 ```
@@ -130,23 +144,25 @@ Edit it and press F8 in FPS.
 - `[Damage] Mode=weapon` uses fixed weapon damage. `Mode=hero` uses the current average Warcraft
   attack of **any** controlled unit, including creeps, multiplied by each weapon's `HeroMultiplier`.
 - `[Damage] AWPOneShot=true` finishes enemies with one AWP hit only in `weapon` mode.
+- `[Damage] FriendlyFirePercent=50` sets damage to owned/allied units and buildings, including
+  firearms, both melee attacks and C4 (including its planter). Range: 0–100; 0 disables allied damage,
+  100 applies full damage. Press F8 to reload; C4 retains the settings from when it was planted.
 - `[Squad] RecruitRadius`, `MaxUnits`, `FollowDistance` and `CombatLeash` control squad behavior.
 
-Native armor still applies; friendly damage uses a 0.5 coefficient. Ordinary items do not grant ammunition.
+Native armor still applies after allied scaling. Ordinary items do not grant ammunition.
 A researched Warcraft Backpack accepts equipment on creeps but cannot activate runes/tomes.
 Rejected pickups and full inventories grant no ammunition. A unit without a normal attack deals zero
 weapon damage in `hero` mode. C4 uses its fixed `[C4] Damage` value.
 
 ## Compatibility and limitations
 
-**Offline single player only.** Multiplayer is not supported. The mod hooks the game globally,
+**Offline single player only.** Multiplayer is not supported for now. The mod hooks the game globally,
 but the complete campaign and every custom map have not been verified.
 Map scripts can conflict with camera or unit control. Maps without living owned units cannot provide
 an FPS character. Hitboxes approximate model bounds rather than individual bones.
 
 The recoil calculations are adapted, but **complete CS bullet spread/accuracy and the GoldSrc client
 are not implemented**. CS economy, rounds and weapon purchasing are also absent.
-See [TROUBLESHOOTING.md](TROUBLESHOOTING.md), currently in Russian.
 
 ## TODO
 
@@ -155,12 +171,12 @@ Planned work:
 - [ ] Improve movement.
 - [ ] Fix gameplay and camera bugs.
 - [ ] Add drivable vehicles.
-- [ ] Add pilotable airplanes.
 - [x] Add an installer that is easy to use.
 - [ ] Test the full campaign.
-- [ ] Expose more gameplay values in configuration.
-- [ ] Improve hitboxes and hit registration.
+- [x] Improve hitboxes and hit registration.
 - [ ] Make further improvements based on playtesting and feedback.
+- [ ] Add multiplayer support(possibly)
+- [ ] Add Warcraft Reforge support(possibly)
 
 ## Source layout and validation
 
@@ -179,15 +195,12 @@ Never commit or redistribute `.local`, game content, converted caches or proprie
 
 ## Credits and licenses
 
-Original Yazgul source code is available under **MIT OR Apache-2.0**.
+Original source code is available under **MIT OR Apache-2.0**.
 Adapted calculations and external components retain their terms: ReGameDLL_CS/ReHLDS use MIT;
 MinHook/HDE is obtained separately under BSD-2-Clause.
 
 Native Warcraft integration facts were researched with JassSpyEngine, RenderEdge and UjAPI;
-their implementations are not bundled. Valve/Blizzard game materials and downloaded sword models
-are excluded and are not covered by the code licenses.
+their implementations are not bundled. Valve/Blizzard game materials are excluded and are not covered by the code licenses.
 
 For the full list of references, adaptations and license terms, see [NOTICE](NOTICE),
 [LICENSE-MIT](LICENSE-MIT), [LICENSE-APACHE](LICENSE-APACHE) and `licenses/`.
-The source-only release layout and local preparation of owned game files were inspired by
-[World of Skatecraft](https://github.com/Kimmo3223/world-of-skatecraft); its code and text were not copied.

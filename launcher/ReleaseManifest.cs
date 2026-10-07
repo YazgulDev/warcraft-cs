@@ -10,7 +10,10 @@ namespace WarcraftCSLauncher {
         public string SourceSha256 { get; set; }
         public string LauncherSha256 { get; set; }
         public string RuntimeSha256 { get; set; }
+        public string DllIncludedLauncherSha256 { get; set; }
+        public string DllIncludedRuntimeSha256 { get; set; }
         public bool SupportsPlayer { get { return !String.IsNullOrEmpty(RuntimeSha256); } }
+        public bool HasDllIncludedVariant { get { return !String.IsNullOrEmpty(DllIncludedLauncherSha256); } }
 
         public void Validate(string tag) {
             // A published stable tag and its manifest must identify the same version and source payload.
@@ -19,6 +22,15 @@ namespace WarcraftCSLauncher {
                 throw new InvalidDataException("Invalid release version or package checksums.");
             // Legacy source-build releases remain valid for Developer mode; Player bundles require their own digest.
             if (SupportsPlayer && !IsHash(RuntimeSha256)) throw new InvalidDataException("Invalid native runtime checksum.");
+            // The primary manifest describes the source-only EXE; bundled hashes are an explicit optional pair.
+            if ((HasDllIncludedVariant || !String.IsNullOrEmpty(DllIncludedRuntimeSha256)) &&
+                (!IsHash(DllIncludedLauncherSha256) || !IsHash(DllIncludedRuntimeSha256)))
+                throw new InvalidDataException("Invalid DLL-included launcher checksums.");
+        }
+        public ReleaseManifest ForDllIncludedLauncher() {
+            if (!HasDllIncludedVariant) return this; // Legacy releases used one bundled executable.
+            return new ReleaseManifest {Version=Version,Revision=Revision,SourceSha256=SourceSha256,
+                LauncherSha256=DllIncludedLauncherSha256,RuntimeSha256=DllIncludedRuntimeSha256};
         }
         public bool IsNewer(string currentVersion, string currentRevision, string installedRevision) {
             int comparison = ParseVersion(Version).CompareTo(ParseVersion(currentVersion));

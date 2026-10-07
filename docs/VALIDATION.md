@@ -135,7 +135,7 @@ corrupt package rejection, archive/junction protection, running-game refusal and
 EXE replacement with backup/restart. The 0.4.0 UI preview displayed the correct version.
 Publication lint reported 147 source files, zero failures and zero warnings.
 
-## Launcher Player/Developer installation and update confirmation
+## 0.5.0 launcher Player/Developer installation and update confirmation
 
 The launcher embeds a separate native-runtime ZIP containing two project-built x86 modules,
 their SHA256/source-version/Miles-ABI manifest and the project/MinHook/mechanics notices.
@@ -159,3 +159,23 @@ GitHub latest release lookup succeeded; rate-limit fallback manifest parsing pre
 repository URLs and stable-version/checksum validation. No new campaign or interactive game
 session was opened for these installer changes. Fresh vendor-tool installation on a clean Windows
 machine remains unverified; Developer mode reused installed tools in the integration test.
+
+## Configurable allied damage
+
+`Damage.FriendlyFirePercent` defaults to the previous 50%, accepts fractional values,
+and clamps to 0–100. Real INI tests cover missing keys, 0/25/100/12.5, out-of-range
+values and malformed/NaN input. Damage oracles cover firearms, heavy melee, C4,
+hero-mode attack scaling, enemy damage independence and allied AWP finishing protection.
+Zero allied damage skips the native damage call to avoid damage-trigger side effects.
+Bullets/melee use the reloaded settings snapshot at contact; C4 retains its planting snapshot.
+No campaign or live match was used for these independent combat/settings checks.
+
+## Dual launcher and separate Install/Update regression checks
+
+Both UI variants pass folder and download-consent checks. The source-only form exposes
+one Install button; the DLL-included form retains explicit Player/Developer installation.
+Both expose a separate Update button. Tests cover variant-specific GitHub API and
+rate-limit fallback selection, independent executable/runtime checksums, incomplete
+variant manifests, missing assets, unexpected launcher names and invalid assemblies.
+Existing extraction, running-game, audio setup, delayed replacement and backup/restart
+regressions pass. These checks do not open a campaign or interact with the user's game.

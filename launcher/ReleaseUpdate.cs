@@ -1,5 +1,7 @@
 namespace WarcraftCSLauncher {
     public sealed class ReleaseUpdate {
+        public string LauncherName { get; set; }
+        public ReleaseUpdate() { LauncherName=LauncherVariant.SourceFile; }
         public string Notes { get; set; }
         public string PageUrl { get { return "https://github.com/YazgulDev/warcraft-cs/releases/tag/v"+Manifest.Version; } }
         public ReleaseManifest Manifest { get; set; }

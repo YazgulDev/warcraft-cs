@@ -10,6 +10,8 @@ struct GameplaySettings {
     bool runeAmmoAllWeapons = true;
     bool heroDamage = false;
     bool awpOneShot = true;
+    // One percentage covers owned/allied units and buildings across firearms, melee and C4.
+    float friendlyFirePercent = 50;
     // Recruitment and spacing are configurable without rewriting map data or unit ownership.
     float squadRadius=600,squadFollowDistance=180,squadLeash=900;
     int squadMaxUnits=24;

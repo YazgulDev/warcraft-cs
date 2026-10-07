@@ -2,14 +2,25 @@
 
 ## Unreleased
 
+- Publish a source-only `WarcraftCSLauncher.exe` in distribution ZIPs and a separate `WarcraftCSLauncher_DLL_Included.exe` for ready mod modules.
+- Separate Install (embedded version) and Update (latest stable GitHub project release); source-only launchers expose one Install button.
+- Preserve launcher variants during verified updates, with independent executable/native-payload hashes and explicit dependency consent.
+- Add `[Damage] FriendlyFirePercent` (0–100, default 50) for firearms, melee and C4 against owned/allied units and buildings.
+- Apply F8 reloads to subsequent contacts and snapshot C4's percentage at planting; zero allied damage emits no native damage event.
+
+## 0.5.0 — 2026-10-06
+
 - Show a release-version/notes confirmation dialog; declining leaves the current installation untouched.
 - Add Player and Developer installation buttons, with explicit dependency information.
 - Embed verified x86 project modules and their notices for Player setup without Build Tools/SDK.
 - Keep original Warcraft libraries local; bind the Player payload to its source snapshot and supported Miles ABI.
 - Fall back to GitHub latest-asset manifest downloads on API rate limits.
 
-- Remove the automatic-install checkbox; always check releases at launcher startup and install discovered updates through Install / Update after consent.
+- Remove the automatic-install checkbox; always check releases at launcher startup and offer discovered updates through an explicit confirmation dialog.
 - Restore saved folders without inheriting legacy automatic-install permission.
+
+Validation: launcher/payload regressions and isolated Player/Developer installs pass.
+Older updater-enabled launchers accept the new bundle; saves and settings are preserved.
 
 ## 0.4.0 — 2026-10-06
 

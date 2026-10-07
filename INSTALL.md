@@ -9,8 +9,10 @@ See [REQUIREMENTS.md](REQUIREMENTS.md) for the complete system, owned-file and d
 ## Windows EXE: recommended for clients
 
 Download `WarcraftCSLauncher.exe` from [GitHub Releases](https://github.com/YazgulDev/warcraft-cs/releases/latest).
-Use Windows 10/11 x64. The EXE embeds project source and ready-to-use mod DLLs and uses Windows' .NET Framework/PowerShell;
-you do not need Git, Python or Visual Studio installed in advance.
+Use Windows 10/11 x64. This standard EXE and all public ZIPs contain source without prebuilt DLLs;
+installation compiles locally and may download missing Build Tools / Windows SDK (several GB).
+For ready mod DLLs, download the separate `WarcraftCSLauncher_DLL_Included.exe` and use Player setup.
+Both use Windows' .NET Framework/PowerShell. You do not need Git or Python installed in advance.
 The launcher is unsigned; downloaded Python/Microsoft installers have verified vendor signatures.
 
 ### 1. Choose your game and installation folders
@@ -39,12 +41,15 @@ plus `sound/weapons` and `sound/player`. CS is required for your local hands, an
 ### 2. Agree and install
 
 Read the download summary and linked terms. Tick **I agree to download and install...**
-(the checkbox starts unchecked), then choose one of the two buttons:
+(the checkbox starts unchecked), then choose the action available in your launcher:
 
 | Button | For whom | What is installed |
 | --- | --- | --- |
-| **Install / Update — Player** | Players | Bundled project DLLs; no Build Tools or Windows SDK. Python/NumPy may be prepared for owned asset conversion. |
-| **Install / Update — Developer** | Developers | Missing Microsoft Build Tools/SDK and pinned MinHook source, then a local DLL build. Existing compatible tools are reused. |
+| **Install** in the standard EXE | Source installation | Missing Microsoft Build Tools/SDK and pinned MinHook source, then a local DLL build. Existing compatible tools are reused. |
+| **Install — Player** in the DLL-included EXE | Players | Bundled project DLLs; no Build Tools or Windows SDK. Python/NumPy may be prepared for owned asset conversion. |
+| **Install — Developer** in the DLL-included EXE | Source installation | The same local compilation as the standard EXE. |
+
+Install uses the EXE's embedded version. The separate **Update** button checks GitHub and installs its latest stable project release after confirmation.
 
 No download or installation starts before agreement.
 
@@ -55,7 +60,7 @@ for local asset conversion. The original games remain unchanged.
 
 Wait until the launcher reports **Ready**. Errors appear in the log, also saved as
 `<installation folder>\install.log`. If Microsoft asks for a Windows restart, restart,
-open the EXE again, choose the same folders, agree and retry **Install / Update**.
+open the EXE again, choose the same folders, agree and retry **Install**.
 
 ### 3. Play
 
@@ -82,15 +87,18 @@ The EXE creates these files inside your selected installation folder:
 - `sources`: embedded project source, private build dependencies and locally converted assets.
 - `install.log`: setup diagnostics; `downloads`/`dependencies`: installer cache/private Python when needed.
 
-To update, save your progress, close the private Warcraft window and run **Install / Update**
+To update, save your progress, close the private Warcraft window and click **Update**
 with the same destination. The setup only updates its marked private runtime and preserves saves. At startup, a new-release dialog
 shows its version/notes and offers **Update** or **Not now**. Confirmation installs in your existing
-Player/Developer mode; selecting an installation button lets you change modes.
+mode supported by your current launcher. Standard EXEs keep source-only updates and compile locally;
+DLL-included EXEs keep their variant and saved Player/Developer mode. Selecting an installation button changes the mode.
+Old 0.5.0 Player launchers cannot choose the separately named DLL variant: download the new DLL-included EXE
+directly and select the same installation folder. This preserves your progress and avoids an implicit compiler installation.
 Back up `Game\save` before updates or removal. If you want existing progress, copy your own original
 `save` files into the private runtime while both games are closed, keeping a backup.
 
 If an older client reports "Unable to initialize base sound services", close Warcraft and
-run **Install / Update** with a launcher containing the Miles setup fix, using the same destination.
+run **Install** or **Update** with a launcher containing the Miles setup fix, using the same destination.
 Setup restores missing `Game/redist/miles` files from your selected complete Warcraft installation.
 It does not download or distribute proprietary audio codecs.
 
@@ -107,7 +115,7 @@ The manual script requires `cstrike` itself rather than its Half-Life parent.
 ```powershell
 git clone https://github.com/YazgulDev/warcraft-cs.git
 cd warcraft-cs
-git switch release/0.4.0
+git switch release/0.5.0
 .\setup.cmd -WarcraftDirectory "E:\Warcraft III" -CounterStrikeDirectory "C:\SteamGames\steamapps\common\Half-Life\cstrike"
 .\play.cmd
 ```
