@@ -17,7 +17,7 @@ This is an early prototype with known limitations.
 - WASD, jumping, crouching, acceleration, friction and weapon movement speeds inspired by CS.
 - Classic AK/M4 and USP/AWP punch calculations, recoil recovery and burst behavior.
 - Primary and secondary melee attacks, locally imported CS sounds and a blood-free hit indicator.
-- Damage to units, buildings and gates; allies receive 50% damage. C4 deals 2500 base area damage.
+- Damage to units, buildings and gates; configurable allied damage (50% by default). C4 deals 2500 base area damage.
 - Warcraft stuns, roots, slows and attack restrictions also limit FPS actions.
 - E picks up items/runes through the real inventory; a successful rune restores 20% ammunition by default.
 - H recruits your own units to follow and fight, O makes them follow without attacking, J releases them.
@@ -128,9 +128,12 @@ Edit it and press F8 in FPS.
 - `[Damage] Mode=weapon` uses fixed weapon damage. `Mode=hero` uses the current average Warcraft
   attack of **any** controlled unit, including creeps, multiplied by each weapon's `HeroMultiplier`.
 - `[Damage] AWPOneShot=true` finishes enemies with one AWP hit only in `weapon` mode.
+- `[Damage] FriendlyFirePercent=50` sets damage to owned/allied units and buildings, including
+  firearms, both melee attacks and C4 (including its planter). Range: 0–100; 0 disables allied damage,
+  100 applies full damage. Press F8 to reload; C4 retains the settings from when it was planted.
 - `[Squad] RecruitRadius`, `MaxUnits`, `FollowDistance` and `CombatLeash` control squad behavior.
 
-Native armor still applies; friendly damage uses a 0.5 coefficient. Ordinary items do not grant ammunition.
+Native armor still applies after allied scaling. Ordinary items do not grant ammunition.
 A researched Warcraft Backpack accepts equipment on creeps but cannot activate runes/tomes.
 Rejected pickups and full inventories grant no ammunition. A unit without a normal attack deals zero
 weapon damage in `hero` mode. C4 uses its fixed `[C4] Damage` value.

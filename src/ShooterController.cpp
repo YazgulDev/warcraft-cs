@@ -247,9 +247,9 @@ void ShooterController::ReloadSettings() {
     // Replace one complete snapshot; stale fractional credit must not survive a percentage/scope change.
     settings_=GameplaySettings::Load(root_+"\\WarcraftCS.ini");
     ammoRecovery_.Reset();ammoMessage_="SETTINGS RELOADED";refillTick_=GetTickCount();
-    wc3::Log("Settings loaded runePercent=%.1f ammoWeapons=%s damageMode=%s awpOneShot=%d radius=%.1f",
+    wc3::Log("Settings loaded runePercent=%.1f ammoWeapons=%s damageMode=%s awpOneShot=%d radius=%.1f friendlyFirePercent=%.1f",
         settings_.runeAmmoPercent,settings_.runeAmmoAllWeapons ? "all" : "current",
-        settings_.heroDamage ? "hero" : "weapon",settings_.awpOneShot,settings_.runePickupRadius);
+        settings_.heroDamage ? "hero" : "weapon",settings_.awpOneShot,settings_.runePickupRadius,settings_.friendlyFirePercent);
 }
 void ShooterController::PickupItem() {
     if (status_.incapacitated || status_.contained || status_.hidden) return;
@@ -342,14 +342,15 @@ void ShooterController::Strike() {
         float before = life();
         bool allied = !destructable && wc3::IsUnitAlly(target,wc3::GetOwningPlayer(unit_));
         bool lethal = !destructable && CombatDamage::FinishesTarget(settings_.FinishingAWP(weapon_),allied);
-        // Alliance changes are evaluated at contact; friendly AWP uses 50% of its ordinary 115 damage.
+        // Alliance changes are evaluated at contact; friendly AWP scales ordinary damage instead of finishing.
         // Hero mode applies the current attack and per-weapon multiplier at contact; friendly reduction follows it.
         float attack=settings_.heroDamage ? wc3::UnitAttackAverage(unit_) : 0;
         float baseDamage=settings_.ContactDamage(weapon_,WeaponSlots::Melee(weapon_) && meleeAttack_.secondary,attack);
-        float damage = CombatDamage::Amount(baseDamage,allied,lethal,before);
+        float damage = CombatDamage::Amount(baseDamage,allied,lethal,before,settings_.friendlyFirePercent);
         if (settings_.heroDamage) wc3::Log("hero damage attack=%.1f multiplier=%.2f base=%.1f",attack,settings_.heroMultiplier[weapon_],baseDamage);
         // Universal AWP damage ignores Warcraft armor; native death keeps death triggers intact.
-        wc3::UnitDamageTarget(unit_, target, &damage, TRUE, TRUE, 0, lethal ? 26 : 4, 0);
+        // Disabling friendly fire also avoids zero-damage map events and reflected/retaliatory side effects.
+        if (damage>0) wc3::UnitDamageTarget(unit_, target, &damage, TRUE, TRUE, 0, lethal ? 26 : 4, 0);
         if (lethal && wc3::Real(wc3::GetUnitState(target, 0)) > 0.405f) wc3::KillUnit(target);
         float after = life();
         if (after < before) {
@@ -383,7 +384,7 @@ void ShooterController::PlantC4(float dt) {
     if (std::abs(x - plantX_) + std::abs(y - plantY_) > 4) { CancelPlant(); return; }
     plantProgress_ += dt;
     if (plantProgress_ >= 3) {
-        if (bomb_.Plant(unit_, x, y, audio_,settings_.damage[WeaponSlots::C4])) { --ammo_[WeaponSlots::C4]; Play("drop"); }
+        if (bomb_.Plant(unit_, x, y, audio_,settings_.damage[WeaponSlots::C4],settings_.friendlyFirePercent)) { --ammo_[WeaponSlots::C4]; Play("drop"); }
         plantProgress_ = 0;
     }
 }

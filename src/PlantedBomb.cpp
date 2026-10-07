@@ -4,7 +4,7 @@
 #include <cmath>
 #include <vector>
 
-bool PlantedBomb::Plant(wc3::Handle attacker, float x, float y, GameAudio& audio,float damage) {
+bool PlantedBomb::Plant(wc3::Handle attacker, float x, float y, GameAudio& audio,float damage,float friendlyFirePercent) {
     if (timer_) return false;
     // Effects have no unit footprint or autonomous abilities, so planting cannot trap the character.
     std::string model = wc3::UnitModelPath(0x6E676C6D); // nglm: read the owner's native mine model
@@ -15,6 +15,7 @@ bool PlantedBomb::Plant(wc3::Handle attacker, float x, float y, GameAudio& audio
     float duration = 3600; wc3::TimerStart(timer_, &duration, FALSE, 0);
     attacker_ = attacker; x_ = x; y_ = y; remaining_ = 35; nextBeep_ = 0; exploded_ = false;
     damage_=damage; // The fixed configured explosion is independent of hero attack and later reloads.
+    friendlyFirePercent_=friendlyFirePercent; // Reloads affect future charges, keeping an active charge consistent.
     audio.Play("c4_plant.wav");
     wc3::Log("C4 planted marker=%08X model=%s at=%.1f,%.1f fuse=35", marker_, model.c_str(), x_, y_);
     return true;
@@ -68,10 +69,10 @@ bool PlantedBomb::Tick(GameAudio& audio) {
         if (before <= .405f) continue;
         // The same friendly-fire rule applies to the bomb, including its planter.
         bool allied = wc3::GetUnitTypeId(attacker_) && wc3::IsUnitAlly(victim, wc3::GetOwningPlayer(attacker_));
-        float damage = CombatDamage::Amount(damage_, allied, false, before);
+        float damage = CombatDamage::Amount(damage_, allied, false, before,friendlyFirePercent_);
         // Chaos + universal keeps the configured damage before map triggers (default 2500).
-        // Allies receive 50%; native invulnerability and mission damage triggers remain.
-        if (wc3::GetUnitTypeId(attacker_)) wc3::UnitDamageTarget(attacker_, victim, &damage, FALSE, TRUE, 5, 26, 0);
+        // Zero friendly fire must not emit a native damage event that can trigger map retaliation/reflect effects.
+        if (damage>0 && wc3::GetUnitTypeId(attacker_)) wc3::UnitDamageTarget(attacker_, victim, &damage, FALSE, TRUE, 5, 26, 0);
         float after = wc3::Real(wc3::GetUnitState(victim, 0)); damaged |= after < before;
         wc3::Log("C4 blast target=%08X owner=%08X damage=%.1f hpBefore=%.1f hpAfter=%.1f", victim, wc3::GetOwningPlayer(victim), damage, before, after);
     }

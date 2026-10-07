@@ -11,6 +11,7 @@ int main() {
     assert(settings.ContactDamage(0,false,100)==36);
     assert(settings.ContactDamage(4,true,100)==65);
     assert(settings.FinishingAWP(3));
+    assert(settings.friendlyFirePercent==50);
     assert(settings.squadRadius==600 && settings.squadMaxUnits==24 && settings.squadFollowDistance==180 && settings.squadLeash==900);
     settings.heroDamage=true;settings.heroMultiplier[0]=2;
     assert(settings.ContactDamage(0,false,28)==56);
@@ -18,6 +19,8 @@ int main() {
     assert(settings.ContactDamage(6,true,40)==240);
     assert(!settings.FinishingAWP(3));
     assert(CombatDamage::Amount(settings.ContactDamage(0,false,28),true,false,100)==28);
+    settings.friendlyFirePercent=25;
+    assert(CombatDamage::Amount(settings.ContactDamage(0,false,28),true,false,100,settings.friendlyFirePercent)==14);
     AmmoRecovery recovery;int magazine=0,reserve=0;
     assert(recovery.Restore(0,20,30,90,magazine,reserve)==24 && magazine==6 && reserve==18);
     magazine=29;reserve=89;assert(recovery.Restore(0,20,30,90,magazine,reserve)==2);
@@ -37,5 +40,17 @@ int main() {
     assert(settings.damage[0]==36 && settings.damage[2]==34);
     assert(settings.squadRadius==2000 && settings.squadMaxUnits==1 && settings.squadFollowDistance==80 && settings.squadLeash==280);
     settings=GameplaySettings::Load(path);assert(settings.runeAmmoPercent==20 && settings.runeAmmoAllWeapons && !settings.heroDamage);
+    assert(settings.friendlyFirePercent==50); // Missing keys keep legacy 50% damage.
+    // Exercise real INI parsing, sanitization and repeated snapshot loads rather than only assigning the field.
+    struct PercentCase { const char* value;float expected; };
+    const PercentCase cases[]={{"25",25},{"0",0},{"100",100},{"12.5",12.5f},
+        {"-10",0},{"200",100},{"nan",50},{"broken",50},{"",50}};
+    int index=0;
+    for (const auto& test : cases) {
+        const auto sample=path+std::to_string(++index);
+        { std::ofstream file(sample);file<<"[Damage]\nFriendlyFirePercent="<<test.value<<"\n"; }
+        settings=GameplaySettings::Load(sample);DeleteFileA(sample.c_str());
+        assert(settings.friendlyFirePercent==test.expected);
+    }
     return 0;
 }
