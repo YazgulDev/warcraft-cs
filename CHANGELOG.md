@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Add `[Damage] FriendlyFirePercent` (0–100, default 50) for firearms, melee and C4 against owned/allied units and buildings.
+- Apply F8 reloads to subsequent contacts and snapshot C4's percentage at planting; zero allied damage emits no native damage event.
+
 ## 0.5.0 — 2026-10-06
 
 - Show a release-version/notes confirmation dialog; declining leaves the current installation untouched.

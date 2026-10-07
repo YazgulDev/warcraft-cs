@@ -159,3 +159,13 @@ GitHub latest release lookup succeeded; rate-limit fallback manifest parsing pre
 repository URLs and stable-version/checksum validation. No new campaign or interactive game
 session was opened for these installer changes. Fresh vendor-tool installation on a clean Windows
 machine remains unverified; Developer mode reused installed tools in the integration test.
+
+## Configurable allied damage
+
+`Damage.FriendlyFirePercent` defaults to the previous 50%, accepts fractional values,
+and clamps to 0–100. Real INI tests cover missing keys, 0/25/100/12.5, out-of-range
+values and malformed/NaN input. Damage oracles cover firearms, heavy melee, C4,
+hero-mode attack scaling, enemy damage independence and allied AWP finishing protection.
+Zero allied damage skips the native damage call to avoid damage-trigger side effects.
+Bullets/melee use the reloaded settings snapshot at contact; C4 retains its planting snapshot.
+No campaign or live match was used for these independent combat/settings checks.
