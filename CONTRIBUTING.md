@@ -1,7 +1,7 @@
 # Contribution and release workflow
 
 Read [the workflow skill](skills/feature-release-workflow/SKILL.md) and [AGENTS.md](AGENTS.md).
-Current release branch: `release/0.5.0`. Code layout: `src`, `tests`, `tools`, `setup`, `config`, `launcher`.
+Current release branch: `release/0.5.1`. Code layout: `src`, `tests`, `tools`, `setup`, `config`, `launcher`.
 
 Start one branch per feature prompt from the current release:
 
