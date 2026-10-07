@@ -169,3 +169,13 @@ hero-mode attack scaling, enemy damage independence and allied AWP finishing pro
 Zero allied damage skips the native damage call to avoid damage-trigger side effects.
 Bullets/melee use the reloaded settings snapshot at contact; C4 retains its planting snapshot.
 No campaign or live match was used for these independent combat/settings checks.
+
+## Dual launcher and separate Install/Update regression checks
+
+Both UI variants pass folder and download-consent checks. The source-only form exposes
+one Install button; the DLL-included form retains explicit Player/Developer installation.
+Both expose a separate Update button. Tests cover variant-specific GitHub API and
+rate-limit fallback selection, independent executable/runtime checksums, incomplete
+variant manifests, missing assets, unexpected launcher names and invalid assemblies.
+Existing extraction, running-game, audio setup, delayed replacement and backup/restart
+regressions pass. These checks do not open a campaign or interact with the user's game.

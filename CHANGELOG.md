@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Publish a source-only `WarcraftCSLauncher.exe` in distribution ZIPs and a separate `WarcraftCSLauncher_DLL_Included.exe` for ready mod modules.
+- Separate Install (embedded version) and Update (latest stable GitHub project release); source-only launchers expose one Install button.
+- Preserve launcher variants during verified updates, with independent executable/native-payload hashes and explicit dependency consent.
 - Add `[Damage] FriendlyFirePercent` (0–100, default 50) for firearms, melee and C4 against owned/allied units and buildings.
 - Apply F8 reloads to subsequent contacts and snapshot C4's percentage at planting; zero allied damage emits no native damage event.
 

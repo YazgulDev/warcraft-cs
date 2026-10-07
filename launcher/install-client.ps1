@@ -12,8 +12,8 @@ $source=Split-Path -Parent $PSScriptRoot
 $paths=Get-ClientPaths $request
 $runtime=Join-Path $paths.install 'Game'
 Assert-ClientGames $paths.warcraft $paths.cstrike
-# Older updater requests default to Player: its verified downloaded EXE supplies the native modules.
-$mode=if ($request.InstallMode) { [string]$request.InstallMode } else { 'Player' }
+# Pre-0.5 launchers only offered local compilation and disclosed its tools; preserve that legacy behavior.
+$mode=if ($request.InstallMode) { [string]$request.InstallMode } else { 'Developer' }
 if ($mode -cnotin @('Player','Developer')) { throw 'Choose Player or Developer installation mode.' }
 $prebuilt=''
 if (Test-Path -LiteralPath $runtime) {
@@ -25,8 +25,11 @@ if (Test-Path -LiteralPath $runtime) {
 }
 # Do not even extract the embedded runtime until the marked game's running-process guard has passed.
 if ($mode -eq 'Player') {
-    $candidate=Join-Path $paths.install ('updates/'+(Split-Path -Leaf $source)+'/WarcraftCSLauncher.exe')
-    if (!(Test-Path -LiteralPath $candidate)) { $candidate=$request.LauncherExecutable }
+    # New clients explicitly hand over the verified variant; old 0.5 updaters still use their update cache.
+    $candidate=$request.LauncherExecutable
+    if (!$candidate -or !(Test-Path -LiteralPath $candidate)) {
+        $candidate=Join-Path $paths.install ('updates/'+(Split-Path -Leaf $source)+'/WarcraftCSLauncher.exe')
+    }
     if (!$candidate -or !(Test-Path -LiteralPath $candidate)) { throw 'Player mode needs the new launcher with bundled native modules.' }
     $prebuilt=Join-Path $source '.local/prebuilt'
     Expand-LauncherRuntime $candidate $source $prebuilt

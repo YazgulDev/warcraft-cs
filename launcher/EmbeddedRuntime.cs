@@ -4,6 +4,13 @@ using System.Reflection;
 
 namespace WarcraftCSLauncher {
     public static class EmbeddedRuntime {
+        public static void VerifySourceOnly(byte[] launcher) {
+            // Reflection inspects resources without executing the candidate's entry point.
+            Assembly assembly;
+            try { assembly=Assembly.Load(launcher); } catch (BadImageFormatException) { throw new InvalidDataException("Invalid source-only launcher assembly."); }
+            if (assembly.GetManifestResourceInfo("WarcraftCS.Runtime.zip")!=null)
+                throw new InvalidDataException("The source-only launcher unexpectedly contains bundled DLLs.");
+        }
         public static void Verify(byte[] launcher, ReleaseManifest manifest) {
             if (!manifest.SupportsPlayer) throw new InvalidDataException("This older release has no bundled Player DLLs. Choose Developer mode or a newer Player release.");
             // Read resources only: a downloaded launcher is not executed to inspect its native payload.

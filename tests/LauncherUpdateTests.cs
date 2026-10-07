@@ -38,7 +38,8 @@ public static class LauncherUpdateTests {
         string root=Path.GetFullPath(args[0]); Directory.CreateDirectory(root);
         string wc=Path.Combine(root,"Original WC"),cs=Path.Combine(root,"Original CS");Directory.CreateDirectory(wc);Directory.CreateDirectory(cs);
         var request=new ClientRequest {WarcraftDirectory=wc,CounterStrikeDirectory=cs,InstallDirectory=Path.Combine(root,"Client"),InstallMode="Developer"};
-        byte[] source=Archive(),exe=Encoding.ASCII.GetBytes("MZ-owned-executable-fixture"); var update=Package(source,exe);
+        // Use a real source-only assembly: the updater now inspects the candidate for unexpected runtime resources.
+        byte[] source=Archive(),exe=File.ReadAllBytes(Assembly.GetExecutingAssembly().Location); var update=Package(source,exe);
         update.Manifest.Validate("v0.3.0");
         Require(update.Manifest.IsNewer("0.2.0",update.Manifest.Revision,null),"New release skipped");
         Require(!update.Manifest.IsNewer("0.4.0","old",null),"Downgrade allowed");
@@ -77,6 +78,30 @@ public static class LauncherUpdateTests {
         var runtimeDigest=update.Manifest.RuntimeSha256;
         update.Manifest.RuntimeSha256="invalid";Reject(()=>update.Manifest.Validate("v0.3.0"),"Malformed Player hash accepted");
         update.Manifest.RuntimeSha256=runtimeDigest;
+        // Dual releases keep independent hashes and preserve source-only / DLL-included choices on both API paths.
+        var dual=Package(source,exe);
+        dual.Manifest.DllIncludedLauncherSha256=new string('b',64);
+        dual.Manifest.DllIncludedRuntimeSha256=new string('c',64);
+        dual.Manifest.Validate("v0.3.0");
+        var dualAssets=new List<object>(assets);
+        dualAssets.Add(new {name=LauncherVariant.IncludedFile,browser_download_url="https://github.com/YazgulDev/warcraft-cs/releases/download/v0.3.0/"+LauncherVariant.IncludedFile});
+        string dualMetadata=serializer.Serialize(new {draft=false,prerelease=false,tag_name="v0.3.0",assets=dualAssets});
+        Func<string,byte[]> dualFetch=url=>Encoding.UTF8.GetBytes(serializer.Serialize(dual.Manifest));
+        var standard=ReleaseClient.Parse(dualMetadata,dualFetch,false);
+        var bundled=ReleaseClient.Parse(dualMetadata,dualFetch,true);
+        Require(standard.LauncherName==LauncherVariant.SourceFile && !standard.Manifest.SupportsPlayer,"Source-only selection introduces DLLs");
+        Require(bundled.LauncherName==LauncherVariant.IncludedFile && bundled.Manifest.SupportsPlayer,"Included selection loses DLLs");
+        Require(bundled.Manifest.LauncherSha256==dual.Manifest.DllIncludedLauncherSha256 && bundled.Manifest.RuntimeSha256==dual.Manifest.DllIncludedRuntimeSha256,"Included selection uses standard checksums");
+        var bundledFallback=ReleaseClient.ParseLatestManifest(dualFetch("manifest"),true);
+        Require(bundledFallback.LauncherUrl==bundled.LauncherUrl && bundledFallback.Manifest.LauncherSha256==bundled.Manifest.LauncherSha256,"Included fallback changes variant");
+        Reject(()=>ReleaseClient.Parse(metadata,dualFetch,true),"Missing included asset accepted");
+        dual.Manifest.DllIncludedRuntimeSha256=null;Reject(()=>dual.Manifest.Validate("v0.3.0"),"Incomplete included checksum pair accepted");
+        dual.Manifest.DllIncludedRuntimeSha256=new string('c',64);
+        EmbeddedRuntime.VerifySourceOnly(exe);
+        // Invalid DLL bytes and unknown asset names cannot reach the update cache.
+        Reject(()=>EmbeddedRuntime.VerifySourceOnly(Encoding.ASCII.GetBytes("MZinvalid")),"Invalid source-only assembly accepted");
+        var wrongName=Package(source,exe);wrongName.LauncherName="unexpected.exe";
+        Reject(()=>ReleaseUpdater.Prepare(wrongName,request,true,fetch),"Unknown launcher variant accepted");
         Require(ReleaseClient.Parse("{\"draft\":false,\"prerelease\":true}",fetch)==null,"Prerelease offered");
         Require(ReleaseClient.Parse("{\"draft\":false,\"prerelease\":false,\"tag_name\":\"v0.3.0\",\"assets\":[]}",fetch)==null,"Legacy release rejected");
         var prepared=ReleaseUpdater.Prepare(update,request,true,fetch);

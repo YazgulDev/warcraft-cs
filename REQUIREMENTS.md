@@ -13,7 +13,9 @@
 | Permissions | Accept the launcher's download/install agreement. In Developer mode, Microsoft tool installation may request administrator approval or a Windows restart. |
 | Game mode | Offline single player, with a living owned unit or hero to control. Complete campaign and custom-map compatibility is still being tested. |
 
-The launcher contains project source/code and prebuilt x86 mod modules. Game files, maps, saves, models, sounds and proprietary audio codecs are supplied locally by their owner.
+The standard launcher and public ZIPs contain source without prebuilt DLLs. Only the separate
+`WarcraftCSLauncher_DLL_Included.exe` contains ready x86 mod modules. Game files, maps, saves,
+models, sounds and proprietary audio codecs are supplied locally by their owner.
 
 ## Required Warcraft files
 
@@ -39,8 +41,12 @@ Conversion reads the owned models, hands, animation and audio locally. The origi
 
 | Button | Behavior | Microsoft tools |
 | --- | --- | --- |
-| Install / Update — Player | Installs bundled `WarcraftCS.mix` and the project-generated `Mss32.dll` loader; converts owned CS assets locally. Recommended for playing. | No Build Tools or Windows SDK download/install. |
-| Install / Update — Developer | Builds the modules from source and obtains pinned MinHook source; converts the same owned assets. | Reuses compatible Visual Studio/SDK, otherwise downloads and installs Build Tools/SDK after consent. |
+| Install (standard EXE) | Builds the modules from source and obtains pinned MinHook; converts owned assets. | Reuses compatible Visual Studio/SDK, otherwise prepares Build Tools/SDK after consent. |
+| Install — Player (DLL-included EXE) | Installs bundled `WarcraftCS.mix` and the project-generated `Mss32.dll` loader; converts owned assets. | No Build Tools or Windows SDK download/install. |
+| Install — Developer (DLL-included EXE) | The same local compilation as the standard EXE. | Reuses compatible tools or prepares missing tools after consent. |
+
+**Update** is a separate action fetching the latest stable GitHub project release. The standard variant always
+builds locally; the DLL-included variant preserves its saved Player/Developer mode and its EXE variant.
 
 Both modes use Python/NumPy for asset conversion. Player validates the owned Miles library against the binary package; a different Miles ABI requires Developer mode. Proprietary Warcraft libraries/codecs remain locally supplied.
 
@@ -65,6 +71,15 @@ Developers run `tools/test-all.ps1` for the C++ rules, `tools/build-launcher.ps1
 
 Set `VERSION` to the new stable `major.minor.patch` version, build the launcher from audited staged source, and create the matching GitHub tag `v<version>` in `YazgulDev/warcraft-cs`.
 
-Attach `WarcraftCSLauncher.exe`, `WarcraftCS-sources.zip` and **`WarcraftCS-update.json`** to that stable release. Upload the manifest last, after its matching packages are available. Also attach the generated EXE checksum, `WarcraftCS-runtime.zip`, `REQUIREMENTS.md` and `WarcraftCS-<version>-dist.zip` for direct downloads. The updater validates the tag/version and package hashes; drafts and prereleases are skipped.
+Attach `WarcraftCSLauncher.exe`, `WarcraftCSLauncher_DLL_Included.exe`, their checksums,
+`WarcraftCS-sources.zip`, `REQUIREMENTS.md` and `WarcraftCS-<version>-dist.zip`.
+Upload **`WarcraftCS-update.json`** last. Its primary hash describes the source-only EXE; optional
+`DllIncludedLauncherSha256` / `DllIncludedRuntimeSha256` describe the separate bundled variant.
+Keep `WarcraftCS-runtime.zip` in private build output rather than release assets. Every public ZIP excludes native modules.
+The updater validates the tag/version and selected package hashes; drafts and prereleases are skipped.
 
-The launcher automatically checks releases on every startup, without requiring a checkbox. A version/release-notes dialog offers **Update** or **Not now**; confirming accepts the displayed download terms and installs in the saved Player/Developer mode while Warcraft is closed. The two installation buttons also allow selecting a mode explicitly. Existing saves and INI settings are preserved. See [INSTALL.md](INSTALL.md) and the [launcher guide](docs/CLIENT-LAUNCHER.md) for folders, recovery and updates.
+The launcher automatically checks releases on every startup. A version/release-notes dialog offers
+**Update** or **Not now**; confirming accepts the displayed terms and installs while Warcraft is closed.
+Install remains an independent embedded-version action. Old 0.5.0 Player clients need a direct download
+of the DLL-included EXE to migrate; they never silently switch to downloading compiler tools.
+Existing saves and INI settings are preserved. See [INSTALL.md](INSTALL.md) and the [launcher guide](docs/CLIENT-LAUNCHER.md).

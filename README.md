@@ -5,8 +5,9 @@ shoot, and play regular maps, campaigns and compatible custom maps.
 The world, enemies, quests and health remain governed by Warcraft.
 
 An unofficial single-player fan project, unaffiliated with Blizzard Entertainment or Valve.
-**This Git repository contains source code. The release launcher contains project-owned code
-source and ready-to-use native mod modules; it does not include game files, models, sounds, maps or saves.
+**This Git repository contains source code. The standard launcher and release ZIPs contain
+project source without prebuilt DLLs. A separate DLL-included EXE supplies ready-to-use project modules.
+Neither variant includes game files, models, sounds, maps or saves.
 You need your own installed copies of both games.**
 This is an early prototype with known limitations.
 
@@ -28,8 +29,9 @@ This is an early prototype with known limitations.
 
 - Windows x64 and **Warcraft III 1.26a x86**, with `Game.dll` version `1.26.0.6401`.
 - Installed Counter-Strike 1.6 with loose files in `cstrike/models` and `cstrike/sound`.
-- Player installation needs no C++ Build Tools or Windows SDK. Python/NumPy may be prepared
-  after agreement to convert your locally owned CS assets. Developer mode builds the DLLs from source.
+- Standard `WarcraftCSLauncher.exe` builds locally and needs C++ Build Tools / Windows SDK.
+  The separate `WarcraftCSLauncher_DLL_Included.exe` offers Player setup without those tools.
+  Both may prepare Python/NumPy after agreement to convert your locally owned CS assets.
 - For manual source setup: Git, Python 3.10–3.14, Visual Studio 2022 or Build Tools with
   **Desktop development with C++**, MSVC x86 and Windows SDK.
 - OpenGL support and enough disk space for a separate copy of Warcraft.
@@ -41,8 +43,16 @@ The full game-file, system, build-dependency and updater requirements are in [RE
 
 ### Windows client launcher
 
-Download **[WarcraftCSLauncher.exe from Releases](https://github.com/YazgulDev/warcraft-cs/releases/latest)**.
-Run the EXE; clients do not need Git or a separate source checkout.
+Choose a launcher from **[Releases](https://github.com/YazgulDev/warcraft-cs/releases/latest)**:
+
+| Download | Installation |
+| --- | --- |
+| `WarcraftCSLauncher.exe` or the distribution ZIP | Source-only EXE; **Install** compiles the mod locally and may prepare missing Build Tools / SDK (several GB). |
+| `WarcraftCSLauncher_DLL_Included.exe` | Separate EXE with ready mod DLLs; **Install — Player** avoids Build Tools / SDK. **Install — Developer** builds locally. |
+
+Clients do not need Git or a separate source checkout. All public ZIPs exclude prebuilt mod DLLs.
+Both EXEs remain unsigned; the bundled module has triggered antivirus detection in 0.5.0.
+Source-only packaging is not a guarantee that the locally built module will be accepted by antivirus.
 
 Choose these folders using **Browse...** (the examples are illustrative):
 
@@ -55,21 +65,27 @@ Choose these folders using **Browse...** (the examples are illustrative):
 1. Select your installed Warcraft III 1.26a folder and CS 1.6 folder (`cstrike` or its Half-Life parent).
 2. Select a separate installation folder for Warcraft CS.
 3. Read the download details and agree to downloading/installing the dependencies and their terms.
-4. Click **Install / Update — Player** for bundled DLLs without Build Tools/SDK. Developers can choose **Install / Update — Developer** to prepare missing C++ tools/SDK and compile locally.
+4. Click **Install** in the standard launcher, or choose **Install — Player / Developer** in the DLL-included launcher. Install uses the version embedded in that EXE.
 5. Click **Play**, select your own living unit and press F6.
 
 The launcher checks new stable GitHub releases automatically at every startup; **Check for updates**
-retries the check. A window shows the new version and release notes: **Update** confirms installation
-in your existing mode; **Not now** postpones it. The dialog explains download requirements and consent.
+retries the check. The separate **Update** button fetches the latest stable project release from GitHub.
+A window shows its version and notes: **Update** confirms installation; **Not now** postpones it.
+The source-only launcher keeps source-only updates and builds locally, including when updating a previous
+Player installation. The DLL-included launcher retains its variant and saved Player/Developer mode.
+The dialog explains download requirements and consent.
 Warcraft must be closed. Player installs verified bundled DLLs; Developer rebuilds them locally. Both
 modes convert owned assets and update the launcher if needed. Saves, INI settings and private sword selections are
 retained. Each session requires the download agreement. Offline Play remains available.
 
 No download or installation starts before agreement. Microsoft tools may need administrator approval,
-several GB of space and a Windows restart in Developer mode. The launcher includes mod modules and source, never game files.
+several GB of space and a Windows restart for local compilation. Only the separately named EXE includes prebuilt modules.
 The launcher itself is unsigned; dependency installers have verified vendor signatures.
 Detailed folder examples, first launch, updates and removal: [INSTALL.md](INSTALL.md).
 Developer build instructions: [Client launcher](docs/CLIENT-LAUNCHER.md).
+
+If the old 0.5.0 Player updater reports that this release requires a source build, download the new
+DLL-included EXE directly and select your existing installation folder. No compiler download is silently enabled.
 
 ### Source setup
 

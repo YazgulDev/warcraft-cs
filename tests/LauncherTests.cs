@@ -17,18 +17,26 @@ public static class LauncherTests {
         Directory.CreateDirectory(wc);Directory.CreateDirectory(cs);
         var destination=Path.Combine(root,"NoConsent");
         var request=new ClientRequest {WarcraftDirectory=wc,CounterStrikeDirectory=cs,InstallDirectory=destination};
-        using (var form=new LauncherForm(true)) {
+        foreach (bool included in new[] {false,true}) using (var form=new LauncherForm(true,included)) {
             var agreement=(CheckBox)form.Controls["DownloadConsent"];
             var install=(Button)form.Controls["InstallButton"];
             var developer=(Button)form.Controls["DeveloperInstallButton"];
+            var update=(Button)form.Controls["UpdateButton"];
+            // Separate installation and GitHub update actions must exist in both actual launcher layouts.
+            Require(install.Text==(included ? "Install — Player" : "Install"),"Wrong Install action for variant");
+            Require((developer!=null)==included,"Source-only UI offers bundled Player/Developer modes");
+            Require(update!=null && update.Text=="Update","Dedicated Update action missing");
             // Neither installation mode may inherit download permission from valid folders alone.
-            Require(!agreement.Checked && !install.Enabled && !developer.Enabled,"UI grants consent by default");
+            Require(!agreement.Checked && !install.Enabled && !update.Enabled && (developer==null || !developer.Enabled),"UI grants consent by default");
             form.Controls["WarcraftDirectory"].Text=wc; form.Controls["CounterStrikeDirectory"].Text=cs;
             form.Controls["InstallDirectory"].Text=destination;
-            Require(!install.Enabled && !developer.Enabled,"Folders alone enable install");
-            agreement.Checked=true; Require(install.Enabled && developer.Enabled,"Valid agreement/folders do not enable install");
-            agreement.Checked=false; Require(!install.Enabled && !developer.Enabled,"Revoked agreement did not disable install");
+            Require(!install.Enabled && !update.Enabled && (developer==null || !developer.Enabled),"Folders alone enable install");
+            agreement.Checked=true; Require(install.Enabled && update.Enabled && (developer==null || developer.Enabled),"Valid agreement/folders do not enable actions");
+            agreement.Checked=false; Require(!install.Enabled && !update.Enabled && (developer==null || !developer.Enabled),"Revoked agreement did not disable actions");
         }
+        Require(LauncherVariant.InstallationMode(false,"Player")=="Developer","Source-only updater selects Player");
+        Require(LauncherVariant.InstallationMode(true,"Player")=="Player","Included updater changes Player mode");
+        Require(LauncherVariant.InstallationMode(true,"Developer")=="Developer","Included updater forgets explicit source mode");
         // Consent must prevent even extraction/requests, not merely disable a visual control.
         Reject(() => SetupRunner.Install(request,false,Console.WriteLine),"No-consent runner started work");
         Reject(() => SourcePayload.Extract(destination,false),"No-consent payload was extracted");
