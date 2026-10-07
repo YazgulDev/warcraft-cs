@@ -9,6 +9,8 @@ namespace WarcraftCSLauncher {
         public static Task Install(ClientRequest request, bool consent, Action<string> report) {
             // Defense in depth: a disabled button alone must never be the download permission gate.
             if (!consent) throw new InvalidOperationException("Agree to downloads and installation before continuing.");
+            if (request.InstallMode=="Player" && !LauncherVariant.IncludesRuntime)
+                throw new InvalidOperationException("This source-only launcher builds locally. Use Install or download the DLL-included launcher for Player setup.");
             request.ValidateDestination();
             return Task.Run(() => {
                 ReleaseUpdater.RequireIdle(request.InstallDirectory);
@@ -17,14 +19,14 @@ namespace WarcraftCSLauncher {
             });
         }
 
-        public static void InstallSource(ClientRequest request, string source, bool consent, Action<string> report) {
+        public static void InstallSource(ClientRequest request, string source, bool consent, Action<string> report,string launcherFile=null) {
             // Both embedded setup and release updates share the same permission, idle-game and path checks.
             if (!consent) throw new InvalidOperationException("Download/install consent is required.");
             request.ValidateDestination(); ReleaseUpdater.RequireIdle(request.InstallDirectory);
             string allowed=Path.GetFullPath(Path.Combine(request.InstallDirectory,"sources"))+Path.DirectorySeparatorChar;
             if (!Path.GetFullPath(source).StartsWith(allowed,StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("Invalid update source path.");
             // The Player installer reads embedded module data from this EXE or the verified update-cache EXE.
-            request.LauncherExecutable=System.Reflection.Assembly.GetExecutingAssembly().Location;
+            request.LauncherExecutable=launcherFile ?? System.Reflection.Assembly.GetExecutingAssembly().Location;
             var requestFile=Path.Combine(request.InstallDirectory,"install-request.json"); request.Save(requestFile);
             Run(Path.Combine(source,"launcher","install-client.ps1"),"-RequestFile "+Quote(requestFile)+" -DownloadConsent",report);
         }

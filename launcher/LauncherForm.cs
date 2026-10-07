@@ -11,7 +11,7 @@ namespace WarcraftCSLauncher {
     public sealed class LauncherForm : Form {
         private readonly TextBox warcraft = new TextBox(), cs = new TextBox(), destination = new TextBox();
         private readonly CheckBox consent = new CheckBox();
-        private readonly Button install = new Button(), developer = new Button(), play = new Button(), check = new Button();
+        private readonly Button install = new Button(), developer = new Button(), update = new Button(), play = new Button(), check = new Button();
         private readonly TextBox log = new TextBox();
         private readonly Label status = new Label();
         private readonly ProgressBar progress = new ProgressBar();
@@ -19,10 +19,12 @@ namespace WarcraftCSLauncher {
         private bool checking;
         private ReleaseUpdate latest;
         private readonly bool preview;
+        private readonly bool includesRuntime;
         protected override bool ShowWithoutActivation { get { return preview; } }
 
-        public LauncherForm(bool preview=false) {
+        public LauncherForm(bool preview=false,bool? runtimeIncluded=null) {
             this.preview=preview;
+            includesRuntime=runtimeIncluded ?? LauncherVariant.IncludesRuntime;
             Text = "Warcraft CS by Yazgul - Launcher";
             ClientSize = new Size(780, 855); MinimumSize = Size; MaximizeBox = false;
             Font = new Font("Segoe UI", 10); AutoScaleMode = AutoScaleMode.Dpi;
@@ -37,7 +39,7 @@ namespace WarcraftCSLauncher {
                 await CheckUpdates();
             };
             AddLabel("WARCRAFT CS", 22, 18, 730, 36, new Font("Segoe UI", 22, FontStyle.Bold));
-            AddLabel("Version "+CurrentVersion+" — separate offline installation; updates preserve saves/settings.", 24, 62, 730, 28, Font);
+            AddLabel("Version "+CurrentVersion+" — "+(includesRuntime ? "DLL included" : "source-only; DLLs built locally"), 24, 62, 730, 28, Font);
             FolderRow("Warcraft III 1.26a folder", warcraft, 100);
             FolderRow("Counter-Strike 1.6 folder (cstrike or Half-Life)", cs, 172);
             FolderRow("Install Warcraft CS here", destination, 244);
@@ -46,10 +48,12 @@ namespace WarcraftCSLauncher {
             AddLabel("DOWNLOADS AND INSTALLATION", 24, 323, 730, 24, new Font(Font, FontStyle.Bold));
             var explanation = new TextBox {Left=24, Top=353, Width=732, Height=136, Multiline=true, ReadOnly=true,
                 BackColor=SystemColors.Control, BorderStyle=BorderStyle.None, TabStop=false,
-                Text="Player: bundled mod DLLs; no Microsoft Build Tools or Windows SDK downloads.\r\n"+
-                     "Developer: builds DLLs from source; installs missing Build Tools / SDK (several GB).\r\n"+
-                     "Both modes need Python (~26 MB if missing) and NumPy for your local CS assets.\r\n"+
-                     "Developer also obtains MinHook source. Existing compatible tools are reused.\r\n"+
+                Text=(includesRuntime ? "Player: bundled mod DLLs; no Microsoft Build Tools or Windows SDK downloads.\r\n"+
+                     "Developer: builds DLLs locally; prepares missing Build Tools / SDK (several GB).\r\n" :
+                     "This source-only EXE contains no prebuilt mod DLLs.\r\n"+
+                     "Local installation and updates build DLLs; missing Build Tools / SDK may take several GB.\r\n")+
+                     "Python (~26 MB if missing) and NumPy convert your local CS assets.\r\n"+
+                     "Source builds also obtain MinHook. Existing compatible tools are reused.\r\n"+
                      "Microsoft tools may request administrator approval or a restart.\r\n"+
                      "You supply both games. Downloads and installation require your agreement."};
             Controls.Add(explanation);
@@ -64,13 +68,19 @@ namespace WarcraftCSLauncher {
             consent.Checked=false; consent.CheckedChanged += (s,e) => RefreshActions(); Controls.Add(consent);
             // Describe the unconditional check without presenting an automatic-install preference.
             AddLabel("New releases are checked at startup and require your confirmation.",24,565,732,30,Font);
-            // Separate actions make compiler downloads an explicit Developer choice.
-            install.Name="InstallButton"; install.Text="Install / Update — Player"; install.SetBounds(24,605,352,42); install.Click += async (s,e) => await Install("Player"); Controls.Add(install);
-            developer.Name="DeveloperInstallButton"; developer.Text="Install / Update — Developer"; developer.SetBounds(390,605,366,42); developer.Click += async (s,e) => await Install("Developer"); Controls.Add(developer);
-            play.Name="PlayButton"; play.Text="Play"; play.SetBounds(24,665,140,38); play.Click += async (s,e) => await Play(); Controls.Add(play);
-            check.Name="CheckUpdatesButton"; check.Text="Check for updates"; check.SetBounds(180,665,180,38); check.Click+=async(s,e)=>await CheckUpdates(); Controls.Add(check);
+            // Source-only builds expose a single Install action; ready DLLs remain an explicit separate download.
+            install.Name="InstallButton"; install.Text=includesRuntime ? "Install — Player" : "Install";
+            install.SetBounds(24,605,includesRuntime ? 352 : 732,42);
+            install.Click += async (s,e) => await Install(includesRuntime ? "Player" : "Developer"); Controls.Add(install);
+            developer.Name="DeveloperInstallButton"; developer.Text="Install — Developer"; developer.SetBounds(390,605,366,42);
+            developer.Click += async (s,e) => await Install("Developer");
+            if (includesRuntime) Controls.Add(developer);
+            play.Name="PlayButton"; play.Text="Play"; play.SetBounds(24,665,125,38); play.Click += async (s,e) => await Play(); Controls.Add(play);
+            update.Name="UpdateButton"; update.Text="Update"; update.SetBounds(163,665,125,38);
+            update.Click += async (s,e) => await UpdateProject(); Controls.Add(update);
+            check.Name="CheckUpdatesButton"; check.Text="Check for updates"; check.SetBounds(302,665,170,38); check.Click+=async(s,e)=>await CheckUpdates(); Controls.Add(check);
             progress.SetBounds(578,675,178,18); Controls.Add(progress);
-            status.SetBounds(24,719,732,38); status.Text="Choose folders, agree to downloads, then choose Player or Developer."; Controls.Add(status);
+            status.SetBounds(24,719,732,38); status.Text="Choose folders, agree to downloads, then click Install."; Controls.Add(status);
             log.SetBounds(24,761,732,80); log.Multiline=true; log.ReadOnly=true; log.ScrollBars=ScrollBars.Vertical;
             log.Font=new Font("Consolas", 9); Controls.Add(log);
             foreach (var box in new[] {warcraft,cs,destination}) box.TextChanged += (s,e) => RefreshActions();
@@ -105,7 +115,8 @@ namespace WarcraftCSLauncher {
         }
         private void RefreshActions() {
             install.Enabled=!busy && consent.Checked && Directory.Exists(warcraft.Text) && Directory.Exists(cs.Text) && !String.IsNullOrWhiteSpace(destination.Text);
-            developer.Enabled=install.Enabled;
+            developer.Enabled=includesRuntime && install.Enabled;
+            update.Enabled=install.Enabled && !checking;
             play.Enabled=!busy && File.Exists(Path.Combine(destination.Text,"client-installed.json"));
             check.Enabled=!busy && !checking;
         }
@@ -119,8 +130,7 @@ namespace WarcraftCSLauncher {
         }
         private async Task Install(string mode) {
             if (!consent.Checked) return;
-            // Install uses the discovered latest package, avoiding an old embedded payload after an update check.
-            if (latest!=null) { await ApplyUpdate(mode); return; }
+            // Install always uses this EXE's reviewed payload; only Update fetches a GitHub release.
             SetBusy(true); log.Clear(); status.Text="Installing... Progress and errors appear below.";
             var request=CurrentRequest(mode);
             try {
@@ -136,9 +146,10 @@ namespace WarcraftCSLauncher {
         }
         private string InstalledMode() {
             var marker=Path.Combine(destination.Text,"client-installed.json");
-            if (!File.Exists(marker)) return "Player";
+            if (!File.Exists(marker)) return LauncherVariant.InstallationMode(includesRuntime,null);
             var saved=new JavaScriptSerializer().Deserialize<System.Collections.Generic.Dictionary<string,string>>(File.ReadAllText(marker));
-            string mode;return saved.TryGetValue("install_mode",out mode) && mode=="Developer" ? "Developer" : "Player";
+            string mode;saved.TryGetValue("install_mode",out mode);
+            return LauncherVariant.InstallationMode(includesRuntime,mode);
         }
         private string InstalledRevision() {
             var marker=Path.Combine(destination.Text,"client-installed.json");
@@ -154,8 +165,8 @@ namespace WarcraftCSLauncher {
                 // The metadata request may finish after the user closes the window.
                 if (IsDisposed) return;
                 latest=candidate!=null && candidate.Manifest.IsNewer(CurrentVersion,SourcePayload.Revision,InstalledRevision()) ? candidate : null;
-                // A same-version legacy source-only package cannot replace a newer launcher that bundles Player DLLs.
-                if (latest!=null && latest.Manifest.Version==CurrentVersion && !latest.Manifest.SupportsPlayer) latest=null;
+                // Preserve the same-version legacy guard only for a launcher that actually bundles native modules.
+                if (includesRuntime && latest!=null && latest.Manifest.Version==CurrentVersion && !latest.Manifest.SupportsPlayer) latest=null;
                 if (busy) return;
                 status.Text=latest==null ? "Up to date. Play and offline installation remain available." :
                     "Update available: "+latest.Manifest.Version+". Choose whether to install it.";
@@ -167,10 +178,18 @@ namespace WarcraftCSLauncher {
                 if (!busy) status.Text="Update check unavailable. You can still Play or install the embedded version.";
             } finally { checking=false; if (!IsDisposed) RefreshActions(); }
             if (IsDisposed || busy || latest==null) return;
+            await ConfirmUpdate();
+        }
+        private async Task UpdateProject() {
+            if (busy || checking || !consent.Checked) return;
+            // Update performs a fresh GitHub check and confirms the chosen package; Install never invokes this path.
+            await CheckUpdates();
+        }
+        private async Task ConfirmUpdate() {
+            if (latest==null || busy || IsDisposed) return;
             var mode=InstalledMode();
-            // Closing or declining the dialog retains Play and never grants download/install permission.
             using (var dialog=new UpdateAvailableForm(latest,mode)) {
-                if (dialog.ShowDialog(this)!=DialogResult.OK) { Report("Update postponed. You can update later using the installation buttons.");return; }
+                if (dialog.ShowDialog(this)!=DialogResult.OK) { Report("Update postponed. Use Update when ready.");return; }
             }
             consent.Checked=true;await ApplyUpdate(mode);
         }
@@ -181,7 +200,7 @@ namespace WarcraftCSLauncher {
             try {
                 var package=await Task.Run(()=>ReleaseUpdater.Prepare(selected,request,true,ReleaseClient.Download));
                 Report("Verified release "+selected.Manifest.Version+" source and launcher SHA256.");
-                await Task.Run(()=>SetupRunner.InstallSource(request,package.SourceDirectory,true,Report));
+                await Task.Run(()=>SetupRunner.InstallSource(request,package.SourceDirectory,true,Report,package.LauncherFile));
                 Directory.CreateDirectory(Path.GetDirectoryName(Preferences)); request.Save(Preferences);
                 latest=null; status.Text="Updated. Saves, settings and original games were preserved.";
                 // Restart only after successful runtime setup; a failed setup never replaces the working launcher.

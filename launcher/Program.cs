@@ -11,7 +11,7 @@ namespace WarcraftCSLauncher {
             bool updatePreview=args.Length==2 && (args[0]=="--preview-update" || args[0]=="--preview-update-developer");
             if (updatePreview) {
                 // Preview a realistic prompt without network, focus changes or installation side effects.
-                var release=new ReleaseUpdate {Manifest=new ReleaseManifest {Version="0.5.0",RuntimeSha256=new string('a',64)},
+                var release=new ReleaseUpdate {Manifest=new ReleaseManifest {Version=System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString(3),RuntimeSha256=new string('a',64)},
                     Notes="Example release notes\r\n\r\n- New gameplay improvements\r\n- Launcher fixes\r\n\r\nYour saves and settings are preserved."};
                 using (var prompt=new UpdateAvailableForm(release,args[0]=="--preview-update-developer" ? "Developer" : "Player",true)) RenderPreview(prompt,args[1]);
                 return;

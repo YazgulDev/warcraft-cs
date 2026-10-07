@@ -26,11 +26,16 @@ namespace WarcraftCSLauncher {
             if (request.InstallMode=="Player" && !update.Manifest.SupportsPlayer)
                 throw new InvalidDataException("This release requires a source build. Choose Developer explicitly; Player mode never installs Build Tools or Windows SDK.");
             ReleaseClient.ValidateAssetUrl(update.SourceUrl,"v"+update.Manifest.Version,"WarcraftCS-sources.zip");
-            ReleaseClient.ValidateAssetUrl(update.LauncherUrl,"v"+update.Manifest.Version,"WarcraftCSLauncher.exe");
+            if (update.LauncherName!=LauncherVariant.SourceFile && update.LauncherName!=LauncherVariant.IncludedFile)
+                throw new InvalidDataException("Unknown launcher variant.");
+            ReleaseClient.ValidateAssetUrl(update.LauncherUrl,"v"+update.Manifest.Version,update.LauncherName);
             byte[] source=download(update.SourceUrl), launcher=download(update.LauncherUrl);
             ReleaseManifest.Verify(source,update.Manifest.SourceSha256); ReleaseManifest.Verify(launcher,update.Manifest.LauncherSha256);
             if (launcher.Length < 2 || launcher[0] != 'M' || launcher[1] != 'Z') throw new InvalidDataException("Invalid launcher executable.");
             if (request.InstallMode=="Player") EmbeddedRuntime.Verify(launcher,update.Manifest);
+            // A source-only update cannot silently introduce bundled native code into that launcher's EXE.
+            if (update.LauncherName==LauncherVariant.SourceFile && !update.Manifest.SupportsPlayer)
+                EmbeddedRuntime.VerifySourceOnly(launcher);
             string cache=Path.Combine(request.InstallDirectory,"updates",update.Manifest.Revision);
             SourcePayload.RequireOrdinaryPath(Path.Combine(cache,"WarcraftCSLauncher.exe"));
             // Validate required source contracts before writing either the new sources or the executable.

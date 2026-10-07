@@ -2,7 +2,9 @@
 
 `WarcraftCSLauncher.exe` is a standalone launcher/installer for Windows 10/11 x64.
 It uses the .NET Framework and Windows PowerShell included with supported Windows installs.
-It embeds the project's source, prebuilt x86 mod DLLs and notices; clients do not need Git, a compiler or Python beforehand.
+The standard EXE embeds audited project source without native DLLs and compiles locally after consent.
+`WarcraftCSLauncher_DLL_Included.exe` is a separate download with ready x86 modules/notices and optional Player setup.
+Clients do not need Git or Python beforehand. Source setup requires C++ tools/SDK, which can be prepared after agreement.
 
 ## Install and play
 
@@ -12,8 +14,9 @@ It embeds the project's source, prebuilt x86 mod DLLs and notices; clients do no
 3. Choose the client installation folder. Default: `%LOCALAPPDATA%/WarcraftCS`.
    It must be outside both original game folders. Allow enough space for another Warcraft copy.
 4. Read the dependency summary/linked terms and tick the agreement box, initially unchecked.
-5. Press **Install / Update — Player** to install bundled DLLs without Build Tools/SDK.
-   **Install / Update — Developer** prepares missing C++ tools/SDK and builds from source. Progress appears in the log.
+5. In the standard EXE, press **Install** to compile locally with C++ tools/SDK.
+   The DLL-included EXE offers **Install — Player** without Build Tools/SDK and **Install — Developer** for local compilation.
+   Install uses the version embedded in that EXE; progress appears in the log.
 6. Press **Play**. Select your own living unit in a single-player map/campaign and press F6.
 
 ### Folder examples
@@ -41,7 +44,7 @@ Use WASD/mouse to move/aim, left mouse to shoot, R to reload, 1–7 to select we
 and F6 to return to RTS. See the [complete controls](../README.md#controls).
 
 After a Windows restart requested by Microsoft setup, open this EXE again, select the
-same folders, accept the agreement and retry **Install / Update**. Successful installation
+same folders, accept the agreement and retry **Install**. Successful installation
 enables **Play**; consent is not required just to play an already prepared installation.
 
 Downloads/installation cannot start without consent: the UI, setup runner, payload extractor
@@ -51,15 +54,20 @@ Existing game saves are not imported automatically; preserve your progress befor
 ## Release updates
 
 Startup checks the latest stable release of `YazgulDev/warcraft-cs`; **Check for updates** retries it.
+The separate **Update** button performs a fresh GitHub check and offers the latest project release.
 Checks always read metadata automatically, regardless of installation consent. When an update is found,
-a dialog shows the version and notes. **Update** confirms downloads/installation in your saved Player or
-Developer mode; **Not now** or closing the window postpones it. The dialog explains its dependencies and
+a dialog shows the version and notes. **Update** confirms downloads/installation; **Not now** or closing
+the window postpones it. The standard launcher always builds locally, including over a previous Player
+installation. The DLL-included launcher preserves its variant and saved Player/Developer mode.
+The dialog explains its dependencies and
 acceptance of terms. Warcraft must be closed. There is no automatic-install checkbox. Previous folder selections are remembered; legacy automatic-install
 preferences do not grant consent or start installation in this launcher.
 
-The updater downloads `WarcraftCS-update.json`, `WarcraftCS-sources.zip` and `WarcraftCSLauncher.exe`
+The updater downloads `WarcraftCS-update.json`, `WarcraftCS-sources.zip` and the matching launcher variant
 from that repository's release assets. It validates version/tag, SHA256, archive paths and the source
-version, then installs all new project sources in a revision-specific folder. Player validates the EXE’s
+version, then installs all new project sources in a revision-specific folder. The standard manifest hash
+describes `WarcraftCSLauncher.exe`; `DllIncludedLauncherSha256` / `DllIncludedRuntimeSha256` describe the
+separate bundled executable and its runtime. Player validates the EXE's
 embedded native runtime and installs its two mod modules. Developer rebuilds the modules locally.
 Both convert owned game assets. Existing saves, maps and INI settings are kept; a remembered private sword remains selected.
 The launcher refuses an update while its Warcraft runtime is running. Save and close the game, then retry.
@@ -75,12 +83,18 @@ the API cannot provide their text. GitHub/network failures leave offline Play an
 installed. Setup failures are reported and must be retried; the launcher is replaced only after successful
 setup. Package hashes check integrity over HTTPS; the project executable remains unsigned.
 
+Old 0.5.0 Player updaters cannot select the newly named DLL-included EXE. Download it directly and select
+the existing installation folder to migrate. Their missing-bundle guard prevents silently installing Build Tools.
+Legacy 0.3/0.4 source-build requests retain local compilation when they lack a mode field.
+
 Version comparisons prevent downgrades. Source revisions also detect repaired assets of the same version,
 so release/0.5.0 can receive fixes without moving its published v0.5.0 tag. Use the attached sources ZIP for
 the updated build; GitHub's automatic tag archives continue to represent the original tag snapshot.
 
 The `dist` folder remains generated/untracked. Release assets include the EXE, checksum, exact embedded
-sources ZIP, native `WarcraftCS-runtime.zip`, readable `REQUIREMENTS.md`, updater manifest and `WarcraftCS-<version>-dist.zip`. Upload the manifest last so clients never
+sources ZIP, the separate DLL-included EXE/checksum, readable `REQUIREMENTS.md`, updater manifest and
+`WarcraftCS-<version>-dist.zip`. Every public ZIP contains no prebuilt DLLs. The native runtime ZIP stays
+in private build output. Upload the manifest last so clients never
 start an update against an incomplete package set.
 
 ## Dependencies
@@ -120,9 +134,13 @@ python tools/audit_sources.py --staged
 .\tools\build-launcher.ps1 -WarcraftDirectory "E:\Warcraft III"
 .\tools\test-launcher.ps1
 $manifest=Get-Content dist/WarcraftCS-update.json -Raw | ConvertFrom-Json
-.\tools\test-prebuilt-runtime.ps1 -Package dist/WarcraftCS-runtime.zip -SourceRevision $manifest.Revision -Launcher (Resolve-Path dist/WarcraftCSLauncher.exe).Path
+.\tools\test-launcher-packages.ps1 -Directory dist
+.\tools\test-prebuilt-runtime.ps1 -Package build/launcher/WarcraftCS-runtime.zip -SourceRevision $manifest.Revision -Launcher (Resolve-Path dist/WarcraftCSLauncher_DLL_Included.exe).Path
 ```
 
-Output: `dist/WarcraftCSLauncher.exe` (ignored by Git). The build embeds exactly the audited staged source tree plus a separate native-runtime resource. Git and the source ZIP contain no binaries.
+Output: both EXEs, their checksums, sources/requirements/update manifest and a source-only distribution ZIP
+(all ignored by Git). Both EXEs embed the same audited staged source tree; only the DLL-included EXE
+embeds a native-runtime resource. Git and every public ZIP exclude prebuilt mod modules.
+Use `build-launcher.ps1 -SourceOnly` when building just the standard EXE without an owned Warcraft build host.
 Only launcher source/scripts/docs are committed; the own-code EXE can be shared separately.
 The EXE is not Authenticode-signed by Yazgul; dependency installers are verified using their vendor signatures.
