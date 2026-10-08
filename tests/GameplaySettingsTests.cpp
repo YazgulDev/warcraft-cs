@@ -12,8 +12,10 @@ int main() {
     assert(settings.ContactDamage(4,true,100)==65);
     assert(settings.FinishingAWP(3));
     assert(settings.friendlyFirePercent==50);
-    assert(!settings.startAllWeapons && settings.startBombs==20 && settings.maxBombs==100 && !settings.allowFreeRefill);
-    assert(settings.buyAccess==GameplaySettings::BuyAccess::Anywhere && settings.csSky);
+    assert(!settings.startAllWeapons && settings.startBombs==20 && settings.maxBombs==100 );
+    assert(settings.buyAccess==GameplaySettings::BuyAccess::Anywhere && !settings.csSky);
+    assert(settings.weaponPrice[0]==625 && settings.weaponPrice[1]==775 && settings.weaponPrice[2]==125);
+    assert(settings.weaponPrice[3]==1188 && settings.weaponPrice[5]==50 && settings.weaponPrice[6]==250);
     assert(settings.squadRadius==600 && settings.squadMaxUnits==24 && settings.squadFollowDistance==180 && settings.squadLeash==900);
     settings.heroDamage=true;settings.heroMultiplier[0]=2;
     assert(settings.ContactDamage(0,false,28)==56);
@@ -58,7 +60,7 @@ int main() {
     { std::ofstream file(path);file<<"[Loadout]\nMode=all\nBombCount=5000\nMaxBombs=30\n[Buy]\nAccess=shops\nRadius=99999\nAllowFreeRefill=true\n[AK47]\nPrice=-50\nAmmoPrice=nan\nAmmoPack=0\n[Sky]\nEnabled=false\nDefault=../../secret\nW=blue\n"; }
     settings=GameplaySettings::Load(path);DeleteFileA(path.c_str());
     assert(settings.startAllWeapons && settings.startBombs==30 && settings.maxBombs==30);
-    assert(settings.buyAccess==GameplaySettings::BuyAccess::Shops && settings.buyRadius==3000 && settings.allowFreeRefill);
+    assert(settings.buyAccess==GameplaySettings::BuyAccess::Shops && settings.buyRadius==3000);
     assert(settings.weaponPrice[0]==0 && settings.ammoPrice[0]==80 && settings.ammoPack[0]==1);
     assert(!settings.csSky && settings.defaultSky=="Des" && settings.tilesetSky['W']=="blue");
     { std::ofstream file(path);file<<"[Buy]\nAccess=friendly\n[Loadout]\nBombCount=0\n[Sky]\nA=forest\n"; }

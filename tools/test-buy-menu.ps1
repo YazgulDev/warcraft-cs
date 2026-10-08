@@ -17,4 +17,7 @@ finally { Pop-Location }
 . (Join-Path $PSScriptRoot 'paths.ps1')
 & (Get-WarcraftCsPython $root) (Join-Path $root 'tests/test_export_skies.py')
 if ($LASTEXITCODE) { throw 'Sky conversion tests failed.' }
+# Synthetic preview fixtures prove arm filtering without including any copyrighted game data.
+& (Get-WarcraftCsPython $root) (Join-Path $root 'tests/test_export_buy_previews.py')
+if ($LASTEXITCODE) { throw 'Buy preview conversion tests failed.' }
 & (Join-Path $PSScriptRoot 'test-gameplay-config.ps1')

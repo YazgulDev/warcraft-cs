@@ -30,6 +30,8 @@ void Overlay::ResetGraphics(bool deleteObjects) {
     sky_.Reset(deleteObjects);
     // GPU names belong to one context; never delete old numeric IDs in a replacement context.
     for (int i = 0; i < WeaponSlots::Count; ++i) { guns_[i].Reset(deleteObjects); loaded_[i] = attempted_[i] = false; }
+    // Menu models obey the same context ownership rules as first-person weapons.
+    for (int i=0;i<WeaponSlots::Count;++i) { buyPreviews_[i].Reset(deleteObjects);previewLoaded_[i]=previewAttempted_[i]=false; }
     if (deleteObjects) {
         if (font_) glDeleteLists(font_, 96);
         if (statusFont_) glDeleteLists(statusFont_, 96);
@@ -52,6 +54,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller) {
         bool valid=(!font_ || glIsList(font_)) && (!statusFont_ || glIsList(statusFont_));
         valid=valid && sky_.Valid();
         for (int i=0;i<WeaponSlots::Count;++i) if (loaded_[i] && !guns_[i].TexturesValid()) valid=false;
+        for (int i=0;i<WeaponSlots::Count;++i) if (previewLoaded_[i] && !buyPreviews_[i].TexturesValid()) valid=false;
         if (!valid) { ResetGraphics(false); wc3::Log("Overlay lost resources forgotten after focus return"); }
         else wc3::Log("Overlay resources retained after focus return");
     }
@@ -158,7 +161,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller) {
     Text(25,88,squad);
     // Keep the creator credit visible alongside the controls.
     Text(25, 30, "Warcraft CS by Yazgul | F6: RTS | B: BUY | .: AMMO | WASD | SPACE: JUMP | CTRL: DUCK | R: RELOAD");
-    char economy[96];sprintf_s(economy,"GOLD %d | B: BUY EQUIPMENT | .: BUY AMMO",controller.Gold());Text(25,117,economy);
+    char economy[96];sprintf_s(economy,"GOLD %d | B: BUY | .: AMMO | F7: FREE AMMO | F9: ALL WEAPONS",controller.Gold());Text(25,117,economy);
     if (controller.RefillNotice()) Text(statusPad, statusY - statusSize - 16, controller.AmmoMessage(), statusFont_);
     // Ground items advertise interaction without issuing a walk-to-item RTS order.
     if (controller.ItemNearby()) Text(width*.5f-120,height*.72f,"E: PICK UP ITEM",statusFont_);
@@ -169,7 +172,17 @@ void Overlay::Draw(HDC dc, const ShooterController& controller) {
             sprintf_s(effect, "%s  %.0f%% SPEED", controller.Status().Label(), controller.Status().speedScale * 100);
         Text(statusPad, statusY - (statusSize + 16) * (controller.RefillNotice() ? 2 : 1), effect, statusFont_);
     }
-    BuyMenuView::Draw(controller,width,height,window,[&](float x,float y,const char* text){Text(x,y,text);});
+    BuyMenuView::Draw(controller,width,height,window,[&](float x,float y,const char* text){Text(x,y,text);},
+        [&](float x,float y,const char* title){Text(x,y,title,statusFont_);},
+        [&](int slot,float x,float y,float w,float h) {
+            auto item=BuyCatalog::Slot(slot);if (!item) return;
+            // Private previews load lazily; absent optional art never prevents a purchase.
+            if (!previewAttempted_[slot]) {
+                previewAttempted_[slot]=true;
+                previewLoaded_[slot]=buyPreviews_[slot].Load(root_+"\\assets\\buy\\"+item->cache+".wcg");
+            }
+            if (previewLoaded_[slot]) buyPreviews_[slot].DrawPreview(x,y,w,h);
+        });
     glPopMatrix(); glMatrixMode(GL_PROJECTION); glPopMatrix();
     glMatrixMode(GL_TEXTURE); glPopMatrix();
     glMatrixMode(oldMode); glPopAttrib();
