@@ -13,6 +13,10 @@ NATIVE(void, GroupEnumUnitsInRange, (Handle, float*, float*, float*, Handle), 0x
 NATIVE(Handle, FirstOfGroup, (Handle), 0x3C4460)
 NATIVE(void, GroupRemoveUnit, (Handle, Handle), 0x3C3FF0)
 NATIVE(Handle, GetOwningPlayer, (Handle), 0x3C8190)
+// Verified against the owned 1.26a JASS registration table (name/signature/function triples).
+NATIVE(int, GetPlayerState, (Handle,int), 0x3C9B00)
+NATIVE(void, SetPlayerState, (Handle,int,int), 0x3C9AA0)
+NATIVE(int, GetUnitAbilityLevel, (Handle,int), 0x3C7290)
 NATIVE(int, GetPlayerController, (Handle), 0x3C12B0)
 NATIVE(int, GetPlayerSlotState, (Handle), 0x3C12D0)
 NATIVE(int, GetUnitTypeId, (Handle), 0x3C5910)
