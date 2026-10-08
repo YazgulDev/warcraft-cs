@@ -11,6 +11,7 @@ public:
     bool Tick(GameAudio& audio);
     void Reset();
     bool Active() const { return timer_ && !exploded_; }
+    bool Finished() const { return timer_==0; }
     float Remaining() const { return remaining_; }
 private:
     wc3::Handle attacker_ = 0, marker_ = 0, timer_ = 0;

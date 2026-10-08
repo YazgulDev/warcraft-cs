@@ -23,11 +23,14 @@ $sources = @('WarcraftApi.cpp', 'MouseLook.cpp', 'MovementPhysics.cpp', 'Warcraf
 $sources += @('GameplaySettings.cpp','ItemPickup.cpp','SquadController.cpp','FpsCombatGuard.cpp') | ForEach-Object { '"' + (Join-Path $modRoot "src/$_") + '"' }
 # Tree narrow-phase geometry is decoded independently of native widget enumeration and the controller.
 $sources += '"' + (Join-Path $modRoot 'src/TreeTrunkMesh.cpp') + '"'
+# Shop access is native-world policy; inventory prices/navigation remain independently testable.
+$sources += @('BuyAccess.cpp','BuyMenuView.cpp','SkyView.cpp','MapEnvironment.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 # Install defaults only once so rebuilds preserve the player's customized settings.
 $configDirectory=Join-Path $OutputDirectory 'WarcraftCS'
 New-Item -ItemType Directory -Path $configDirectory -Force | Out-Null
 $configFile=Join-Path $configDirectory 'WarcraftCS.ini'
-if (!(Test-Path -LiteralPath $configFile)) { Copy-Item -LiteralPath (Join-Path $modRoot 'config/WarcraftCS.ini') -Destination $configFile }
+. (Join-Path $modRoot 'setup/gameplay-config.ps1')
+Update-GameplayConfig (Join-Path $modRoot 'config/WarcraftCS.ini') $configFile
 $testDefine = ''
 if ($TestStatusEffects) {
     $sources += '"' + (Join-Path $modRoot 'tests/StatusEffectScene.cpp') + '"'

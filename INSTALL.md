@@ -78,6 +78,9 @@ Maps do not need editing. Enable FPS again after changing maps.
 - F6: return to RTS; F10: pause menu; F8: reload configuration.
 
 See [README controls and settings](README.md#controls) for details.
+The default starting kit is knife, sword and 20 C4 charges. Press B to buy firearms with Warcraft
+gold and `.` to buy current-weapon ammunition. Edit `[Loadout]`, `[Buy]`, weapon prices and `[Sky]`
+in `Game/WarcraftCS/WarcraftCS.ini`; F8 reloads settings (starting-kit changes apply to the next map).
 Once installed, **Play** does not require download consent or install dependencies.
 
 Use the launcher for either edition so fullscreen rendering uses consistent DPI scaling after Alt-Tab.
