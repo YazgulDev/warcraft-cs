@@ -40,7 +40,8 @@ void ShooterController::ResetLoadout() {
     int magazines[WeaponSlots::Count],reserves[WeaponSlots::Count];
     for (int i=0;i<WeaponSlots::Count;++i) { magazines[i]=weapons[i].magazine;reserves[i]=weapons[i].reserve; }
     inventory_.Reset(settings_,ammo_,reserve_,magazines,reserves);
-    weapon_=settings_.startAllWeapons ? 0 : WeaponSlots::Knife;
+    // The default kit includes a loaded USP, selected when a fresh map starts.
+    weapon_=settings_.startAllWeapons ? 0 : WeaponSlots::Pistol;
 }
 void ShooterController::Notice(const char* message) { ammoMessage_=message;refillTick_=GetTickCount(); }
 void ShooterController::RequestBuyClick(int x,int y,int width,int height) {
@@ -57,6 +58,8 @@ void ShooterController::Buy(int slot,bool ammunition) {
         wc3::SetPlayerState(owner,1,gold);gold_=gold;Notice(ammunition ? "AMMUNITION PURCHASED" : "WEAPON PURCHASED");
         wc3::Log("buy weapon=%s ammunition=%d gold=%d ammo=%d reserve=%d",weapons[slot].name,ammunition,gold,ammo_[slot],reserve_[slot]);
         if (!ammunition) SwitchWeapon(slot);
+        // Successful CS purchases return directly to play; rejected purchases leave the menu open.
+        buyMenu_.Close();
     } else Notice(result==BuyInventory::Result::NoGold ? "NOT ENOUGH GOLD" : result==BuyInventory::Result::Full ? "AMMUNITION FULL" :
         result==BuyInventory::Result::AlreadyOwned ? "ALREADY OWNED" : "NO AMMUNITION FOR THIS WEAPON");
 }
@@ -74,10 +77,16 @@ void ShooterController::UpdateBuyMenu() {
     if (Buying() && !BuyAccess::Allowed(unit_,settings_)) { buyMenu_.Close();Notice("LEFT BUY ZONE"); }
     if (Buying() && buyKeyRequested_>=0) {
         auto action=buyMenu_.Select(buyKeyRequested_,weapon_);
-        if (action.allAmmo) {
-            for (int i=0;i<WeaponSlots::Count;++i) if (inventory_.owned[i] && !WeaponSlots::Melee(i)) Buy(i,true);
+        // Original CS splits primary (rifles) and secondary (pistols) ammunition.
+        if (action.primaryAmmo || action.secondaryAmmo) {
+            auto category=action.primaryAmmo ? BuyCatalog::Category::Rifles : BuyCatalog::Category::Pistols;
+            bool carried=false;
+            for (const auto& item : BuyCatalog::Entries) if (item.category==category && inventory_.owned[item.slot]) {
+                Buy(item.slot,true);carried=true;
+            }
+            if (!carried) Notice("NO WEAPON IN THIS CATEGORY");
         }
-        if (action.slot>=0) Buy(action.slot,action.ammo);
+        if (action.slot>=0) Buy(action.slot,false);
     }
     // Closing via a clicked 0 row must not turn that same held button into a gunshot/C4 installation.
     if (wasBuying && !Buying()) { mouseLook_.Reset();suppressFire_=true; }
@@ -142,7 +151,7 @@ void ShooterController::Disable(bool restoreCamera) {
     active_ = false; scopeLevel_ = 0; reloadEnd_ = 0;
     meleeContact_ = meleeReady_ = 0; recoil_.Reset();
     fullscreen_.Update(ui_, false); audio_.Stop(); stepDistance_ = 0;
-    hits_.Clear(); refillRequested_ = false; refillTick_ = 0;
+    hits_.Clear(); refillRequested_ = false; allWeaponsRequested_=false; refillTick_ = 0;
     itemRequested_=settingsRequested_=itemNearby_=false;squadRequested_=0;
     movement_.Stop();
     weaponWheel_.Reset(); // A partial notch must not survive leaving FPS.
@@ -165,7 +174,7 @@ void ShooterController::ResetMap() {
     fullscreen_.Reset(); audio_.Stop(); stepDistance_ = 0; reloadEnd_ = 0;
     menuRequested_ = false;
     itemRequested_=settingsRequested_=itemNearby_=false;squadRequested_=0;ammoRecovery_.Reset();
-    hits_.Clear(); refillRequested_ = false; refillTick_ = 0; fixtureTarget_ = 0; blastFixtures_.clear();
+    hits_.Clear(); refillRequested_ = false; allWeaponsRequested_=false; refillTick_ = 0; fixtureTarget_ = 0; blastFixtures_.clear();
     ResetLoadout();
 }
 void ShooterController::Toggle() {
@@ -255,7 +264,7 @@ void ShooterController::UpdateStatus() {
             wc3::Real(wc3::GetUnitState(unit_, 0)));
         if (current.incapacitated) {
             // A stun interrupts reload/refill and cancels queued action edges instead of replaying them on recovery.
-            reloadEnd_ = 0; meleeContact_ = 0; refillRequested_ = false; CancelPlant(); audio_.Stop(); Play("idle");
+            reloadEnd_ = 0; meleeContact_ = 0; refillRequested_ = false; allWeaponsRequested_=false; CancelPlant(); audio_.Stop(); Play("idle");
         }
     }
     if ((status_.contained || status_.hidden) && !current.contained && !current.hidden) {
@@ -287,15 +296,16 @@ void ShooterController::Reload() {
     recoil_.ResetBurst(); // Native CS reload resets burst accuracy, without snapping the camera punch away.
     reloadEnd_ = animationTick_ + DWORD((duration > 0 ? duration : w.reload) * 1000);
 }
-void ShooterController::RefillAmmo() {
-    if (!settings_.allowFreeRefill) { Notice("FREE REFILL DISABLED | B: BUY | .: AMMO");return; }
-    // Refill every carried weapon together, including reserves, and cancel an unfinished reload.
-    for (int i = 0; i < WeaponSlots::Count; ++i) if (inventory_.owned[i]) { ammo_[i] = i==WeaponSlots::C4 ? settings_.maxBombs : weapons[i].magazine; reserve_[i] = weapons[i].reserve; }
+void ShooterController::RefillAmmo(bool grantAll) {
+    // F7 freely restores carried ammo; F9 additionally unlocks every slot without spending gold.
+    int magazines[WeaponSlots::Count],reserves[WeaponSlots::Count];
+    for (int i=0;i<WeaponSlots::Count;++i) { magazines[i]=weapons[i].magazine;reserves[i]=weapons[i].reserve; }
+    inventory_.Refill(settings_,ammo_,reserve_,magazines,reserves,grantAll);
     if (reloadEnd_) { reloadEnd_ = 0; audio_.CancelAnimation(); Play("idle"); }
-    CancelPlant();
-    refillTick_ = GetTickCount();
-    ammoRecovery_.Reset();ammoMessage_="ALL AMMO RESTORED";
-    wc3::Log("F7 ammo refill: AK47=30/90 M4A1=30/90 USP=12/100 AWP=10/30 C4=1");
+    CancelPlant();ammoRecovery_.Reset();
+    Notice(grantAll ? "ALL WEAPONS AND AMMO GRANTED" : "ALL AMMO RESTORED");
+    wc3::Log("%s free inventory: AK47=%d/%d M4A1=%d/%d USP=%d/%d AWP=%d/%d C4=%d gold=%d",
+        grantAll ? "F9" : "F7",ammo_[0],reserve_[0],ammo_[1],reserve_[1],ammo_[2],reserve_[2],ammo_[3],reserve_[3],ammo_[5],gold_);
 }
 void ShooterController::SwitchWeapon(int slot) {
     if (slot<0 || slot>=WeaponSlots::Count || !inventory_.owned[slot] || weapon_ == slot) return;
@@ -631,10 +641,11 @@ void ShooterController::Tick(uintptr_t ui) {
         // Consume action edges while disabled, so held reload/scope/switch inputs are not replayed on recovery.
         static const int actionKeys[] = {'1', '2', '3', '4', '5', '6', '7', 'R', VK_LBUTTON, VK_RBUTTON};
         for (int key : actionKeys) Pressed(key);
-        refillRequested_ = false;
+        refillRequested_ = false; allWeaponsRequested_=false;
         AimAndMove(dt); Camera(); audio_.Tick(GetTickCount());
         return;
     }
+    if (allWeaponsRequested_) { allWeaponsRequested_=false;refillRequested_=false;RefillAmmo(true); }
     if (refillRequested_) { refillRequested_ = false; RefillAmmo(); }
     UpdateBuyMenu();
     if (!Down(VK_LBUTTON) && !Down(VK_RBUTTON)) suppressFire_=false;

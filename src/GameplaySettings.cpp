@@ -37,11 +37,10 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     else if (_stricmp(access.c_str(),"anywhere")) { result.buyAccess=BuyAccess::Shops;wc3::Log("Invalid Buy.Access; using shops"); }
     result.buyRadius=number("Buy","Radius",600,3000);
     result.shopTypes=text("Buy","ShopTypes","");
-    result.allowFreeRefill=!_stricmp(text("Buy","AllowFreeRefill","false").c_str(),"true");
     result.startAllWeapons=!_stricmp(text("Loadout","Mode","melee").c_str(),"all");
     result.maxBombs=int(number("Loadout","MaxBombs",100,1000));
     result.startBombs=std::min(result.maxBombs,int(number("Loadout","BombCount",20,1000)));
-    result.csSky=_stricmp(text("Sky","Enabled","true").c_str(),"false")!=0;
+    result.csSky=_stricmp(text("Sky","Enabled","false").c_str(),"false")!=0;
     // Only filename stems from private CS caches are accepted; INI strings never become arbitrary paths.
     auto sky=[&](const char* key,const char* fallback) {
         auto value=text("Sky",key,fallback);

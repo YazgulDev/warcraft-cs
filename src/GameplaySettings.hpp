@@ -22,11 +22,11 @@ struct GameplaySettings {
     BuyAccess buyAccess=BuyAccess::Anywhere;
     float buyRadius=600;
     std::string shopTypes="";
-    bool allowFreeRefill=false;
-    std::array<int,WeaponSlots::Count> weaponPrice={2500,3100,500,4750,0,200,1000};
+    // F7 is always a free refill; ordinary purchases still debit native gold.
+    std::array<int,WeaponSlots::Count> weaponPrice={625,775,125,1188,0,50,250};
     std::array<int,WeaponSlots::Count> ammoPrice={80,60,25,125,0,200,0};
     std::array<int,WeaponSlots::Count> ammoPack={30,30,12,10,0,1,0};
-    bool csSky=true;
+    bool csSky=false;
     std::string defaultSky="Des";
     std::array<std::string,256> tilesetSky{};
     std::array<float, WeaponSlots::Count> damage = {36,33,34,115,40,2500,120};

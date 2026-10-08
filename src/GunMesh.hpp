@@ -8,6 +8,8 @@ class GunMesh {
 public:
     bool Load(const std::string& path);
     void Draw(const char* animation, float seconds);
+    // Hand-free private caches fit the complete weapon in the buy menu's preview rectangle.
+    void DrawPreview(float x,float y,float width,float height);
     void Reset(bool deleteTextures);
     bool TexturesValid() const;
 private:

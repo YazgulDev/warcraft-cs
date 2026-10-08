@@ -73,14 +73,16 @@ Maps do not need editing. Enable FPS again after changing maps.
 
 - WASD/mouse: move and aim; Space: jump; Ctrl: crouch; Shift: walk.
 - Left mouse: shoot or melee; right mouse: strong melee attack or AWP zoom.
-- 1–7: choose weapons; mouse wheel: previous/next weapon; R: reload; F7: refill all ammunition.
+- 1–7: choose weapons; mouse wheel: previous/next weapon; R: reload; F7: refill carried ammunition for free; F9: get all weapons and ammunition for free.
 - E: pick up items/runes; H/O: recruit your units; J: release them.
 - F6: return to RTS; F10: pause menu; F8: reload configuration.
 
 See [README controls and settings](README.md#controls) for details.
-The default starting kit is knife, sword and 20 C4 charges. Press B to buy firearms with Warcraft
+The default starting kit is a loaded USP, knife, sword and 20 C4 charges. Press B to buy firearms with Warcraft
 gold and `.` to buy current-weapon ammunition. Edit `[Loadout]`, `[Buy]`, weapon prices and `[Sky]`
 in `Game/WarcraftCS/WarcraftCS.ini`; F8 reloads settings (starting-kit changes apply to the next map).
+The CS-style menu uses 1 pistols, 4 rifles, 6 primary ammo, 7 secondary ammo and 8 equipment.
+Sky replacement is disabled by default. Weapon prices are four times lower; ammo-pack prices are unchanged.
 Once installed, **Play** does not require download consent or install dependencies.
 
 Use the launcher for either edition so fullscreen rendering uses consistent DPI scaling after Alt-Tab.
