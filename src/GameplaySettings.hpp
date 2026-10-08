@@ -15,6 +15,20 @@ struct GameplaySettings {
     // Recruitment and spacing are configurable without rewriting map data or unit ownership.
     float squadRadius=600,squadFollowDistance=180,squadLeash=900;
     int squadMaxUnits=24;
+    // Gold economy and loadout are per-map; reloading settings cannot mint another starting kit.
+    bool startAllWeapons=false;
+    int startBombs=20,maxBombs=100;
+    enum class BuyAccess { Anywhere, FriendlyBuildings, Shops };
+    BuyAccess buyAccess=BuyAccess::Anywhere;
+    float buyRadius=600;
+    std::string shopTypes="";
+    bool allowFreeRefill=false;
+    std::array<int,WeaponSlots::Count> weaponPrice={2500,3100,500,4750,0,200,1000};
+    std::array<int,WeaponSlots::Count> ammoPrice={80,60,25,125,0,200,0};
+    std::array<int,WeaponSlots::Count> ammoPack={30,30,12,10,0,1,0};
+    bool csSky=true;
+    std::string defaultSky="Des";
+    std::array<std::string,256> tilesetSky{};
     std::array<float, WeaponSlots::Count> damage = {36,33,34,115,40,2500,120};
     std::array<float, WeaponSlots::Count> heroMultiplier = {1,1,1,3,1,1,3};
     float knifeSecondaryDamage = 65, swordSecondaryDamage = 240;

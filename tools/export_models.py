@@ -181,6 +181,7 @@ class StudioModel:
 
 
 def main():
+    from export_skies import export as export_skies
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cstrike", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
@@ -219,6 +220,8 @@ def main():
     for step in range(1, 5):
         shutil.copy2(args.cstrike / "sound" / "player" / f"pl_step{step}.wav", sounds / f"pl_step{step}.wav")
     (args.output / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    # Sky faces remain private game-derived content, just like hands, skins and audio.
+    export_skies(args.cstrike, args.output / "skies")
     print(json.dumps(manifest, indent=2))
 
 

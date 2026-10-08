@@ -65,6 +65,10 @@ extern void (__cdecl* GroupEnumUnitsInRange)(Handle, float*, float*, float*, Han
 extern Handle (__cdecl* FirstOfGroup)(Handle);
 extern void (__cdecl* GroupRemoveUnit)(Handle, Handle);
 extern Handle (__cdecl* GetOwningPlayer)(Handle);
+// Economy operates on native Warcraft gold, preserving the campaign's resource triggers/UI.
+extern int (__cdecl* GetPlayerState)(Handle,int);
+extern void (__cdecl* SetPlayerState)(Handle,int,int);
+extern int (__cdecl* GetUnitAbilityLevel)(Handle,int);
 extern int (__cdecl* GetPlayerController)(Handle);
 extern int (__cdecl* GetPlayerSlotState)(Handle);
 extern int (__cdecl* GetUnitTypeId)(Handle);

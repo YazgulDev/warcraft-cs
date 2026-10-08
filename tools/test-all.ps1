@@ -6,4 +6,6 @@ foreach ($name in @('movement','mouse-look','hitboxes','melee','combat-damage','
     & (Join-Path $PSScriptRoot "test-$name.ps1")
 }
 & (Join-Path $PSScriptRoot 'test-tree-and-wheel.ps1')
-Write-Output 'All nine native-independent C++ regression suites passed.'
+# Buying/sky decoding are independent of Warcraft and use only synthetic/private-free test inputs.
+& (Join-Path $PSScriptRoot 'test-buy-menu.ps1')
+Write-Output 'All native-independent regression suites passed.'

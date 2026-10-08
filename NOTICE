@@ -132,6 +132,11 @@ https://docs.python.org/3/license.html
 https://visualstudio.microsoft.com/license-terms/
 
 PROVENANCE RULE
+CS skybox faces are read only from the owner's cstrike/gfx/env TGA files and converted
+locally into private RGBA caches. No Valve sky texture or generated cache is committed,
+embedded or redistributed. The original TGA reader, cache writer and OpenGL sky renderer
+are project source; their code license does not license Counter-Strike game art.
+
 Source-only Git commits include project source, tests, setup/configuration and
 these required notices. All .local data, downloaded dependencies, generated
 forwarders/binaries, private mod logs, game assets, saves and recordings are excluded.

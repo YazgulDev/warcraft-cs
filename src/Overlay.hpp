@@ -2,6 +2,7 @@
 #include "WeaponSlots.hpp"
 #include "GunMesh.hpp"
 #include "ShooterController.hpp"
+#include "SkyView.hpp"
 
 class Overlay {
 public:
@@ -21,4 +22,5 @@ private:
     int statusFontSize_ = 0;
     HGLRC context_ = nullptr;
     bool refreshPending_ = false;
+    SkyView sky_;
 };
