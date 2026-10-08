@@ -26,7 +26,7 @@ void Overlay::Text(float x, float y, const char* text, GLuint font) {
     glCallLists(GLsizei(strlen(text)), GL_UNSIGNED_BYTE, text);
 }
 void Overlay::ResetGraphics(bool deleteObjects) {
-    // GPU names belong to one context; rebuild both skins and glyphs after replacement or focus recovery.
+    // GPU names belong to one context; never delete old numeric IDs in a replacement context.
     for (int i = 0; i < WeaponSlots::Count; ++i) { guns_[i].Reset(deleteObjects); loaded_[i] = attempted_[i] = false; }
     if (deleteObjects) {
         if (font_) glDeleteLists(font_, 96);
@@ -46,7 +46,11 @@ void Overlay::Draw(HDC dc, const ShooterController& controller) {
         ResetGraphics(false); context_ = current;
         wc3::Log("Overlay context acquired: %p", current);
     } else if (refreshPending_) {
-        ResetGraphics(true); wc3::Log("Overlay rebuilt after focus return");
+        // Keep surviving resources: blind deletion after Alt-Tab can touch IDs recycled by the game.
+        bool valid=(!font_ || glIsList(font_)) && (!statusFont_ || glIsList(statusFont_));
+        for (int i=0;i<WeaponSlots::Count;++i) if (loaded_[i] && !guns_[i].TexturesValid()) valid=false;
+        if (!valid) { ResetGraphics(false); wc3::Log("Overlay lost resources forgotten after focus return"); }
+        else wc3::Log("Overlay resources retained after focus return");
     }
     refreshPending_ = false;
     // Preserve every GL state touched so Warcraft's next frame renders normally.

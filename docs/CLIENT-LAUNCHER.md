@@ -17,7 +17,8 @@ Clients do not need Git or Python beforehand. Source setup requires C++ tools/SD
 5. In the standard EXE, press **Install** to compile locally with C++ tools/SDK.
    The DLL-included EXE offers **Install — Player** without Build Tools/SDK and **Install — Developer** for local compilation.
    Install uses the version embedded in that EXE; progress appears in the log.
-6. Press **Play**. Select your own living unit in a single-player map/campaign and press F6.
+6. Select **The Frozen Throne** or **Reign of Chaos** under **Game to launch**, then press **Play**.
+   Select your own living unit in a single-player map/campaign and press F6.
 
 ### Folder examples
 

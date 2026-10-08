@@ -12,9 +12,12 @@ namespace WarcraftCSLauncher {
         public bool AutomaticUpdates { get; set; }
         public string InstallMode { get; set; }
         public string LauncherExecutable { get; set; }
-        public ClientRequest() { InstallMode="Player"; }
+        // Edition preferences are optional in old clients and independent of download consent.
+        public string GameEdition { get; set; }
+        public ClientRequest() { InstallMode="Player"; GameEdition=WarcraftCSLauncher.GameEdition.FrozenThrone; }
 
         public void ValidateDestination() {
+            GameEdition=WarcraftCSLauncher.GameEdition.Normalize(GameEdition);
             // Missing legacy mode selects bundled Player modules; only an explicit Developer choice builds locally.
             if (InstallMode!="Player" && InstallMode!="Developer") throw new InvalidOperationException("Choose Player or Developer mode.");
             if (!Directory.Exists(WarcraftDirectory) || !Directory.Exists(CounterStrikeDirectory))

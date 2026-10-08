@@ -9,6 +9,7 @@ public:
     bool Load(const std::string& path);
     void Draw(const char* animation, float seconds);
     void Reset(bool deleteTextures);
+    bool TexturesValid() const;
 private:
     struct Vertex { float x, y, z, u, v; unsigned bone; };
     struct Mesh { unsigned texture; std::vector<Vertex> vertices; };
