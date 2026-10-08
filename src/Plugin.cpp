@@ -16,6 +16,10 @@
 #include "../tests/TreeAndWheelScene.hpp"
 #endif
 
+#ifdef WCS_SURFACE_TEST
+#include "../tests/WorldSurfaceScene.hpp"
+#endif
+
 static ShooterController controller;
 static Overlay overlay;
 static bool healthy = true;
@@ -34,7 +38,7 @@ static Perspective originalPerspective = nullptr;
 static RenderUI originalUI = nullptr;
 static WNDPROC originalWindow = nullptr;
 static HWND gameWindow = nullptr;
-static bool nativeUIPhase = false, overlayPass = false;
+static bool nativeUIPhase = false, overlayPass = false, worldRendering = false;
 static uintptr_t mapUI = 0;
 using DeleteContext = BOOL (WINAPI*)(HGLRC);
 using Interface = void (__cdecl*)(BOOL, float*);
@@ -159,11 +163,17 @@ static int __fastcall WorldHook(uintptr_t ui, uintptr_t unused) {
     // Dedicated tree/input oracles never run in ordinary release builds.
     if (healthy && gameUI) TreeAndWheelScene::Tick(controller,gameBase,root);
 #endif
+#ifdef WCS_SURFACE_TEST
+    if (healthy && gameUI) WorldSurfaceScene::Tick(root);
+#endif
     // Keep layout evaluation running while hiding its final graphics after the world pass.
     nativeUIPhase = false;
     // Suppress only the controlled actor during world drawing; menus, portraits and RTS still render it.
     ActorRenderFilter::Begin(healthy ? controller.ViewActor() : 0);
+    // Portrait/UI projection must keep its native clipping planes and unit appearance.
+    bool outerWorld = worldRendering; worldRendering = true;
     int result = originalWorld(ui, unused);
+    worldRendering = outerWorld;
     ActorRenderFilter::End();
     nativeUIPhase = true;
     return result;
@@ -184,7 +194,7 @@ static void APIENTRY DrawElementsHook(GLenum mode, GLsizei count, GLenum type, c
 }
 static void __fastcall PerspectiveHook(uintptr_t output, uintptr_t unused, float fov, float aspect, float nearZ, float farZ) {
     // The RTS near plane clips nearby terrain at eye level; FPS needs a short near plane.
-    if (controller.Visible() && GetTickCount() - lastWorld < 500) nearZ = std::min(nearZ, 8.0f);
+    if (worldRendering && controller.Visible() && GetTickCount() - lastWorld < 500) nearZ = std::min(nearZ, 8.0f);
     originalPerspective(output, unused, fov, aspect, nearZ, farZ);
 }
 static BOOL WINAPI SwapHook(HDC dc, UINT planes) {

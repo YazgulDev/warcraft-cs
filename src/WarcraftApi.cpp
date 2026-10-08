@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cstdarg>
 #include <cstring>
+#include <cmath>
 #include <share.h>
 
 namespace wc3 {
@@ -10,6 +11,8 @@ namespace wc3 {
 #undef NATIVE
 static FILE* logFile = nullptr;
 static uintptr_t nativeBase = 0;
+using SurfaceHeight = float (__fastcall*)(int, BOOL*, float, float, BOOL);
+static SurfaceHeight surfaceHeight = nullptr;
 void OpenLog(const char* directory) {
     char path[MAX_PATH];
     sprintf_s(path, "%s\\WarcraftCS.log", directory);
@@ -36,6 +39,13 @@ bool Bind(HMODULE game) {
     delete[] bytes;
     if (!correct) { Log("Unsupported Game.dll: expected 1.26.0.6401"); return false; }
     auto base = reinterpret_cast<uintptr_t>(game);
+    // Verified 1.26a GetLocationZ helper: ECX=terrain mode, EDX=raised-surface output,
+    // stack=x/y/include-walkables, ST0=height. Refuse a patched helper instead of guessing its ABI.
+    const unsigned char surfaceSignature[] = {0x83,0xEC,0x0C,0xD9,0x44,0x24,0x10,0x53,0xD9,0x5C,0x24,0x04};
+    if (memcmp(reinterpret_cast<void*>(base+0x126F0),surfaceSignature,sizeof(surfaceSignature)) != 0) {
+        Log("Unsupported native walkable-surface helper"); return false;
+    }
+    surfaceHeight = reinterpret_cast<SurfaceHeight>(base+0x126F0);
     nativeBase = base;
 #define NATIVE(result, name, arguments, offset) name = reinterpret_cast<decltype(name)>(base + offset);
 #include "NativeOffsets.inc"
@@ -48,6 +58,13 @@ float Ground(float x, float y) {
     float z = Real(GetLocationZ(location));
     RemoveLocation(location);
     return z;
+}
+bool WalkableSurface(float x, float y, float& height) {
+    if (!surfaceHeight || !std::isfinite(x) || !std::isfinite(y)) return false;
+    BOOL raised = FALSE;
+    float z = surfaceHeight(-1,&raised,x,y,TRUE);
+    if (!raised || !std::isfinite(z)) return false;
+    height = z; return true;
 }
 std::string UnitModelPath(int type) {
     auto read = [](uintptr_t address, void* value, size_t size) {

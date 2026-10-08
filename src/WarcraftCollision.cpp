@@ -9,7 +9,12 @@ bool WarcraftCollision::Clear(float x, float y, float oldFloor) const {
         float angle = (point - 1) * 0.78539816339f;
         float px = x + (point ? std::cos(angle) * radius : 0);
         float py = y + (point ? std::sin(angle) * radius : 0);
-        if (wc3::IsTerrainPathable(&px, &py, 1)) return false;
+        if (wc3::IsTerrainPathable(&px, &py, 1)) {
+            // Terrain below a living bridge is blocked, but its native walkable deck is a floor.
+            // Query every footprint point; dead bridges, trees and deck edges cannot grant passage.
+            float deck = 0;
+            if (!wc3::WalkableSurface(px,py,deck) || std::abs(deck-oldFloor)>stepHeight) return false;
+        }
     }
     // Warcraft cliffs are vertical walls; only small steps and ramps are traversable.
     return std::abs(wc3::Ground(x, y) - oldFloor) <= stepHeight;
