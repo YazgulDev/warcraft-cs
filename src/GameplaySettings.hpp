@@ -27,6 +27,7 @@ struct GameplaySettings {
     std::array<int,WeaponSlots::Count> ammoPrice={80,60,25,125,0,200,0};
     std::array<int,WeaponSlots::Count> ammoPack={30,30,12,10,0,1,0};
     bool csSky=false;
+    bool nativeSky=false;
     std::string defaultSky="Des";
     std::array<std::string,256> tilesetSky{};
     std::array<float, WeaponSlots::Count> damage = {36,33,34,115,40,2500,120};

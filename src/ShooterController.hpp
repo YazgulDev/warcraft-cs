@@ -4,6 +4,7 @@
 #include "MovementPhysics.hpp"
 #include "WarcraftCollision.hpp"
 #include "FirstPersonCamera.hpp"
+#include "NativeSky.hpp"
 #include "GameAudio.hpp"
 #include "HitFeedback.hpp"
 #include "UnitStatus.hpp"
@@ -166,6 +167,7 @@ private:
     MovementPhysics movement_;
     WarcraftCollision collision_;
     FirstPersonCamera camera_;
+    NativeSky nativeSky_;
     MouseLook mouseLook_;
     WeaponWheel weaponWheel_;
     GameplaySettings settings_;

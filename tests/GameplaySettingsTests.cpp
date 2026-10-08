@@ -63,8 +63,9 @@ int main() {
     assert(settings.buyAccess==GameplaySettings::BuyAccess::Shops && settings.buyRadius==3000);
     assert(settings.weaponPrice[0]==0 && settings.ammoPrice[0]==80 && settings.ammoPack[0]==1);
     assert(!settings.csSky && settings.defaultSky=="Des" && settings.tilesetSky['W']=="blue");
-    { std::ofstream file(path);file<<"[Buy]\nAccess=friendly\n[Loadout]\nBombCount=0\n[Sky]\nA=forest\n"; }
+    { std::ofstream file(path);file<<"[Buy]\nAccess=friendly\n[Loadout]\nBombCount=0\n[Sky]\nA=forest\nWarcraftEnabled=true\n"; }
     settings=GameplaySettings::Load(path);DeleteFileA(path.c_str());
     assert(settings.buyAccess==GameplaySettings::BuyAccess::FriendlyBuildings && settings.startBombs==0 && settings.tilesetSky['A']=="forest");
+    assert(settings.nativeSky && !settings.csSky);
     return 0;
 }

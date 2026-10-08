@@ -31,6 +31,7 @@ void ShooterController::Configure(const char* root, uintptr_t gameBase) {
     hitboxes_.Configure(gameBase);
     destructableHitboxes_.Configure(gameBase);
     audio_.Configure(root_);
+    if (!nativeSky_.Configure(gameBase)) wc3::Log("Native sky signature mismatch; preview disabled");
     ReloadSettings();
     ResetLoadout();
 }
@@ -121,6 +122,7 @@ void ShooterController::SurfaceStep(float volume) {
 void ShooterController::InterfaceRequest(bool show) {
     cinematicRequested_ = !show;
     if (active_ && !show) {
+        nativeSky_.Update(ui_,false,mapTileset_);
         // Yield before the map applies its cinematic layout/camera; keep the mission unit visible.
         audio_.Stop(); movement_.Stop(); suspended_ = true;
         wc3::Log("FPS yielded to map cinematic");
@@ -138,6 +140,7 @@ void ShooterController::Disable(bool restoreCamera) {
     }
     CancelPlant();
     active_ = false; scopeLevel_ = 0; reloadEnd_ = 0;
+    nativeSky_.Update(ui_,false,mapTileset_);
     meleeContact_ = meleeReady_ = 0; recoil_.Reset();
     audio_.Stop(); stepDistance_ = 0;
     hits_.Clear(); refillRequested_ = false; allWeaponsRequested_=false; refillTick_ = 0;
@@ -148,6 +151,7 @@ void ShooterController::Disable(bool restoreCamera) {
     wc3::Log("FPS disabled");
 }
 void ShooterController::ResetMap() {
+    nativeSky_.Reset();
     mapTileset_=0;
     mouseLook_.Reset();
     weaponWheel_.Reset();
@@ -490,6 +494,8 @@ void ShooterController::Tick(uintptr_t ui) {
         } else if (active_) Toggle();
     }
     toggleRequested_ = false;
+    // Menus/cinematics return ownership to the map; live FPS may temporarily fill a missing native sky.
+    nativeSky_.Update(ui_,Visible() && settings_.nativeSky && !settings_.csSky,mapTileset_);
     if (!active_ || suspended_) { mouseLook_.Reset();weaponWheel_.Reset();itemRequested_=false;squadRequested_=0;return; }
     if (settingsRequested_) { settingsRequested_=false;ReloadSettings(); }
     // An explicit local test request creates one stationary target for damage verification.
