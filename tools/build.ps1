@@ -24,7 +24,7 @@ $sources += @('GameplaySettings.cpp','ItemPickup.cpp','SquadController.cpp','Fps
 # Tree narrow-phase geometry is decoded independently of native widget enumeration and the controller.
 $sources += '"' + (Join-Path $modRoot 'src/TreeTrunkMesh.cpp') + '"'
 # Shop access is native-world policy; inventory prices/navigation remain independently testable.
-$sources += @('BuyAccess.cpp','BuyMenuView.cpp','SkyView.cpp','MapEnvironment.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
+$sources += @('BuyAccess.cpp','BuyMenuView.cpp','SkyView.cpp','MapEnvironment.cpp','NativeSky.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 # Install defaults only once so rebuilds preserve the player's customized settings.
 $configDirectory=Join-Path $OutputDirectory 'WarcraftCS'
 New-Item -ItemType Directory -Path $configDirectory -Force | Out-Null
