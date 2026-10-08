@@ -5,7 +5,6 @@
 #include "WarcraftCollision.hpp"
 #include "FirstPersonCamera.hpp"
 #include "GameAudio.hpp"
-#include "FullscreenView.hpp"
 #include "HitFeedback.hpp"
 #include "UnitStatus.hpp"
 #include "UnitHitboxes.hpp"
@@ -140,7 +139,6 @@ private:
     void Camera();
     void Sound(const char* name);
     void SurfaceStep(float volume);
-    void SetInterface(bool show);
     void UpdateStatus();
     const char* Sequence(const char* name) const;
     wc3::Handle unit_ = 0;
@@ -151,7 +149,7 @@ private:
     uintptr_t gameBase_ = 0;
     UnitStatus status_;
     bool active_ = false, suspended_ = false, paused_ = false;
-    bool ownInterfaceRequest_ = false, cinematicRequested_ = false;
+    bool cinematicRequested_ = false;
     bool ownCameraRequest_ = false;
     int scopeLevel_ = 0;
     bool toggleRequested_ = false, menuRequested_ = false, refillRequested_ = false, allWeaponsRequested_=false;
@@ -181,7 +179,6 @@ private:
     SquadController squad_;
     std::string ammoMessage_;
     GameAudio audio_;
-    FullscreenView fullscreen_;
     float stepDistance_ = 0;
     unsigned stepIndex_ = 0;
     unsigned knifeSwing_ = 0;

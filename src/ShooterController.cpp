@@ -32,7 +32,6 @@ void ShooterController::Configure(const char* root, uintptr_t gameBase) {
     destructableHitboxes_.Configure(gameBase);
     audio_.Configure(root_);
     ReloadSettings();
-    if (!fullscreen_.Configure(gameBase)) wc3::Log("World viewport signature mismatch");
     ResetLoadout();
 }
 void ShooterController::ResetLoadout() {
@@ -119,18 +118,11 @@ void ShooterController::SurfaceStep(float volume) {
     static const char* steps[] = {"pl_step1.wav", "pl_step3.wav", "pl_step2.wav", "pl_step4.wav"};
     audio_.Play(steps[stepIndex_++ % 4], volume);
 }
-void ShooterController::SetInterface(bool show) {
-    // Distinguish our HUD hiding from map-script cinematic requests observed by the native hook.
-    ownInterfaceRequest_ = true;
-    float zero = 0; wc3::ShowInterface(show ? TRUE : FALSE, &zero);
-    ownInterfaceRequest_ = false;
-}
 void ShooterController::InterfaceRequest(bool show) {
-    if (ownInterfaceRequest_) return;
     cinematicRequested_ = !show;
     if (active_ && !show) {
         // Yield before the map applies its cinematic layout/camera; keep the mission unit visible.
-        fullscreen_.Update(ui_, false); audio_.Stop(); movement_.Stop(); suspended_ = true;
+        audio_.Stop(); movement_.Stop(); suspended_ = true;
         wc3::Log("FPS yielded to map cinematic");
     }
 }
@@ -141,13 +133,13 @@ void ShooterController::Disable(bool restoreCamera) {
     if (restoreCamera) {
         // Restoration is our own camera write even though FPS is still active until cleanup completes.
         ownCameraRequest_ = true;
-        float time = 0.25f; wc3::ResetToGameCamera(&time); SetInterface(true);
+        float time = 0.25f; wc3::ResetToGameCamera(&time);
         ownCameraRequest_ = false;
     }
     CancelPlant();
     active_ = false; scopeLevel_ = 0; reloadEnd_ = 0;
     meleeContact_ = meleeReady_ = 0; recoil_.Reset();
-    fullscreen_.Update(ui_, false); audio_.Stop(); stepDistance_ = 0;
+    audio_.Stop(); stepDistance_ = 0;
     hits_.Clear(); refillRequested_ = false; allWeaponsRequested_=false; refillTick_ = 0;
     itemRequested_=settingsRequested_=itemNearby_=false;squadRequested_=0;
     movement_.Stop();
@@ -168,7 +160,7 @@ void ShooterController::ResetMap() {
     scopeLevel_ = 0; cinematicRequested_ = false; toggleRequested_ = false; ownCameraRequest_ = false;
     status_ = {}; meleeContact_ = meleeReady_ = 0; recoil_.Reset();
     std::fill(std::begin(keys_), std::end(keys_), false); lastShot_ = 0;
-    fullscreen_.Reset(); audio_.Stop(); stepDistance_ = 0; reloadEnd_ = 0;
+    audio_.Stop(); stepDistance_ = 0; reloadEnd_ = 0;
     menuRequested_ = false;
     itemRequested_=settingsRequested_=itemNearby_=false;squadRequested_=0;ammoRecovery_.Reset();
     hits_.Clear(); refillRequested_ = false; allWeaponsRequested_=false; refillTick_ = 0; fixtureTarget_ = 0; blastFixtures_.clear();
@@ -190,8 +182,7 @@ void ShooterController::Toggle() {
     movement_.Reset(wc3::Ground(wc3::Real(wc3::GetUnitX(unit_)), wc3::Real(wc3::GetUnitY(unit_))));
     wc3::IssueImmediateOrderById(unit_, 851972);  // stop autonomous attack/movement orders
     float zero = 0; wc3::SetCameraTargetController(0, &zero, &zero, FALSE);
-    // Save RTS anchors before the engine replaces them with cinematic letterbox bounds.
-    fullscreen_.Update(ui_, true); SetInterface(false);
+    // Keep native UI/portrait anchors intact; FPS suppresses HUD graphics at GL submission.
     active_ = true; suspended_ = false; scopeLevel_ = 0; Play("draw");
     wc3::Log("FPS enabled: unit=%08X type=%08X", unit_, wc3::GetUnitTypeId(unit_));
 }
@@ -471,15 +462,13 @@ void ShooterController::Tick(uintptr_t ui) {
         // Cancel queued animation events rather than releasing delayed reload sounds on return.
         audio_.CancelAnimation(); return;
     }
-    // ShowInterface(false) disables Warcraft input itself; FPS supplies its own controls.
+    // Map scripts still control cinematic input/layout; FPS leaves native HUD state intact.
     // Map-script interface requests are distinct from the FPS mode's own hidden HUD.
     bool cinematic = cinematicRequested_;
     // Native menus have their own pause flags, separate from the JASS PauseGame callback.
     bool suspended = cinematic || paused_ || *reinterpret_cast<int*>(ui + 0x258) || *reinterpret_cast<int*>(ui + 0x260);
     if (active_ && suspended != suspended_) {
         // Yield actor visibility and layout to native menus/cinematics; mission bounds stay untouched.
-        if (!suspended) fullscreen_.Update(ui_, true);
-        if (!cinematic) SetInterface(suspended);
         audio_.Stop(); stepDistance_ = 0;
         wc3::Log("FPS %s for campaign/UI", suspended ? "suspended" : "resumed");
     }
@@ -501,7 +490,6 @@ void ShooterController::Tick(uintptr_t ui) {
         } else if (active_) Toggle();
     }
     toggleRequested_ = false;
-    fullscreen_.Update(ui_, Visible());
     if (!active_ || suspended_) { mouseLook_.Reset();weaponWheel_.Reset();itemRequested_=false;squadRequested_=0;return; }
     if (settingsRequested_) { settingsRequested_=false;ReloadSettings(); }
     // An explicit local test request creates one stationary target for damage verification.
