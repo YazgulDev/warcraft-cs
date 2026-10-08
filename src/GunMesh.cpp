@@ -106,3 +106,42 @@ void GunMesh::Draw(const char* animation, float seconds) {
         glEnd();
     }
 }
+
+void GunMesh::DrawPreview(float x,float y,float width,float height) {
+    if (sequences_.empty() || meshes_.empty()) return;
+    // Freeze the original unsilenced idle pose, then fit its actual geometry rather than fixed weapon offsets.
+    const Sequence* pose=&sequences_.front();
+    for (const auto& sequence : sequences_) if (sequence.name=="idle_unsil" || sequence.name=="idle1_unsil") { pose=&sequence;break; }
+    struct PreviewVertex { float x,y,z,u,v; };
+    std::vector<std::vector<PreviewVertex>> geometry;
+    float minimum[3]={1e9f,1e9f,1e9f},maximum[3]={-1e9f,-1e9f,-1e9f};
+    for (const auto& mesh : meshes_) {
+        std::vector<PreviewVertex> vertices;
+        for (const auto& vertex : mesh.vertices) {
+            const float* m=&pose->bones[vertex.bone*12];
+            float p[3]={m[0]*vertex.x+m[1]*vertex.y+m[2]*vertex.z+m[3],
+                m[4]*vertex.x+m[5]*vertex.y+m[6]*vertex.z+m[7],
+                m[8]*vertex.x+m[9]*vertex.y+m[10]*vertex.z+m[11]};
+            // A slight side angle shows thickness while keeping the familiar horizontal CS preview.
+            p[0]+=.22f*p[1];
+            for (int axis=0;axis<3;++axis) { minimum[axis]=std::min(minimum[axis],p[axis]);maximum[axis]=std::max(maximum[axis],p[axis]); }
+            vertices.push_back({p[0],p[1],p[2],vertex.u,vertex.v});
+        }
+        geometry.push_back(std::move(vertices));
+    }
+    float scale=std::min(width/std::max(1.0f,maximum[0]-minimum[0]),height/std::max(1.0f,maximum[2]-minimum[2]))*.86f;
+    glPushAttrib(GL_ENABLE_BIT|GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT|GL_TEXTURE_BIT|GL_CURRENT_BIT);
+    glEnable(GL_TEXTURE_2D);glEnable(GL_DEPTH_TEST);glDepthFunc(GL_LEQUAL);glDepthMask(GL_TRUE);
+    glDepthRange(0,1);glClearDepth(1);glClear(GL_DEPTH_BUFFER_BIT);glColor4f(1,1,1,1);
+    for (size_t i=0;i<meshes_.size();++i) {
+        glBindTexture(GL_TEXTURE_2D,textures_[meshes_[i].texture]);glBegin(GL_TRIANGLES);
+        for (const auto& vertex : geometry[i]) {
+            glTexCoord2f(vertex.u,vertex.v);
+            glVertex3f(x+width*.5f+(vertex.x-(maximum[0]+minimum[0])*.5f)*scale,
+                y+height*.5f-(vertex.z-(maximum[2]+minimum[2])*.5f)*scale,
+                (vertex.y-(maximum[1]+minimum[1])*.5f)/std::max(1.0f,maximum[1]-minimum[1]));
+        }
+        glEnd();
+    }
+    glPopAttrib();
+}

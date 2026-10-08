@@ -10,6 +10,7 @@ from pathlib import Path
 
 import numpy as np
 from greatsword import export_greatsword
+from export_buy_previews import export_preview
 
 
 class StudioModel:
@@ -158,6 +159,11 @@ class StudioModel:
                 "cache_bytes": destination.stat().st_size,
                 "excluded_textures": sorted(excluded), "excluded_meshes": excluded_meshes}
 
+    def texture_names(self) -> list[str]:
+        # Preview conversion identifies arm/glove materials from the owned model's texture table.
+        return [self.data[self.integer(184) + i * 80:self.integer(184) + i * 80 + 64]
+                .split(b"\0")[0].decode("ascii") for i in range(self.integer(180))]
+
     def audio_timeline(self, destination: Path) -> set[str]:
         # Studio event 5004 supplies the original sound's animation frame, not a guess.
         sounds = set()
@@ -200,6 +206,7 @@ def main():
         excluded = ("silencer.bmp",) if weapon in ("m4a1", "usp") else ()
         manifest.append(model.export(args.output / f"{weapon}.wcg", excluded))
         weapon_sounds.update(model.audio_timeline(args.output / f"{weapon}.wca"))
+        export_preview(args.output / f"{weapon}.wcg", args.output / "buy" / f"{weapon}.wcg", model.texture_names())
     # Import only an explicitly selected/private model; public packages contain no external sword asset.
     if args.sword_model:
         sword = StudioModel(args.sword_model)
@@ -208,6 +215,9 @@ def main():
     else:
         manifest.append(export_greatsword(args.output / "knife.wcg", args.output / "sword.wcg"))
         shutil.copy2(args.output / "knife.wca", args.output / "sword.wca")
+    # Sword previews exclude the matching private hands, including a player's optional local sword model.
+    sword_materials = sword.texture_names() if args.sword_model else StudioModel(args.cstrike / "models/v_knife.mdl").texture_names()
+    export_preview(args.output / "sword.wcg", args.output / "buy/sword.wcg", sword_materials)
     # Keep retail-derived files in the private lab, with their source fingerprints.
     sounds = args.output / "sounds"
     sounds.mkdir(exist_ok=True)

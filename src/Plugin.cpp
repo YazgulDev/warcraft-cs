@@ -80,9 +80,11 @@ static LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM key, LPARAM
             if (GetForegroundWindow() == window) controller.RequestWeaponWheel(GET_WHEEL_DELTA_WPARAM(key));
             return 0;
         }
-        // Consume F7 before Warcraft can interpret it as a strategy shortcut.
-        if (key == VK_F7 && (message == WM_KEYDOWN || message == WM_KEYUP)) {
-            if (message == WM_KEYDOWN && !(data & (1L << 30))) controller.RequestRefill();
+        // Free refill/grant keys are consumed before Warcraft interprets native strategy shortcuts.
+        if ((key == VK_F7 || key == VK_F9) && (message == WM_KEYDOWN || message == WM_KEYUP)) {
+            if (message == WM_KEYDOWN && !(data & (1L << 30))) {
+                if (key==VK_F9) controller.RequestAllWeapons();else controller.RequestRefill();
+            }
             return 0;
         }
         // Preserve short pickup/squad/config taps; J releases followers without leaving FPS.
