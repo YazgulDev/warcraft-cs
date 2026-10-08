@@ -69,6 +69,11 @@ void GunMesh::Reset(bool deleteTextures) {
     if (deleteTextures && !textures_.empty()) glDeleteTextures(GLsizei(textures_.size()), textures_.data());
     textures_.clear(); meshes_.clear(); sequences_.clear(); boneCount_ = 0;
 }
+bool GunMesh::TexturesValid() const {
+    // A focus change alone does not invalidate textures in a surviving OpenGL context.
+    return !textures_.empty() && std::all_of(textures_.begin(), textures_.end(),
+        [](GLuint texture) { return glIsTexture(texture)==GL_TRUE; });
+}
 void GunMesh::Draw(const char* animation, float seconds) {
     if (sequences_.empty()) return;
     const Sequence* sequence = &sequences_.front();
