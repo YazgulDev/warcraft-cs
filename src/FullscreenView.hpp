@@ -1,16 +1,7 @@
 #pragma once
-#include <cstdint>
 
-// Classic UI frame anchors define the real world viewport, independently of the HUD.
+// Expand the main world rectangle without moving native UI/portrait frame anchors.
 class FullscreenView {
 public:
-    bool Configure(uintptr_t base);
-    void Update(uintptr_t ui, bool visible);
-    void Reset();
-private:
-    struct Anchor { uintptr_t parent = 0; int relative = 0; float x = 0, y = 0; };
-    void Set(uintptr_t frame, int point, const Anchor& anchor);
-    uintptr_t base_ = 0, ui_ = 0, frame_ = 0;
-    Anchor top_, bottom_;
-    bool expanded_ = false;
+    static void Expand(int clientWidth, int clientHeight, int& x, int& y, int& width, int& height);
 };
