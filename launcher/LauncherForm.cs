@@ -15,6 +15,7 @@ namespace WarcraftCSLauncher {
         private readonly TextBox log = new TextBox();
         private readonly Label status = new Label();
         private readonly ProgressBar progress = new ProgressBar();
+        private readonly ComboBox edition = new ComboBox();
         private bool busy;
         private bool checking;
         private ReleaseUpdate latest;
@@ -26,7 +27,7 @@ namespace WarcraftCSLauncher {
             this.preview=preview;
             includesRuntime=runtimeIncluded ?? LauncherVariant.IncludesRuntime;
             Text = "Warcraft CS by Yazgul - Launcher";
-            ClientSize = new Size(780, 855); MinimumSize = Size; MaximizeBox = false;
+            ClientSize = new Size(780, 907); MinimumSize = Size; MaximizeBox = false;
             Font = new Font("Segoe UI", 10); AutoScaleMode = AutoScaleMode.Dpi;
             StartPosition = FormStartPosition.CenterScreen;
             // Keep the agreement/actions reachable on small displays and Windows display scaling.
@@ -75,13 +76,18 @@ namespace WarcraftCSLauncher {
             developer.Name="DeveloperInstallButton"; developer.Text="Install — Developer"; developer.SetBounds(390,605,366,42);
             developer.Click += async (s,e) => await Install("Developer");
             if (includesRuntime) Controls.Add(developer);
-            play.Name="PlayButton"; play.Text="Play"; play.SetBounds(24,665,125,38); play.Click += async (s,e) => await Play(); Controls.Add(play);
-            update.Name="UpdateButton"; update.Text="Update"; update.SetBounds(163,665,125,38);
+            // Edition changes only launch arguments; both campaigns use the same prepared private installation.
+            AddLabel("Game to launch",24,658,160,30,Font);
+            edition.Name="GameEdition"; edition.DropDownStyle=ComboBoxStyle.DropDownList;
+            edition.Items.AddRange(new object[] {"The Frozen Throne","Reign of Chaos"}); edition.SelectedIndex=0;
+            edition.SetBounds(190,655,282,32); Controls.Add(edition);
+            play.Name="PlayButton"; play.Text="Play"; play.SetBounds(24,717,125,38); play.Click += async (s,e) => await Play(); Controls.Add(play);
+            update.Name="UpdateButton"; update.Text="Update"; update.SetBounds(163,717,125,38);
             update.Click += async (s,e) => await UpdateProject(); Controls.Add(update);
-            check.Name="CheckUpdatesButton"; check.Text="Check for updates"; check.SetBounds(302,665,170,38); check.Click+=async(s,e)=>await CheckUpdates(); Controls.Add(check);
-            progress.SetBounds(578,675,178,18); Controls.Add(progress);
-            status.SetBounds(24,719,732,38); status.Text="Choose folders, agree to downloads, then click Install."; Controls.Add(status);
-            log.SetBounds(24,761,732,80); log.Multiline=true; log.ReadOnly=true; log.ScrollBars=ScrollBars.Vertical;
+            check.Name="CheckUpdatesButton"; check.Text="Check for updates"; check.SetBounds(302,717,170,38); check.Click+=async(s,e)=>await CheckUpdates(); Controls.Add(check);
+            progress.SetBounds(578,727,178,18); Controls.Add(progress);
+            status.SetBounds(24,771,732,38); status.Text="Choose folders, agree to downloads, then click Install."; Controls.Add(status);
+            log.SetBounds(24,813,732,80); log.Multiline=true; log.ReadOnly=true; log.ScrollBars=ScrollBars.Vertical;
             log.Font=new Font("Consolas", 9); Controls.Add(log);
             foreach (var box in new[] {warcraft,cs,destination}) box.TextChanged += (s,e) => RefreshActions();
             FormClosing += (s,e) => { if (busy) { e.Cancel=true; MessageBox.Show(this,"Wait for installation to finish. Vendor installers must not be interrupted."); } };
@@ -95,8 +101,9 @@ namespace WarcraftCSLauncher {
             try {
                 if (!File.Exists(Preferences)) return;
                 var saved=new JavaScriptSerializer().Deserialize<ClientRequest>(File.ReadAllText(Preferences));
-                // Restore saved folders only; legacy automatic-install preferences never grant permission.
+                // Restore folders and the edition only; saved preferences never grant download permission.
                 warcraft.Text=saved.WarcraftDirectory; cs.Text=saved.CounterStrikeDirectory; destination.Text=saved.InstallDirectory;
+                edition.SelectedIndex=GameEdition.Normalize(saved.GameEdition)==GameEdition.ReignOfChaos ? 1 : 0;
             } catch { status.Text="Previous folder settings could not be loaded. Select folders again."; }
         }
         private void FolderRow(string title, TextBox box, int y) {
@@ -118,6 +125,7 @@ namespace WarcraftCSLauncher {
             developer.Enabled=includesRuntime && install.Enabled;
             update.Enabled=install.Enabled && !checking;
             play.Enabled=!busy && File.Exists(Path.Combine(destination.Text,"client-installed.json"));
+            edition.Enabled=!busy;
             check.Enabled=!busy && !checking;
         }
         private void SetBusy(bool value) {
@@ -142,7 +150,8 @@ namespace WarcraftCSLauncher {
         }
         private ClientRequest CurrentRequest(string mode) {
             return new ClientRequest {WarcraftDirectory=warcraft.Text,CounterStrikeDirectory=cs.Text,
-                InstallDirectory=destination.Text,InstallMode=mode};
+                InstallDirectory=destination.Text,InstallMode=mode,
+                GameEdition=edition.SelectedIndex==1 ? GameEdition.ReignOfChaos : GameEdition.FrozenThrone};
         }
         private string InstalledMode() {
             var marker=Path.Combine(destination.Text,"client-installed.json");
@@ -216,7 +225,10 @@ namespace WarcraftCSLauncher {
                 var allowed=Path.GetFullPath(Path.Combine(destination.Text,"sources"))+Path.DirectorySeparatorChar;
                 if (!source.StartsWith(allowed,StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("Invalid installed source path. Run Install again.");
                 // Play launches only the prepared private runtime; it does not install/download dependencies.
-                await Task.Run(() => SetupRunner.Run(Path.Combine(source,"tools","launch.ps1"),"",Report));
+                var request=CurrentRequest(InstalledMode());
+                await Task.Run(() => GameLaunch.Start(request.InstallDirectory,request.GameEdition));
+                // Remember the chosen campaign after a successful launch without granting download consent.
+                Directory.CreateDirectory(Path.GetDirectoryName(Preferences)); request.Save(Preferences);
                 status.Text="Warcraft started. Select your unit and press F6.";
             } catch (Exception error) { Report(error.Message); status.Text="Could not start Warcraft. Read the log."; }
             finally { SetBusy(false); }
