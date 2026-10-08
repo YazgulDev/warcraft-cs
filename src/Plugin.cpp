@@ -5,6 +5,7 @@
 #include "ActorRenderFilter.hpp"
 #include "FpsCombatGuard.hpp"
 #include "FullscreenView.hpp"
+#include "FpsProjection.hpp"
 #include <MinHook.h>
 #include <cstring>
 #ifdef WCS_STATUS_TEST
@@ -39,7 +40,7 @@ static Perspective originalPerspective = nullptr;
 static RenderUI originalUI = nullptr;
 static WNDPROC originalWindow = nullptr;
 static HWND gameWindow = nullptr;
-static bool nativeUIPhase = false, overlayPass = false, worldRendering = false;
+static bool nativeUIPhase = false, overlayPass = false;
 static uintptr_t mapUI = 0;
 using DeleteContext = BOOL (WINAPI*)(HGLRC);
 using Interface = void (__cdecl*)(BOOL, float*);
@@ -190,10 +191,7 @@ static int __fastcall WorldHook(uintptr_t ui, uintptr_t unused) {
     nativeUIPhase = false;
     // Suppress only the controlled actor during world drawing; menus, portraits and RTS still render it.
     ActorRenderFilter::Begin(healthy ? controller.ViewActor() : 0);
-    // Portrait/UI projection must keep its native clipping planes and unit appearance.
-    bool outerWorld = worldRendering; worldRendering = true;
     int result = originalWorld(ui, unused);
-    worldRendering = outerWorld;
     ActorRenderFilter::End();
     nativeUIPhase = true;
     return result;
@@ -213,10 +211,9 @@ static void APIENTRY DrawElementsHook(GLenum mode, GLsizei count, GLenum type, c
     originalDrawElements(mode, count, type, indices);
 }
 static void __fastcall PerspectiveHook(uintptr_t output, uintptr_t unused, float fov, float aspect, float nearZ, float farZ) {
-    // The RTS near plane clips nearby terrain at eye level; FPS needs a short near plane.
-    if (worldRendering && controller.Visible() && GetTickCount() - lastWorld < 500) nearZ = std::min(nearZ, 8.0f);
-    RECT rect={};
-    if (worldRendering && WorldRectangle(rect)) aspect=float(rect.right)/float(rect.bottom);
+    // Projection precedes world batching, so scope by the FPS camera's configured far distance.
+    // Keep native FOV/aspect and portrait projection unchanged.
+    nearZ=FpsProjection::NearPlane(healthy && controller.Visible() && GetTickCount()-lastWorld<500,nearZ,farZ);
     originalPerspective(output, unused, fov, aspect, nearZ, farZ);
 }
 static BOOL WINAPI SwapHook(HDC dc, UINT planes) {
