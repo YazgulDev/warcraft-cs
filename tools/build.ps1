@@ -1,4 +1,4 @@
-param([string]$OutputDirectory = '',[string]$MinHookDirectory='',[string]$PythonExecutable='', [switch]$TestStatusEffects,[switch]$TestGameplay,[switch]$TestTreeAndWheel)
+param([string]$OutputDirectory = '',[string]$MinHookDirectory='',[string]$PythonExecutable='', [switch]$TestStatusEffects,[switch]$TestGameplay,[switch]$TestTreeAndWheel,[switch]$TestWorldSurfaces)
 $ErrorActionPreference = 'Stop'
 $modRoot = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'paths.ps1')
@@ -45,6 +45,11 @@ if ($TestTreeAndWheel) {
     # Tree/input fixtures require an explicit test build and request; release binaries exclude them.
     $sources += '"' + (Join-Path $modRoot 'tests/TreeAndWheelScene.cpp') + '"'
     $testDefine += ' /DWCS_TREE_WHEEL_TEST'
+}
+# Surface fixtures require an explicit build flag; client builds cannot run these map probes.
+if ($TestWorldSurfaces) {
+    $sources += '"' + (Join-Path $modRoot 'tests/WorldSurfaceScene.cpp') + '"'
+    $testDefine += ' /DWCS_SURFACE_TEST'
 }
 $buildDirectory = Join-Path $modRoot 'build'
 New-Item -ItemType Directory -Path $buildDirectory -Force | Out-Null
