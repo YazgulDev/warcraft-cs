@@ -11,6 +11,9 @@
 #include "UnitHitboxes.hpp"
 #include "DestructableHitboxes.hpp"
 #include "PlantedBomb.hpp"
+#include "BombField.hpp"
+#include "BuyInventory.hpp"
+#include "BuyMenu.hpp"
 #include "WeaponRecoil.hpp"
 #include "MeleeAttack.hpp"
 #include "MouseLook.hpp"
@@ -57,6 +60,23 @@ public:
     size_t SquadCount() const { return squad_.Count(); }
     bool SquadPassive() const { return squad_.Passive(); }
     void RequestSettingsReload() { settingsRequested_=true; }
+    // Buy-menu events are consumed on Warcraft's simulation thread, never inside WindowProc.
+    void RequestBuyToggle() { buyToggleRequested_=true; }
+    void RequestBuyAmmo() { buyAmmoRequested_=true; }
+    void RequestBuyKey(int key) { buyKeyRequested_=key; }
+    void RequestBuyClick(int x,int y,int width,int height);
+    bool Buying() const { return buyMenu_.Open(); }
+    BuyMenu::Page BuyPage() const { return buyMenu_.Current(); }
+    const GameplaySettings& Settings() const { return settings_; }
+    bool OwnsWeapon(int slot) const { return slot>=0 && slot<WeaponSlots::Count && inventory_.owned[slot]; }
+    int Gold() const { return gold_; }
+    float ViewYaw() const { return yaw_+recoil_.Yaw(); }
+    float ViewPitch() const { return pitch_+recoil_.Pitch(); }
+    float ViewFov() const { return scopeLevel_==2 ? 10.0f : Scoped() ? 40.0f : 85.0f; }
+    const std::string& SkyName() const {
+        const auto& choice=settings_.tilesetSky[static_cast<unsigned char>(mapTileset_)];
+        return choice.empty() ? settings_.defaultSky : choice;
+    }
     bool Visible() const { return active_ && !suspended_; }
     // Presentation may identify the controlled actor only while the first-person view owns the screen.
     wc3::Handle ViewActor() const { return Visible() ? unit_ : 0; }
@@ -89,7 +109,8 @@ public:
     bool RefillNotice() const { return refillTick_ && GetTickCount() - refillTick_ < 1600; }
     const char* AmmoMessage() const { return ammoMessage_.c_str(); }
     bool ItemNearby() const { return itemNearby_; }
-    float BombRemaining() const { return bomb_.Active() ? bomb_.Remaining() : -1; }
+    float BombRemaining() const { return bombs_.Remaining(); }
+    size_t BombCount() const { return bombs_.Count(); }
     float PlantProgress() const { return plantProgress_; }
     const HitFeedback& Hits() const { return hits_; }
     void Configure(const char* root, uintptr_t gameBase);
@@ -109,6 +130,10 @@ private:
     void RefillAmmo();
     void PickupItem();
     void ReloadSettings();
+    void ResetLoadout();
+    void Buy(int slot,bool ammunition);
+    void UpdateBuyMenu();
+    void Notice(const char* message);
     float Play(const char* name);
     void Camera();
     void Sound(const char* name);
@@ -144,6 +169,11 @@ private:
     MouseLook mouseLook_;
     WeaponWheel weaponWheel_;
     GameplaySettings settings_;
+    BuyInventory inventory_;
+    BuyMenu buyMenu_;
+    bool buyToggleRequested_=false,buyAmmoRequested_=false,suppressFire_=false;
+    int buyKeyRequested_=-1,gold_=0;
+    char mapTileset_=0;
     AmmoRecovery ammoRecovery_;
     ItemPickup itemPickup_;
     SquadController squad_;
@@ -158,6 +188,6 @@ private:
     HitFeedback hits_;
     UnitHitboxes hitboxes_;
     DestructableHitboxes destructableHitboxes_;
-    PlantedBomb bomb_;
+    BombField bombs_;
     float plantProgress_ = 0, plantX_ = 0, plantY_ = 0;
 };

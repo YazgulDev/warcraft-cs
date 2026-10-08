@@ -46,7 +46,7 @@ static DrawElements originalDrawElements = nullptr;
 static LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM key, LPARAM data) {
     if (message==WM_INPUT) {
         // Raw packets retain fast movement and keep 360-degree look independent of cursor recentering.
-        controller.MouseInput(data,healthy && controller.Visible() && GetForegroundWindow()==window);
+        controller.MouseInput(data,healthy && controller.Visible() && !controller.Buying() && GetForegroundWindow()==window);
         if (healthy && controller.Visible()) return DefWindowProcA(window,message,key,data);
     }
     // Returning from Alt-Tab may replace the GL context or its resources; refresh on the render thread.
@@ -61,6 +61,20 @@ static LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM key, LPARAM
     }
     // Consume FPS inputs so Warcraft does not also issue RTS orders or select units.
     if (healthy && controller.Visible()) {
+        // B/period and menu rows are mailbox events; no native economy calls occur in the input handler.
+        if ((message==WM_KEYDOWN || message==WM_KEYUP) && (key=='B' || key==VK_OEM_PERIOD ||
+            (controller.Buying() && key>='0' && key<='9'))) {
+            if (message==WM_KEYDOWN && !(data&(1L<<30))) {
+                if (key=='B') controller.RequestBuyToggle();
+                else if (key==VK_OEM_PERIOD) controller.RequestBuyAmmo();
+                else controller.RequestBuyKey(int(key-'0'));
+            }
+            return 0;
+        }
+        if (controller.Buying() && message==WM_LBUTTONDOWN) {
+            RECT client={};GetClientRect(window,&client);
+            controller.RequestBuyClick(short(LOWORD(data)),short(HIWORD(data)),client.right,client.bottom);return 0;
+        }
         // Queue each signed wheel packet for the game tick; Warcraft must not also zoom its RTS camera.
         if (message == WM_MOUSEWHEEL) {
             if (GetForegroundWindow() == window) controller.RequestWeaponWheel(GET_WHEEL_DELTA_WPARAM(key));

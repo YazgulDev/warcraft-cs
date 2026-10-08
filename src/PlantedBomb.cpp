@@ -12,6 +12,8 @@ bool PlantedBomb::Plant(wc3::Handle attacker, float x, float y, GameAudio& audio
     marker_ = wc3::Effect(model.c_str(), x, y);
     if (!marker_) return false;
     timer_ = wc3::CreateTimer();
+    // Failed native allocation must not leave an orphan world marker or consume inventory.
+    if (!timer_) { wc3::DestroyEffect(marker_);marker_=0;return false; }
     float duration = 3600; wc3::TimerStart(timer_, &duration, FALSE, 0);
     attacker_ = attacker; x_ = x; y_ = y; remaining_ = 35; nextBeep_ = 0; exploded_ = false;
     damage_=damage; // The fixed configured explosion is independent of hero attack and later reloads.
