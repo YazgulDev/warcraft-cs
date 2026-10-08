@@ -130,7 +130,6 @@ void ShooterController::InterfaceRequest(bool show) {
     cinematicRequested_ = !show;
     if (active_ && !show) {
         // Yield before the map applies its cinematic layout/camera; keep the mission unit visible.
-        if (unit_ && wc3::GetUnitTypeId(unit_)) wc3::SetUnitVertexColor(unit_, 255, 255, 255, 255);
         fullscreen_.Update(ui_, false); audio_.Stop(); movement_.Stop(); suspended_ = true;
         wc3::Log("FPS yielded to map cinematic");
     }
@@ -139,8 +138,6 @@ void ShooterController::Disable(bool restoreCamera) {
     buyMenu_.Close();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1;suppressFire_=true;
     mouseLook_.Reset();
     squad_.Release(); // Native RTS regains followers and their ordinary attack policy on F6/F10.
-    // Keep the original mission unit alive and restore RTS control on exit/cutscenes.
-    if (unit_ && wc3::GetUnitTypeId(unit_)) wc3::SetUnitVertexColor(unit_, 255, 255, 255, 255);
     if (restoreCamera) {
         // Restoration is our own camera write even though FPS is still active until cleanup completes.
         ownCameraRequest_ = true;
@@ -188,11 +185,10 @@ void ShooterController::Toggle() {
     yaw_ = wc3::Real(wc3::GetUnitFacing(unit_)); pitch_ = 0;
     // F6 begins a fresh capture rather than applying the RTS cursor's distance from the center.
     mouseLook_.Reset();
-    // Begin physics on the actual terrain, independent of the RTS unit's move-speed cap.
+    // Begin on the native standing surface, including walkable bridges, independent of the RTS speed cap.
     weaponWheel_.Reset();
     movement_.Reset(wc3::Ground(wc3::Real(wc3::GetUnitX(unit_)), wc3::Real(wc3::GetUnitY(unit_))));
     wc3::IssueImmediateOrderById(unit_, 851972);  // stop autonomous attack/movement orders
-    wc3::SetUnitVertexColor(unit_, 255, 255, 255, 0);
     float zero = 0; wc3::SetCameraTargetController(0, &zero, &zero, FALSE);
     // Save RTS anchors before the engine replaces them with cinematic letterbox bounds.
     fullscreen_.Update(ui_, true); SetInterface(false);
@@ -270,7 +266,6 @@ void ShooterController::UpdateStatus() {
     if ((status_.contained || status_.hidden) && !current.contained && !current.hidden) {
         // On unloading/rescue, resume from the actual native position, not the stale pre-swallow eye height.
         movement_.Reset(wc3::Ground(wc3::Real(wc3::GetUnitX(unit_)), wc3::Real(wc3::GetUnitY(unit_))));
-        wc3::SetUnitVertexColor(unit_, 255, 255, 255, 0);
     }
     if (current.contained || current.hidden) scopeLevel_ = 0;
     status_ = current;
@@ -281,8 +276,7 @@ void ShooterController::Camera() {
     // Presentation follows the same physical eye used by weapon rays.
     // Map RTS camera timers must not overwrite this pass; cinematics still receive control when suspended.
     ownCameraRequest_ = true;
-    // Refresh alpha before rendering so scripted appearance changes cannot expose the actor around the eye.
-    wc3::SetUnitVertexColor(unit_, 255, 255, 255, 0);
+    // Body/attachments are hidden by the world-only render filter; preserve native portrait tint/alpha.
     camera_.Update(wc3::Real(wc3::GetUnitX(unit_)), wc3::Real(wc3::GetUnitY(unit_)),
         movement_.EyeZ() + wc3::Real(wc3::GetUnitFlyHeight(unit_)), yaw_ + recoil_.Yaw(), std::clamp(pitch_ + recoil_.Pitch(), -65.0f, 65.0f),
         scopeLevel_ == 2 ? 10.0f : Scoped() ? 40.0f : 85.0f);
@@ -484,8 +478,6 @@ void ShooterController::Tick(uintptr_t ui) {
     bool suspended = cinematic || paused_ || *reinterpret_cast<int*>(ui + 0x258) || *reinterpret_cast<int*>(ui + 0x260);
     if (active_ && suspended != suspended_) {
         // Yield actor visibility and layout to native menus/cinematics; mission bounds stay untouched.
-        // Map scripts can remove the controlled unit before their next cinematic callback.
-        if (unit_ && wc3::GetUnitTypeId(unit_)) wc3::SetUnitVertexColor(unit_, 255, 255, 255, suspended ? 255 : 0);
         if (!suspended) fullscreen_.Update(ui_, true);
         if (!cinematic) SetInterface(suspended);
         audio_.Stop(); stepDistance_ = 0;
