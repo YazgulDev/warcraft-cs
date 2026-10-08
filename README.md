@@ -131,7 +131,8 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 | Shift / Ctrl / Space | Walk / crouch / jump |
 | Left mouse button | Shoot or primary melee attack |
 | Right mouse button | Knife/sword: strong attack; AWP: cycle two zoom levels and normal view |
-| R / F7 | Reload / optional free ammo refill (disabled by default; see configuration) |
+| R / F7 | Reload / refill all carried ammunition for free |
+| F9 | Get all weapons and full ammunition for free |
 | B | Open/close the buy menu; number keys or mouse select categories and purchases |
 | . | Buy one ammo pack for the weapon currently held |
 | Esc / 0 in buy menu | Close / back to previous menu (0 closes the main menu) |
@@ -156,7 +157,7 @@ Edit it and press F8 in FPS.
   firearms, both melee attacks and C4 (including its planter). Range: 0–100; 0 disables allied damage,
   100 applies full damage. Press F8 to reload; C4 retains the settings from when it was planted.
 - `[Squad] RecruitRadius`, `MaxUnits`, `FollowDistance` and `CombatLeash` control squad behavior.
-- `[Loadout] Mode=melee` starts each map with knife, sword and C4; `Mode=all` grants all weapons
+- `[Loadout] Mode=melee` starts each map with a loaded USP, knife, sword and C4; `Mode=all` grants all weapons
   with their initial ammunition. `BombCount=20` sets starting charges; `MaxBombs=100` caps carried
   charges (0–1000). F6/F8 and changing the controlled unit never grant another starting kit.
 - `[AK47]`, `[M4A1]`, `[USP]`, `[AWP]`, `[Knife]`, `[Sword]`, `[C4]` use `Price` in native Warcraft
@@ -169,17 +170,27 @@ Edit it and press F8 in FPS.
   qualify when allied or neutral-passive and visible/alive.
   Add custom shop unit rawcodes with `ShopTypes=nmer,ngme`. Both B and every purchase, including `.`,
   check the zone. The menu does not pause the world; leaving a valid zone closes it.
-- `[Buy] AllowFreeRefill=false` prevents F7 from bypassing the gold economy. Enable it for testing.
+- F7 always refills carried magazines/reserves and C4 to `MaxBombs` for free; F9 also unlocks all weapons.
+  These shortcuts do not spend gold or bypass Warcraft incapacitation. Legacy `AllowFreeRefill` is ignored.
   Rune rewards still follow `[Runes]` settings, apply only to owned weapons and use `MaxBombs` for C4.
-- `[Sky] Enabled=true` draws a private CS sky in FPS. `Default=Des` is the unknown-tileset fallback;
+- `[Sky] Enabled=false` keeps Warcraft's native sky by default; `true` enables a private CS sky in FPS. `Default=Des` is the unknown-tileset fallback;
   map tileset keys such as `W=snow`, `A=forest`, `D=DrkG` choose a filename stem from your
   `cstrike/gfx/env`. Set `Enabled=false` to retain Warcraft's original sky. Missing caches also keep
   the native sky; run setup again to convert your installed CS sky textures. F8 applies changes live.
 
-The buy menu has pistol, rifle and melee categories, C4, current-weapon ammo and one ammo pack for
-each owned firearm/C4. All-ammo purchases are individual transactions: purchases stop costing gold
-when funds are insufficient. Prices are configurable rather than converted to Warcraft's normal
-unit attack costs. No round, buy-time or team-spawn restriction is imposed.
+The buy panel follows the original CS layout: translucent black background, amber outlined rows,
+red mouse selection, a hand-free weapon preview and live prices/capacities in the detail panel.
+A successful purchase closes the menu; rejected purchases leave it open.
+Only supported categories appear, preserving CS keys: 1 pistols, 4 rifles, 6 primary ammo,
+7 secondary ammo, 8 equipment (knife, sword, C4), 0 back/cancel. The `.` key buys current-weapon ammo.
+Primary/secondary ammo rows buy one pack per carried weapon in that category; every transaction checks
+funds independently. Defaults are one quarter of the previous weapon prices: AK47 625, M4A1 775,
+USP 125, AWP 1188 (rounded from 1187.5 gold), knife 0, sword 250 and C4 50. Ammo-pack prices are unchanged.
+No round, buy-time or team-spawn restriction is imposed.
+
+When adding a weapon, apply [warcraft-cs-weapon-menu](skills/warcraft-cs-weapon-menu/SKILL.md).
+`src/BuyCatalog.hpp` supplies both navigation and presentation so new weapons cannot be forgotten in
+one of those lists. Setup converts private buy previews alongside the player's own weapon models.
 Every planted C4 keeps its own 35-second simulation-time fuse and damage snapshot. The HUD shows
 the active charge count and the nearest explosion. Switching weapons or leaving FPS keeps charges active;
 Warcraft pause suspends their clocks, and changing maps discards old native handles.

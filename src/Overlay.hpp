@@ -16,6 +16,8 @@ private:
     void Font(HDC dc, int statusSize);
     std::string root_;
     GunMesh guns_[WeaponSlots::Count];
+    GunMesh buyPreviews_[WeaponSlots::Count];
+    bool previewLoaded_[WeaponSlots::Count]={},previewAttempted_[WeaponSlots::Count]={};
     bool loaded_[WeaponSlots::Count] = {}, attempted_[WeaponSlots::Count] = {};
     GLuint font_ = 0;
     GLuint statusFont_ = 0;
