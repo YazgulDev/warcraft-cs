@@ -12,6 +12,8 @@ bool Bind(HMODULE game);
 void Log(const char* format, ...);
 void OpenLog(const char* directory);
 float Ground(float x, float y);
+// Query real walkable geometry above terrain; removed/dead bridges cease to supply this surface.
+bool WalkableSurface(float x, float y, float& height);
 Handle PickOwnedUnit();
 bool SinglePlayer();
 // Neutral owners include hostile, passive, victim and extra slots in classic Warcraft.
