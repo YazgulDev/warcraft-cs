@@ -30,11 +30,12 @@ int main() {
         HGLRC context=wglCreateContext(dc);assert(context && wglMakeCurrent(dc,context));glViewport(0,0,64,64);
         glPixelStorei(GL_UNPACK_ROW_LENGTH,512);glPixelStorei(GL_UNPACK_SKIP_PIXELS,32);glPixelStorei(GL_UNPACK_SKIP_ROWS,1024);
         const float angles[][2]={{0,0},{180,0},{90,0},{270,0},{0,89},{0,-89}};
+        const int expected[]={0,1,3,2,4,5}; // GoldSrc's front/back sides join rt/lf at the proper edges.
         for (int face=0;face<6;++face) {
             glClearDepth(1);glClearColor(0,0,0,1);glClear(GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT);
             sky.Draw(root,"test",angles[face][0],angles[face][1],85,1);
             unsigned char color[4]={};glReadPixels(32,32,1,1,GL_RGBA,GL_UNSIGNED_BYTE,color);
-            assert(!memcmp(color,colors[face],3));
+            assert(!memcmp(color,colors[expected[face]],3));
         }
         GLint stride=0;glGetIntegerv(GL_UNPACK_ROW_LENGTH,&stride);assert(stride==512);
         glGetIntegerv(GL_UNPACK_SKIP_ROWS,&stride);assert(stride==1024);

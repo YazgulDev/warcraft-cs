@@ -22,9 +22,19 @@ bool SkyView::Load(const std::string& filename) {
     glTexParameteri(cube,GL_TEXTURE_MIN_FILTER,GL_LINEAR);glTexParameteri(cube,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
     glTexParameteri(cube,GL_TEXTURE_WRAP_S,0x812F);glTexParameteri(cube,GL_TEXTURE_WRAP_T,0x812F);glTexParameteri(cube,0x8072,0x812F);
     // Caches follow GoldSrc rt/lf/bk/ft/up/dn; OpenGL cube targets use X/Y/Z with Y as vertical.
-    const unsigned targets[]={0,1,5,4,2,3};
+    const unsigned targets[]={0,1,4,5,2,3};
+    std::vector<unsigned char> rotated(size);
     for (unsigned face=0;face<6;++face) {
         if (!file.read(reinterpret_cast<char*>(pixels.data()),std::streamsize(size))) { Reset(true);return false; }
+        // GoldSrc's roof/floor are rotated relative to cube Y faces: preserve the original horizon edge joins.
+        if (face>=4) {
+            for (unsigned y=0;y<height;++y) for (unsigned x=0;x<width;++x) {
+                unsigned sourceX=face==4 ? width-1-y : y;
+                unsigned sourceY=face==4 ? x : height-1-x;
+                memcpy(rotated.data()+(size_t(y)*width+x)*4,pixels.data()+(size_t(sourceY)*width+sourceX)*4,4);
+            }
+            pixels.swap(rotated);
+        }
         // Warcraft can retain unpack stride/skips after Alt-Tab; our tightly packed buffers must never inherit them.
         glPushClientAttrib(GL_CLIENT_PIXEL_STORE_BIT);
         glPixelStorei(GL_UNPACK_ALIGNMENT,1);glPixelStorei(GL_UNPACK_ROW_LENGTH,0);
