@@ -9,9 +9,17 @@ public:
     std::array<bool,WeaponSlots::Count> owned{};
     void Reset(const GameplaySettings& settings,int* ammo,int* reserve,const int* magazines,const int* reserves) {
         for (int i=0;i<WeaponSlots::Count;++i) {
-            owned[i]=settings.startAllWeapons || WeaponSlots::Melee(i) || i==WeaponSlots::C4;
+            owned[i]=settings.startAllWeapons || WeaponSlots::Melee(i) || i==WeaponSlots::C4 || i==WeaponSlots::Pistol;
             ammo[i]=owned[i] ? (i==WeaponSlots::C4 ? settings.startBombs : magazines[i]) : 0;
             reserve[i]=owned[i] ? reserves[i] : 0;
+        }
+    }
+    // Free grants/refills share capacity rules without altering the player's gold or planted C4 timers.
+    void Refill(const GameplaySettings& settings,int* ammo,int* reserve,const int* magazines,const int* reserves,bool grantAll=false) {
+        for (int i=0;i<WeaponSlots::Count;++i) {
+            if (grantAll) owned[i]=true;
+            if (!owned[i]) continue;
+            ammo[i]=i==WeaponSlots::C4 ? settings.maxBombs : magazines[i];reserve[i]=reserves[i];
         }
     }
     int Next(int current,int steps) const {

@@ -51,6 +51,8 @@ public:
     void RequestToggle() { toggleRequested_ = true; }
     void RequestMenu() { menuRequested_ = true; }
     void RequestRefill() { refillRequested_ = true; }
+    // F9 grants all slots through the same game-thread mailbox as F7.
+    void RequestAllWeapons() { allWeaponsRequested_=true; }
     void RequestItemPickup() { itemRequested_=true; }
     void RequestSquad(bool passive) { squadRequested_=passive ? 2 : 1; }
     // Release shares the command mailbox: the last H/O/J tap before a frame wins.
@@ -127,7 +129,7 @@ private:
     void SwitchWeapon(int slot);
     void PlantC4(float dt);
     void CancelPlant();
-    void RefillAmmo();
+    void RefillAmmo(bool grantAll=false);
     void PickupItem();
     void ReloadSettings();
     void ResetLoadout();
@@ -152,7 +154,7 @@ private:
     bool ownInterfaceRequest_ = false, cinematicRequested_ = false;
     bool ownCameraRequest_ = false;
     int scopeLevel_ = 0;
-    bool toggleRequested_ = false, menuRequested_ = false, refillRequested_ = false;
+    bool toggleRequested_ = false, menuRequested_ = false, refillRequested_ = false, allWeaponsRequested_=false;
     bool itemRequested_=false,settingsRequested_=false,itemNearby_=false;
     int squadRequested_=0;
     bool keys_[256] = {};
