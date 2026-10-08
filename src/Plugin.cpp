@@ -4,6 +4,7 @@
 #include "MapCameraGuard.hpp"
 #include "ActorRenderFilter.hpp"
 #include "FpsCombatGuard.hpp"
+#include "FullscreenView.hpp"
 #include <MinHook.h>
 #include <cstring>
 #ifdef WCS_STATUS_TEST
@@ -46,6 +47,23 @@ static DeleteContext originalDeleteContext = nullptr;
 static Interface originalInterface = nullptr;
 using DrawElements = void (APIENTRY*)(GLenum, GLsizei, GLenum, const void*);
 static DrawElements originalDrawElements = nullptr;
+using Viewport = void (APIENTRY*)(GLint, GLint, GLsizei, GLsizei);
+static Viewport originalViewport = nullptr, originalScissor = nullptr;
+static bool WorldRectangle(RECT& rect) {
+    return healthy && controller.Visible() && gameWindow &&
+        GetClientRect(gameWindow, &rect) && rect.right > 0 && rect.bottom > 0;
+}
+static void APIENTRY ViewportHook(GLint x, GLint y, GLsizei width, GLsizei height) {
+    RECT rect={};
+    // Expand only world GL submission; native portrait layout and its viewport stay untouched.
+    if (WorldRectangle(rect)) FullscreenView::Expand(rect.right,rect.bottom,x,y,width,height);
+    originalViewport(x,y,width,height);
+}
+static void APIENTRY ScissorHook(GLint x, GLint y, GLsizei width, GLsizei height) {
+    RECT rect={};
+    if (WorldRectangle(rect)) FullscreenView::Expand(rect.right,rect.bottom,x,y,width,height);
+    originalScissor(x,y,width,height);
+}
 
 static LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM key, LPARAM data) {
     if (message==WM_INPUT) {
@@ -112,6 +130,8 @@ static LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM key, LPARAM
              key == VK_F6 || key == VK_SPACE || key == VK_CONTROL || key == VK_SHIFT || (key >= '1' && key <= '1' + WeaponSlots::Count - 1))) return 0;
         if (message == WM_LBUTTONDOWN || message == WM_LBUTTONUP || message == WM_RBUTTONDOWN ||
             message == WM_RBUTTONUP || message == WM_MOUSEMOVE) return 0;
+        // Native HUD stays enabled for portrait rendering; unused keys must not issue RTS orders in FPS.
+        if (message==WM_KEYDOWN || message==WM_KEYUP || message==WM_CHAR) return 0;
     }
     return CallWindowProcA(originalWindow, window, message, key, data);
 }
@@ -195,6 +215,8 @@ static void APIENTRY DrawElementsHook(GLenum mode, GLsizei count, GLenum type, c
 static void __fastcall PerspectiveHook(uintptr_t output, uintptr_t unused, float fov, float aspect, float nearZ, float farZ) {
     // The RTS near plane clips nearby terrain at eye level; FPS needs a short near plane.
     if (worldRendering && controller.Visible() && GetTickCount() - lastWorld < 500) nearZ = std::min(nearZ, 8.0f);
+    RECT rect={};
+    if (worldRendering && WorldRectangle(rect)) aspect=float(rect.right)/float(rect.bottom);
     originalPerspective(output, unused, fov, aspect, nearZ, farZ);
 }
 static BOOL WINAPI SwapHook(HDC dc, UINT planes) {
@@ -253,6 +275,8 @@ static DWORD WINAPI Initialize(void*) {
     else wc3::Log("Perspective signature mismatch; original near plane retained");
     // The verified Game.dll import uses the two-argument layer-buffer API.
     HMODULE gl = GetModuleHandleA("opengl32.dll");
+    Hook(reinterpret_cast<void*>(GetProcAddress(gl, "glViewport")), reinterpret_cast<void*>(ViewportHook), reinterpret_cast<void**>(&originalViewport));
+    Hook(reinterpret_cast<void*>(GetProcAddress(gl, "glScissor")), reinterpret_cast<void*>(ScissorHook), reinterpret_cast<void**>(&originalScissor));
     Hook(reinterpret_cast<void*>(GetProcAddress(gl, "wglDeleteContext")), reinterpret_cast<void*>(DeleteContextHook), reinterpret_cast<void**>(&originalDeleteContext));
     Hook(reinterpret_cast<void*>(GetProcAddress(gl, "glDrawElements")), reinterpret_cast<void*>(DrawElementsHook), reinterpret_cast<void**>(&originalDrawElements));
     Hook(reinterpret_cast<void*>(GetProcAddress(gl, "wglSwapLayerBuffers")), reinterpret_cast<void*>(SwapHook), reinterpret_cast<void**>(&originalSwap));
