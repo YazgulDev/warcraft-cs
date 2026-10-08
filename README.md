@@ -66,7 +66,12 @@ Choose these folders using **Browse...** (the examples are illustrative):
 2. Select a separate installation folder for Warcraft CS.
 3. Read the download details and agree to downloading/installing the dependencies and their terms.
 4. Click **Install** in the standard launcher, or choose **Install — Player / Developer** in the DLL-included launcher. Install uses the version embedded in that EXE.
-5. Click **Play**, select your own living unit and press F6.
+5. Choose **The Frozen Throne** or **Reign of Chaos** under **Game to launch**, then click **Play**, select your own living unit and press F6. The choice is remembered after a successful launch.
+
+Both editions use the same private Warcraft III 1.26a installation. RoC selects the original campaign menus;
+it does not turn two-player custom maps into solo missions. Launch through the launcher or `tools/launch.ps1`
+to keep fullscreen DPI scaling consistent after Alt-Tab. For source users, add `-Edition ReignOfChaos` to
+`tools/launch.ps1`; omitting it retains Frozen Throne. `-Windowed` remains available for either edition.
 
 The launcher checks new stable GitHub releases automatically at every startup; **Check for updates**
 retries the check. The separate **Update** button fetches the latest stable project release from GitHub.

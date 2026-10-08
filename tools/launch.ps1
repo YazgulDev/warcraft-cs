@@ -1,4 +1,5 @@
-param([string]$Map = '', [switch]$Menu, [switch]$Windowed)
+param([string]$Map = '', [switch]$Menu, [switch]$Windowed,
+    [ValidateSet('FrozenThrone','ReignOfChaos')][string]$Edition='FrozenThrone')
 $ErrorActionPreference = 'Stop'
 $modRoot=Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'paths.ps1')
@@ -10,6 +11,8 @@ if (Get-Process war3 -ErrorAction SilentlyContinue) { throw 'Close the existing 
 # Open Warcraft's map/campaign menu by default; an explicit -Map still launches that map directly.
 # Native fullscreen is the default; retain an explicit windowed mode for capture/debugging.
 $arguments = '-opengl'
+# RoC and TFT share war3.exe and the verified native ABI; the campaign menu is selected before startup.
+if ($Edition -eq 'ReignOfChaos') { $arguments += ' -classic' }
 if ($Windowed) { $arguments += ' -window' }
 if ($Map) {
     $mapPath = (Resolve-Path -LiteralPath $Map).Path
