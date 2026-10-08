@@ -196,6 +196,10 @@ static DWORD WINAPI Initialize(void*) {
     for (int i = 0; i < 100 && !game; ++i) { game = GetModuleHandleA("Game.dll"); if (!game) Sleep(100); }
     wc3::OpenLog(root);
     if (!game || !wc3::Bind(game)) return 0;
+    // Direct RoC launches must also opt out of Windows bitmap scaling before Warcraft creates its window.
+    // Launcher startup supplies HIGHDPIAWARE; leave an already-created window's awareness unchanged.
+    if (!IsProcessDPIAware() && !FindWindowA("Warcraft III", nullptr))
+        wc3::Log("Early DPI awareness enabled=%d", SetProcessDPIAware());
     uintptr_t base = gameBase = reinterpret_cast<uintptr_t>(game);
     // Verify the render callback prologue before installing any game hook.
     const unsigned char expected[] = {0x53,0x56,0x8B,0xF1,0x8B,0x8E,0x38,0x03,0x00,0x00};

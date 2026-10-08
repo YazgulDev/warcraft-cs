@@ -64,7 +64,9 @@ open the EXE again, choose the same folders, agree and retry **Install**.
 
 ### 3. Play
 
-Click **Play**. Close any other Warcraft window first; the launcher will not restart your active match.
+Choose **The Frozen Throne** or **Reign of Chaos** in **Game to launch**, then click **Play**.
+Both launchers offer this selector and remember it after a successful launch; existing preferences default
+to Frozen Throne. Close any other Warcraft window first; the launcher will not restart your active match.
 Warcraft opens in fullscreen. Choose **Single Player → Custom Game** or **Campaign**,
 start a map, select your own living unit and press **F6**.
 Maps do not need editing. Enable FPS again after changing maps.
@@ -77,6 +79,11 @@ Maps do not need editing. Enable FPS again after changing maps.
 
 See [README controls and settings](README.md#controls) for details.
 Once installed, **Play** does not require download consent or install dependencies.
+
+Use the launcher for either edition so fullscreen rendering uses consistent DPI scaling after Alt-Tab.
+For a source checkout, `tools/launch.ps1 -Edition ReignOfChaos` opens the original RoC campaign menus;
+`-Edition FrozenThrone` opens TFT. Add `-Windowed` for an optional windowed launch. The supported game
+version remains 1.26a, and two-player custom missions still require their intended player count.
 
 ## Settings, saves, updates and removal
 
