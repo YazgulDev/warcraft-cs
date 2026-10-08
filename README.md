@@ -105,7 +105,7 @@ git switch release/0.5.1
 ```
 
 Setup downloads a pinned MinHook dependency separately, installs NumPy in a local environment,
-reads your CS models/sounds, uses an optional privately supplied sword or generates the original sword,
+reads your CS models/sounds/sky textures, uses an optional privately supplied sword or generates the original sword,
 and builds the mod in a private Warcraft copy.
 Your original installations remain unchanged. Additional installation and removal details are in
 [INSTALL.md](INSTALL.md).
@@ -131,10 +131,13 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 | Shift / Ctrl / Space | Walk / crouch / jump |
 | Left mouse button | Shoot or primary melee attack |
 | Right mouse button | Knife/sword: strong attack; AWP: cycle two zoom levels and normal view |
-| R / F7 | Reload / refill all ammunition, including C4 |
+| R / F7 | Reload / optional free ammo refill (disabled by default; see configuration) |
+| B | Open/close the buy menu; number keys or mouse select categories and purchases |
+| . | Buy one ammo pack for the weapon currently held |
+| Esc / 0 in buy menu | Close / back to previous menu (0 closes the main menu) |
 | 1 / 2 / 3 / 4 / 5 / 6 / 7 | AK47 / M4A1 / USP / AWP / knife / C4 / original greatsword |
-| Mouse wheel up / down | Previous / next weapon; wraps through all seven slots |
-| Hold left mouse button with C4 | Plant for 3 seconds while standing on the ground |
+| Mouse wheel up / down | Previous / next owned weapon |
+| Hold left mouse button with C4 | Plant for 3 seconds while standing on the ground; multiple charges are allowed |
 | E | Pick up the nearest item/rune if the unit has an available inventory |
 | H / O / J | Your units: follow and fight / follow without attacking / release squad |
 | F8 | Reload settings |
@@ -153,6 +156,38 @@ Edit it and press F8 in FPS.
   firearms, both melee attacks and C4 (including its planter). Range: 0–100; 0 disables allied damage,
   100 applies full damage. Press F8 to reload; C4 retains the settings from when it was planted.
 - `[Squad] RecruitRadius`, `MaxUnits`, `FollowDistance` and `CombatLeash` control squad behavior.
+- `[Loadout] Mode=melee` starts each map with knife, sword and C4; `Mode=all` grants all weapons
+  with their initial ammunition. `BombCount=20` sets starting charges; `MaxBombs=100` caps carried
+  charges (0–1000). F6/F8 and changing the controlled unit never grant another starting kit.
+- `[AK47]`, `[M4A1]`, `[USP]`, `[AWP]`, `[Knife]`, `[Sword]`, `[C4]` use `Price` in native Warcraft
+  **gold**. Buying a firearm gives one loaded magazine, with zero reserve rounds. `AmmoPrice` buys
+  `AmmoPack` reserve rounds (R loads them). A C4 weapon/ammo purchase grants one charge. Full ammo,
+  duplicate non-consumable weapons and rejected purchases do not cost gold.
+- `[Buy] Access=anywhere` allows buying anywhere (default); `friendly` requires a nearby allied
+  building **or shop**; `shops` allows shops only. `Radius=600` is the center distance in Warcraft units.
+  Stock neutral merchants, mercenary camps and shops with purchase/sell/neutral-interaction abilities
+  qualify when allied or neutral-passive and visible/alive.
+  Add custom shop unit rawcodes with `ShopTypes=nmer,ngme`. Both B and every purchase, including `.`,
+  check the zone. The menu does not pause the world; leaving a valid zone closes it.
+- `[Buy] AllowFreeRefill=false` prevents F7 from bypassing the gold economy. Enable it for testing.
+  Rune rewards still follow `[Runes]` settings, apply only to owned weapons and use `MaxBombs` for C4.
+- `[Sky] Enabled=true` draws a private CS sky in FPS. `Default=Des` is the unknown-tileset fallback;
+  map tileset keys such as `W=snow`, `A=forest`, `D=DrkG` choose a filename stem from your
+  `cstrike/gfx/env`. Set `Enabled=false` to retain Warcraft's original sky. Missing caches also keep
+  the native sky; run setup again to convert your installed CS sky textures. F8 applies changes live.
+
+The buy menu has pistol, rifle and melee categories, C4, current-weapon ammo and one ammo pack for
+each owned firearm/C4. All-ammo purchases are individual transactions: purchases stop costing gold
+when funds are insufficient. Prices are configurable rather than converted to Warcraft's normal
+unit attack costs. No round, buy-time or team-spawn restriction is imposed.
+Every planted C4 keeps its own 35-second simulation-time fuse and damage snapshot. The HUD shows
+the active charge count and the nearest explosion. Switching weapons or leaving FPS keeps charges active;
+Warcraft pause suspends their clocks, and changing maps discards old native handles.
+
+Setup adds missing configuration keys during updates and preserves existing custom values.
+Source checks: `tools/test-all.ps1` covers gameplay and purchase rules; `tools/test-sky-view.ps1`
+additionally checks synthetic sky colors/depth and context replacement in a hidden desktop OpenGL
+window, including the pixel-upload state left by Warcraft after Alt-Tab.
 
 Native armor still applies after allied scaling. Ordinary items do not grant ammunition.
 A researched Warcraft Backpack accepts equipment on creeps but cannot activate runes/tomes.
@@ -167,7 +202,7 @@ Map scripts can conflict with camera or unit control. Maps without living owned 
 an FPS character. Hitboxes approximate model bounds rather than individual bones.
 
 The recoil calculations are adapted, but **complete CS bullet spread/accuracy and the GoldSrc client
-are not implemented**. CS economy, rounds and weapon purchasing are also absent.
+are not implemented**. Purchases use Warcraft gold; CS rounds and team economy are not implemented.
 
 ## TODO
 

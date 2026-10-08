@@ -1,5 +1,6 @@
 #include "Overlay.hpp"
 #include "ScopeView.hpp"
+#include "BuyMenuView.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -26,6 +27,7 @@ void Overlay::Text(float x, float y, const char* text, GLuint font) {
     glCallLists(GLsizei(strlen(text)), GL_UNSIGNED_BYTE, text);
 }
 void Overlay::ResetGraphics(bool deleteObjects) {
+    sky_.Reset(deleteObjects);
     // GPU names belong to one context; never delete old numeric IDs in a replacement context.
     for (int i = 0; i < WeaponSlots::Count; ++i) { guns_[i].Reset(deleteObjects); loaded_[i] = attempted_[i] = false; }
     if (deleteObjects) {
@@ -48,6 +50,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller) {
     } else if (refreshPending_) {
         // Keep surviving resources: blind deletion after Alt-Tab can touch IDs recycled by the game.
         bool valid=(!font_ || glIsList(font_)) && (!statusFont_ || glIsList(statusFont_));
+        valid=valid && sky_.Valid();
         for (int i=0;i<WeaponSlots::Count;++i) if (loaded_[i] && !guns_[i].TexturesValid()) valid=false;
         if (!valid) { ResetGraphics(false); wc3::Log("Overlay lost resources forgotten after focus return"); }
         else wc3::Log("Overlay resources retained after focus return");
@@ -82,6 +85,9 @@ void Overlay::Draw(HDC dc, const ShooterController& controller) {
     glDisable(GL_TEXTURE_GEN_S); glDisable(GL_TEXTURE_GEN_T);
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    // Sky touches only far-depth pixels before the weapon's private depth clear, preserving native scenery.
+    if (controller.Settings().csSky && !controller.Status().contained && !controller.Status().hidden)
+        sky_.Draw(root_,controller.SkyName(),controller.ViewYaw(),controller.ViewPitch(),controller.ViewFov(),float(width)/height);
     glMatrixMode(GL_PROJECTION); glPushMatrix(); glLoadIdentity();
     int index = controller.WeaponIndex();
     // Bring rifles closer while their original pose keeps forearms entering through the lower edge.
@@ -141,7 +147,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller) {
         Text(width * 0.5f - 180, height * 0.65f, message, statusFont_);
     }
     if (controller.BombRemaining() >= 0) {
-        char message[80]; sprintf_s(message, "C4  %.0f SEC", double(std::ceil(controller.BombRemaining())));
+        char message[80]; sprintf_s(message, "C4 x%u  %.0fs",unsigned(controller.BombCount()),double(std::ceil(controller.BombRemaining())));
         Text(float(width - statusSize * 9), statusY, message, statusFont_);
     }
     // Advertise wheel switching beside the existing direct-selection slots.
@@ -151,7 +157,8 @@ void Overlay::Draw(HDC dc, const ShooterController& controller) {
     char squad[128];sprintf_s(squad,"H: FIGHT | O: FOLLOW | J: RELEASE | SQUAD %u %s",unsigned(controller.SquadCount()),controller.SquadCount() ? (controller.SquadPassive() ? "FOLLOW" : "COMBAT") : "");
     Text(25,88,squad);
     // Keep the creator credit visible alongside the controls.
-    Text(25, 30, "Warcraft CS by Yazgul | F6: RTS | F7: AMMO | WASD | SPACE: JUMP | CTRL: DUCK | R: RELOAD");
+    Text(25, 30, "Warcraft CS by Yazgul | F6: RTS | B: BUY | .: AMMO | WASD | SPACE: JUMP | CTRL: DUCK | R: RELOAD");
+    char economy[96];sprintf_s(economy,"GOLD %d | B: BUY EQUIPMENT | .: BUY AMMO",controller.Gold());Text(25,117,economy);
     if (controller.RefillNotice()) Text(statusPad, statusY - statusSize - 16, controller.AmmoMessage(), statusFont_);
     // Ground items advertise interaction without issuing a walk-to-item RTS order.
     if (controller.ItemNearby()) Text(width*.5f-120,height*.72f,"E: PICK UP ITEM",statusFont_);
@@ -162,6 +169,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller) {
             sprintf_s(effect, "%s  %.0f%% SPEED", controller.Status().Label(), controller.Status().speedScale * 100);
         Text(statusPad, statusY - (statusSize + 16) * (controller.RefillNotice() ? 2 : 1), effect, statusFont_);
     }
+    BuyMenuView::Draw(controller,width,height,window,[&](float x,float y,const char* text){Text(x,y,text);});
     glPopMatrix(); glMatrixMode(GL_PROJECTION); glPopMatrix();
     glMatrixMode(GL_TEXTURE); glPopMatrix();
     glMatrixMode(oldMode); glPopAttrib();

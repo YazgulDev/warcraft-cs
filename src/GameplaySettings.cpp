@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <cstring>
 
 GameplaySettings GameplaySettings::Load(const std::string& filename) {
     GameplaySettings result;
@@ -29,10 +30,39 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.squadFollowDistance=std::max(80.0f,number("Squad","FollowDistance",180,500));
     result.squadLeash=std::max(result.squadFollowDistance+200,number("Squad","CombatLeash",900,3000));
     result.squadMaxUnits=int(std::max(1.0f,number("Squad","MaxUnits",24,64)));
+    // Restricted modes govern both opening B and every transaction, including the quick-ammo key.
+    auto access=text("Buy","Access","anywhere");
+    if (!_stricmp(access.c_str(),"friendly")) result.buyAccess=BuyAccess::FriendlyBuildings;
+    else if (!_stricmp(access.c_str(),"shops")) result.buyAccess=BuyAccess::Shops;
+    else if (_stricmp(access.c_str(),"anywhere")) { result.buyAccess=BuyAccess::Shops;wc3::Log("Invalid Buy.Access; using shops"); }
+    result.buyRadius=number("Buy","Radius",600,3000);
+    result.shopTypes=text("Buy","ShopTypes","");
+    result.allowFreeRefill=!_stricmp(text("Buy","AllowFreeRefill","false").c_str(),"true");
+    result.startAllWeapons=!_stricmp(text("Loadout","Mode","melee").c_str(),"all");
+    result.maxBombs=int(number("Loadout","MaxBombs",100,1000));
+    result.startBombs=std::min(result.maxBombs,int(number("Loadout","BombCount",20,1000)));
+    result.csSky=_stricmp(text("Sky","Enabled","true").c_str(),"false")!=0;
+    // Only filename stems from private CS caches are accepted; INI strings never become arbitrary paths.
+    auto sky=[&](const char* key,const char* fallback) {
+        auto value=text("Sky",key,fallback);
+        if (value.empty() || value.size()>48 || value.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-")!=std::string::npos)
+            return std::string(fallback);
+        return value;
+    };
+    result.defaultSky=sky("Default","Des");
+    const char* tilesets="ALFWBYXVQJNDCIGOZ";
+    for (const char* code=tilesets;*code;++code) {
+        char key[]={*code,0};
+        const char* fallback=strchr("NWIC",*code) ? "snow" : strchr("OD",*code) ? "DrkG" : strchr("AZJ",*code) ? "forest" : "Des";
+        result.tilesetSky[static_cast<unsigned char>(*code)]=sky(key,fallback);
+    }
     const char* sections[]={"AK47","M4A1","USP","AWP","Knife","C4","Sword"};
     for (int slot=0;slot<WeaponSlots::Count;++slot) {
         result.damage[slot]=number(sections[slot],"Damage",result.damage[slot],1000000);
         result.heroMultiplier[slot]=number(sections[slot],"HeroMultiplier",result.heroMultiplier[slot],1000);
+        result.weaponPrice[slot]=int(number(sections[slot],"Price",float(result.weaponPrice[slot]),1000000));
+        result.ammoPrice[slot]=int(number(sections[slot],"AmmoPrice",float(result.ammoPrice[slot]),1000000));
+        result.ammoPack[slot]=int(std::max(1.0f,number(sections[slot],"AmmoPack",float(std::max(1,result.ammoPack[slot])),1000)));
     }
     result.knifeSecondaryDamage=number("Knife","SecondaryDamage",65,1000000);
     result.swordSecondaryDamage=number("Sword","SecondaryDamage",240,1000000);
