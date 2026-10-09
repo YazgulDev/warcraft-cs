@@ -5,6 +5,8 @@ and Counter-Strike 1.6. Reforged and other Warcraft patches are unsupported.
 This offline, single-player prototype does not download games or redistribute their content.
 Full campaign/custom-map compatibility has not been verified.
 See [REQUIREMENTS.md](REQUIREMENTS.md) for the complete system, owned-file and dependency checklist.
+Current release: **0.6.0**; [all changes and download variants](docs/RELEASE-0.6.0.md).
+Antivirus can block the unsigned hook module; see the [short explanation and checks](TROUBLESHOOTING.md#antivirus).
 
 ## Windows EXE: recommended for clients
 
@@ -86,11 +88,24 @@ Sky replacement is disabled by default. Weapon prices are four times lower; ammo
 Once installed, **Play** does not require download consent or install dependencies.
 
 Use the launcher for either edition so fullscreen rendering uses consistent DPI scaling after Alt-Tab.
-For a source checkout, `tools/launch.ps1 -Edition ReignOfChaos` opens the original RoC campaign menus;
-`-Edition FrozenThrone` opens TFT. Add `-Windowed` for an optional windowed launch. The supported game
+For a source checkout, double-click `play-roc.bat` or run `play.cmd -Edition ReignOfChaos` to open
+the original RoC campaign menus; `play.cmd` alone opens TFT. Both use the shared PowerShell launcher.
+Add `-Windowed` for an optional windowed launch. The supported game
 version remains 1.26a, and two-player custom missions still require their intended player count.
 
 ## Settings, saves, updates and removal
+
+To adjust **CS sound volume**, edit your private `Game/WarcraftCS/WarcraftCS.ini`:
+
+```ini
+[Audio]
+CSVolumePercent=50
+```
+
+Use **0–100**: 0 mutes CS and 100 preserves the old levels; fractional values also work.
+Press **F8 in FPS** to apply it immediately, including sounds already playing. Warcraft's own
+music/effects are unaffected. For source installs, edit the prepared runtime's `WarcraftCS/WarcraftCS.ini`.
+Updates add this key to older configs without replacing an existing custom value.
 
 The EXE creates these files inside your selected installation folder:
 
@@ -127,7 +142,7 @@ The manual script requires `cstrike` itself rather than its Half-Life parent.
 ```powershell
 git clone https://github.com/YazgulDev/warcraft-cs.git
 cd warcraft-cs
-git switch release/0.5.1
+git switch release/0.6.0
 .\setup.cmd -WarcraftDirectory "E:\Warcraft III" -CounterStrikeDirectory "C:\SteamGames\steamapps\common\Half-Life\cstrike"
 .\play.cmd
 ```
@@ -153,6 +168,8 @@ Optional launch arguments:
 
 ```powershell
 .\play.cmd -Windowed
+.\play-roc.bat
+.\play-roc.bat -Windowed
 .\play.cmd -Map "E:\Warcraft III\Maps\(4)LostTemple.w3m"
 ```
 

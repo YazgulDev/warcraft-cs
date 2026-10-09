@@ -89,7 +89,7 @@ the existing installation folder to migrate. Their missing-bundle guard prevents
 Legacy 0.3/0.4 source-build requests retain local compilation when they lack a mode field.
 
 Version comparisons prevent downgrades. Source revisions also detect repaired assets of the same version,
-so release/0.5.1 can receive fixes without moving its published v0.5.1 tag. Use the attached sources ZIP for
+so release/0.6.0 can receive fixes without moving its published v0.6.0 tag. Use the attached sources ZIP for
 the updated build; GitHub's automatic tag archives continue to represent the original tag snapshot.
 
 The `dist` folder remains generated/untracked. Release assets include the EXE, checksum, exact embedded

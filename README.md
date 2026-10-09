@@ -1,11 +1,4 @@
-# Warcraft CS — 0.5.1
-
-Module ownership is documented in [docs/MODULES.md](docs/MODULES.md).
-The [modular-code skill](skills/modular-code/SKILL.md) guides future source changes.
-
-Native world labels in FPS are culled outside the camera view or beyond
-`[Interface] FloatingTextDistance=1200` Warcraft units. Set it to `0` to hide world labels in FPS,
-then press F8. Gold harvesting, RTS and screen-space map text retain native behavior.
+# Warcraft CS — 0.6.0
 
 Counter-Strike 1.6 inside Warcraft III: control your own hero or unit in first person,
 shoot, and play regular maps, campaigns and compatible custom maps.
@@ -18,19 +11,33 @@ Neither variant includes game files, models, sounds, maps or saves.
 You need your own installed copies of both games.**
 This is an early prototype with known limitations.
 
+**[Download 0.6.0](https://github.com/YazgulDev/warcraft-cs/releases/tag/v0.6.0)** ·
+[Release Notes](docs/RELEASE-0.6.0.md) · [Installation](INSTALL.md) · [Requirements](REQUIREMENTS.md)
+
+0.6.0 adds the CS-style gold buy menu, configurable starting equipment and multiple C4 charges,
+RoC/TFT selection and `play-roc.bat`, improved fullscreen/Alt-Tab recovery, native Warcraft skies,
+optional CS skies, bridge movement and corrected FPS rendering. All changes since 0.5.1 are in the Release Notes.
+
 ## Features
 
 - Windows EXE launcher with game-folder selection, consent before dependency setup, live logs and Play.
+- Remembered Reign of Chaos / The Frozen Throne selection; `play-roc.bat` starts RoC from a source installation.
 - F6 switches between FPS and RTS; fullscreen launch, relative mouse look and hidden player-unit model.
+- Consistent fullscreen DPI scaling and texture/context recovery after Alt-Tab; native hero portraits keep their layout.
 - WASD, jumping, crouching, acceleration, friction and weapon movement speeds inspired by CS.
 - Classic AK/M4 and USP/AWP punch calculations, recoil recovery and burst behavior.
 - Primary and secondary melee attacks, locally imported CS sounds and a blood-free hit indicator.
+- CS-only volume in INI, including shots, reloads, footsteps and C4; F8 applies it to ongoing and future sounds.
 - Damage to units, buildings and gates; configurable allied damage (50% by default). C4 deals 2500 base area damage.
 - Warcraft stuns, roots, slows and attack restrictions also limit FPS actions.
 - E picks up items/runes through the real inventory; a successful rune restores 20% ammunition by default.
 - H recruits your own units to follow and fight, O makes them follow without attacking, J releases them.
 - INI settings for ammunition recovery, damage and squad behavior, reloaded with F8.
 - Mouse-wheel weapon cycling through all seven slots, with high-resolution wheel support.
+- B opens a CS-style buy menu using Warcraft gold; configurable prices, starting kits and shop/building access.
+- Multiple planted C4 charges with independent fuses; F7 refills carried equipment and F9 grants every weapon for free.
+- Warcraft sky by default in FPS, optional privately converted CS skyboxes, and visible native walkable bridge decks.
+- Corrected near-ground clipping and camera/distance filtering for floating world labels.
 
 ## Requirements
 
@@ -58,8 +65,10 @@ Choose a launcher from **[Releases](https://github.com/YazgulDev/warcraft-cs/rel
 | `WarcraftCSLauncher_DLL_Included.exe` | Separate EXE with ready mod DLLs; **Install — Player** avoids Build Tools / SDK. **Install — Developer** builds locally. |
 
 Clients do not need Git or a separate source checkout. All public ZIPs exclude prebuilt mod DLLs.
-Both EXEs remain unsigned; the bundled module has triggered antivirus detection in 0.5.0.
-Source-only packaging is not a guarantee that the locally built module will be accepted by antivirus.
+**Antivirus:** Defender detected the bundled `WarcraftCS.mix` in 0.5.0. The unsigned mod uses
+native function hooks and a DLL loader, which can resemble suspicious behavior to heuristic scanners.
+This is a plausible explanation; the exact detection cause has not been confirmed by the vendor.
+Source builds can also be flagged. See [troubleshooting](TROUBLESHOOTING.md#antivirus).
 
 Choose these folders using **Browse...** (the examples are illustrative):
 
@@ -77,8 +86,9 @@ Choose these folders using **Browse...** (the examples are illustrative):
 
 Both editions use the same private Warcraft III 1.26a installation. RoC selects the original campaign menus;
 it does not turn two-player custom maps into solo missions. Launch through the launcher or `tools/launch.ps1`
-to keep fullscreen DPI scaling consistent after Alt-Tab. For source users, add `-Edition ReignOfChaos` to
-`tools/launch.ps1`; omitting it retains Frozen Throne. `-Windowed` remains available for either edition.
+to keep fullscreen DPI scaling consistent after Alt-Tab. For source users, double-click `play-roc.bat`
+or run `play.cmd -Edition ReignOfChaos`; `play.cmd` alone starts Frozen Throne.
+`-Windowed` and `-Map` remain available for either edition.
 
 The launcher checks new stable GitHub releases automatically at every startup; **Check for updates**
 retries the check. The separate **Update** button fetches the latest stable project release from GitHub.
@@ -106,7 +116,7 @@ Run in PowerShell, replacing the game paths with your own:
 ```powershell
 git clone https://github.com/YazgulDev/warcraft-cs.git
 cd warcraft-cs
-git switch release/0.5.1
+git switch release/0.6.0
 .\setup.cmd -WarcraftDirectory "E:\Warcraft III" -CounterStrikeDirectory "C:\SteamGames\steamapps\common\Half-Life\cstrike"
 .\play.cmd
 ```
@@ -124,6 +134,8 @@ Optional launches:
 
 ```powershell
 .\play.cmd -Windowed
+.\play-roc.bat
+.\play-roc.bat -Windowed
 .\play.cmd -Map "E:\Warcraft III\Maps\(4)LostTemple.w3m"
 ```
 
@@ -156,6 +168,10 @@ EXE installation: `<installation folder>/Game/WarcraftCS/WarcraftCS.ini`.
 Default source installation: `.local/warcraft-cs/WarcraftCS/WarcraftCS.ini`.
 Edit it and press F8 in FPS.
 
+- `[Audio] CSVolumePercent=100` controls all CS sounds independently of Warcraft audio. Range: **0–100**;
+  **0** mutes CS, **100** retains the previous levels, and fractional values are accepted.
+  F8 applies the new volume immediately, including sounds already playing; restarting also loads it.
+  Missing/empty/malformed/non-finite values use 100; finite values outside the range are clamped.
 - `[Runes] AmmoPercent=20`; `AmmoWeapons=all` or `current`.
 - `[Damage] Mode=weapon` uses fixed weapon damage. `Mode=hero` uses the current average Warcraft
   attack of **any** controlled unit, including creeps, multiplied by each weapon's `HeroMultiplier`.
@@ -187,6 +203,8 @@ Edit it and press F8 in FPS.
 - `[Sky] WarcraftEnabled=true` (default) shows Warcraft's stock summer/winter sky in FPS on maps without
   a sky. Keep `Enabled=false` for this mode. Existing map skies are preserved; F6 and cinematics
   restore the map's original sky. Set `WarcraftEnabled=false` and press F8 to disable the preview.
+- `[Interface] FloatingTextDistance=1200` limits native world labels to the FPS camera view and distance
+  in Warcraft units. Set `0` to hide world labels and press F8; RTS, harvesting and screen-space map text keep native behavior.
 
 The buy panel follows the original CS layout: translucent black background, amber outlined rows,
 red mouse selection, a hand-free weapon preview and live prices/capacities in the detail panel.
@@ -244,14 +262,19 @@ Planned work:
 `src` contains the runtime and independent calculations; `tests` contains numerical checks and
 optional scenes for disposable test maps; `tools` handles builds, conversion and audits;
 `setup` prepares your local game files. Camera, audio, recoil, inventory and squads have separate responsibilities.
+Module ownership and dependency boundaries: [docs/MODULES.md](docs/MODULES.md).
+The [modular-code skill](skills/modular-code/SKILL.md) guides future source changes.
 
 ```powershell
 .\tools\test-all.ps1
+.\tools\test-cs-audio.ps1
 python .\tools\audit_sources.py --revision HEAD
 ```
 
 Verification notes: [docs/VALIDATION.md](docs/VALIDATION.md).
+The CS audio check uses real XAudio2 and a silent synthetic WAV; it requires a working Windows audio device.
 Branch/release rules: [CONTRIBUTING.md](CONTRIBUTING.md).
+New game tuning parameters follow [configurable-game-settings](skills/configurable-game-settings/SKILL.md).
 Never commit or redistribute `.local`, game content, converted caches or proprietary DLLs.
 
 ## Credits and licenses

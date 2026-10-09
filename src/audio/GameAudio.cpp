@@ -1,6 +1,7 @@
 #include "GameAudio.hpp"
 #include "../platform/WarcraftApi.hpp"
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <fstream>
 #include <iterator>
@@ -74,6 +75,20 @@ void GameAudio::Configure(const std::string& root) {
     }
     wc3::Log("CS audio ready: %zu cached samples; Warcraft audio retained", clips_.size());
     CoUninitialize();
+}
+void GameAudio::SetVolumePercent(float percent) {
+    // Audio initialization is optional; changing settings must remain safe when its device is unavailable.
+    if (!master_) return;
+    percent=std::isfinite(percent) ? std::clamp(percent,0.0f,100.0f) : 100.0f;
+    // Master gain also changes already playing shots/reloads without restarting voices or animation clocks.
+    HRESULT result=master_->SetVolume(percent/100.0f);
+    wc3::Log("CS master volume=%.1f percent result=%08X",VolumePercent(),result);
+}
+float GameAudio::VolumePercent() const {
+    // Read the applied native bus gain for diagnostics instead of reporting only the requested setting.
+    float gain=0;
+    if (master_) master_->GetVolume(&gain);
+    return gain*100.0f;
 }
 void GameAudio::Play(const char* name, float volume) {
     auto found = clips_.find(name);

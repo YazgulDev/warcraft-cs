@@ -12,6 +12,9 @@
 class GameAudio {
 public:
     void Configure(const std::string& root);
+    // A single master gain covers ongoing/future CS sounds while preserving their relative levels.
+    void SetVolumePercent(float percent);
+    float VolumePercent() const;
     void Play(const char* name, float volume = 0.75f);
     float BeginAnimation(int weapon, const char* name, DWORD start);
     void Tick(DWORD now);

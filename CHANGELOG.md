@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.6.0 — 2026-10-09
+
+- Merge all completed feature work since 0.5.1, retaining earlier release/feature branches and immutable tags.
+- Add remembered RoC/TFT selection in both launchers and `play-roc.bat` with forwarded map/window options.
+- Set fullscreen DPI awareness and recover weapon/menu/sky graphics after focus and OpenGL context changes.
+- Add the CS-style gold buy menu, mouse/number navigation, hand-free private previews, live details and `.` quick ammo.
+- Configure weapon/ammunition prices, default reduced weapon prices, starting kits and native shop/building buy zones.
+- Grant starting equipment once per map; F7 freely refills carried equipment and F9 freely grants all equipment/ammo.
+- Allow multiple planted C4 charges, independent simulation-time fuses/damage snapshots and nearest-fuse HUD.
+- Add optional private CS sky conversion, tileset mapping, correctly aligned cube faces and isolated GL upload state.
+- Enable stock Warcraft summer/winter FPS skies by default while preserving existing map skies and RTS/cinematic state.
+- Preserve native hero portraits, expand the FPS viewport, fix near-ground clipping and traverse native walkable bridges.
+- Bring AWP/USP viewmodels closer; filter world labels by camera and configurable distance without changing RTS text.
+- Organize native/launcher sources by responsibility; retain published entry points and share the buy catalog.
+- Merge missing INI defaults without overwriting player settings; document all features, installation and limitations.
+- Update the main README, requirements links and branch references; briefly explain recorded antivirus detections
+  and their likely unsigned-loader/hook heuristic cause, without claiming vendor confirmation.
+
+Full release notes, downloads and validation scope: [RELEASE-0.6.0](docs/RELEASE-0.6.0.md).
+
 ## 0.5.1 — 2026-10-07
 
 - Publish a source-only `WarcraftCSLauncher.exe` in distribution ZIPs and a separate `WarcraftCSLauncher_DLL_Included.exe` for ready mod modules.
