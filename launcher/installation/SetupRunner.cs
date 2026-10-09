@@ -28,6 +28,12 @@ namespace WarcraftCSLauncher {
             // The Player installer reads embedded module data from this EXE or the verified update-cache EXE.
             request.LauncherExecutable=launcherFile ?? System.Reflection.Assembly.GetExecutingAssembly().Location;
             var requestFile=Path.Combine(request.InstallDirectory,"install-request.json"); request.Save(requestFile);
+            if (!File.Exists(Path.Combine(source,"setup","warcraft-runtime.ps1"))) {
+                // Older GitHub releases skip existing game files. Use the current embedded repair adapter
+                // before their verified installer, preserving the downloaded release's assets and DLLs.
+                var repairSource=SourcePayload.Extract(request.InstallDirectory,consent);
+                Run(Path.Combine(repairSource,"launcher","prepare-runtime.ps1"),"-RequestFile "+Quote(requestFile)+" -DownloadConsent",report);
+            }
             Run(Path.Combine(source,"launcher","install-client.ps1"),"-RequestFile "+Quote(requestFile)+" -DownloadConsent",report);
         }
 

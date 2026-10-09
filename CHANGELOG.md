@@ -2,6 +2,9 @@
 
 ## Unreleased — test branches
 
+- Make manual Update download and reinstall GitHub's latest stable release even when version/revision already match; startup checks still avoid repeated prompts.
+- Share full Warcraft file refresh between Install and Update, repairing missing/corrupt resources while preserving saves, INI preferences and private-only content. Back up edited original maps/campaign files before replacement.
+- Apply the current runtime repair policy when reinstalling older GitHub packages whose setup skips existing Game folders; retain Player/Developer mode, verified packages and running-game protection.
 - Disable AWP instant enemy kills by default (`[Damage] AWPOneShot=false`); ordinary damage remains 115 before native armor.
 - Require explicit `true`/`1` for AWP finishing; missing/empty/invalid values use false. F8 reload and custom-value preservation remain supported.
 - Draw hip-fire and scope reticles with filled geometry while preserving their shape and inherited OpenGL state.

@@ -94,6 +94,7 @@ or run `play.cmd -Edition ReignOfChaos`; `play.cmd` alone starts Frozen Throne.
 
 The launcher checks new stable GitHub releases automatically at every startup; **Check for updates**
 retries the check. The separate **Update** button fetches the latest stable project release from GitHub.
+After confirmation it reinstalls that release even when the installed version and revision already match.
 A window shows its version and notes: **Update** confirms installation; **Not now** postpones it.
 Both launchers show one change per line. Reviewed lists in `docs/launcher-changes/<version>.txt`
 are included in the update manifest and embedded for known legacy versions, so GitHub API limits
@@ -104,6 +105,10 @@ The dialog explains download requirements and consent.
 Warcraft must be closed. Player installs verified bundled DLLs; Developer rebuilds them locally. Both
 modes convert owned assets and update the launcher if needed. Saves, INI settings and private sword selections are
 retained. Each session requires the download agreement. Offline Play remains available.
+Install and Update both recopy owned Warcraft files, regenerate private CS assets and reinstall/build
+the selected mod DLLs. Missing/corrupt game resources are repaired in the marked private `Game` folder.
+Private-only maps remain; edited content that shares an original map/campaign filename is backed up
+under `backups/runtime-content/<id>/` before replacement. Original game installs remain unchanged.
 
 No download or installation starts before agreement. Microsoft tools may need administrator approval,
 several GB of space and a Windows restart for local compilation. Only the separately named EXE includes prebuilt modules.

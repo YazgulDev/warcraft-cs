@@ -27,6 +27,13 @@ Launcher sources use `launcher/app`, `game`, `installation`, `updates` and `pack
 sources recursively. Launcher PowerShell entry points keep their published paths. Native builds list
 production sources explicitly; verification scenes remain opt-in under `tests`.
 
+`UpdateSelection` distinguishes passive release checks from explicit latest-release reinstalls.
+`setup/warcraft-runtime.ps1` owns the common game-file refresh and content-backup policy; setup owns
+asset conversion and mod installation. `SetupRunner` invokes the embedded compatibility adapter
+before older downloaded installers that lack the new refresh module. Neither path deletes save/config
+folders or terminates Warcraft. Reinstall tests use synthetic resources and a version-metadata DLL;
+they do not access an actual game installation or run its executable.
+
 `InputDispatcher` translates input into game-thread command mailboxes and returns an optional result.
 The window procedure forwards unconsumed messages and owns render-resource focus recovery. Native
 adapters isolate engine layouts; `WorldLabelVisibility` consumes a camera snapshot without Warcraft,

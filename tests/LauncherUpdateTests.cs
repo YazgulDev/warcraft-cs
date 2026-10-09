@@ -40,6 +40,16 @@ public static class LauncherUpdateTests {
         var request=new ClientRequest {WarcraftDirectory=wc,CounterStrikeDirectory=cs,InstallDirectory=Path.Combine(root,"Client"),InstallMode="Developer"};
         // Use a real source-only assembly: the updater now inspects the candidate for unexpected runtime resources.
         byte[] source=Archive(),exe=File.ReadAllBytes(Assembly.GetExecutingAssembly().Location); var update=Package(source,exe);
+        // Manual Update must repair an already-current installation; automatic checks stay quiet.
+        Require(UpdateSelection.Select(update,"0.3.0",update.Manifest.Revision,update.Manifest.Revision,false,false)==null,
+            "Startup reoffers an identical release");
+        Require(UpdateSelection.Select(update,"0.3.0",update.Manifest.Revision,update.Manifest.Revision,false,true)==update,
+            "Manual Update cannot reinstall an identical release");
+        Require(UpdateSelection.Select(null,"0.3.0",update.Manifest.Revision,null,false,true)==null,
+            "Unavailable metadata selected an unverified reinstall");
+        Require(UpdateSelection.Select(update,"0.3.0",update.Manifest.Revision,null,true,false)==null &&
+            UpdateSelection.Select(update,"0.3.0",update.Manifest.Revision,null,true,true)==update,
+            "Legacy same-version checks and explicit repair are not separated");
         update.Manifest.Validate("v0.3.0");
         Require(update.Manifest.IsNewer("0.2.0",update.Manifest.Revision,null),"New release skipped");
         Require(!update.Manifest.IsNewer("0.4.0","old",null),"Downgrade allowed");

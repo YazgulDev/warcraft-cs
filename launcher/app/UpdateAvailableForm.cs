@@ -23,7 +23,8 @@ namespace WarcraftCSLauncher {
             string details=mode=="Developer" ? "Developer: builds DLLs locally. Missing Build Tools / SDK will be downloaded (several GB)." :
                 "Player: installs bundled DLLs. No Build Tools or Windows SDK are downloaded.";
             // Update is an explicit consent action; declining this dialog performs no installation.
-            Controls.Add(new Label {Name="ModeDetails",Text=details+"\r\nPython / NumPy may be prepared for local asset conversion. Close Warcraft first.\r\nChoosing Update accepts the download/dependency terms shown in the launcher.",
+            // Confirmation covers full runtime repair as well as the selected mode's dependencies.
+            Controls.Add(new Label {Name="ModeDetails",Text=details+"\r\nReinstalls the private game; keeps saves and settings. Close Warcraft first.\r\nPython / NumPy may be prepared. Update accepts the launcher download/dependency terms.",
                 Left=20,Top=326,Width=640,Height=78});
             var update=new Button {Name="ConfirmUpdate",Text="Update",Left=412,Top=418,Width=118,Height=34,DialogResult=DialogResult.OK};
             var decline=new Button {Name="DeclineUpdate",Text="Not now",Left=542,Top=418,Width=118,Height=34,DialogResult=DialogResult.Cancel};

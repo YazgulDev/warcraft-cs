@@ -1,5 +1,20 @@
 # Validation of the 0.1.0 source baseline
 
+## Full launcher reinstall (test branch)
+
+Manual Update selects an identical latest GitHub release for repair; startup checks remain quiet
+when version and revision match. Both launcher variants describe full private-game reinstall.
+Production file-copy tests repair damaged/missing core files, official maps and original audio;
+retain progress, custom INI, private assets/maps and the installed proxy until mod setup completes;
+and back up edited official content without duplicating unchanged backups on a repeat run.
+Original/overlapping/unmarked/active runtimes and junction redirection are rejected before file writes.
+
+The setup-runner integration uses current embedded repair code with synthetic legacy/modern releases
+in Player/Developer mode. Game-version metadata is provided by a project-authored test DLL. Only
+conversion/module installation is stubbed; production source extraction, Windows PowerShell launch,
+request serialization and runtime repair execute. This verifies repair before the downloaded backend,
+module/asset replacement and save/config preservation without an actual game or dependency downloads.
+
 ## Unreleased bunnyhop test branch (2026-10-09)
 
 Movement, native collision, real INI parsing and migration checks pass. The numerical oracles cover

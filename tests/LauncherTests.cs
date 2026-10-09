@@ -32,7 +32,7 @@ public static class LauncherTests {
             Require(edition.SelectedIndex==0 && edition.Items[1].ToString()=="Reign of Chaos","Wrong edition default/options");
             edition.SelectedIndex=1;
             Require(edition.SelectedItem.ToString()=="Reign of Chaos","RoC cannot be selected");
-            // Separate installation and GitHub update actions must exist in both actual launcher layouts.
+            // Embedded Install and latest-GitHub reinstall remain separate actions in both layouts.
             Require(install.Text==(included ? "Install — Player" : "Install"),"Wrong Install action for variant");
             Require((developer!=null)==included,"Source-only UI offers bundled Player/Developer modes");
             Require(update!=null && update.Text=="Update","Dedicated Update action missing");
@@ -91,6 +91,7 @@ public static class LauncherTests {
         using(var prompt=new UpdateAvailableForm(release,"Player",true)) {
             Require(((TextBox)prompt.Controls["ReleaseNotes"]).Text==release.Notes,"Release notes missing");
             Require(((Label)prompt.Controls["ModeDetails"]).Text.Contains("No Build Tools"),"Player prompt hides dependencies");
+            Require(((Label)prompt.Controls["ModeDetails"]).Text.Contains("Reinstalls the private game"),"Update prompt hides full reinstall behavior");
             Require(((Button)prompt.Controls["DeclineUpdate"]).DialogResult==DialogResult.Cancel,"Decline confirms update");
             Require(((Button)prompt.Controls["ConfirmUpdate"]).DialogResult==DialogResult.OK,"Confirm does not accept update");
         }

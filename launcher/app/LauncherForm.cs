@@ -184,7 +184,7 @@ namespace WarcraftCSLauncher {
             var saved=new JavaScriptSerializer().Deserialize<System.Collections.Generic.Dictionary<string,string>>(File.ReadAllText(marker));
             return saved.ContainsKey("revision") ? saved["revision"] : Path.GetFileName(saved["source"]);
         }
-        private async Task CheckUpdates() {
+        private async Task CheckUpdates(bool reinstall=false) {
             if (checking || busy || preview) return;
             checking=true; RefreshActions();
             try {
@@ -192,9 +192,7 @@ namespace WarcraftCSLauncher {
                 Report("Update metadata received version="+(candidate==null ? "none" : candidate.Manifest.Version));
                 // The metadata request may finish after the user closes the window.
                 if (IsDisposed) return;
-                latest=candidate!=null && candidate.Manifest.IsNewer(CurrentVersion,SourcePayload.Revision,InstalledRevision()) ? candidate : null;
-                // Preserve the same-version legacy guard only for a launcher that actually bundles native modules.
-                if (includesRuntime && latest!=null && latest.Manifest.Version==CurrentVersion && !latest.Manifest.SupportsPlayer) latest=null;
+                latest=UpdateSelection.Select(candidate,CurrentVersion,SourcePayload.Revision,InstalledRevision(),includesRuntime,reinstall);
                 if (busy) return;
                 status.Text=latest==null ? "Up to date. Play and offline installation remain available." :
                     "Update available: "+latest.Manifest.Version+". Choose whether to install it.";
@@ -210,8 +208,9 @@ namespace WarcraftCSLauncher {
         }
         private async Task UpdateProject() {
             if (busy || checking || !consent.Checked) return;
-            // Update performs a fresh GitHub check and confirms the chosen package; Install never invokes this path.
-            await CheckUpdates();
+            // A manual Update reinstalls GitHub's latest package even when startup reports "Up to date".
+            // It shares Install's full setup and preservation rules after checksum verification/confirmation.
+            await CheckUpdates(true);
         }
         private async Task ConfirmUpdate() {
             if (latest==null || busy || IsDisposed) return;
@@ -225,7 +224,7 @@ namespace WarcraftCSLauncher {
             if (busy || !consent.Checked || latest==null) return;
             var selected=latest; var request=CurrentRequest(mode); SetBusy(true);
             Report("Update started target="+selected.Manifest.Version+" mode="+mode+" destination="+destination.Text);
-            status.Text="Downloading and verifying the release, then updating the private installation...";
+            status.Text="Downloading and verifying the latest release, then reinstalling the private game...";
             try {
                 var package=await Task.Run(()=>ReleaseUpdater.Prepare(selected,request,true,ReleaseClient.Download));
                 Report("Verified release "+selected.Manifest.Version+" source and launcher SHA256.");
