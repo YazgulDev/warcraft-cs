@@ -184,7 +184,7 @@ Edit it and press F8 in FPS.
   map tileset keys such as `W=snow`, `A=forest`, `D=DrkG` choose a filename stem from your
   `cstrike/gfx/env`. Set `Enabled=false` to retain Warcraft's original sky. Missing caches also keep
   the native sky; run setup again to convert your installed CS sky textures. F8 applies changes live.
-- `[Sky] WarcraftEnabled=true` previews Warcraft's stock summer/winter sky in FPS on maps without
+- `[Sky] WarcraftEnabled=true` (default) shows Warcraft's stock summer/winter sky in FPS on maps without
   a sky. Keep `Enabled=false` for this mode. Existing map skies are preserved; F6 and cinematics
   restore the map's original sky. Set `WarcraftEnabled=false` and press F8 to disable the preview.
 

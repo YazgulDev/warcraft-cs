@@ -42,8 +42,8 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.maxBombs=int(number("Loadout","MaxBombs",100,1000));
     result.startBombs=std::min(result.maxBombs,int(number("Loadout","BombCount",20,1000)));
     result.csSky=_stricmp(text("Sky","Enabled","false").c_str(),"false")!=0;
-    // Native sky is an opt-in FPS preview; CS sky takes precedence when explicitly enabled.
-    result.nativeSky=_stricmp(text("Sky","WarcraftEnabled","false").c_str(),"true")==0;
+    // Default to Warcraft's sky even for older configs missing this key; explicit CS sky still takes precedence.
+    result.nativeSky=_stricmp(text("Sky","WarcraftEnabled","true").c_str(),"true")==0;
     // Only filename stems from private CS caches are accepted; INI strings never become arbitrary paths.
     auto sky=[&](const char* key,const char* fallback) {
         auto value=text("Sky",key,fallback);
