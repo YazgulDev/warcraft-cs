@@ -1,6 +1,7 @@
 #include "Overlay.hpp"
 #include "ScopeView.hpp"
 #include "ReticleView.hpp"
+#include "ReticleDiagnostics.hpp"
 #include "BuyMenuView.hpp"
 #include "../platform/DiagnosticLog.hpp"
 #include <algorithm>
@@ -46,7 +47,9 @@ void Overlay::ContextDeleted(HGLRC context) {
     wc3::Log("Overlay context deleted; GPU names forgotten");
 }
 void Overlay::Draw(HDC dc, const ShooterController& controller) {
-    if (!controller.Visible() || !wglGetCurrentContext()) return;
+    // Explain early returns as well as submitted geometry when investigating a missing aiming mark.
+    if (!controller.Visible()) { ReticleDiagnostics::Skip("fps-inactive"); return; }
+    if (!wglGetCurrentContext()) { ReticleDiagnostics::Skip("no-gl-context"); return; }
     HGLRC current = wglGetCurrentContext();
     if (context_ != current) {
         ResetGraphics(false); context_ = current;
@@ -66,9 +69,14 @@ void Overlay::Draw(HDC dc, const ShooterController& controller) {
     refreshPending_ = false;
     // Preserve every GL state touched so Warcraft's next frame renders normally.
     GLint oldMode; glGetIntegerv(GL_MATRIX_MODE, &oldMode); glPushAttrib(GL_ALL_ATTRIB_BITS);
-    HWND window = WindowFromDC(dc); RECT client; GetClientRect(window, &client);
+    HWND window = WindowFromDC(dc); RECT client = {};
+    if (!window || !GetClientRect(window, &client)) {
+        ReticleDiagnostics::Skip("client-rect-unavailable"); glPopAttrib(); return;
+    }
     int width = client.right, height = client.bottom;
-    if (height <= 0 || width <= 0) { glPopAttrib(); return; }
+    if (height <= 0 || width <= 0) {
+        ReticleDiagnostics::Skip("empty-client-rect", width, height); glPopAttrib(); return;
+    }
     glViewport(0, 0, width, height);
     // Warcraft uses multiple texture units; isolate the overlay on unit zero.
     using ActiveTexture = void (APIENTRY*)(GLenum);
@@ -122,6 +130,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller) {
     // A swallowed/transported unit has no world viewpoint: hide equipment and retain the health/status HUD.
     bool unavailableView = controller.Status().contained || controller.Status().hidden;
     if (unavailableView) {
+        ReticleDiagnostics::Skip(controller.Status().contained ? "unit-contained" : "unit-hidden", width, height);
         glColor4f(0.015f, 0.015f, 0.015f, 1);
         glBegin(GL_QUADS); glVertex2f(0, 0); glVertex2f(float(width), 0);
         glVertex2f(float(width), float(height)); glVertex2f(0, float(height)); glEnd();

@@ -39,6 +39,8 @@ claim to finish all future decomposition.
 
 `ReticleView` owns hip-fire and scope aiming marks. It uses filled rectangles while retaining the
 existing center, recoil gap and thickness, and restores inherited polygon/color state after drawing.
+`ReticleDiagnostics` observes its draw preparation/completion and the runtime/overlay skip paths;
+it shares the bounded logger's interval and master switch without owning geometry or files.
 `tools/test-reticle-view.ps1` verifies real pixels in a hidden native WGL window, including zero
 line stipple, color masks, polygon stipple and wireframe state. Run it separately on a Windows desktop;
 the numerical suites do not require an OpenGL window. This regression does not establish the cause

@@ -29,6 +29,16 @@ camera, player status, render frequency, world-frame age, focus, context, viewpo
 and reticle submission decisions. OpenGL vendor/renderer/version identify the driver used by the game.
 An observed GL error may originate in the host frame; a submission record does not prove visible pixels.
 
+Dedicated `reticle draw begin`, `reticle state` (`inherited` / `prepared`) and `reticle draw end`
+records surround the actual hip-fire/scope primitives. They include center, recoil gap or scope radius,
+thickness, primitive/vertex count, context, viewport/scissor, color masks/color, polygon/stipple,
+logic operation, depth/stencil/alpha/blend/cull and texture state. Sampled GL errors already pending
+are labeled `before-draw-host`; errors observed after geometry and state restoration are labeled
+`draw-and-restore`. These diagnostics consume the sampled GL error queue and do not read GPU pixels.
+`reticle skipped` explains inactive FPS, missing context/client area, contained/hidden units,
+stale world frames or controller faults. Mode/skip/context transitions are immediate; repeated
+records follow `IntervalMs`. `Detailed=false` disables these optional checks and records.
+
 Only mod control keys/buttons are traced; raw character text and mouse-motion packets are not written.
 Launcher records include startup/exit, version/variant, install/update/Play results, backend output and
 managed exception stacks. Launcher journals are limited to 4 MiB each with three archives. Oversized

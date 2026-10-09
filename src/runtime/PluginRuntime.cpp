@@ -5,6 +5,7 @@
 #include "../platform/DiagnosticLog.hpp"
 #include "../application/ShooterController.hpp"
 #include "../presentation/Overlay.hpp"
+#include "../presentation/ReticleDiagnostics.hpp"
 #include "../platform/MapCameraGuard.hpp"
 #include "../platform/ActorRenderFilter.hpp"
 #include "../platform/FpsCombatGuard.hpp"
@@ -198,6 +199,8 @@ static BOOL WINAPI SwapHook(HDC dc, UINT planes) {
     }
     overlayPass = true;
     if (healthy && GetTickCount() - lastWorld < 500) overlay.Draw(dc, controller);
+    // The reticle cannot reach its draw entry while native recovery or stale world frames suppress the overlay.
+    else ReticleDiagnostics::Skip(healthy ? "world-frame-stale" : "controller-fault", 0, 0, GetTickCount() - lastWorld);
     overlayPass = false; nativeUIPhase = false;
     // Observe skipped frames too: a valid context alone does not establish an active FPS overlay.
     if (DiagnosticLog::Due(previous)) {

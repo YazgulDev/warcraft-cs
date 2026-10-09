@@ -25,6 +25,8 @@ $sources += @('config/GameplaySettings.cpp','inventory/ItemPickup.cpp','squad/Sq
 $sources += '"' + (Join-Path $modRoot 'src/geometry/TreeTrunkMesh.cpp') + '"'
 # Shared filled aiming geometry is compiled into both ordinary Player builds and scope rendering.
 $sources += '"' + (Join-Path $modRoot 'src/presentation/ReticleView.cpp') + '"'
+# Draw diagnostics are shared by the real reticle and frame/overlay skip paths.
+$sources += '"' + (Join-Path $modRoot 'src/presentation/ReticleDiagnostics.cpp') + '"'
 # Thread-safe bounded diagnostics are a native platform adapter, not controller/file ownership.
 $sources += '"' + (Join-Path $modRoot 'src/platform/DiagnosticLog.cpp') + '"'
 # Shop access is native-world policy; inventory prices/navigation remain independently testable.

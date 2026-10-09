@@ -1,9 +1,14 @@
 #include "../src/presentation/ReticleView.hpp"
+#include "../src/presentation/ReticleDiagnostics.hpp"
+#include "../src/platform/DiagnosticLog.hpp"
 #include <windows.h>
 #include <gl/GL.h>
 #include <cstdio>
 #include <cstdlib>
 #include <vector>
+#include <fstream>
+#include <iterator>
+#include <string>
 
 static void Require(bool value, const char* message) {
     if (!value) { std::fprintf(stderr, "%s\n", message); std::exit(1); }
@@ -23,7 +28,14 @@ static void Projection(int width, int height) {
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     glClearColor(0, 0, 0, 1); glClear(GL_COLOR_BUFFER_BIT);
 }
-int main() {
+static std::string ReadLog(const char* directory) {
+    std::ifstream stream(std::string(directory) + "\\WarcraftCS.log", std::ios::binary);
+    return std::string(std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>());
+}
+int main(int argc, char** argv) {
+    Require(argc == 2, "An isolated journal directory is required");
+    LoggingSettings logging; logging.intervalMs = 60000;
+    DiagnosticLog::Configure(logging); DiagnosticLog::Open(argv[1]);
     // A hidden native WGL window tests actual rasterized pixels without taking over the user's input.
     HWND window = CreateWindowA("STATIC", "Reticle regression", WS_POPUP, 0, 0, 640, 480, nullptr, nullptr, nullptr, nullptr);
     Require(window != nullptr, "Cannot create WGL test window");
@@ -65,6 +77,11 @@ int main() {
             "Reticle failed to restore Warcraft enables");
         glDisable(GL_POLYGON_STIPPLE); glDisable(GL_COLOR_LOGIC_OP); glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
+    // Skip and mode transitions must be recorded immediately despite the long sample interval.
+    ReticleDiagnostics::Skip("unit-hidden", 320, 240);
+    std::string skipped = ReadLog(argv[1]);
+    ReticleDiagnostics::Skip("unit-hidden", 320, 240);
+    Require(ReadLog(argv[1]) == skipped, "Repeated skip must respect diagnostic interval");
     Projection(320, 240); glClearColor(1, 1, 1, 1); glClear(GL_COLOR_BUFFER_BIT);
     ReticleView::DrawScope(160, 120, 80, 2);
     unsigned char center[4], outside[4];
@@ -73,6 +90,40 @@ int main() {
     Require(center[0] == 0 && center[1] == 0 && center[2] == 0 && outside[0] == 255,
         "Scope hairs must survive zero line stipple without filling the clear lens");
     Require(glGetError() == GL_NO_ERROR, "Reticle emitted an OpenGL error");
-    wglMakeCurrent(nullptr, nullptr); wglDeleteContext(context); ReleaseDC(window, dc); DestroyWindow(window);
-    std::puts("Reticle rasterization/state regression passed.");
+
+    Projection(320, 240);
+    // A pending host error and poisoned inherited state must be diagnosed separately from our valid quads.
+    glEnable(GL_POLYGON_STIPPLE); glEnable(GL_COLOR_LOGIC_OP); glLogicOp(GL_NOOP);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+    glEnable(0xFFFFFFFF);
+    ReticleView::DrawHipFire(320, 240, 2);
+    Require(GreenPixels(320, 240) == 80, "Diagnostic sampling changed crosshair pixels");
+    std::string journal = ReadLog(argv[1]);
+    Require(journal.find("mode=hip-fire") != std::string::npos &&
+        journal.find("center=160.00,120.00 gap=13.00 thickness=2.00 recoil=2.00") != std::string::npos &&
+        journal.find("quads=4 vertices=16") != std::string::npos, "Hip-fire geometry diagnostics missing");
+    Require(journal.find("mode=scope") != std::string::npos && journal.find("radius=80.00") != std::string::npos &&
+        journal.find("quads=2 vertices=8") != std::string::npos, "Scope transition diagnostics missing");
+    Require(journal.find("phase=inherited viewport=0,0,320,240 scissor=") != std::string::npos &&
+        journal.find("colorMask=0000") != std::string::npos && journal.find("colorMask=1111") != std::string::npos &&
+        journal.find("phase=prepared") != std::string::npos, "Inherited/prepared state diagnostics missing");
+    Require(journal.find("phase=before-draw-host code=0500") != std::string::npos &&
+        journal.find("observedErrors=0 submission=completed") != std::string::npos &&
+        journal.find("phase=draw-and-restore code=") == std::string::npos, "Host GL error attribution failed");
+    ReticleView::DrawHipFire(320, 240, 2);
+    Require(ReadLog(argv[1]) == journal, "Repeated draw must respect diagnostic interval");
+    logging.detailed = false; DiagnosticLog::Configure(logging);
+    // Disabled diagnostics must neither write transition records nor consume the game's GL error flag.
+    glEnable(0xFFFFFFFF); ReticleView::DrawScope(160, 120, 80, 2);
+    ReticleDiagnostics::Skip("controller-fault");
+    Require(glGetError() == GL_INVALID_ENUM, "Disabled diagnostics consumed the host error");
+    Require(ReadLog(argv[1]) == journal, "Detailed=false must suppress reticle diagnostic transitions");
+    wglMakeCurrent(nullptr, nullptr);
+    logging.detailed = true; DiagnosticLog::Configure(logging);
+    ReticleDiagnostics::Skip("no-gl-context");
+    Require(ReadLog(argv[1]).find("reticle skipped reason=no-gl-context") != std::string::npos,
+        "Missing-context skip must work without GL state queries");
+    DiagnosticLog::Close();
+    wglDeleteContext(context); ReleaseDC(window, dc); DestroyWindow(window);
+    std::puts("Reticle pixels/state, draw/skip diagnostics, GL error attribution and sampling passed.");
 }

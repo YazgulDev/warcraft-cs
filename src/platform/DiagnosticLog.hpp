@@ -10,5 +10,5 @@ public:
     static void Open(const char* directory);
     static void Close();
     static void Write(const char* level, const char* format, va_list args);
-    static bool Due(DWORD& previous);
+    static bool Due(DWORD& previous, bool immediate = false);
 };

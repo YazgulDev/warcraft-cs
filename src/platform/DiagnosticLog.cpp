@@ -52,10 +52,11 @@ void DiagnosticLog::Close() {
     file = nullptr;
     ReleaseSRWLockExclusive(&mutex);
 }
-bool DiagnosticLog::Due(DWORD& previous) {
+bool DiagnosticLog::Due(DWORD& previous, bool immediate) {
     AcquireSRWLockShared(&mutex); auto current = options; ReleaseSRWLockShared(&mutex);
     DWORD now = GetTickCount();
-    if (!current.detailed || (previous && now - previous < current.intervalMs)) return false;
+    // Diagnostic transitions can be immediate without bypassing the player's master TRACE switch.
+    if (!current.detailed || (!immediate && previous && now - previous < current.intervalMs)) return false;
     previous = now; return true;
 }
 void DiagnosticLog::Write(const char* level, const char* format, va_list args) {
