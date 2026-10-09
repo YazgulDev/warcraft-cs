@@ -32,6 +32,18 @@ $audioBefore=(Get-FileHash -LiteralPath $customAudio).Hash
 Update-GameplayConfig $template $customAudio
 if ((Get-FileHash -LiteralPath $customAudio).Hash -ne $audioBefore) { throw 'Repeated audio migration changed the config.' }
 $empty=Join-Path $folder 'empty.ini'
+# Movement upgrades retain personal jump tuning and add missing siblings exactly once.
+$customMovement=Join-Path $folder 'custom-movement.ini'
+@('[Movement]','JumpBoostPercent=15','AutoJump=false','[Damage]','FriendlyFirePercent=0') | Set-Content -LiteralPath $customMovement -Encoding ascii
+Update-GameplayConfig $template $customMovement
+$movementText=Get-Content -LiteralPath $customMovement -Raw
+foreach ($required in @('JumpBoostPercent=15','AutoJump=false','FriendlyFirePercent=0','MaxBunnySpeed=1000','Gravity=800','BunnyHop=true')) {
+    if (!$movementText.Contains($required)) { throw "Movement migration replaced or omitted: $required" }
+}
+if ([regex]::Matches($movementText,'(?m)^\[Movement\]').Count -ne 1) { throw 'Movement section was duplicated.' }
+$movementBefore=(Get-FileHash -LiteralPath $customMovement).Hash
+Update-GameplayConfig $template $customMovement
+if ((Get-FileHash -LiteralPath $customMovement).Hash -ne $movementBefore) { throw 'Movement migration is not idempotent.' }
 [IO.File]::WriteAllText($empty,'');Update-GameplayConfig $template $empty
 if (!(Get-Content -LiteralPath $empty -Raw).Contains('BombCount=20')) { throw 'Empty config repair failed.' }
 $fresh=Join-Path $folder 'fresh.ini';Update-GameplayConfig $template $fresh

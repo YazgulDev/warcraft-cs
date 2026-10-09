@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — test branch
+
+- Add accelerating bunnyhops, held-Space autojump, bounded air strafing and live movement tuning.
+- Allow height-aware jumps over low objects and gradual gravity-driven falls from cliffs.
+- Preserve tall/unknown blockers, swept collision, bridge surfaces, map bounds and spell movement restrictions.
+- Add editable `[Movement]` settings, migration preservation and independent/native movement oracles.
+- No release merge, version bump or publication; see [movement notes](docs/MOVEMENT.md).
+
 ## 0.6.1 — 2026-10-09
 
 - Add `[Audio] CSVolumePercent` (0–100, default 100) for CS shots, reloads, footsteps, melee and C4.

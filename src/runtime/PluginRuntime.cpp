@@ -28,6 +28,9 @@
 #ifdef WCS_SURFACE_TEST
 #include "../../tests/WorldSurfaceScene.hpp"
 #endif
+#ifdef WCS_MOVEMENT_TEST
+#include "../../tests/MovementScene.hpp"
+#endif
 
 static ShooterController controller;
 static Overlay overlay;
@@ -133,6 +136,10 @@ static int __fastcall WorldHook(uintptr_t ui, uintptr_t unused) {
 #endif
 #ifdef WCS_SURFACE_TEST
     if (healthy && gameUI) WorldSurfaceScene::Tick(root);
+#endif
+#ifdef WCS_MOVEMENT_TEST
+    // Native movement oracles are explicit and must run only in the developer's disposable map copy.
+    if (healthy && gameUI) MovementScene::Tick(gameBase,root);
 #endif
     // Keep layout evaluation running while hiding its final graphics after the world pass.
     nativeUIPhase = false;

@@ -30,6 +30,7 @@ void ShooterController::Configure(const char* root, uintptr_t gameBase) {
     gameBase_ = gameBase;
     hitboxes_.Configure(gameBase);
     destructableHitboxes_.Configure(gameBase);
+    collision_.Configure(gameBase);
     audio_.Configure(root_);
     if (!nativeSky_.Configure(gameBase)) wc3::Log("Native sky signature mismatch; preview disabled");
     ReloadSettings();
@@ -151,6 +152,7 @@ void ShooterController::Disable(bool restoreCamera) {
     wc3::Log("FPS disabled");
 }
 void ShooterController::ResetMap() {
+    collision_.Reset(); // Custom-map model bounds must never leak into the next world's collision.
     nativeSky_.Reset();
     mapTileset_=0;
     mouseLook_.Reset();
@@ -308,6 +310,7 @@ void ShooterController::ReloadSettings() {
     settings_=GameplaySettings::Load(root_+"\\WarcraftCS.ini");
     // Startup and F8 share the same CS-only gain update; Warcraft's Miles mixer is untouched.
     audio_.SetVolumePercent(settings_.csVolumePercent);
+    movement_.Configure(settings_.movement); // F8 changes tuning without resetting a jump or accumulated momentum.
     ammoRecovery_.Reset();ammoMessage_="SETTINGS RELOADED";refillTick_=GetTickCount();
     wc3::Log("Settings loaded runePercent=%.1f ammoWeapons=%s damageMode=%s awpOneShot=%d radius=%.1f friendlyFirePercent=%.1f",
         settings_.runeAmmoPercent,settings_.runeAmmoAllWeapons ? "all" : "current",

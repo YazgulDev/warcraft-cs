@@ -107,6 +107,11 @@ Press **F8 in FPS** to apply it immediately, including sounds already playing. W
 music/effects are unaffected. For source installs, edit the prepared runtime's `WarcraftCS/WarcraftCS.ini`.
 Updates add this key to older configs without replacing an existing custom value.
 
+Experimental movement in the bunnyhop test branch uses the same settings file. Hold **Space** while
+moving to repeat accelerating jumps. The `[Movement]` section controls autojump, boost, speed cap,
+air acceleration, jump strength, gravity and step height; **F8 in FPS** applies changes.
+See [Movement settings](docs/MOVEMENT.md) for defaults, ranges and manual-jump mode.
+
 The EXE creates these files inside your selected installation folder:
 
 - `Game`: private Warcraft runtime. Settings: `Game\WarcraftCS\WarcraftCS.ini`.

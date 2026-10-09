@@ -95,5 +95,22 @@ int main() {
     settings=GameplaySettings::Load(path);DeleteFileA(path.c_str());
     assert(settings.buyAccess==GameplaySettings::BuyAccess::FriendlyBuildings && settings.startBombs==0 && settings.tilesetSky['A']=="forest");
     assert(settings.nativeSky && !settings.csSky);
+    // Real INI parsing bounds every movement knob before the physics snapshot is applied.
+    { std::ofstream file(path); file << "[Movement]\nBunnyHop=false\nAutoJump=false\nJumpBoostPercent=250\nMaxBunnySpeed=1\nAirAcceleration=nan\nJumpSpeed=0\nGravity=9999\nStepHeight=-5\n"; }
+    settings=GameplaySettings::Load(path);DeleteFileA(path.c_str());
+    assert(!settings.movement.bunnyHop && !settings.movement.autoJump);
+    assert(settings.movement.jumpBoostPercent==100 && settings.movement.maxBunnySpeed==250);
+    assert(settings.movement.airAcceleration==10 && settings.movement.jumpSpeed==1);
+    assert(settings.movement.gravity==3000 && settings.movement.stepHeight==0);
+    { std::ofstream file(path); file << "[Movement]\nBunnyHop=broken\nAutoJump=\nJumpBoostPercent=inf\nMaxBunnySpeed=nan\nJumpSpeed=broken\nGravity=nan\nStepHeight=200\n"; }
+    settings=GameplaySettings::Load(path);DeleteFileA(path.c_str());
+    assert(settings.movement.bunnyHop && settings.movement.autoJump);
+    assert(settings.movement.jumpBoostPercent==8 && settings.movement.maxBunnySpeed==1000);
+    assert(settings.movement.jumpSpeed==268.328f && settings.movement.gravity==800 && settings.movement.stepHeight==64);
+    WritePrivateProfileStringA("Movement","JumpBoostPercent","15",path.c_str());
+    assert(GameplaySettings::Load(path).movement.jumpBoostPercent==15);
+    WritePrivateProfileStringA("Movement","JumpBoostPercent","0",path.c_str());
+    assert(GameplaySettings::Load(path).movement.jumpBoostPercent==0);
+    DeleteFileA(path.c_str());
     return 0;
 }

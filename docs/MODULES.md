@@ -10,7 +10,7 @@ has its own header and implementation. There is no global header search path mas
 | `src/input` | Relative mouse input, look angles, weapon wheel and window-message dispatcher |
 | `src/application` | FPS lifecycle and coordination of gameplay systems |
 | `src/config` | Validated configuration snapshots |
-| `src/movement` | Independent movement physics |
+| `src/movement` | Independent movement physics and validated movement tuning contract |
 | `src/combat` | Weapon/damage/recoil/melee rules, hitboxes, C4 and status effects |
 | `src/economy` | Buy catalog, navigation, inventory transactions and shop access |
 | `src/inventory` | Item/rune pickup and ammunition recovery |
@@ -31,6 +31,11 @@ production sources explicitly; verification scenes remain opt-in under `tests`.
 The window procedure forwards unconsumed messages and owns render-resource focus recovery. Native
 adapters isolate engine layouts; `WorldLabelVisibility` consumes a camera snapshot without Warcraft,
 Windows or OpenGL dependencies. Weapon data lives in `combat/Weapon.hpp` independently of the controller.
+
+`MovementPhysics` integrates momentum, jumping and gravity without engine calls. `WarcraftCollision`
+sweeps the player footprint against terrain, native bridge decks and solid model volumes supplied by
+`MovementObstacles`. The obstacle adapter owns model/type caches and clears them on map changes.
+`GameplaySettings` loads movement tuning; the controller applies that snapshot on startup and F8.
 
 Apply SOLID at real boundaries: cohesive collaborators, explicit dependencies, narrow contracts and
 composition. Adapter isolates native hooks; dispatcher/mailbox separates input from simulation timing.
