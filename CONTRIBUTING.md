@@ -18,6 +18,10 @@ baseline advanced when the owner starts the next release.
 Run `tools/test-all.ps1` for relevant math/domain changes, build against your own private game copy,
 and test native changes only in a disposable offline map. Do not run fixtures in a campaign save.
 Keep behavior comments concise. No third-party source vendoring or game data in Git.
+Apply [configurable-game-settings](skills/configurable-game-settings/SKILL.md) when adding or changing
+game tuning: ship documented config keys, validated defaults, reload semantics and update preservation.
+Release Notes must describe every included change since the previous published tag, following
+[feature-release-workflow](skills/feature-release-workflow/SKILL.md#complete-release-notes).
 
 Stage explicit source/document paths. Before committing:
 

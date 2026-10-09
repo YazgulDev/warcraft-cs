@@ -95,6 +95,18 @@ version remains 1.26a, and two-player custom missions still require their intend
 
 ## Settings, saves, updates and removal
 
+To adjust **CS sound volume**, edit your private `Game/WarcraftCS/WarcraftCS.ini`:
+
+```ini
+[Audio]
+CSVolumePercent=50
+```
+
+Use **0–100**: 0 mutes CS and 100 preserves the old levels; fractional values also work.
+Press **F8 in FPS** to apply it immediately, including sounds already playing. Warcraft's own
+music/effects are unaffected. For source installs, edit the prepared runtime's `WarcraftCS/WarcraftCS.ini`.
+Updates add this key to older configs without replacing an existing custom value.
+
 The EXE creates these files inside your selected installation folder:
 
 - `Game`: private Warcraft runtime. Settings: `Game\WarcraftCS\WarcraftCS.ini`.

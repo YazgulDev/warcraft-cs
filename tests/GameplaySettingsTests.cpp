@@ -13,6 +13,7 @@ int main() {
     assert(settings.FinishingAWP(3));
     assert(settings.friendlyFirePercent==50);
     assert(settings.floatingTextDistance==1200);
+    assert(settings.csVolumePercent==100);
     assert(!settings.startAllWeapons && settings.startBombs==20 && settings.maxBombs==100 );
     assert(settings.buyAccess==GameplaySettings::BuyAccess::Anywhere && !settings.csSky);
     assert(settings.weaponPrice[0]==625 && settings.weaponPrice[1]==775 && settings.weaponPrice[2]==125);
@@ -46,6 +47,7 @@ int main() {
     assert(settings.squadRadius==2000 && settings.squadMaxUnits==1 && settings.squadFollowDistance==80 && settings.squadLeash==280);
     settings=GameplaySettings::Load(path);assert(settings.runeAmmoPercent==20 && settings.runeAmmoAllWeapons && !settings.heroDamage);
     assert(settings.friendlyFirePercent==50); // Missing keys keep legacy 50% damage.
+    assert(settings.csVolumePercent==100); // Missing Audio keys retain the previous CS mix.
     // Exercise real INI parsing, sanitization and repeated snapshot loads rather than only assigning the field.
     struct PercentCase { const char* value;float expected; };
     const PercentCase cases[]={{"25",25},{"0",0},{"100",100},{"12.5",12.5f},
@@ -57,6 +59,23 @@ int main() {
         settings=GameplaySettings::Load(sample);DeleteFileA(sample.c_str());
         assert(settings.friendlyFirePercent==test.expected);
     }
+    // Exercise the actual INI loader for mute, fractional gains, bounds and malformed audio settings.
+    const PercentCase volumes[]={{"0",0},{"50",50},{"100",100},{"12.5",12.5f},
+        {"-10",0},{"200",100},{"nan",100},{"inf",100},{"broken",100},{"",100}};
+    for (const auto& test : volumes) {
+        const auto sample=path+std::to_string(++index);
+        { std::ofstream file(sample);file<<"[Audio]\nCSVolumePercent="<<test.value<<"\n"; }
+        settings=GameplaySettings::Load(sample);DeleteFileA(sample.c_str());
+        assert(settings.csVolumePercent==test.expected);
+    }
+    // Reloading an existing INI must replace the audio snapshot rather than retaining the startup gain.
+    WritePrivateProfileStringA("Audio","CSVolumePercent","35",path.c_str());
+    assert(GameplaySettings::Load(path).csVolumePercent==35);
+    WritePrivateProfileStringA("Audio","CSVolumePercent","0",path.c_str());
+    assert(GameplaySettings::Load(path).csVolumePercent==0);
+    WritePrivateProfileStringA("Audio","CSVolumePercent","100",path.c_str());
+    assert(GameplaySettings::Load(path).csVolumePercent==100);
+    DeleteFileA(path.c_str());
     // Visibility settings reject malformed values and bound work to the world camera's range.
     const PercentCase distances[]={{"0",0},{"900",900},{"-10",0},{"99999",5000},{"nan",1200},{"broken",1200}};
     for (const auto& test : distances) {

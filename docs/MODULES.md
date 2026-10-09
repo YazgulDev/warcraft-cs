@@ -16,7 +16,7 @@ has its own header and implementation. There is no global header search path mas
 | `src/inventory` | Item/rune pickup and ammunition recovery |
 | `src/squad` | Recruitment and follow/fight/release policies |
 | `src/geometry` | Model bounds, transformations, ray tests and tree meshes |
-| `src/audio` | CS sample loading and mixing |
+| `src/audio` | CS sample loading/mixing and its configurable master gain, separate from Warcraft's audio |
 | `src/presentation` | FPS camera/HUD/menu/weapon/scope/sky rendering and world-label visibility |
 
 `src/Plugin.cpp` remains the tiny public DLL entry point because published launcher archive validators

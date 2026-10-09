@@ -14,6 +14,8 @@ struct GameplaySettings {
     float friendlyFirePercent = 50;
     // Limit world labels to nearby FPS activity without altering native resource production.
     float floatingTextDistance=1200;
+    // Scale only the CS mixer; 100 preserves legacy levels and zero mutes every CS voice.
+    float csVolumePercent=100;
     // Recruitment and spacing are configurable without rewriting map data or unit ownership.
     float squadRadius=600,squadFollowDistance=180,squadLeash=900;
     int squadMaxUnits=24;

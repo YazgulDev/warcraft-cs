@@ -27,6 +27,7 @@ optional CS skies, bridge movement and corrected FPS rendering. All changes sinc
 - WASD, jumping, crouching, acceleration, friction and weapon movement speeds inspired by CS.
 - Classic AK/M4 and USP/AWP punch calculations, recoil recovery and burst behavior.
 - Primary and secondary melee attacks, locally imported CS sounds and a blood-free hit indicator.
+- CS-only volume in INI, including shots, reloads, footsteps and C4; F8 applies it to ongoing and future sounds.
 - Damage to units, buildings and gates; configurable allied damage (50% by default). C4 deals 2500 base area damage.
 - Warcraft stuns, roots, slows and attack restrictions also limit FPS actions.
 - E picks up items/runes through the real inventory; a successful rune restores 20% ammunition by default.
@@ -167,6 +168,10 @@ EXE installation: `<installation folder>/Game/WarcraftCS/WarcraftCS.ini`.
 Default source installation: `.local/warcraft-cs/WarcraftCS/WarcraftCS.ini`.
 Edit it and press F8 in FPS.
 
+- `[Audio] CSVolumePercent=100` controls all CS sounds independently of Warcraft audio. Range: **0–100**;
+  **0** mutes CS, **100** retains the previous levels, and fractional values are accepted.
+  F8 applies the new volume immediately, including sounds already playing; restarting also loads it.
+  Missing/empty/malformed/non-finite values use 100; finite values outside the range are clamped.
 - `[Runes] AmmoPercent=20`; `AmmoWeapons=all` or `current`.
 - `[Damage] Mode=weapon` uses fixed weapon damage. `Mode=hero` uses the current average Warcraft
   attack of **any** controlled unit, including creeps, multiplied by each weapon's `HeroMultiplier`.
@@ -262,11 +267,14 @@ The [modular-code skill](skills/modular-code/SKILL.md) guides future source chan
 
 ```powershell
 .\tools\test-all.ps1
+.\tools\test-cs-audio.ps1
 python .\tools\audit_sources.py --revision HEAD
 ```
 
 Verification notes: [docs/VALIDATION.md](docs/VALIDATION.md).
+The CS audio check uses real XAudio2 and a silent synthetic WAV; it requires a working Windows audio device.
 Branch/release rules: [CONTRIBUTING.md](CONTRIBUTING.md).
+New game tuning parameters follow [configurable-game-settings](skills/configurable-game-settings/SKILL.md).
 Never commit or redistribute `.local`, game content, converted caches or proprietary DLLs.
 
 ## Credits and licenses
