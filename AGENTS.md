@@ -5,7 +5,7 @@ For feature work, commits, release merges and publication, read and apply
 
 Current release: `release/0.6.0`; VERSION is the project version.
 Feature branches use `feature/add-<feature-or-features>` and merge into the latest
-release only when requested. A new release requires asking for its version, merging
+release only when requested. A new release requires a user-supplied version, merging
 the previous release into master, then creating the new release branch. Keep old branches.
 
 This is a source-only repository. Exclude `.local`, `build`, dependencies, game assets,
@@ -16,6 +16,11 @@ private setup/build scripts in `setup` and `tools`. Add concise intent comments 
 
 For source changes, apply [modular-code](skills/modular-code/SKILL.md).
 Module ownership and dependency direction are documented in [docs/MODULES.md](docs/MODULES.md).
+
+When adding or changing player-facing game parameters, apply
+[configurable-game-settings](skills/configurable-game-settings/SKILL.md).
+Ship editable config keys, validated defaults, supported live reload and preservation during updates.
+Every release must document all included changes in Release Notes, using the previous published tag as its baseline.
 
 When adding or changing weapons, apply
 [warcraft-cs-weapon-menu](skills/warcraft-cs-weapon-menu/SKILL.md) so combat, buying,

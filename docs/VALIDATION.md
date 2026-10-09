@@ -179,3 +179,24 @@ rate-limit fallback selection, independent executable/runtime checksums, incompl
 variant manifests, missing assets, unexpected launcher names and invalid assemblies.
 Existing extraction, running-game, audio setup, delayed replacement and backup/restart
 regressions pass. These checks do not open a campaign or interact with the user's game.
+
+## Configurable CS volume (0.6.1)
+
+Real INI regression checks cover missing/empty/malformed/non-finite values, mute, fractional
+percentages, 0-100 clamping and repeated edits/reloads of the same settings file. Setup migration
+checks in PowerShell 7 and Windows PowerShell 5.1 add Audio defaults to old/empty configs,
+preserve an existing CSVolumePercent=35 and other preferences, avoid duplicate sections/keys
+and remain byte-identical on repeated setup.
+
+The native CS audio test uses the production GameAudio and settings loader, actual XAudio2
+and a project-authored silent PCM clip. Native master-voice readback verifies 50, 0, 12.5 and
+100 percent while source voices are queued; mute/restore, defensive bounds and the uninitialized
+audio path pass. No game assets, audible test tones, saves or Warcraft window are used.
+The master bus preserves per-event CS gains and does not access Warcraft's Miles engine.
+Startup and F8 both call ReloadSettings, which applies the validated snapshot to this bus.
+All independent gameplay suites and the normal x86 native build also pass.
+
+The configurable-game-settings and feature-release-workflow skills pass the skill validator,
+are available in the repository and installed personal skills, and are adopted by AGENTS.md.
+No new complete campaign, live Warcraft F8-input session or clean-machine dependency install
+is claimed for this audio/settings change.

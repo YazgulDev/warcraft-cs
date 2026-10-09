@@ -306,6 +306,8 @@ void ShooterController::SwitchWeapon(int slot) {
 void ShooterController::ReloadSettings() {
     // Replace one complete snapshot; stale fractional credit must not survive a percentage/scope change.
     settings_=GameplaySettings::Load(root_+"\\WarcraftCS.ini");
+    // Startup and F8 share the same CS-only gain update; Warcraft's Miles mixer is untouched.
+    audio_.SetVolumePercent(settings_.csVolumePercent);
     ammoRecovery_.Reset();ammoMessage_="SETTINGS RELOADED";refillTick_=GetTickCount();
     wc3::Log("Settings loaded runePercent=%.1f ammoWeapons=%s damageMode=%s awpOneShot=%d radius=%.1f friendlyFirePercent=%.1f",
         settings_.runeAmmoPercent,settings_.runeAmmoAllWeapons ? "all" : "current",

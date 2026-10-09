@@ -23,13 +23,21 @@ Use for repositories whose AGENTS.md adopts this skill. Preserve all existing br
 
 ## Starting a new release
 
-1. Ask the user for the new version number, even when a plausible next version exists. Suggest one if useful, but do not treat silence as an answer. The explicitly requested initial `0.1.0` is already supplied.
+1. Use a new version explicitly supplied by the user. Otherwise ask for the version, even when a plausible next version exists; suggest one if useful, but do not treat silence as an answer.
 2. Verify the version is valid and newer than the current release and its branch does not already represent another release.
 3. Complete the current release checks and merge the current release into `master` with `--no-ff`.
 4. Create `release/<new-version>` from the updated master, then update VERSION and the changelog for the new release.
 5. Retain every old release and feature branch. Do not move published tags, rewrite shared history, or force-push. A release tag identifies an immutable published snapshot, while its release branch may continue to receive features.
 
 Initial source-only publication may bootstrap an empty master commit, create `release/0.1.0`, and merge the initial publication feature into it. Keep the active release as the repository's default branch until master contains a released baseline.
+
+## Complete Release Notes
+
+- Every release must have Release Notes covering **all changes included in that release**, not just the last task or commit.
+- Compare the immutable previous published tag with the new release tree and inspect the included commits/merges. A release branch may have advanced since publication; do not use its moving tip as the baseline.
+- Include every added feature/parameter, changed default or behavior, fix, relevant source/packaging/skill/documentation change, upgrade instructions and known limitations. Explain config keys, units/ranges and reload timing when parameters are added.
+- Reconcile the notes against the full diff and changelog before publication. Keep version, README/download information, validation claims and the uploaded GitHub release body consistent; do not claim checks that were not performed.
+- Record the complete notes in the project's established release-document location and publish that reviewed content with the release. Keep historical release notes unchanged.
 
 ## Source-only commits and publication
 

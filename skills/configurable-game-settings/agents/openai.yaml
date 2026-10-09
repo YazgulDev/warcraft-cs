@@ -1,0 +1,6 @@
+interface:
+  display_name: "Configurable Game Settings"
+  short_description: "Expose game tuning in config with safe live reload"
+  default_prompt: "Use $configurable-game-settings to make new game parameters editable in the config and verify defaults, reload and update preservation."
+policy:
+  allow_implicit_invocation: true
