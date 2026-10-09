@@ -1,6 +1,6 @@
-#include "../src/GameplaySettings.hpp"
-#include "../src/AmmoRecovery.hpp"
-#include "../src/CombatDamage.hpp"
+#include "../src/config/GameplaySettings.hpp"
+#include "../src/inventory/AmmoRecovery.hpp"
+#include "../src/combat/CombatDamage.hpp"
 #include <cassert>
 #include <cmath>
 #include <fstream>
@@ -12,6 +12,7 @@ int main() {
     assert(settings.ContactDamage(4,true,100)==65);
     assert(settings.FinishingAWP(3));
     assert(settings.friendlyFirePercent==50);
+    assert(settings.floatingTextDistance==1200);
     assert(!settings.startAllWeapons && settings.startBombs==20 && settings.maxBombs==100 );
     assert(settings.buyAccess==GameplaySettings::BuyAccess::Anywhere && !settings.csSky);
     assert(settings.weaponPrice[0]==625 && settings.weaponPrice[1]==775 && settings.weaponPrice[2]==125);
@@ -55,6 +56,14 @@ int main() {
         { std::ofstream file(sample);file<<"[Damage]\nFriendlyFirePercent="<<test.value<<"\n"; }
         settings=GameplaySettings::Load(sample);DeleteFileA(sample.c_str());
         assert(settings.friendlyFirePercent==test.expected);
+    }
+    // Visibility settings reject malformed values and bound work to the world camera's range.
+    const PercentCase distances[]={{"0",0},{"900",900},{"-10",0},{"99999",5000},{"nan",1200},{"broken",1200}};
+    for (const auto& test : distances) {
+        const auto sample=path+std::to_string(++index);
+        { std::ofstream file(sample);file<<"[Interface]\nFloatingTextDistance="<<test.value<<"\n"; }
+        settings=GameplaySettings::Load(sample);DeleteFileA(sample.c_str());
+        assert(settings.floatingTextDistance==test.expected);
     }
     // Invalid prices/counts cannot produce credits or huge allocations; unsafe sky paths use the fallback.
     { std::ofstream file(path);file<<"[Loadout]\nMode=all\nBombCount=5000\nMaxBombs=30\n[Buy]\nAccess=shops\nRadius=99999\nAllowFreeRefill=true\n[AK47]\nPrice=-50\nAmmoPrice=nan\nAmmoPack=0\n[Sky]\nEnabled=false\nDefault=../../secret\nW=blue\n"; }

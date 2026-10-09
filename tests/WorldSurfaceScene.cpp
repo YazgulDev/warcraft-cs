@@ -1,5 +1,5 @@
 #include "WorldSurfaceScene.hpp"
-#include "../src/WarcraftCollision.hpp"
+#include "../src/platform/WarcraftCollision.hpp"
 #include <fstream>
 #include <sstream>
 #include <string>

@@ -7,8 +7,8 @@ description: Add or change weapons in Warcraft CS by Yazgul, keeping the CS-styl
 
 When adding a weapon, make it purchasable and visible in the buy menu in the same change. Do not leave combat-only weapons inaccessible to ordinary buyers.
 
-- Preserve existing slot IDs in `src/WeaponSlots.hpp`; extend the weapon, price, ammo and damage tables together. Keep F7 free refill and F9 free all-weapons grant working for every supported weapon.
-- Register one entry per slot in `src/BuyCatalog.hpp`, with its supported category, number key, visible name and cache stem. Navigation and rendering use this catalog; do not introduce separate weapon lists in `BuyMenu` or `BuyMenuView`.
+- Preserve existing slot IDs in `src/combat/WeaponSlots.hpp`; extend the weapon, price, ammo and damage tables together. Keep F7 free refill and F9 free all-weapons grant working for every supported weapon.
+- Register one entry per slot in `src/economy/BuyCatalog.hpp`, with its supported category, number key, visible name and cache stem. Navigation and rendering use this catalog; do not introduce separate weapon lists in `BuyMenu` or `BuyMenuView`.
 - Put the purchase price in the weapon's `config/WarcraftCS.ini` section and its matching `GameplaySettings` fallback. For weapons with ammunition also add `AmmoPrice` and `AmmoPack`. Do not change unrelated player settings.
 - Include the weapon in private setup conversion and generate its hand-free buy preview through `tools/export_buy_previews.py`. Reuse the player's own installed assets or owned procedural geometry; never commit extracted art, textures, models or preview caches.
 - Apply ownership to number keys, wheel switching, rune rewards and ammo purchases. Reject duplicate permanent weapons, unaffordable purchases and full ammunition without charging gold; consumables remain repeatable.

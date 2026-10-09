@@ -1,4 +1,4 @@
-#include "../src/SkyView.hpp"
+#include "../src/presentation/SkyView.hpp"
 #include <cassert>
 #include <fstream>
 #include <filesystem>

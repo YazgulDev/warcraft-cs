@@ -1,4 +1,4 @@
-#include "../src/LookAngles.hpp"
+#include "../src/input/LookAngles.hpp"
 #include <cstdio>
 #include <cstdlib>
 

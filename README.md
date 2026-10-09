@@ -1,5 +1,12 @@
 # Warcraft CS — 0.5.1
 
+Module ownership is documented in [docs/MODULES.md](docs/MODULES.md).
+The [modular-code skill](skills/modular-code/SKILL.md) guides future source changes.
+
+Native world labels in FPS are culled outside the camera view or beyond
+`[Interface] FloatingTextDistance=1200` Warcraft units. Set it to `0` to hide world labels in FPS,
+then press F8. Gold harvesting, RTS and screen-space map text retain native behavior.
+
 Counter-Strike 1.6 inside Warcraft III: control your own hero or unit in first person,
 shoot, and play regular maps, campaigns and compatible custom maps.
 The world, enemies, quests and health remain governed by Warcraft.
@@ -192,7 +199,7 @@ USP 125, AWP 1188 (rounded from 1187.5 gold), knife 0, sword 250 and C4 50. Ammo
 No round, buy-time or team-spawn restriction is imposed.
 
 When adding a weapon, apply [warcraft-cs-weapon-menu](skills/warcraft-cs-weapon-menu/SKILL.md).
-`src/BuyCatalog.hpp` supplies both navigation and presentation so new weapons cannot be forgotten in
+`src/economy/BuyCatalog.hpp` supplies both navigation and presentation so new weapons cannot be forgotten in
 one of those lists. Setup converts private buy previews alongside the player's own weapon models.
 Every planted C4 keeps its own 35-second simulation-time fuse and damage snapshot. The HUD shows
 the active charge count and the nearest explosion. Switching weapons or leaving FPS keeps charges active;

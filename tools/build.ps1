@@ -1,4 +1,4 @@
-param([string]$OutputDirectory = '',[string]$MinHookDirectory='',[string]$PythonExecutable='', [switch]$TestStatusEffects,[switch]$TestGameplay,[switch]$TestTreeAndWheel,[switch]$TestWorldSurfaces)
+param([string]$OutputDirectory = '',[string]$MinHookDirectory='',[string]$PythonExecutable='', [switch]$TestStatusEffects,[switch]$TestGameplay,[switch]$TestTreeAndWheel,[switch]$TestWorldSurfaces,[switch]$TestFloatingText)
 $ErrorActionPreference = 'Stop'
 $modRoot = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'paths.ps1')
@@ -17,14 +17,14 @@ $hookRoot=Join-Path $MinHookDirectory 'include'
 # Share model decoding while keeping unit and destructable geometry separate from the controller.
 # Actor mesh filtering owns rendering only, independent of the unit's simulation visibility.
 # Relative Windows input is separate from look-angle math, physical movement and native camera ownership.
-$sources = @('WarcraftApi.cpp', 'MouseLook.cpp', 'MovementPhysics.cpp', 'WarcraftCollision.cpp', 'FirstPersonCamera.cpp', 'MapCameraGuard.cpp', 'ActorRenderFilter.cpp', 'GameAudio.cpp', 'FullscreenView.cpp', 'HitFeedback.cpp', 'ScopeView.cpp', 'UnitStatus.cpp', 'ModelBounds.cpp', 'SpriteTransform.cpp', 'UnitHitboxes.cpp', 'DestructableHitboxes.cpp', 'PlantedBomb.cpp', 'WeaponRecoil.cpp', 'ShooterController.cpp', 'GunMesh.cpp', 'Overlay.cpp', 'Plugin.cpp') | ForEach-Object { '"' + (Join-Path $modRoot "src/$_") + '"' }
+$sources = @('platform/WarcraftApi.cpp', 'input/MouseLook.cpp', 'movement/MovementPhysics.cpp', 'platform/WarcraftCollision.cpp', 'presentation/FirstPersonCamera.cpp', 'platform/MapCameraGuard.cpp', 'platform/ActorRenderFilter.cpp', 'audio/GameAudio.cpp', 'presentation/FullscreenView.cpp', 'presentation/HitFeedback.cpp', 'presentation/ScopeView.cpp', 'combat/UnitStatus.cpp', 'geometry/ModelBounds.cpp', 'platform/SpriteTransform.cpp', 'combat/UnitHitboxes.cpp', 'combat/DestructableHitboxes.cpp', 'combat/PlantedBomb.cpp', 'combat/WeaponRecoil.cpp', 'application/ShooterController.cpp', 'presentation/GunMesh.cpp', 'presentation/Overlay.cpp', 'runtime/PluginRuntime.cpp', 'Plugin.cpp', 'input/InputDispatcher.cpp') | ForEach-Object { '"' + (Join-Path $modRoot "src/$_") + '"' }
 # Native spell fixtures are opt-in and are excluded from the installed normal build.
 # Item pickup and temporary native squad policies remain independent of shooter input/rendering.
-$sources += @('GameplaySettings.cpp','ItemPickup.cpp','SquadController.cpp','FpsCombatGuard.cpp') | ForEach-Object { '"' + (Join-Path $modRoot "src/$_") + '"' }
+$sources += @('config/GameplaySettings.cpp','inventory/ItemPickup.cpp','squad/SquadController.cpp','platform/FpsCombatGuard.cpp') | ForEach-Object { '"' + (Join-Path $modRoot "src/$_") + '"' }
 # Tree narrow-phase geometry is decoded independently of native widget enumeration and the controller.
-$sources += '"' + (Join-Path $modRoot 'src/TreeTrunkMesh.cpp') + '"'
+$sources += '"' + (Join-Path $modRoot 'src/geometry/TreeTrunkMesh.cpp') + '"'
 # Shop access is native-world policy; inventory prices/navigation remain independently testable.
-$sources += @('BuyAccess.cpp','BuyMenuView.cpp','SkyView.cpp','MapEnvironment.cpp','NativeSky.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
+$sources += @('economy/BuyAccess.cpp','presentation/BuyMenuView.cpp','presentation/SkyView.cpp','platform/MapEnvironment.cpp','platform/NativeSky.cpp','platform/NativeFloatingText.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 # Install defaults only once so rebuilds preserve the player's customized settings.
 $configDirectory=Join-Path $OutputDirectory 'WarcraftCS'
 New-Item -ItemType Directory -Path $configDirectory -Force | Out-Null
@@ -32,9 +32,14 @@ $configFile=Join-Path $configDirectory 'WarcraftCS.ini'
 . (Join-Path $modRoot 'setup/gameplay-config.ps1')
 Update-GameplayConfig (Join-Path $modRoot 'config/WarcraftCS.ini') $configFile
 $testDefine = ''
+if ($TestFloatingText) {
+    # Render oracle is explicit and absent from both ordinary client launchers.
+    $sources += '"'+(Join-Path $modRoot 'tests/FloatingTextScene.cpp')+'"'
+    $testDefine += ' /DWCS_FLOATING_TEXT_TEST'
+}
 if ($TestStatusEffects) {
     $sources += '"' + (Join-Path $modRoot 'tests/StatusEffectScene.cpp') + '"'
-    $testDefine = ' /DWCS_STATUS_TEST'
+    $testDefine += ' /DWCS_STATUS_TEST'
 }
 # Rune/AI native fixtures stay outside the installed ordinary build.
 if ($TestGameplay) {
@@ -81,7 +86,7 @@ try { & $env:COMSPEC /d /c compile.cmd; if ($LASTEXITCODE) { throw 'MinHook x86 
 $compileCommand = 'cl /nologo /LD /MT /std:c++17 /EHsc /W4 /O2 /DWIN32_LEAN_AND_MEAN /DNOMINMAX' + $testDefine + ' /I"' + $hookRoot + '" ' + ($sources -join ' ') + ' /link /OUT:"' + (Join-Path $OutputDirectory 'WarcraftCS.mix') + '" "' + $hookLibrary + '" user32.lib gdi32.lib opengl32.lib version.lib winmm.lib ole32.lib'
 # A saved batch file avoids nested cmd/PowerShell quoting around Visual Studio paths.
 $buildScript = Join-Path $buildDirectory 'compile.cmd'
-$loaderCommand = 'cl /nologo /LD /MT /O2 /W4 /DWIN32_LEAN_AND_MEAN "' + (Join-Path $modRoot 'src/MilesLoader.cpp') + '" "' + [System.IO.Path]::ChangeExtension($exports, '.cpp') + '" /link /DEF:"' + $exports + '" /OUT:"' + (Join-Path $OutputDirectory 'Mss32.dll') + '"'
+$loaderCommand = 'cl /nologo /LD /MT /O2 /W4 /DWIN32_LEAN_AND_MEAN "' + (Join-Path $modRoot 'src/runtime/MilesLoader.cpp') + '" "' + [System.IO.Path]::ChangeExtension($exports, '.cpp') + '" /link /DEF:"' + $exports + '" /OUT:"' + (Join-Path $OutputDirectory 'Mss32.dll') + '"'
 $commands=@('@echo off','chcp 65001 >nul', 'rem Initialize the x86 compiler, then build the project-owned mod.', ('call "' + $compilerEnvironment + '" >nul'), 'if errorlevel 1 exit /b 1', $compileCommand, 'if errorlevel 1 exit /b 1', $loaderCommand)
 [IO.File]::WriteAllLines($buildScript,$commands,[Text.UTF8Encoding]::new($false))
 Push-Location $buildDirectory

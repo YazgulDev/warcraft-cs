@@ -1,4 +1,4 @@
-#include "../src/WarcraftCollision.hpp"
+#include "../src/platform/WarcraftCollision.hpp"
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>

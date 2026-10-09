@@ -1,4 +1,4 @@
-#include "../src/FullscreenView.hpp"
+#include "../src/presentation/FullscreenView.hpp"
 #include <cassert>
 #include <cstdio>
 #include <initializer_list>
