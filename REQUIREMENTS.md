@@ -1,5 +1,8 @@
 # Warcraft CS requirements
 
+Applies to **0.6.0**. See [Release Notes](docs/RELEASE-0.6.0.md) for changes and
+[antivirus troubleshooting](TROUBLESHOOTING.md#antivirus) for unsigned-module detections.
+
 ## Playing through the Windows launcher
 
 | Requirement | Details |
