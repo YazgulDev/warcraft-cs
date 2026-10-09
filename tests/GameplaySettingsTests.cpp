@@ -1,6 +1,6 @@
-#include "../src/GameplaySettings.hpp"
-#include "../src/AmmoRecovery.hpp"
-#include "../src/CombatDamage.hpp"
+#include "../src/config/GameplaySettings.hpp"
+#include "../src/inventory/AmmoRecovery.hpp"
+#include "../src/combat/CombatDamage.hpp"
 #include <cassert>
 #include <cmath>
 #include <fstream>
@@ -12,6 +12,11 @@ int main() {
     assert(settings.ContactDamage(4,true,100)==65);
     assert(settings.FinishingAWP(3));
     assert(settings.friendlyFirePercent==50);
+    assert(settings.floatingTextDistance==1200);
+    assert(!settings.startAllWeapons && settings.startBombs==20 && settings.maxBombs==100 );
+    assert(settings.buyAccess==GameplaySettings::BuyAccess::Anywhere && !settings.csSky);
+    assert(settings.weaponPrice[0]==625 && settings.weaponPrice[1]==775 && settings.weaponPrice[2]==125);
+    assert(settings.weaponPrice[3]==1188 && settings.weaponPrice[5]==50 && settings.weaponPrice[6]==250);
     assert(settings.squadRadius==600 && settings.squadMaxUnits==24 && settings.squadFollowDistance==180 && settings.squadLeash==900);
     settings.heroDamage=true;settings.heroMultiplier[0]=2;
     assert(settings.ContactDamage(0,false,28)==56);
@@ -52,5 +57,24 @@ int main() {
         settings=GameplaySettings::Load(sample);DeleteFileA(sample.c_str());
         assert(settings.friendlyFirePercent==test.expected);
     }
+    // Visibility settings reject malformed values and bound work to the world camera's range.
+    const PercentCase distances[]={{"0",0},{"900",900},{"-10",0},{"99999",5000},{"nan",1200},{"broken",1200}};
+    for (const auto& test : distances) {
+        const auto sample=path+std::to_string(++index);
+        { std::ofstream file(sample);file<<"[Interface]\nFloatingTextDistance="<<test.value<<"\n"; }
+        settings=GameplaySettings::Load(sample);DeleteFileA(sample.c_str());
+        assert(settings.floatingTextDistance==test.expected);
+    }
+    // Invalid prices/counts cannot produce credits or huge allocations; unsafe sky paths use the fallback.
+    { std::ofstream file(path);file<<"[Loadout]\nMode=all\nBombCount=5000\nMaxBombs=30\n[Buy]\nAccess=shops\nRadius=99999\nAllowFreeRefill=true\n[AK47]\nPrice=-50\nAmmoPrice=nan\nAmmoPack=0\n[Sky]\nEnabled=false\nDefault=../../secret\nW=blue\n"; }
+    settings=GameplaySettings::Load(path);DeleteFileA(path.c_str());
+    assert(settings.startAllWeapons && settings.startBombs==30 && settings.maxBombs==30);
+    assert(settings.buyAccess==GameplaySettings::BuyAccess::Shops && settings.buyRadius==3000);
+    assert(settings.weaponPrice[0]==0 && settings.ammoPrice[0]==80 && settings.ammoPack[0]==1);
+    assert(!settings.csSky && settings.defaultSky=="Des" && settings.tilesetSky['W']=="blue");
+    { std::ofstream file(path);file<<"[Buy]\nAccess=friendly\n[Loadout]\nBombCount=0\n[Sky]\nA=forest\nWarcraftEnabled=true\n"; }
+    settings=GameplaySettings::Load(path);DeleteFileA(path.c_str());
+    assert(settings.buyAccess==GameplaySettings::BuyAccess::FriendlyBuildings && settings.startBombs==0 && settings.tilesetSky['A']=="forest");
+    assert(settings.nativeSky && !settings.csSky);
     return 0;
 }

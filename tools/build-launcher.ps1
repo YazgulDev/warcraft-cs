@@ -20,7 +20,7 @@ $version=(Get-Content -LiteralPath (Join-Path $root 'VERSION') -Raw).Trim()
 $assembly=Join-Path $build 'LauncherVersion.cs'
 ('[assembly: System.Reflection.AssemblyTitle("Warcraft CS by Yazgul Launcher")]'+[Environment]::NewLine+
  '[assembly: System.Reflection.AssemblyVersion("'+$version+'.0")]') | Set-Content -LiteralPath $assembly -Encoding utf8
-$sources=@(Get-ChildItem -LiteralPath (Join-Path $root 'launcher') -Filter '*.cs' -File | ForEach-Object { $_.FullName })
+$sources=@(Get-ChildItem -LiteralPath (Join-Path $root 'launcher') -Filter '*.cs' -File -Recurse | ForEach-Object { $_.FullName })
 $exe=Join-Path $OutputDirectory 'WarcraftCSLauncher.exe'
 # The primary executable and every public ZIP contain reviewed sources without prebuilt native modules.
 $references=@('/r:System.Windows.Forms.dll','/r:System.Drawing.dll','/r:System.IO.Compression.dll','/r:System.IO.Compression.FileSystem.dll','/r:System.Web.Extensions.dll')

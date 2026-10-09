@@ -14,6 +14,13 @@ Run `python tools/audit_sources.py --staged` before committing.
 Use explicit staging paths. Runtime and domain code are in `src`, tests in `tests`,
 private setup/build scripts in `setup` and `tools`. Add concise intent comments for behavior changes.
 
+For source changes, apply [modular-code](skills/modular-code/SKILL.md).
+Module ownership and dependency direction are documented in [docs/MODULES.md](docs/MODULES.md).
+
+When adding or changing weapons, apply
+[warcraft-cs-weapon-menu](skills/warcraft-cs-weapon-menu/SKILL.md) so combat, buying,
+private previews and configuration stay synchronized.
+
 Supported host: offline Warcraft III 1.26a x86 (Game.dll 1.26.0.6401).
 Never test fixtures in the user's campaign. Preserve the latest progress before restarting
 an active game. Native opt-in verification scenes are excluded from ordinary builds.

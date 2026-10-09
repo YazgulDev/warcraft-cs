@@ -1,4 +1,4 @@
-#include "../src/CombatDamage.hpp"
+#include "../src/combat/CombatDamage.hpp"
 #include <cstdio>
 #include <cstdlib>
 
