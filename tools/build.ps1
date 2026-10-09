@@ -23,6 +23,8 @@ $sources = @('platform/WarcraftApi.cpp', 'input/MouseLook.cpp', 'movement/Moveme
 $sources += @('config/GameplaySettings.cpp','inventory/ItemPickup.cpp','squad/SquadController.cpp','platform/FpsCombatGuard.cpp') | ForEach-Object { '"' + (Join-Path $modRoot "src/$_") + '"' }
 # Tree narrow-phase geometry is decoded independently of native widget enumeration and the controller.
 $sources += '"' + (Join-Path $modRoot 'src/geometry/TreeTrunkMesh.cpp') + '"'
+# Shared filled aiming geometry is compiled into both ordinary Player builds and scope rendering.
+$sources += '"' + (Join-Path $modRoot 'src/presentation/ReticleView.cpp') + '"'
 # Shop access is native-world policy; inventory prices/navigation remain independently testable.
 $sources += @('economy/BuyAccess.cpp','presentation/BuyMenuView.cpp','presentation/SkyView.cpp','platform/MapEnvironment.cpp','platform/NativeSky.cpp','platform/NativeFloatingText.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 # Install defaults only once so rebuilds preserve the player's customized settings.
