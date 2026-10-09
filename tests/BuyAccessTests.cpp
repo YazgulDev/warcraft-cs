@@ -1,4 +1,4 @@
-#include "../src/BuyAccess.hpp"
+#include "../src/economy/BuyAccess.hpp"
 #include <cassert>
 #include <cstring>
 #include <vector>

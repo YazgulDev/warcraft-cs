@@ -9,7 +9,7 @@ $script=Join-Path $build 'test-buy-menu.cmd'
 @('@echo off',('call "'+$environment+'" >nul'),
     ('cl /nologo /std:c++17 /EHsc /O2 /W4 /DNOMINMAX "'+(Join-Path $root 'tests/BuyMenuTests.cpp')+'" /Fe:buy-menu-tests.exe'),
     'if errorlevel 1 exit /b 1','buy-menu-tests.exe','if errorlevel 1 exit /b 1',
-    ('cl /nologo /std:c++17 /EHsc /O2 /W4 /DNOMINMAX "'+(Join-Path $root 'tests/BuyAccessTests.cpp')+'" "'+(Join-Path $root 'src/BuyAccess.cpp')+'" /Fe:buy-access-tests.exe'),
+    ('cl /nologo /std:c++17 /EHsc /O2 /W4 /DNOMINMAX "'+(Join-Path $root 'tests/BuyAccessTests.cpp')+'" "'+(Join-Path $root 'src/economy/BuyAccess.cpp')+'" /Fe:buy-access-tests.exe'),
     'if errorlevel 1 exit /b 1','buy-access-tests.exe') | Set-Content -LiteralPath $script -Encoding ascii
 Push-Location $build
 try { & $env:COMSPEC /d /c $script;if ($LASTEXITCODE) { throw 'Buy-menu tests failed.' };Write-Output 'PASS buy economy, loadouts, navigation and mouse row geometry.' }

@@ -1,6 +1,6 @@
-#include "../src/BuyInventory.hpp"
-#include "../src/BuyMenu.hpp"
-#include "../src/BuyMenuLayout.hpp"
+#include "../src/economy/BuyInventory.hpp"
+#include "../src/economy/BuyMenu.hpp"
+#include "../src/presentation/BuyMenuLayout.hpp"
 #include <cassert>
 
 int main() {

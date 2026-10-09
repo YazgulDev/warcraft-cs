@@ -1,4 +1,4 @@
-#include "../src/FpsProjection.hpp"
+#include "../src/presentation/FpsProjection.hpp"
 #include <cassert>
 #include <cstdio>
 

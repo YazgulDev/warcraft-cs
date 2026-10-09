@@ -2,7 +2,7 @@ $ErrorActionPreference='Stop'
 $root=Split-Path -Parent $PSScriptRoot
 $build=Join-Path $root 'build/launcher'
 $compiler=Join-Path $env:WINDIR 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
-$sources=@(Get-ChildItem -LiteralPath (Join-Path $root 'launcher') -Filter '*.cs' -File | Where-Object { $_.Name -ne 'Program.cs' } | ForEach-Object { $_.FullName })
+$sources=@(Get-ChildItem -LiteralPath (Join-Path $root 'launcher') -Filter '*.cs' -File -Recurse | Where-Object { $_.Name -ne 'Program.cs' } | ForEach-Object { $_.FullName })
 $payload=Join-Path $build 'Source.zip'
 if (!(Test-Path -LiteralPath $payload)) { throw 'Build the launcher first to create its audited source payload.' }
 $tests=Join-Path $build 'LauncherTests.exe'

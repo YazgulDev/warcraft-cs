@@ -7,7 +7,7 @@ $environmentScript = Join-Path $compilerRoot 'VC/Auxiliary/Build/vcvars32.bat'
 $script = Join-Path $buildDirectory 'test-movement.cmd'
 # Physics tests run without Warcraft, keeping deterministic motion checks independent of UI input.
 @('@echo off', ('call "' + $environmentScript + '" >nul'),
-    ('cl /nologo /std:c++17 /EHsc /O2 /W4 "' + (Join-Path $modRoot 'src/MovementPhysics.cpp') + '" "' + (Join-Path $modRoot 'tests/MovementPhysicsTests.cpp') + '" /Fe:movement-tests.exe'),
+    ('cl /nologo /std:c++17 /EHsc /O2 /W4 "' + (Join-Path $modRoot 'src/movement/MovementPhysics.cpp') + '" "' + (Join-Path $modRoot 'tests/MovementPhysicsTests.cpp') + '" /Fe:movement-tests.exe'),
     'if errorlevel 1 exit /b 1', 'movement-tests.exe') | Set-Content -LiteralPath $script -Encoding ascii
 Push-Location $buildDirectory
 try { & $env:COMSPEC /d /c $script; if ($LASTEXITCODE) { throw 'Movement verification failed.' } }
