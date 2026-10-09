@@ -1,4 +1,11 @@
-# Warcraft CS — 0.5.0
+# Warcraft CS — 0.5.1
+
+Module ownership is documented in [docs/MODULES.md](docs/MODULES.md).
+The [modular-code skill](skills/modular-code/SKILL.md) guides future source changes.
+
+Native world labels in FPS are culled outside the camera view or beyond
+`[Interface] FloatingTextDistance=1200` Warcraft units. Set it to `0` to hide world labels in FPS,
+then press F8. Gold harvesting, RTS and screen-space map text retain native behavior.
 
 Counter-Strike 1.6 inside Warcraft III: control your own hero or unit in first person,
 shoot, and play regular maps, campaigns and compatible custom maps.
@@ -66,7 +73,12 @@ Choose these folders using **Browse...** (the examples are illustrative):
 2. Select a separate installation folder for Warcraft CS.
 3. Read the download details and agree to downloading/installing the dependencies and their terms.
 4. Click **Install** in the standard launcher, or choose **Install — Player / Developer** in the DLL-included launcher. Install uses the version embedded in that EXE.
-5. Click **Play**, select your own living unit and press F6.
+5. Choose **The Frozen Throne** or **Reign of Chaos** under **Game to launch**, then click **Play**, select your own living unit and press F6. The choice is remembered after a successful launch.
+
+Both editions use the same private Warcraft III 1.26a installation. RoC selects the original campaign menus;
+it does not turn two-player custom maps into solo missions. Launch through the launcher or `tools/launch.ps1`
+to keep fullscreen DPI scaling consistent after Alt-Tab. For source users, add `-Edition ReignOfChaos` to
+`tools/launch.ps1`; omitting it retains Frozen Throne. `-Windowed` remains available for either edition.
 
 The launcher checks new stable GitHub releases automatically at every startup; **Check for updates**
 retries the check. The separate **Update** button fetches the latest stable project release from GitHub.
@@ -94,13 +106,13 @@ Run in PowerShell, replacing the game paths with your own:
 ```powershell
 git clone https://github.com/YazgulDev/warcraft-cs.git
 cd warcraft-cs
-git switch release/0.5.0
+git switch release/0.5.1
 .\setup.cmd -WarcraftDirectory "E:\Warcraft III" -CounterStrikeDirectory "C:\SteamGames\steamapps\common\Half-Life\cstrike"
 .\play.cmd
 ```
 
 Setup downloads a pinned MinHook dependency separately, installs NumPy in a local environment,
-reads your CS models/sounds, uses an optional privately supplied sword or generates the original sword,
+reads your CS models/sounds/sky textures, uses an optional privately supplied sword or generates the original sword,
 and builds the mod in a private Warcraft copy.
 Your original installations remain unchanged. Additional installation and removal details are in
 [INSTALL.md](INSTALL.md).
@@ -126,10 +138,14 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 | Shift / Ctrl / Space | Walk / crouch / jump |
 | Left mouse button | Shoot or primary melee attack |
 | Right mouse button | Knife/sword: strong attack; AWP: cycle two zoom levels and normal view |
-| R / F7 | Reload / refill all ammunition, including C4 |
+| R / F7 | Reload / refill all carried ammunition for free |
+| F9 | Get all weapons and full ammunition for free |
+| B | Open/close the buy menu; number keys or mouse select categories and purchases |
+| . | Buy one ammo pack for the weapon currently held |
+| Esc / 0 in buy menu | Close / back to previous menu (0 closes the main menu) |
 | 1 / 2 / 3 / 4 / 5 / 6 / 7 | AK47 / M4A1 / USP / AWP / knife / C4 / original greatsword |
-| Mouse wheel up / down | Previous / next weapon; wraps through all seven slots |
-| Hold left mouse button with C4 | Plant for 3 seconds while standing on the ground |
+| Mouse wheel up / down | Previous / next owned weapon |
+| Hold left mouse button with C4 | Plant for 3 seconds while standing on the ground; multiple charges are allowed |
 | E | Pick up the nearest item/rune if the unit has an available inventory |
 | H / O / J | Your units: follow and fight / follow without attacking / release squad |
 | F8 | Reload settings |
@@ -148,6 +164,51 @@ Edit it and press F8 in FPS.
   firearms, both melee attacks and C4 (including its planter). Range: 0–100; 0 disables allied damage,
   100 applies full damage. Press F8 to reload; C4 retains the settings from when it was planted.
 - `[Squad] RecruitRadius`, `MaxUnits`, `FollowDistance` and `CombatLeash` control squad behavior.
+- `[Loadout] Mode=melee` starts each map with a loaded USP, knife, sword and C4; `Mode=all` grants all weapons
+  with their initial ammunition. `BombCount=20` sets starting charges; `MaxBombs=100` caps carried
+  charges (0–1000). F6/F8 and changing the controlled unit never grant another starting kit.
+- `[AK47]`, `[M4A1]`, `[USP]`, `[AWP]`, `[Knife]`, `[Sword]`, `[C4]` use `Price` in native Warcraft
+  **gold**. Buying a firearm gives one loaded magazine, with zero reserve rounds. `AmmoPrice` buys
+  `AmmoPack` reserve rounds (R loads them). A C4 weapon/ammo purchase grants one charge. Full ammo,
+  duplicate non-consumable weapons and rejected purchases do not cost gold.
+- `[Buy] Access=anywhere` allows buying anywhere (default); `friendly` requires a nearby allied
+  building **or shop**; `shops` allows shops only. `Radius=600` is the center distance in Warcraft units.
+  Stock neutral merchants, mercenary camps and shops with purchase/sell/neutral-interaction abilities
+  qualify when allied or neutral-passive and visible/alive.
+  Add custom shop unit rawcodes with `ShopTypes=nmer,ngme`. Both B and every purchase, including `.`,
+  check the zone. The menu does not pause the world; leaving a valid zone closes it.
+- F7 always refills carried magazines/reserves and C4 to `MaxBombs` for free; F9 also unlocks all weapons.
+  These shortcuts do not spend gold or bypass Warcraft incapacitation. Legacy `AllowFreeRefill` is ignored.
+  Rune rewards still follow `[Runes]` settings, apply only to owned weapons and use `MaxBombs` for C4.
+- `[Sky] Enabled=false` keeps Warcraft's native sky by default; `true` enables a private CS sky in FPS. `Default=Des` is the unknown-tileset fallback;
+  map tileset keys such as `W=snow`, `A=forest`, `D=DrkG` choose a filename stem from your
+  `cstrike/gfx/env`. Set `Enabled=false` to retain Warcraft's original sky. Missing caches also keep
+  the native sky; run setup again to convert your installed CS sky textures. F8 applies changes live.
+- `[Sky] WarcraftEnabled=true` (default) shows Warcraft's stock summer/winter sky in FPS on maps without
+  a sky. Keep `Enabled=false` for this mode. Existing map skies are preserved; F6 and cinematics
+  restore the map's original sky. Set `WarcraftEnabled=false` and press F8 to disable the preview.
+
+The buy panel follows the original CS layout: translucent black background, amber outlined rows,
+red mouse selection, a hand-free weapon preview and live prices/capacities in the detail panel.
+A successful purchase closes the menu; rejected purchases leave it open.
+Only supported categories appear, preserving CS keys: 1 pistols, 4 rifles, 6 primary ammo,
+7 secondary ammo, 8 equipment (knife, sword, C4), 0 back/cancel. The `.` key buys current-weapon ammo.
+Primary/secondary ammo rows buy one pack per carried weapon in that category; every transaction checks
+funds independently. Defaults are one quarter of the previous weapon prices: AK47 625, M4A1 775,
+USP 125, AWP 1188 (rounded from 1187.5 gold), knife 0, sword 250 and C4 50. Ammo-pack prices are unchanged.
+No round, buy-time or team-spawn restriction is imposed.
+
+When adding a weapon, apply [warcraft-cs-weapon-menu](skills/warcraft-cs-weapon-menu/SKILL.md).
+`src/economy/BuyCatalog.hpp` supplies both navigation and presentation so new weapons cannot be forgotten in
+one of those lists. Setup converts private buy previews alongside the player's own weapon models.
+Every planted C4 keeps its own 35-second simulation-time fuse and damage snapshot. The HUD shows
+the active charge count and the nearest explosion. Switching weapons or leaving FPS keeps charges active;
+Warcraft pause suspends their clocks, and changing maps discards old native handles.
+
+Setup adds missing configuration keys during updates and preserves existing custom values.
+Source checks: `tools/test-all.ps1` covers gameplay and purchase rules; `tools/test-sky-view.ps1`
+additionally checks synthetic sky colors/depth and context replacement in a hidden desktop OpenGL
+window, including the pixel-upload state left by Warcraft after Alt-Tab.
 
 Native armor still applies after allied scaling. Ordinary items do not grant ammunition.
 A researched Warcraft Backpack accepts equipment on creeps but cannot activate runes/tomes.
@@ -162,7 +223,7 @@ Map scripts can conflict with camera or unit control. Maps without living owned 
 an FPS character. Hitboxes approximate model bounds rather than individual bones.
 
 The recoil calculations are adapted, but **complete CS bullet spread/accuracy and the GoldSrc client
-are not implemented**. CS economy, rounds and weapon purchasing are also absent.
+are not implemented**. Purchases use Warcraft gold; CS rounds and team economy are not implemented.
 
 ## TODO
 

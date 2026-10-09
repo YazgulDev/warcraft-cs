@@ -64,19 +64,31 @@ open the EXE again, choose the same folders, agree and retry **Install**.
 
 ### 3. Play
 
-Click **Play**. Close any other Warcraft window first; the launcher will not restart your active match.
+Choose **The Frozen Throne** or **Reign of Chaos** in **Game to launch**, then click **Play**.
+Both launchers offer this selector and remember it after a successful launch; existing preferences default
+to Frozen Throne. Close any other Warcraft window first; the launcher will not restart your active match.
 Warcraft opens in fullscreen. Choose **Single Player → Custom Game** or **Campaign**,
 start a map, select your own living unit and press **F6**.
 Maps do not need editing. Enable FPS again after changing maps.
 
 - WASD/mouse: move and aim; Space: jump; Ctrl: crouch; Shift: walk.
 - Left mouse: shoot or melee; right mouse: strong melee attack or AWP zoom.
-- 1–7: choose weapons; mouse wheel: previous/next weapon; R: reload; F7: refill all ammunition.
+- 1–7: choose weapons; mouse wheel: previous/next weapon; R: reload; F7: refill carried ammunition for free; F9: get all weapons and ammunition for free.
 - E: pick up items/runes; H/O: recruit your units; J: release them.
 - F6: return to RTS; F10: pause menu; F8: reload configuration.
 
 See [README controls and settings](README.md#controls) for details.
+The default starting kit is a loaded USP, knife, sword and 20 C4 charges. Press B to buy firearms with Warcraft
+gold and `.` to buy current-weapon ammunition. Edit `[Loadout]`, `[Buy]`, weapon prices and `[Sky]`
+in `Game/WarcraftCS/WarcraftCS.ini`; F8 reloads settings (starting-kit changes apply to the next map).
+The CS-style menu uses 1 pistols, 4 rifles, 6 primary ammo, 7 secondary ammo and 8 equipment.
+Sky replacement is disabled by default. Weapon prices are four times lower; ammo-pack prices are unchanged.
 Once installed, **Play** does not require download consent or install dependencies.
+
+Use the launcher for either edition so fullscreen rendering uses consistent DPI scaling after Alt-Tab.
+For a source checkout, `tools/launch.ps1 -Edition ReignOfChaos` opens the original RoC campaign menus;
+`-Edition FrozenThrone` opens TFT. Add `-Windowed` for an optional windowed launch. The supported game
+version remains 1.26a, and two-player custom missions still require their intended player count.
 
 ## Settings, saves, updates and removal
 
@@ -115,7 +127,7 @@ The manual script requires `cstrike` itself rather than its Half-Life parent.
 ```powershell
 git clone https://github.com/YazgulDev/warcraft-cs.git
 cd warcraft-cs
-git switch release/0.5.0
+git switch release/0.5.1
 .\setup.cmd -WarcraftDirectory "E:\Warcraft III" -CounterStrikeDirectory "C:\SteamGames\steamapps\common\Half-Life\cstrike"
 .\play.cmd
 ```

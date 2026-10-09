@@ -1,5 +1,5 @@
-#include "../src/TreeTrunkMesh.hpp"
-#include "../src/ModelTransform.hpp"
+#include "../src/geometry/TreeTrunkMesh.hpp"
+#include "../src/geometry/ModelTransform.hpp"
 #include <array>
 #include <cstdio>
 #include <cstdlib>

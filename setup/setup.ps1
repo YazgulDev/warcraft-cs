@@ -11,6 +11,7 @@ $ErrorActionPreference='Stop'
 $root=Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'audio-runtime.ps1')
 . (Join-Path $PSScriptRoot 'prebuilt-runtime.ps1')
+. (Join-Path $PSScriptRoot 'gameplay-config.ps1')
 . (Join-Path $root 'tools/sword-model.ps1')
 # Keep the owner's Grudge model and full authored animation set across repeated setup runs.
 $SwordModel=Get-WarcraftCsSwordModel $root $SwordModel
@@ -84,7 +85,7 @@ if ($InstallMode -eq 'Developer') {
     Install-PrebuiltRuntime $PrebuiltDirectory $runtime $warcraft
     # Match the ordinary build's first-install policy without replacing the owner's customized INI.
     $config=Join-Path $runtime 'WarcraftCS/WarcraftCS.ini'
-    if (!(Test-Path -LiteralPath $config)) { Copy-Item -LiteralPath (Join-Path $root 'config/WarcraftCS.ini') -Destination $config }
+    Update-GameplayConfig (Join-Path $root 'config/WarcraftCS.ini') $config
 }
 # Store machine-specific paths outside source control; launch resolves this owner-only configuration.
 @{runtime=$runtime;warcraft=$warcraft;cstrike=$cstrike;sword_model=$SwordModel} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $root '.local/setup.json') -Encoding utf8

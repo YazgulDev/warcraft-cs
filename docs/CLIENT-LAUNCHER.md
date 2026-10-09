@@ -17,7 +17,8 @@ Clients do not need Git or Python beforehand. Source setup requires C++ tools/SD
 5. In the standard EXE, press **Install** to compile locally with C++ tools/SDK.
    The DLL-included EXE offers **Install — Player** without Build Tools/SDK and **Install — Developer** for local compilation.
    Install uses the version embedded in that EXE; progress appears in the log.
-6. Press **Play**. Select your own living unit in a single-player map/campaign and press F6.
+6. Select **The Frozen Throne** or **Reign of Chaos** under **Game to launch**, then press **Play**.
+   Select your own living unit in a single-player map/campaign and press F6.
 
 ### Folder examples
 
@@ -88,7 +89,7 @@ the existing installation folder to migrate. Their missing-bundle guard prevents
 Legacy 0.3/0.4 source-build requests retain local compilation when they lack a mode field.
 
 Version comparisons prevent downgrades. Source revisions also detect repaired assets of the same version,
-so release/0.5.0 can receive fixes without moving its published v0.5.0 tag. Use the attached sources ZIP for
+so release/0.5.1 can receive fixes without moving its published v0.5.1 tag. Use the attached sources ZIP for
 the updated build; GitHub's automatic tag archives continue to represent the original tag snapshot.
 
 The `dist` folder remains generated/untracked. Release assets include the EXE, checksum, exact embedded

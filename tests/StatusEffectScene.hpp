@@ -1,5 +1,5 @@
 #pragma once
-#include "../src/ShooterController.hpp"
+#include "../src/application/ShooterController.hpp"
 
 // Compile only with -TestStatusEffects; fixtures never run in normal player builds.
 namespace StatusEffectScene {
