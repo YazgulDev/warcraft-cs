@@ -10,7 +10,10 @@ int main() {
     GameplaySettings settings;
     assert(settings.ContactDamage(0,false,100)==36);
     assert(settings.ContactDamage(4,true,100)==65);
-    assert(settings.FinishingAWP(3));
+    // Default AWP hits use their configured base damage rather than health-dependent finishing damage.
+    assert(!settings.FinishingAWP(3));
+    assert(CombatDamage::Amount(settings.ContactDamage(3,false,100),false,
+        CombatDamage::FinishesTarget(settings.FinishingAWP(3),false),5000)==115);
     assert(settings.friendlyFirePercent==50);
     assert(settings.floatingTextDistance==1200);
     assert(settings.csVolumePercent==100);
@@ -38,6 +41,30 @@ int main() {
     recovery.Reset();bomb=0;recovery.Restore(5,0,1,0,bomb,none);assert(bomb==0);
     char directory[MAX_PATH];GetCurrentDirectoryA(MAX_PATH,directory);
     std::string path=std::string(directory)+"\\settings-test.ini";
+    // Exercise the actual INI boundary, including absent/invalid defaults and explicit opt-in/out reloads.
+    const struct { const char* value; bool enabled; } awpCases[] = {
+        {"",false},{"false",false},{"true",true},{"TrUe",true},{"0",false},{"1",true},{"broken",false}
+    };
+    int awpIndex=0;
+    for (const auto& test:awpCases) {
+        std::string sample=path+".awp-"+std::to_string(awpIndex++);
+        { std::ofstream file(sample);file<<"[Damage]\nAWPOneShot="<<test.value<<"\n"; }
+        auto configured=GameplaySettings::Load(sample);DeleteFileA(sample.c_str());
+        assert(configured.awpOneShot==test.enabled && configured.FinishingAWP(3)==test.enabled);
+        assert(!configured.FinishingAWP(0));
+        float damage=CombatDamage::Amount(configured.ContactDamage(3,false,0),false,
+            CombatDamage::FinishesTarget(configured.FinishingAWP(3),false),5000);
+        assert(test.enabled ? damage>5000 : damage==115);
+        assert(CombatDamage::Amount(configured.ContactDamage(3,false,0),true,
+            CombatDamage::FinishesTarget(configured.FinishingAWP(3),true),5000)==57.5f);
+        configured.heroDamage=true;assert(!configured.FinishingAWP(3));
+    }
+    std::string awpReload=path+".awp-reload";DeleteFileA(awpReload.c_str());
+    assert(!GameplaySettings::Load(awpReload).FinishingAWP(3));
+    WritePrivateProfileStringA("Damage","AWPOneShot","true",awpReload.c_str());
+    assert(GameplaySettings::Load(awpReload).FinishingAWP(3));
+    WritePrivateProfileStringA("Damage","AWPOneShot","false",awpReload.c_str());
+    assert(!GameplaySettings::Load(awpReload).FinishingAWP(3));DeleteFileA(awpReload.c_str());
     // Invalid formation values cannot produce zero slots or a combat leash shorter than the spacing.
     { std::ofstream file(path);file<<"[Runes]\nAmmoPercent=35\nAmmoWeapons=current\nPickupRadius=999\n[Damage]\nMode=hero\n[AK47]\nHeroMultiplier=2.5\nDamage=nan\n[USP]\nDamage=broken\n[Squad]\nRecruitRadius=9999\nMaxUnits=0\nFollowDistance=0\nCombatLeash=0\n"; }
     settings=GameplaySettings::Load(path);DeleteFileA(path.c_str());

@@ -190,7 +190,10 @@ Edit it and press F8 in FPS.
 - `[Runes] AmmoPercent=20`; `AmmoWeapons=all` or `current`.
 - `[Damage] Mode=weapon` uses fixed weapon damage. `Mode=hero` uses the current average Warcraft
   attack of **any** controlled unit, including creeps, multiplied by each weapon's `HeroMultiplier`.
-- `[Damage] AWPOneShot=true` finishes enemies with one AWP hit only in `weapon` mode.
+- `[Damage] AWPOneShot=false` is the test-build default: AWP uses `[AWP] Damage` (115 by default)
+  and native armor. Set `true` to enable instant enemy kills in `weapon` mode; F8 applies changes.
+  Missing/empty/invalid values use `false`; `true`/`false` and `1`/`0` are accepted.
+  Updates preserve existing values, so older configs with `AWPOneShot=true` need an explicit edit to disable it.
 - `[Damage] FriendlyFirePercent=50` sets damage to owned/allied units and buildings, including
   firearms, both melee attacks and C4 (including its planter). Range: 0–100; 0 disables allied damage,
   100 applies full damage. Press F8 to reload; C4 retains the settings from when it was planted.

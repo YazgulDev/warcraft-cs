@@ -9,7 +9,7 @@ $config=Join-Path $folder 'legacy.ini'
 # Updates append missing keys inside existing sections while retaining all custom values.
 Update-GameplayConfig $template $config
 $text=Get-Content -LiteralPath $config -Raw
-foreach ($required in @('AmmoPercent=37','Price=0','Damage=81','FriendlyFirePercent=25','BombCount=20','Access=anywhere','AmmoPrice=80','CSVolumePercent=100','Detailed=true','IntervalMs=1000','MaxFileMB=8','ArchiveCount=3')) {
+foreach ($required in @('AmmoPercent=37','Price=0','Damage=81','FriendlyFirePercent=25','AWPOneShot=false','BombCount=20','Access=anywhere','AmmoPrice=80','CSVolumePercent=100','Detailed=true','IntervalMs=1000','MaxFileMB=8','ArchiveCount=3')) {
     if (!$text.Contains($required)) { throw "Missing/patched preference: $required" }
 }
 if ([regex]::Matches($text,'(?m)^\[AK47\]').Count -ne 1) { throw 'Duplicate section can hide new INI keys.' }
@@ -36,6 +36,19 @@ $empty=Join-Path $folder 'empty.ini'
 if (!(Get-Content -LiteralPath $empty -Raw).Contains('BombCount=20')) { throw 'Empty config repair failed.' }
 $fresh=Join-Path $folder 'fresh.ini';Update-GameplayConfig $template $fresh
 if ((Get-FileHash -LiteralPath $fresh).Hash -ne (Get-FileHash -LiteralPath $template).Hash) { throw 'Fresh config differs from defaults.' }
+# New defaults must not overwrite an existing player's explicit AWP finishing preference.
+foreach ($preference in @('true','false')) {
+    $awpConfig=Join-Path $folder ('custom-awp-'+$preference+'.ini')
+    @('[Damage]',('AWPOneShot='+$preference)) | Set-Content -LiteralPath $awpConfig -Encoding ascii
+    Update-GameplayConfig $template $awpConfig
+    $awpText=Get-Content -LiteralPath $awpConfig -Raw
+    if ([regex]::Matches($awpText,'(?m)^AWPOneShot=').Count -ne 1 -or !$awpText.Contains('AWPOneShot='+$preference)) {
+        throw 'AWP migration overwrote or duplicated an explicit preference.'
+    }
+    $awpBefore=(Get-FileHash -LiteralPath $awpConfig).Hash
+    Update-GameplayConfig $template $awpConfig
+    if ((Get-FileHash -LiteralPath $awpConfig).Hash -ne $awpBefore) { throw 'Repeated AWP migration changed the config.' }
+}
 Write-Output 'PASS fresh/legacy/empty/repeated config updates preserve custom values and expose new settings.'
 # Logging preferences survive upgrades while missing sibling keys are inserted exactly once.
 $customLogging=Join-Path $folder 'custom-logging.ini'

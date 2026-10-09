@@ -4,14 +4,15 @@
 #include <array>
 #include <string>
 
-// Defaults preserve existing combat; live settings are replaced as one complete snapshot on F8.
+// Editable combat defaults and live settings are replaced as one complete snapshot on F8.
 struct GameplaySettings {
     LoggingSettings logging;
     float runeAmmoPercent = 20;
     float runePickupRadius = 160;
     bool runeAmmoAllWeapons = true;
     bool heroDamage = false;
-    bool awpOneShot = true;
+    // Ordinary AWP damage is the default; instant finishing remains an explicit player opt-in.
+    bool awpOneShot = false;
     // One percentage covers owned/allied units and buildings across firearms, melee and C4.
     float friendlyFirePercent = 50;
     // Limit world labels to nearby FPS activity without altering native resource production.

@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — test branches
+
+- Disable AWP instant enemy kills by default (`[Damage] AWPOneShot=false`); ordinary damage remains 115 before native armor.
+- Require explicit `true`/`1` for AWP finishing; missing/empty/invalid values use false. F8 reload and custom-value preservation remain supported.
+- Draw hip-fire and scope reticles with filled geometry while preserving their shape and inherited OpenGL state.
+- Add configurable bounded diagnostics, dedicated reticle draw/skip/error records and Read logs in both launchers.
+- Show reviewed per-line update changes in both launchers, including the GitHub API rate-limit path.
+
 ## 0.6.1 — 2026-10-09
 
 - Add `[Audio] CSVolumePercent` (0–100, default 100) for CS shots, reloads, footsteps, melee and C4.

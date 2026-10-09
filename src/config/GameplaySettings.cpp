@@ -29,7 +29,11 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.runePickupRadius=number("Runes","PickupRadius",160,400);
     result.runeAmmoAllWeapons=_stricmp(text("Runes","AmmoWeapons","all").c_str(),"current")!=0;
     result.heroDamage=_stricmp(text("Damage","Mode","weapon").c_str(),"hero")==0;
-    result.awpOneShot=_stricmp(text("Damage","AWPOneShot","true").c_str(),"false")!=0;
+    // Missing or malformed settings must not silently enable instant kills; explicit preferences still reload on F8.
+    auto awpOneShot=text("Damage","AWPOneShot","false");
+    result.awpOneShot=!_stricmp(awpOneShot.c_str(),"true") || awpOneShot=="1";
+    if (!awpOneShot.empty() && _stricmp(awpOneShot.c_str(),"true") && _stricmp(awpOneShot.c_str(),"false") &&
+        awpOneShot!="0" && awpOneShot!="1") wc3::Log("Invalid Damage.AWPOneShot; using false");
     // Old configs retain 50%; zero disables allied damage and full damage is capped at 100%.
     result.friendlyFirePercent=number("Damage","FriendlyFirePercent",50,100);
     result.floatingTextDistance=number("Interface","FloatingTextDistance",1200,5000);
