@@ -1,4 +1,4 @@
-#include "../src/WeaponWheel.hpp"
+#include "../src/input/WeaponWheel.hpp"
 #include <cstdio>
 #include <cstdlib>
 void Require(bool condition,const char* message) {
