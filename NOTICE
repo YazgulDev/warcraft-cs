@@ -46,7 +46,10 @@ ADAPTED MECHANICS AND RESEARCH REFERENCES
 
 4. Valve Half-Life SDK — https://github.com/ValveSoftware/halflife
    Research reference for GoldSrc studio-model layout, animation/event encoding,
-   movement and view behavior. The SDK has Valve's own noncommercial HL1-engine
+   movement and view behavior, including wish-direction projection in PM_AirAccelerate
+   and friction ordering around takeoff. The project independently applies these rules
+   in src/movement/MovementPhysics.cpp with configurable Warcraft-specific limits.
+   The SDK has Valve's own noncommercial HL1-engine
    modification license, not MIT/Apache. No SDK code/header/runtime is bundled or
    asserted relicensed here. The model parser/exporter is project-owned and reads
    the user's installed models; the recoil implementation cites the MIT projects

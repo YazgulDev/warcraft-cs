@@ -156,7 +156,7 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 | --- | --- |
 | F6 / F10 | Toggle FPS ↔ RTS / pause menu and return to RTS |
 | WASD / mouse | Move / look and aim |
-| Shift / Ctrl / Space | Walk / crouch / jump |
+| Shift / Ctrl / Space | Walk / crouch / jump (hold Space for repeated hops by default) |
 | Left mouse button | Shoot or primary melee attack |
 | Right mouse button | Knife/sword: strong attack; AWP: cycle two zoom levels and normal view |
 | R / F7 | Reload / refill all carried ammunition for free |
@@ -182,6 +182,13 @@ Edit it and press F8 in FPS.
   `MaxFileMB=8` bounds each runtime log to 1–64 MiB; `ArchiveCount=3` keeps 0–8 previous
   sessions/segments. Startup and F8 apply all four values. Essential events/errors remain when details
   are disabled. Updates preserve custom values. See [Diagnostics](docs/DIAGNOSTICS.md).
+
+- `[Movement]` enables Half-Life-inspired bunnyhopping and air strafing. Run with W, jump, release W,
+  then alternate A + mouse left and D + mouse right. Hold Space to jump on landing and retain momentum.
+  Turning in the air builds speed; straight jumps retain the run-up. `JumpBoostPercent=0` is the default,
+  with an optional 0–100% bonus per moving takeoff. Low objects can be cleared above their bounds; tall solids remain blocked.
+  Walking/jumping off a cliff starts a gravity-driven fall. Tune these [movement settings](docs/MOVEMENT.md);
+  all apply on F8 without resetting the current jump. This is an experimental feature on the test branch.
 
 - `[Audio] CSVolumePercent=100` controls all CS sounds independently of Warcraft audio. Range: **0–100**;
   **0** mutes CS, **100** retains the previous levels, and fractional values are accepted.

@@ -26,6 +26,21 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.logging.maxFileMB = unsigned(std::max(1.f, number("Logging", "MaxFileMB", 8, 64)));
     result.logging.archiveCount = unsigned(number("Logging", "ArchiveCount", 3, 8));
     result.runeAmmoPercent=number("Runes","AmmoPercent",20,100);
+    // Missing settings enable the requested hopping; malformed switches preserve documented defaults.
+    auto boolean = [&](const char* key, bool fallback) {
+        auto value = text("Movement", key, fallback ? "true" : "false");
+        if (!_stricmp(value.c_str(), "true")) return true;
+        if (!_stricmp(value.c_str(), "false")) return false;
+        return fallback;
+    };
+    result.movement.bunnyHop = boolean("BunnyHop", true);
+    result.movement.autoJump = boolean("AutoJump", true);
+    result.movement.jumpBoostPercent = number("Movement", "JumpBoostPercent", 0, 100);
+    result.movement.maxBunnySpeed = std::max(250.0f, number("Movement", "MaxBunnySpeed", 1000, 2000));
+    result.movement.airAcceleration = number("Movement", "AirAcceleration", 10, 100);
+    result.movement.jumpSpeed = std::max(1.0f, number("Movement", "JumpSpeed", 268.328f, 800));
+    result.movement.gravity = std::max(100.0f, number("Movement", "Gravity", 800, 3000));
+    result.movement.stepHeight = number("Movement", "StepHeight", 27, 64);
     result.runePickupRadius=number("Runes","PickupRadius",160,400);
     result.runeAmmoAllWeapons=_stricmp(text("Runes","AmmoWeapons","all").c_str(),"current")!=0;
     result.heroDamage=_stricmp(text("Damage","Mode","weapon").c_str(),"hero")==0;

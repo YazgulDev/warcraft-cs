@@ -5,6 +5,7 @@
 #include <vector>
 
 namespace wc3 {
+extern int (__cdecl* GetTerrainCliffLevel)(float*,float*);
 using Handle = uint32_t;
 using Bits = uint32_t;
 float Real(Bits bits);
@@ -14,6 +15,8 @@ void Trace(const char* format, ...);
 void LogError(const char* format, ...);
 void OpenLog(const char* directory);
 float Ground(float x, float y);
+// Terrain alone excludes bridge decks so their underside cannot become an upward teleport.
+float TerrainGround(float x, float y);
 // Query real walkable geometry above terrain; removed/dead bridges cease to supply this surface.
 bool WalkableSurface(float x, float y, float& height);
 Handle PickOwnedUnit();
@@ -94,6 +97,9 @@ extern BOOL (__cdecl* IsUnitAlly)(Handle, Handle);
 extern BOOL (__cdecl* IsUnitVisible)(Handle, Handle);
 extern BOOL (__cdecl* IsTerrainPathable)(float*, float*, int);
 extern void (__cdecl* SetUnitPosition)(Handle, float*, float*);
+// Use only after our swept 3D clearance checks; these setters do not search a new pathable XY.
+extern void (__cdecl* SetUnitX)(Handle, float*);
+extern void (__cdecl* SetUnitY)(Handle, float*);
 // Fixture scale checks exercise the same scaled model bounds as custom map units.
 extern void (__cdecl* SetUnitScale)(Handle, float*, float*, float*);
 extern void (__cdecl* SetUnitFacing)(Handle, float*);

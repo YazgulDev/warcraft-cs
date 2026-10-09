@@ -1,12 +1,16 @@
 #pragma once
 #include "../combat/WeaponSlots.hpp"
 #include "LoggingSettings.hpp"
+
+#include "../movement/MovementSettings.hpp"
 #include <array>
 #include <string>
 
 // Editable combat defaults and live settings are replaced as one complete snapshot on F8.
 struct GameplaySettings {
     LoggingSettings logging;
+
+    MovementSettings movement;
     float runeAmmoPercent = 20;
     float runePickupRadius = 160;
     bool runeAmmoAllWeapons = true;

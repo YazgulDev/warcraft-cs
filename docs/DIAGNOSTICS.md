@@ -29,6 +29,11 @@ camera, player status, render frequency, world-frame age, focus, context, viewpo
 and reticle submission decisions. OpenGL vendor/renderer/version identify the driver used by the game.
 An observed GL error may originate in the host frame; a submission record does not prove visible pixels.
 
+Movement settings are recorded after validation at startup and F8. `movement contact` traces each
+takeoff/landing with horizontal speed in Warcraft and GoldSrc units, XYZ velocity, movement inputs
+and view yaw. These transitions complement sampled position/ground/speed summaries when diagnosing
+lost hop momentum or strafe gain. `Detailed=false` disables the optional movement records.
+
 Dedicated `reticle draw begin`, `reticle state` (`inherited` / `prepared`) and `reticle draw end`
 records surround the actual hip-fire/scope primitives. They include center, recoil gap or scope radius,
 thickness, primitive/vertex count, context, viewport/scissor, color masks/color, polygon/stipple,

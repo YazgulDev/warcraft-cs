@@ -8,6 +8,14 @@
 - Add configurable bounded diagnostics, dedicated reticle draw/skip/error records and Read logs in both launchers.
 - Show reviewed per-line update changes in both launchers, including the GitHub API rate-limit path.
 
+- Add accelerating A/D-and-mouse air strafes, held-Space autojump and live movement tuning.
+- Use air acceleration immediately on takeoff and retain momentum through landings. Straight jumps preserve the run-up; default `JumpBoostPercent=0` disables the separate automatic takeoff bonus.
+- Bound accumulated speed with `MaxBunnySpeed=1000` GoldSrc units/s; disabling BunnyHop clips excess momentum on each takeoff. Preserve custom boosts and caps during upgrades.
+- Allow height-aware jumps over low objects and gradual gravity-driven falls from cliffs.
+- Preserve tall/unknown blockers, swept collision, bridge surfaces, map bounds and spell movement restrictions.
+- Add editable `[Movement]` settings, migration preservation and independent/native movement oracles.
+- No release merge, version bump or publication; see [movement notes](docs/MOVEMENT.md).
+
 ## 0.6.1 — 2026-10-09
 
 - Add `[Audio] CSVolumePercent` (0–100, default 100) for CS shots, reloads, footsteps, melee and C4.

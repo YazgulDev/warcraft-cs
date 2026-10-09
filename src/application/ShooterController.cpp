@@ -31,6 +31,7 @@ void ShooterController::Configure(const char* root, uintptr_t gameBase) {
     gameBase_ = gameBase;
     hitboxes_.Configure(gameBase);
     destructableHitboxes_.Configure(gameBase);
+    collision_.Configure(gameBase);
     audio_.Configure(root_);
     if (!nativeSky_.Configure(gameBase)) wc3::Log("Native sky signature mismatch; preview disabled");
     ReloadSettings();
@@ -152,6 +153,7 @@ void ShooterController::Disable(bool restoreCamera) {
     wc3::Log("FPS disabled");
 }
 void ShooterController::ResetMap() {
+    collision_.Reset(); // Custom-map model bounds must never leak into the next world's collision.
     nativeSky_.Reset();
     mapTileset_=0;
     mouseLook_.Reset();
@@ -221,6 +223,11 @@ void ShooterController::AimAndMove(float dt) {
         if (status_.speedScale < 0.99f) movement_.LimitSpeed(speed * MovementPhysics::worldScale);
         bool tookOff = wasGrounded && !movement_.Grounded();
         collision_.Move(unit_, movement_, dt);
+        // Transition records expose retained takeoff/landing momentum without per-frame disk writes.
+        if (tookOff || ((!wasGrounded || tookOff) && movement_.Grounded()))
+            wc3::Trace("movement contact takeoff=%d landed=%d speed=%.1f goldSrcSpeed=%.1f velocity=%.1f,%.1f,%.1f forward=%.0f right=%.0f yaw=%.2f",
+                tookOff, movement_.Grounded(), movement_.Speed(), movement_.Speed()/MovementPhysics::worldScale,
+                movement_.VelocityX(), movement_.VelocityY(), movement_.VerticalVelocity(), input.forward, input.right, yaw_);
         // CS uses a surface step for moving takeoff (150 GoldSrc units/s); standing jumps are silent.
         if (tookOff && movement_.Speed() >= 150.0f * MovementPhysics::worldScale) {
             SurfaceStep(1.0f); wc3::Log("jump sound: concrete takeoff");
@@ -313,6 +320,11 @@ void ShooterController::ReloadSettings() {
         settings_.logging.detailed, settings_.logging.intervalMs, settings_.logging.maxFileMB, settings_.logging.archiveCount);
     // Startup and F8 share the same CS-only gain update; Warcraft's Miles mixer is untouched.
     audio_.SetVolumePercent(settings_.csVolumePercent);
+    movement_.Configure(settings_.movement); // F8 changes tuning without resetting a jump or accumulated momentum.
+    wc3::Trace("settings movement bunnyHop=%d autoJump=%d jumpBoostPercent=%.1f maxBunnySpeed=%.1f airAcceleration=%.1f jumpSpeed=%.3f gravity=%.1f stepHeight=%.1f",
+        settings_.movement.bunnyHop, settings_.movement.autoJump, settings_.movement.jumpBoostPercent,
+        settings_.movement.maxBunnySpeed, settings_.movement.airAcceleration, settings_.movement.jumpSpeed,
+        settings_.movement.gravity, settings_.movement.stepHeight);
     ammoRecovery_.Reset();ammoMessage_="SETTINGS RELOADED";refillTick_=GetTickCount();
     wc3::Log("Settings loaded runePercent=%.1f ammoWeapons=%s damageMode=%s awpOneShot=%d radius=%.1f friendlyFirePercent=%.1f",
         settings_.runeAmmoPercent,settings_.runeAmmoAllWeapons ? "all" : "current",

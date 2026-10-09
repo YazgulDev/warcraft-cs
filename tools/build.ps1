@@ -1,4 +1,4 @@
-param([string]$OutputDirectory = '',[string]$MinHookDirectory='',[string]$PythonExecutable='', [switch]$TestStatusEffects,[switch]$TestGameplay,[switch]$TestTreeAndWheel,[switch]$TestWorldSurfaces,[switch]$TestFloatingText)
+param([string]$OutputDirectory = '',[string]$MinHookDirectory='',[string]$PythonExecutable='', [switch]$TestStatusEffects,[switch]$TestGameplay,[switch]$TestTreeAndWheel,[switch]$TestWorldSurfaces,[switch]$TestFloatingText,[switch]$TestMovement)
 $ErrorActionPreference = 'Stop'
 $modRoot = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'paths.ps1')
@@ -29,6 +29,9 @@ $sources += '"' + (Join-Path $modRoot 'src/presentation/ReticleView.cpp') + '"'
 $sources += '"' + (Join-Path $modRoot 'src/presentation/ReticleDiagnostics.cpp') + '"'
 # Thread-safe bounded diagnostics are a native platform adapter, not controller/file ownership.
 $sources += '"' + (Join-Path $modRoot 'src/platform/DiagnosticLog.cpp') + '"'
+
+# World obstacle adapters supply movement with height-aware volumes from the active map's own models.
+$sources += '"' + (Join-Path $modRoot 'src/platform/MovementObstacles.cpp') + '"'
 # Shop access is native-world policy; inventory prices/navigation remain independently testable.
 $sources += @('economy/BuyAccess.cpp','presentation/BuyMenuView.cpp','presentation/SkyView.cpp','platform/MapEnvironment.cpp','platform/NativeSky.cpp','platform/NativeFloatingText.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 # Install defaults only once so rebuilds preserve the player's customized settings.
@@ -38,6 +41,11 @@ $configFile=Join-Path $configDirectory 'WarcraftCS.ini'
 . (Join-Path $modRoot 'setup/gameplay-config.ps1')
 Update-GameplayConfig (Join-Path $modRoot 'config/WarcraftCS.ini') $configFile
 $testDefine = ''
+if ($TestMovement) {
+    # Movement requests and destructive fixtures exist only in this explicit disposable-map build.
+    $sources += '"'+(Join-Path $modRoot 'tests/MovementScene.cpp')+'"'
+    $testDefine += ' /DWCS_MOVEMENT_TEST'
+}
 if ($TestFloatingText) {
     # Render oracle is explicit and absent from both ordinary client launchers.
     $sources += '"'+(Join-Path $modRoot 'tests/FloatingTextScene.cpp')+'"'

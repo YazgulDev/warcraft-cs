@@ -1,5 +1,30 @@
 # Validation of the 0.1.0 source baseline
 
+## Unreleased bunnyhop test branch (2026-10-09)
+
+Movement, native collision, real INI parsing and migration checks pass. The numerical oracles cover
+repeated/manual jumps, acceleration and speed caps, stationary takeoffs, frame-rate behavior, air
+strafing, gravity-driven cliff falls, low props, tall/unknown blockers, full bridge footprints,
+uphill takeoff/landing momentum, shallow-water support and root/stun/slow restrictions. Configuration
+checks cover documented bounds/defaults, malformed/non-finite values, repeated reloads and preservation
+of custom movement values during repeated updates in both PowerShell 7 and Windows PowerShell 5.1.
+All existing independent gameplay suites also pass.
+
+An explicit movement fixture in a disposable Lost Temple copy on Warcraft III 1.26a verifies five
+native checks: five held-Space hops accelerate from 375 to 551 Warcraft units/s; a scaled barricade
+stops a walking actor but is cleared by jumping; a native town hall blocks the attempted jump; and
+walking off an actual cliff falls gradually from 128 to 17.2 world units and lands. Native model
+transforms include the separate visual-scale getter. Terrain uses the verified interpolated height
+backend; ordinary GetLocationZ support is preserved for shallow water. Game logs and captures were
+inspected. Test requests and destructive fixtures are excluded from ordinary builds.
+
+This is feature-branch verification, without a release/version change. No campaign save or complete
+campaign was tested. Irregular/imported geometry and other maps still require playtesting; collisions
+use model boxes, not triangle-perfect mesh contact. F8's existing production reload path applies the
+movement snapshot; no new live F8 keyboard session is claimed.
+
+## Original source baseline
+
 Windows, native x86 Warcraft III 1.26a / Game.dll 1.26.0.6401, OpenGL, offline private runtime.
 No game footage, game content, raw memory dumps or personal campaign saves are included here.
 
@@ -200,3 +225,21 @@ The configurable-game-settings and feature-release-workflow skills pass the skil
 are available in the repository and installed personal skills, and are adopted by AGENTS.md.
 No new complete campaign, live Warcraft F8-input session or clean-machine dependency install
 is claimed for this audio/settings change.
+
+## Experimental Half-Life-style air strafing
+
+Independent production-physics trials run for eight seconds at 30/60/144 FPS with alternating
+A/D turns, no W after the run-up and no takeoff bonus. Speed rises from 375 to approximately
+792/1055/960 Warcraft units/s. Straight held-Space hops preserve 375; disabling air acceleration
+removes gain, and disabling BunnyHop removes excess speed on every takeoff. Manual jumping,
+stationary jumps, root/stun/slow restrictions, optional custom boosts and live cap replacement pass.
+
+Actual production swept collision in a synthetic native world covers low props, tall/unknown
+blockers, bridge destruction/edges, hills, cliff falling and water support. A maximum-speed trial
+approaches 3000 Warcraft units/s and stops before a thin wall even when the frame's destination
+would be beyond it. Real INI loading feeds physics and supports changing a cap without resetting
+the current vertical velocity. Migration preserves older custom bonuses and adds the zero default.
+
+The opt-in native scene includes separate `strafe` and straight `hop` trials. This revision's
+real-game verification remains pending because the user's Warcraft process is active; no campaign
+or running module is replaced. Measurements above are independent physics results only.
