@@ -1,4 +1,4 @@
-# Warcraft CS — 0.6.0
+# Warcraft CS — 0.6.1
 
 Counter-Strike 1.6 inside Warcraft III: control your own hero or unit in first person,
 shoot, and play regular maps, campaigns and compatible custom maps.
@@ -11,12 +11,13 @@ Neither variant includes game files, models, sounds, maps or saves.
 You need your own installed copies of both games.**
 This is an early prototype with known limitations.
 
-**[Download 0.6.0](https://github.com/YazgulDev/warcraft-cs/releases/tag/v0.6.0)** ·
-[Release Notes](docs/RELEASE-0.6.0.md) · [Installation](INSTALL.md) · [Requirements](REQUIREMENTS.md)
+**[Download 0.6.1](https://github.com/YazgulDev/warcraft-cs/releases/tag/v0.6.1)** ·
+[Release Notes](docs/RELEASE-0.6.1.md) · [Installation](INSTALL.md) · [Requirements](REQUIREMENTS.md)
 
-0.6.0 adds the CS-style gold buy menu, configurable starting equipment and multiple C4 charges,
-RoC/TFT selection and `play-roc.bat`, improved fullscreen/Alt-Tab recovery, native Warcraft skies,
-optional CS skies, bridge movement and corrected FPS rendering. All changes since 0.5.1 are in the Release Notes.
+0.6.1 adds configurable CS sound volume with live F8 reload and reusable rules for game settings
+and complete Release Notes. The project also includes the CS-style gold buy menu, configurable
+starting equipment, multiple C4, RoC/TFT selection and `play-roc.bat`, fullscreen/Alt-Tab recovery,
+native/optional CS skies, bridge movement and corrected FPS rendering. Earlier changes are in the [changelog](CHANGELOG.md).
 
 ## Features
 
@@ -116,7 +117,7 @@ Run in PowerShell, replacing the game paths with your own:
 ```powershell
 git clone https://github.com/YazgulDev/warcraft-cs.git
 cd warcraft-cs
-git switch release/0.6.0
+git switch release/0.6.1
 .\setup.cmd -WarcraftDirectory "E:\Warcraft III" -CounterStrikeDirectory "C:\SteamGames\steamapps\common\Half-Life\cstrike"
 .\play.cmd
 ```

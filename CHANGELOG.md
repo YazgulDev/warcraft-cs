@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.6.1 — 2026-10-09
+
+- Add `[Audio] CSVolumePercent` (0–100, default 100) for CS shots, reloads, footsteps, melee and C4.
+- Apply the CS-only master gain at startup and on F8, including queued/playing sounds; preserve per-event levels and Warcraft's own audio.
+- Validate missing/empty/malformed/non-finite values and clamp finite percentages; expose native gain readback for diagnostics.
+- Preserve custom audio values while migrating old configs; cover default insertion, repeat setup and duplicate-section/key prevention.
+- Add and install `configurable-game-settings`: new game tuning must ship config keys, validated defaults, reload semantics and update preservation.
+- Update installed/repository `feature-release-workflow` to require all release changes in Release Notes, based on the previous immutable published tag; reuse a version explicitly supplied by the user.
+- Adopt both rules in AGENTS/contributor guidance; update README, installation/troubleshooting, module ownership, validation notes and current version/branch/download references.
+- Add real INI/audio migration checks and a production-XAudio2 test with silent synthetic PCM, live gain changes, mute/restore and defensive bounds.
+- Rebuild both launcher variants, audited sources, checksums, updater manifest and source-only distribution for 0.6.1; preserve previous branches/tags and update compatibility.
+
+Complete changes since v0.6.0 and validation scope: [RELEASE-0.6.1](docs/RELEASE-0.6.1.md).
+
 ## 0.6.0 — 2026-10-09
 
 - Merge all completed feature work since 0.5.1, retaining earlier release/feature branches and immutable tags.
