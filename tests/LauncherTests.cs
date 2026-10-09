@@ -22,6 +22,13 @@ public static class LauncherTests {
             var install=(Button)form.Controls["InstallButton"];
             var developer=(Button)form.Controls["DeveloperInstallButton"];
             var update=(Button)form.Controls["UpdateButton"];
+            var edition=(ComboBox)form.Controls["GameEdition"];
+            // Both variants expose the same editions and preserve the previous TFT default.
+            Require(edition!=null && edition.DropDownStyle==ComboBoxStyle.DropDownList && edition.Items.Count==2,
+                "Edition selector missing or allows arbitrary arguments");
+            Require(edition.SelectedIndex==0 && edition.Items[1].ToString()=="Reign of Chaos","Wrong edition default/options");
+            edition.SelectedIndex=1;
+            Require(edition.SelectedItem.ToString()=="Reign of Chaos","RoC cannot be selected");
             // Separate installation and GitHub update actions must exist in both actual launcher layouts.
             Require(install.Text==(included ? "Install — Player" : "Install"),"Wrong Install action for variant");
             Require((developer!=null)==included,"Source-only UI offers bundled Player/Developer modes");
@@ -45,7 +52,24 @@ public static class LauncherTests {
         request.InstallDirectory=cs;Reject(request.ValidateDestination,"Original CS folder allowed");
         request.InstallDirectory=Path.GetPathRoot(root);Reject(request.ValidateDestination,"Drive root allowed");
         request.InstallDirectory=destination;request.ValidateDestination();
+        // Legacy JSON keeps TFT; serialization round-trips RoC without treating data as shell arguments.
+        var serializer=new System.Web.Script.Serialization.JavaScriptSerializer();
+        Require(serializer.Deserialize<ClientRequest>("{}").GameEdition==GameEdition.FrozenThrone,"Legacy preferences change edition");
+        request.GameEdition=GameEdition.ReignOfChaos;
         request.Save(Path.Combine(root,"quoted-paths.json"));
+        Require(serializer.Deserialize<ClientRequest>(File.ReadAllText(Path.Combine(root,"quoted-paths.json"))).GameEdition==GameEdition.ReignOfChaos,
+            "RoC preference not saved");
+        Require(GameEdition.LaunchArguments(GameEdition.ReignOfChaos)=="-opengl -classic","RoC launch argument missing");
+        Require(GameEdition.LaunchArguments(null)=="-opengl","Legacy launch default wrong");
+        Reject(()=>GameEdition.LaunchArguments("ReignOfChaos; arbitrary command"),"Unvalidated edition reaches launch arguments");
+        // Launching an older installed revision still selects RoC and opts out of DPI bitmap scaling.
+        foreach (string selected in new[] {GameEdition.FrozenThrone,GameEdition.ReignOfChaos}) {
+            var start=GameLaunch.CreateStartInfo(destination,selected);
+            Require(start.FileName==Path.Combine(destination,"Game","war3.exe") && !start.UseShellExecute,"Play escapes private game");
+            Require(start.WorkingDirectory==Path.Combine(destination,"Game"),"Wrong game working directory");
+            Require(start.Arguments==GameEdition.LaunchArguments(selected),"Selected edition lost during Play");
+            Require(start.EnvironmentVariables["__COMPAT_LAYER"].Contains("HIGHDPIAWARE"),"Fullscreen Play permits DPI bitmap scaling");
+        }
         Require(File.ReadAllText(Path.Combine(root,"quoted-paths.json")).Contains("Warcraft"),"Request serialization failed");
         using (var memory=new MemoryStream()) {
             using (var zip=new ZipArchive(memory,ZipArchiveMode.Create,true)) { zip.CreateEntry("../escaped.txt"); }

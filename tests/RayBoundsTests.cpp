@@ -1,5 +1,5 @@
-#include "../src/RayBounds.hpp"
-#include "../src/ModelTransform.hpp"
+#include "../src/geometry/RayBounds.hpp"
+#include "../src/geometry/ModelTransform.hpp"
 #include <cstdio>
 #include <cstdlib>
 

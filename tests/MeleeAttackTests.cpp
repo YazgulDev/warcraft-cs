@@ -1,4 +1,4 @@
-#include "../src/MeleeAttack.hpp"
+#include "../src/combat/MeleeAttack.hpp"
 #include <cstdio>
 #include <initializer_list>
 #include <cstdlib>

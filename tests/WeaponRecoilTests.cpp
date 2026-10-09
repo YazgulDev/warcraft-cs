@@ -1,4 +1,4 @@
-#include "../src/WeaponRecoil.hpp"
+#include "../src/combat/WeaponRecoil.hpp"
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>

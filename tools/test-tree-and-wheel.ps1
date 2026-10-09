@@ -7,7 +7,7 @@ $environment=Join-Path $vs 'VC/Auxiliary/Build/vcvars32.bat'
 $script=Join-Path $build 'test-tree-and-wheel.cmd'
 # Compile geometry/input rules independently of Warcraft; retail model fixtures remain optional and private.
 @('@echo off',('call "'+$environment+'" >nul'),
-    ('cl /nologo /std:c++17 /EHsc /O2 /W4 "'+(Join-Path $root 'tests/TreeTrunkMeshTests.cpp')+'" "'+(Join-Path $root 'src/TreeTrunkMesh.cpp')+'" /Fe:tree-trunk-tests.exe'),
+    ('cl /nologo /std:c++17 /EHsc /O2 /W4 "'+(Join-Path $root 'tests/TreeTrunkMeshTests.cpp')+'" "'+(Join-Path $root 'src/geometry/TreeTrunkMesh.cpp')+'" /Fe:tree-trunk-tests.exe'),
     'if errorlevel 1 exit /b 1','tree-trunk-tests.exe','if errorlevel 1 exit /b 1',
     ('cl /nologo /std:c++17 /EHsc /O2 /W4 "'+(Join-Path $root 'tests/WeaponWheelTests.cpp')+'" /Fe:weapon-wheel-tests.exe'),
     'if errorlevel 1 exit /b 1','weapon-wheel-tests.exe') | Set-Content -LiteralPath $script -Encoding ASCII

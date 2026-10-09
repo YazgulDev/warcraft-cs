@@ -1,6 +1,6 @@
 #include "TreeAndWheelScene.hpp"
-#include "../src/ModelBounds.hpp"
-#include "../src/SpriteTransform.hpp"
+#include "../src/geometry/ModelBounds.hpp"
+#include "../src/platform/SpriteTransform.hpp"
 #include <fstream>
 
 namespace {
