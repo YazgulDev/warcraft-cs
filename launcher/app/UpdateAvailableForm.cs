@@ -14,8 +14,8 @@ namespace WarcraftCSLauncher {
             MaximizeBox=false;MinimizeBox=false;ShowInTaskbar=false;
             Controls.Add(new Label {Text="Warcraft CS "+release.Manifest.Version+" is available",Left=20,Top=18,Width=640,Height=34,
                 Font=new Font(Font.FontFamily,16,FontStyle.Bold)});
-            var notes=new TextBox {Name="ReleaseNotes",Text=String.IsNullOrWhiteSpace(release.Notes) ?
-                "A new stable release of Warcraft CS is available. Open the release page for its changelog." : release.Notes,
+            // Display each reviewed change separately, including legacy manifests with no GitHub release body.
+            var notes=new TextBox {Name="ReleaseNotes",Text=ReleaseNotesText.Resolve(release.Manifest,release.Notes),
                 Left=20,Top=62,Width=640,Height=222,Multiline=true,ReadOnly=true,ScrollBars=ScrollBars.Vertical};
             Controls.Add(notes);
             var page=new LinkLabel {Text="Open release page",Left=20,Top=293,Width=640,Height=25};

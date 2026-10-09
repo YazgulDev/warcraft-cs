@@ -74,12 +74,25 @@ public static class LauncherUpdateTests {
         // The rate-limit fallback must preserve the stable-version/checksum contract and canonical package URLs.
         var fallback=ReleaseClient.ParseLatestManifest(Encoding.UTF8.GetBytes("\uFEFF"+serializer.Serialize(update.Manifest)));
         Require(fallback.SourceUrl==update.SourceUrl && fallback.LauncherUrl==update.LauncherUrl,"Fallback changes package origin");
+        // Markdown wraps and Unix newlines must not collapse separate change items in the Windows textbox.
+        string markdown="## Изменения\n\n* **Добавлен** параметр звука\n  и применение по F8.\n- Исправлено отображение списка.";
+        string formatted="- Изменения\r\n- Добавлен параметр звука и применение по F8.\r\n- Исправлено отображение списка.";
+        Require(ReleaseNotesText.Format(markdown)==formatted,"Per-line Markdown formatting failed");
+        Require(ReleaseNotesText.Format(formatted)==formatted,"Resolved notes must remain stable when displayed");
+        string legacyMetadata=serializer.Serialize(new {draft=false,prerelease=false,tag_name="v0.3.0",assets=assets,body=markdown});
+        Require(ReleaseClient.Parse(legacyMetadata,url=>Encoding.UTF8.GetBytes(serializer.Serialize(update.Manifest))).Notes==formatted,
+            "Legacy GitHub body changes lost");
+        var knownManifest=Package(source,exe).Manifest;knownManifest.Version="0.6.1";
+        Require(ReleaseClient.ParseLatestManifest(Encoding.UTF8.GetBytes(serializer.Serialize(knownManifest))).Notes.Contains("CSVolumePercent"),
+            "Legacy manifest fallback lacks the published version's changes");
+        Require(!fallback.Notes.Contains("CSVolumePercent"),"Unknown version reuses another release's changes");
         Reject(()=>ReleaseClient.ParseLatestManifest(Encoding.UTF8.GetBytes("{\"Version\":\"0.3.0-beta\"}")),"Fallback permits unstable manifest");
         var runtimeDigest=update.Manifest.RuntimeSha256;
         update.Manifest.RuntimeSha256="invalid";Reject(()=>update.Manifest.Validate("v0.3.0"),"Malformed Player hash accepted");
         update.Manifest.RuntimeSha256=runtimeDigest;
         // Dual releases keep independent hashes and preserve source-only / DLL-included choices on both API paths.
         var dual=Package(source,exe);
+        dual.Manifest.ReleaseNotes="- Добавлен параметр звука.\n- Исправлен список обновлений.";
         dual.Manifest.DllIncludedLauncherSha256=new string('b',64);
         dual.Manifest.DllIncludedRuntimeSha256=new string('c',64);
         dual.Manifest.Validate("v0.3.0");
@@ -93,6 +106,10 @@ public static class LauncherUpdateTests {
         Require(bundled.LauncherName==LauncherVariant.IncludedFile && bundled.Manifest.SupportsPlayer,"Included selection loses DLLs");
         Require(bundled.Manifest.LauncherSha256==dual.Manifest.DllIncludedLauncherSha256 && bundled.Manifest.RuntimeSha256==dual.Manifest.DllIncludedRuntimeSha256,"Included selection uses standard checksums");
         var bundledFallback=ReleaseClient.ParseLatestManifest(dualFetch("manifest"),true);
+        string expectedNotes=ReleaseNotesText.Format(dual.Manifest.ReleaseNotes);
+        Require(standard.Notes==expectedNotes && bundled.Notes==expectedNotes && bundledFallback.Notes==expectedNotes &&
+            bundled.Manifest.ReleaseNotes==dual.Manifest.ReleaseNotes,"Variant/API fallback lost manifest changes");
+        Require(ReleaseClient.Parse(legacyMetadata,dualFetch).Notes==expectedNotes,"Manifest list must take priority over legacy body");
         Require(bundledFallback.LauncherUrl==bundled.LauncherUrl && bundledFallback.Manifest.LauncherSha256==bundled.Manifest.LauncherSha256,"Included fallback changes variant");
         Reject(()=>ReleaseClient.Parse(metadata,dualFetch,true),"Missing included asset accepted");
         dual.Manifest.DllIncludedRuntimeSha256=null;Reject(()=>dual.Manifest.Validate("v0.3.0"),"Incomplete included checksum pair accepted");

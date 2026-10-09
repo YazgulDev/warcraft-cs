@@ -4,9 +4,13 @@ $build=Join-Path $root 'build/launcher'
 $compiler=Join-Path $env:WINDIR 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
 $sources=@(Get-ChildItem -LiteralPath (Join-Path $root 'launcher') -Filter '*.cs' -File -Recurse | Where-Object { $_.Name -ne 'Program.cs' } | ForEach-Object { $_.FullName })
 $payload=Join-Path $build 'Source.zip'
+# Exercise the same version-specific fallback resources compiled into both real launchers.
+$notesResources=@(Get-ChildItem -LiteralPath (Join-Path $root 'docs/launcher-changes') -Filter '*.txt' -File | ForEach-Object {
+    '/resource:'+ $_.FullName+',WarcraftCS.ReleaseNotes.'+$_.Name
+})
 if (!(Test-Path -LiteralPath $payload)) { throw 'Build the launcher first to create its audited source payload.' }
 $tests=Join-Path $build 'LauncherTests.exe'
-& $compiler /nologo /target:exe /platform:x64 "/out:$tests" "/resource:$payload,WarcraftCS.Source.zip" /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll /r:System.Web.Extensions.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll (Join-Path $root 'tests/LauncherTests.cs') $sources
+& $compiler /nologo /target:exe /platform:x64 "/out:$tests" "/resource:$payload,WarcraftCS.Source.zip" $notesResources /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll /r:System.Web.Extensions.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll (Join-Path $root 'tests/LauncherTests.cs') $sources
 if ($LASTEXITCODE) { throw 'Launcher test compilation failed.' }
 & $tests (Join-Path $root ('.local/launcher-tests-'+[guid]::NewGuid().ToString('N')))
 if ($LASTEXITCODE) { throw 'Launcher regression checks failed.' }
@@ -24,7 +28,7 @@ if ($LASTEXITCODE -eq 0) { throw 'Backend accepted installation without consent.
 Write-Output 'PASS backend refuses setup before reading even the request file without consent.'
 # Exercise release selection and package integrity offline, without downloading or rebuilding the player's game.
 $updateTests=Join-Path $build 'LauncherUpdateTests.exe'
-& $compiler /nologo /target:exe /platform:x64 "/out:$updateTests" "/resource:$payload,WarcraftCS.Source.zip" /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll /r:System.Web.Extensions.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll (Join-Path $root 'tests/LauncherUpdateTests.cs') $sources
+& $compiler /nologo /target:exe /platform:x64 "/out:$updateTests" "/resource:$payload,WarcraftCS.Source.zip" $notesResources /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll /r:System.Web.Extensions.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll (Join-Path $root 'tests/LauncherUpdateTests.cs') $sources
 if ($LASTEXITCODE) { throw 'Updater test compilation failed.' }
 & $updateTests (Join-Path $root ('.local/update-tests-'+[guid]::NewGuid().ToString('N')))
 if ($LASTEXITCODE) { throw 'Updater regression checks failed.' }

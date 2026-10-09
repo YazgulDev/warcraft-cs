@@ -87,7 +87,7 @@ public static class LauncherTests {
         Require(File.Exists(Path.Combine(source,"setup","audio-runtime.ps1")),"Embedded Miles setup missing");
         Require(!Directory.Exists(Path.Combine(source,".local")),"Private assets embedded");
         // Cancel/close declines updates; the prompt exposes both the release information and mode-specific downloads.
-        var release=new ReleaseUpdate {Manifest=new ReleaseManifest {Version="0.5.0",RuntimeSha256=new string('a',64)},Notes="New tree and weapon fixes."};
+        var release=new ReleaseUpdate {Manifest=new ReleaseManifest {Version="0.5.0",RuntimeSha256=new string('a',64)},Notes="- New tree and weapon fixes."};
         using(var prompt=new UpdateAvailableForm(release,"Player",true)) {
             Require(((TextBox)prompt.Controls["ReleaseNotes"]).Text==release.Notes,"Release notes missing");
             Require(((Label)prompt.Controls["ModeDetails"]).Text.Contains("No Build Tools"),"Player prompt hides dependencies");
@@ -97,6 +97,14 @@ public static class LauncherTests {
         release.Manifest.RuntimeSha256=null;
         using(var legacy=new UpdateAvailableForm(release,"Player",true)) Require(!((Button)legacy.Controls["ConfirmUpdate"]).Enabled,"Player prompt offers legacy source build");
         using(var dev=new UpdateAvailableForm(release,"Developer",true)) Require(((Label)dev.Controls["ModeDetails"]).Text.Contains("several GB"),"Developer prompt hides SDK download");
+        // The screenshot's legacy 0.6.1 manifest has no body: both installation modes still show real changes.
+        foreach (string mode in new[] {"Player","Developer"}) using(var prompt=new UpdateAvailableForm(
+            new ReleaseUpdate {Manifest=new ReleaseManifest {Version="0.6.1",RuntimeSha256=new string('a',64)}},mode,true)) {
+            var notes=(TextBox)prompt.Controls["ReleaseNotes"];
+            Require(notes.Text.Contains("CSVolumePercent") && notes.Text.Contains("\r\n- ") && notes.ReadOnly && notes.Multiline,
+                "Legacy update prompt does not show per-line reviewed changes");
+            Require(!notes.Text.Contains("прицел"),"Legacy published version claims unreleased crosshair work");
+        }
         // Real journal discovery/reader/export work with Unicode, live writers and retained sessions.
         var logRoot=Path.Combine(root,"log-reader");var gameLogs=Path.Combine(logRoot,"Game","WarcraftCS");
         Directory.CreateDirectory(gameLogs);
