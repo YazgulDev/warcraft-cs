@@ -1,6 +1,8 @@
 using System;
 using System.Diagnostics;
 using System.Drawing;
+using System.Collections.Generic;
+using System.IO;
 using System.Windows.Forms;
 
 namespace WarcraftCSLauncher {
@@ -14,8 +16,7 @@ namespace WarcraftCSLauncher {
             MaximizeBox=false;MinimizeBox=false;ShowInTaskbar=false;
             Controls.Add(new Label {Text="Warcraft CS "+release.Manifest.Version+" is available",Left=20,Top=18,Width=640,Height=34,
                 Font=new Font(Font.FontFamily,16,FontStyle.Bold)});
-            var notes=new TextBox {Name="ReleaseNotes",Text=String.IsNullOrWhiteSpace(release.Notes) ?
-                "A new stable release of Warcraft CS is available. Open the release page for its changelog." : release.Notes,
+            var notes=new TextBox {Name="ReleaseNotes",Text=ChangeSummary(release.Notes),
                 Left=20,Top=62,Width=640,Height=222,Multiline=true,ReadOnly=true,ScrollBars=ScrollBars.Vertical};
             Controls.Add(notes);
             var page=new LinkLabel {Text="Open release page",Left=20,Top=293,Width=640,Height=25};
@@ -33,6 +34,17 @@ namespace WarcraftCSLauncher {
                 ((Label)Controls["ModeDetails"]).Text="This older release has no Player DLL bundle. Choose Developer in the launcher to build it locally.\r\nDeveloper mode may download Build Tools / Windows SDK. Your existing game remains playable.";
             }
             Controls.Add(update);Controls.Add(decline);AcceptButton=update;CancelButton=decline;
+        }
+        private static string ChangeSummary(string body) {
+            // Only the opening change list belongs in the updater; full notes and links remain on the release page.
+            var changes=new List<string>();
+            using (var reader=new StringReader((body ?? String.Empty).Trim())) {
+                string line;
+                while ((line=reader.ReadLine())!=null && line.Trim().StartsWith("- ",StringComparison.Ordinal))
+                    changes.Add(line.Trim());
+            }
+            // Windows multiline text boxes need CRLF to keep GitHub's LF-separated bullets on separate lines.
+            return changes.Count==0 ? "Open the release page to see what changed." : String.Join("\r\n",changes);
         }
     }
 }

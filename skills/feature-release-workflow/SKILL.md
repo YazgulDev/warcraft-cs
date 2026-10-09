@@ -37,7 +37,9 @@ Initial source-only publication may bootstrap an empty master commit, create `re
 - Compare the immutable previous published tag with the new release tree and inspect the included commits/merges. A release branch may have advanced since publication; do not use its moving tip as the baseline.
 - Include every added feature/parameter, changed default or behavior, fix, relevant source/packaging/skill/documentation change, upgrade instructions and known limitations. Explain config keys, units/ranges and reload timing when parameters are added.
 - Reconcile the notes against the full diff and changelog before publication. Keep version, README/download information, validation claims and the uploaded GitHub release body consistent; do not claim checks that were not performed.
-- Record the complete notes in the project's established release-document location and publish that reviewed content with the release. Keep historical release notes unchanged.
+- Record complete notes in the project's established release-document location. Keep historical full notes unchanged.
+- The GitHub release body shown by the updater must start with a short plain-text bullet list of what changed, for example `- Added CS sound volume parameter.` Include only changes actually shipped; examples are not permission to invent features.
+- Keep installation steps, validation details and developer explanations in the complete release document. After the opening bullet list, add a blank line and a link to those full notes; the updater displays only the change list. Use real line breaks and verify the dialog preserves them.
 
 ## Source-only commits and publication
 

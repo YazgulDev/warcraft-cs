@@ -12,7 +12,8 @@ namespace WarcraftCSLauncher {
             if (updatePreview) {
                 // Preview a realistic prompt without network, focus changes or installation side effects.
                 var release=new ReleaseUpdate {Manifest=new ReleaseManifest {Version=System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString(3),RuntimeSha256=new string('a',64)},
-                    Notes="Example release notes\r\n\r\n- New gameplay improvements\r\n- Launcher fixes\r\n\r\nYour saves and settings are preserved."};
+                    // Preview the same short change list used by the updater, without setup or network actions.
+                    Notes="- Added CS sound volume parameter.\r\n- Added configurable game settings skill.\r\n- Updated Release Notes rules."};
                 using (var prompt=new UpdateAvailableForm(release,args[0]=="--preview-update-developer" ? "Developer" : "Player",true)) RenderPreview(prompt,args[1]);
                 return;
             }
