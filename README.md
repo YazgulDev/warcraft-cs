@@ -13,6 +13,7 @@ This is an early prototype with known limitations.
 
 **[Download 0.6.1](https://github.com/YazgulDev/warcraft-cs/releases/tag/v0.6.1)** ·
 [Release Notes](docs/RELEASE-0.6.1.md) · [Installation](INSTALL.md) · [Requirements](REQUIREMENTS.md)
+· [Troubleshooting](TROUBLESHOOTING.md) · [Discussions](https://github.com/YazgulDev/warcraft-cs/discussions)
 
 0.6.1 adds configurable CS sound volume with live F8 reload and reusable rules for game settings
 and complete Release Notes. The project also includes the CS-style gold buy menu, configurable
@@ -257,6 +258,20 @@ Planned work:
 - [ ] Make further improvements based on playtesting and feedback.
 - [ ] Add multiplayer support(possibly)
 - [ ] Add Warcraft Reforge support(possibly)
+
+## Help
+
+Warcraft CS is a hobby project. Help is provided when time allows; replies and fixes are not guaranteed.
+
+1. Read [Troubleshooting](TROUBLESHOOTING.md) and check the launcher's error message.
+2. If the problem remains, ask in [Discussions — Q&A](https://github.com/YazgulDev/warcraft-cs/discussions/categories/q-a).
+   Include the release version, Player/Developer mode, Windows version, GPU, steps to reproduce
+   and the relevant log: `install.log` in your client folder for setup, or
+   `Game/WarcraftCS/WarcraftCS.log` for in-game problems.
+3. Remove personal information from logs before uploading them. Do not attach game files or saves.
+
+Working installations are useful feedback too: share your Windows/GPU details and whether you tested
+Reign of Chaos, The Frozen Throne, a campaign or a custom map. Use **Ideas** for feature requests.
 
 ## Source layout and validation
 
