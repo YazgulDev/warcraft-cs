@@ -93,8 +93,8 @@ void Overlay::Draw(HDC dc, const ShooterController& controller) {
         sky_.Draw(root_,controller.SkyName(),controller.ViewYaw(),controller.ViewPitch(),controller.ViewFov(),float(width)/height);
     glMatrixMode(GL_PROJECTION); glPushMatrix(); glLoadIdentity();
     int index = controller.WeaponIndex();
-    // Bring rifles closer while their original pose keeps forearms entering through the lower edge.
-    static constexpr float projectionScales[] = {0.72f, 0.78f, 1.0f, 0.78f, 1.0f, 0.95f, 0.85f};
+    // Slightly tighten USP/AWP framing while preserving the original lower-edge arm origins.
+    static constexpr float projectionScales[] = {0.72f, 0.78f, 0.94f, 0.73f, 1.0f, 0.95f, 0.85f};
     float projectionScale = projectionScales[index];
     float top = std::tan(45.0f * 0.01745329252f) * projectionScale; float side = top * width / height;
     glFrustum(-side, side, -top, top, 1, 200);
