@@ -1,5 +1,6 @@
 #include "Overlay.hpp"
 #include "ScopeView.hpp"
+#include "ReticleView.hpp"
 #include "BuyMenuView.hpp"
 #include <algorithm>
 #include <cmath>
@@ -49,6 +50,9 @@ void Overlay::Draw(HDC dc, const ShooterController& controller) {
     if (context_ != current) {
         ResetGraphics(false); context_ = current;
         wc3::Log("Overlay context acquired: %p", current);
+        // Record the actual driver renderer for reports where the overlay initializes but primitives disappear.
+        wc3::Log("Overlay GL vendor=%s renderer=%s version=%s lineStipple=%d",
+            glGetString(GL_VENDOR), glGetString(GL_RENDERER), glGetString(GL_VERSION), glIsEnabled(GL_LINE_STIPPLE));
     } else if (refreshPending_) {
         // Keep surviving resources: blind deletion after Alt-Tab can touch IDs recycled by the game.
         bool valid=(!font_ || glIsList(font_)) && (!statusFont_ || glIsList(statusFont_));
@@ -125,15 +129,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller) {
             "SWALLOWED: DIGESTING | F6: RETURN TO RTS TO RESCUE THIS UNIT" : "UNIT IS OUTSIDE THE WORLD | F6: RETURN TO RTS");
     }
     else if (controller.Scoped()) ScopeView::Draw(float(width), float(height));
-    else {
-        glColor4f(0.5f, 1.0f, 0.25f, 1); glLineWidth(2);
-        // The FPS world frame fills the window, so the camera ray intersects its true center.
-        float x = width * 0.5f, y = height * 0.5f, gap = 5 + controller.Recoil() * 4;
-        glBegin(GL_LINES);
-        glVertex2f(x - gap - 10, y); glVertex2f(x - gap, y); glVertex2f(x + gap, y); glVertex2f(x + gap + 10, y);
-        glVertex2f(x, y - gap - 10); glVertex2f(x, y - gap); glVertex2f(x, y + gap); glVertex2f(x, y + gap + 10);
-        glEnd();
-    }
+    else ReticleView::DrawHipFire(float(width), float(height), controller.Recoil());
     // Scale the bottom HUD from a readable 42-pixel font at 1080p, with safe edge padding.
     int statusSize = std::clamp(int(std::lround(height * (42.0f / 1080.0f))), 26, 84);
     Font(dc, statusSize);
