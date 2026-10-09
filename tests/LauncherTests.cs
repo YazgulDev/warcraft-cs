@@ -23,6 +23,9 @@ public static class LauncherTests {
             var developer=(Button)form.Controls["DeveloperInstallButton"];
             var update=(Button)form.Controls["UpdateButton"];
             var edition=(ComboBox)form.Controls["GameEdition"];
+            // Reading is independent of installation consent and is present in both actual launcher variants.
+            var logs=(Button)form.Controls["ReadLogsButton"];
+            Require(logs!=null && logs.Enabled && logs.Text=="Read logs","Log-reader action missing or consent-gated");
             // Both variants expose the same editions and preserve the previous TFT default.
             Require(edition!=null && edition.DropDownStyle==ComboBoxStyle.DropDownList && edition.Items.Count==2,
                 "Edition selector missing or allows arbitrary arguments");
@@ -94,7 +97,42 @@ public static class LauncherTests {
         release.Manifest.RuntimeSha256=null;
         using(var legacy=new UpdateAvailableForm(release,"Player",true)) Require(!((Button)legacy.Controls["ConfirmUpdate"]).Enabled,"Player prompt offers legacy source build");
         using(var dev=new UpdateAvailableForm(release,"Developer",true)) Require(((Label)dev.Controls["ModeDetails"]).Text.Contains("several GB"),"Developer prompt hides SDK download");
-        Console.WriteLine("PASS launcher consent, original-directory protection, special-character paths, ZIP traversal and source payload");
+        // Real journal discovery/reader/export work with Unicode, live writers and retained sessions.
+        var logRoot=Path.Combine(root,"log-reader");var gameLogs=Path.Combine(logRoot,"Game","WarcraftCS");
+        Directory.CreateDirectory(gameLogs);
+        var runtimeLog=Path.Combine(gameLogs,"WarcraftCS.log");
+        File.WriteAllText(runtimeLog,"Прицел: hip-fire\r\n",new System.Text.UTF8Encoding(false));
+        File.WriteAllText(Path.Combine(gameLogs,"WarcraftCS.1.log"),"previous session");
+        File.WriteAllText(Path.Combine(logRoot,"install.log"),"installer");
+        var replacement=Path.Combine(logRoot,"updates","revision-test");Directory.CreateDirectory(replacement);
+        File.WriteAllText(Path.Combine(replacement,"launcher-replacement.log"),"replacement");
+        var launcherLogs=Path.Combine(logRoot,"launcher-journal");LauncherLog.Append(launcherLogs,"session-start");
+        Require(LogCatalog.List(logRoot,launcherLogs).Count==5,"Known log sessions/installer/launcher/replacement missing");
+        Require(LogCatalog.List(Path.Combine(root,"no-log-installation"),null).Count==0,"Empty installation cannot be read safely");
+        using(var writer=new FileStream(runtimeLog,FileMode.Append,FileAccess.Write,FileShare.ReadWrite|FileShare.Delete)) {
+            byte[] line=System.Text.Encoding.UTF8.GetBytes("live-append\r\n");writer.Write(line,0,line.Length);writer.Flush();
+            Require(LogCatalog.ReadTail(runtimeLog).Contains("Прицел") && LogCatalog.ReadTail(runtimeLog).Contains("live-append"),"Live UTF-8 journal is unreadable");
+        }
+        var large=Path.Combine(gameLogs,"WarcraftCS.2.log");File.WriteAllText(large,new string('x',600000)+"\nlast-complete-line\n");
+        var tail=LogCatalog.ReadTail(large);Require(tail.Length<513000 && tail.Contains("last-complete-line") && tail.Contains("last 512 KiB"),"Viewer tail is not bounded");
+        Require(tail.Contains("last-complete-line\r\n"),"LF-only log lines will join together in the WinForms reader");
+        var exported=Path.Combine(logRoot,"full-export.log");LogCatalog.Export(large,exported);
+        Require(File.ReadAllText(exported)==File.ReadAllText(large),"Full export omitted the hidden log prefix");
+        bool exportRejected=false;try { LogCatalog.Export(runtimeLog,runtimeLog); } catch(IOException) { exportRejected=true; }
+        Require(exportRejected,"Export overwrote the live log");
+        using(var viewer=new LogViewerForm(logRoot,true)) {
+            viewer.StartPosition=FormStartPosition.Manual;viewer.Location=new System.Drawing.Point(-10000,-10000);viewer.Show();Application.DoEvents();
+            viewer.RefreshFiles();
+            var text=(TextBox)viewer.Controls["LogContents"];
+            Require(text.ReadOnly && text.Text.Contains("live-append"),"Actual reader does not open the current game log");
+            File.AppendAllText(runtimeLog,"next-refresh\n");viewer.RefreshFiles();
+            Require(text.Text.Contains("next-refresh"),"Refresh did not reload a changed log");viewer.Close();
+        }
+        // Launcher rotation is shared with live readers and never mixes diagnostics with player configuration.
+        var launcherFile=Path.Combine(launcherLogs,"launcher.log");File.WriteAllText(launcherFile,new string('l',4*1024*1024));
+        using(var reader=new FileStream(launcherFile,FileMode.Open,FileAccess.Read,FileShare.ReadWrite|FileShare.Delete)) LauncherLog.Append(launcherLogs,"rotated-launcher");
+        Require(File.Exists(Path.Combine(launcherLogs,"launcher.1.log")) && File.ReadAllText(launcherFile).Contains("rotated-launcher"),"Launcher rotation failed with a live reader");
+        Console.WriteLine("PASS launcher consent, original-directory protection, special-character paths, ZIP traversal, source payload and live log viewer/export");
         return 0;
     }
 }

@@ -2,6 +2,19 @@
 #include "../application/ShooterController.hpp"
 
 std::optional<LRESULT> InputDispatcher::Handle(HWND window, UINT message, WPARAM key, LPARAM data, bool healthy) {
+    // Record mod controls only: never log WM_CHAR, pasted text or unrelated desktop keystrokes.
+    bool controlKey = key == VK_F6 || (healthy && controller_.Visible() &&
+        (key == 'W' || key == 'A' || key == 'S' || key == 'D' || key == 'R' || key == 'B' ||
+         key == 'E' || key == 'H' || key == 'O' || key == 'J' || key == VK_SPACE || key == VK_CONTROL ||
+         key == VK_SHIFT || key == VK_ESCAPE || key == VK_OEM_PERIOD ||
+         (key >= '0' && key <= '9') || (key >= VK_F7 && key <= VK_F10)));
+    if (controlKey && (message == WM_KEYUP || ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN) && !(data & (1L << 30)))))
+        wc3::Trace("control key=%u event=%s fps=%d buying=%d healthy=%d", unsigned(key),
+            message == WM_KEYUP ? "up" : "down", controller_.Visible(), controller_.Buying(), healthy);
+    if (healthy && controller_.Visible() && (message == WM_LBUTTONDOWN || message == WM_LBUTTONUP ||
+        message == WM_RBUTTONDOWN || message == WM_RBUTTONUP || message == WM_MOUSEWHEEL))
+        wc3::Trace("control mouseMessage=%u wheel=%d buying=%d", message,
+            message == WM_MOUSEWHEEL ? GET_WHEEL_DELTA_WPARAM(key) : 0, controller_.Buying());
     if (message==WM_INPUT) {
         // Raw packets retain fast movement and keep 360-degree look independent of cursor recentering.
         controller_.MouseInput(data,healthy && controller_.Visible() && !controller_.Buying() && GetForegroundWindow()==window);

@@ -25,6 +25,8 @@ $sources += @('config/GameplaySettings.cpp','inventory/ItemPickup.cpp','squad/Sq
 $sources += '"' + (Join-Path $modRoot 'src/geometry/TreeTrunkMesh.cpp') + '"'
 # Shared filled aiming geometry is compiled into both ordinary Player builds and scope rendering.
 $sources += '"' + (Join-Path $modRoot 'src/presentation/ReticleView.cpp') + '"'
+# Thread-safe bounded diagnostics are a native platform adapter, not controller/file ownership.
+$sources += '"' + (Join-Path $modRoot 'src/platform/DiagnosticLog.cpp') + '"'
 # Shop access is native-world policy; inventory prices/navigation remain independently testable.
 $sources += @('economy/BuyAccess.cpp','presentation/BuyMenuView.cpp','presentation/SkyView.cpp','platform/MapEnvironment.cpp','platform/NativeSky.cpp','platform/NativeFloatingText.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 # Install defaults only once so rebuilds preserve the player's customized settings.
@@ -60,6 +62,18 @@ if ($TestWorldSurfaces) {
 }
 $buildDirectory = Join-Path $modRoot 'build'
 New-Item -ItemType Directory -Path $buildDirectory -Force | Out-Null
+# Fingerprint the compiled source/config inputs; support logs distinguish same-version test DLLs.
+$fingerprints=@(Get-ChildItem -LiteralPath (Join-Path $modRoot 'src') -Recurse -File | Sort-Object FullName | ForEach-Object {
+    $_.FullName.Substring($modRoot.Length)+':'+(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
+})
+$fingerprints+=(Get-FileHash -LiteralPath (Join-Path $modRoot 'config/WarcraftCS.ini')).Hash
+$fingerprints+=$testDefine
+$sourceHasher=[Security.Cryptography.SHA256]::Create()
+try { $sourceDigest=([BitConverter]::ToString($sourceHasher.ComputeHash([Text.Encoding]::UTF8.GetBytes(($fingerprints -join "`n"))))).Replace('-','').ToLowerInvariant() }
+finally { $sourceHasher.Dispose() }
+$metadata=Join-Path $buildDirectory 'BuildDiagnostics.hpp'
+$buildVersion=(Get-Content -LiteralPath (Join-Path $modRoot 'VERSION') -Raw).Trim()
+[IO.File]::WriteAllLines($metadata,@('#pragma once',('#define WCS_BUILD_VERSION "'+$buildVersion+'"'),('#define WCS_BUILD_SOURCE "'+$sourceDigest+'"')),[Text.UTF8Encoding]::new($false))
 # Preserve Miles byte-for-byte and forward its complete export table from a tiny loader.
 $originalSound = Join-Path $OutputDirectory 'WarcraftOriginalMss.dll'
 if (!(Test-Path -LiteralPath $originalSound)) {
@@ -85,7 +99,7 @@ $hookCommands=@('@echo off','chcp 65001 >nul',('call "'+$compilerEnvironment+'" 
 Push-Location $hookBuild
 # The working directory owns this fixed filename, avoiding cmd parsing of user-chosen path characters.
 try { & $env:COMSPEC /d /c compile.cmd; if ($LASTEXITCODE) { throw 'MinHook x86 build failed.' } } finally { Pop-Location }
-$compileCommand = 'cl /nologo /LD /MT /std:c++17 /EHsc /W4 /O2 /DWIN32_LEAN_AND_MEAN /DNOMINMAX' + $testDefine + ' /I"' + $hookRoot + '" ' + ($sources -join ' ') + ' /link /OUT:"' + (Join-Path $OutputDirectory 'WarcraftCS.mix') + '" "' + $hookLibrary + '" user32.lib gdi32.lib opengl32.lib version.lib winmm.lib ole32.lib'
+$compileCommand = 'cl /nologo /LD /MT /std:c++17 /EHsc /W4 /O2 /DWIN32_LEAN_AND_MEAN /DNOMINMAX /FI"' + $metadata + '"' + $testDefine + ' /I"' + $hookRoot + '" ' + ($sources -join ' ') + ' /link /OUT:"' + (Join-Path $OutputDirectory 'WarcraftCS.mix') + '" "' + $hookLibrary + '" user32.lib gdi32.lib opengl32.lib version.lib winmm.lib ole32.lib'
 # A saved batch file avoids nested cmd/PowerShell quoting around Visual Studio paths.
 $buildScript = Join-Path $buildDirectory 'compile.cmd'
 $loaderCommand = 'cl /nologo /LD /MT /O2 /W4 /DWIN32_LEAN_AND_MEAN "' + (Join-Path $modRoot 'src/runtime/MilesLoader.cpp') + '" "' + [System.IO.Path]::ChangeExtension($exports, '.cpp') + '" /link /DEF:"' + $exports + '" /OUT:"' + (Join-Path $OutputDirectory 'Mss32.dll') + '"'

@@ -108,6 +108,10 @@ The launcher itself is unsigned; dependency installers have verified vendor sign
 Detailed folder examples, first launch, updates and removal: [INSTALL.md](INSTALL.md).
 Developer build instructions: [Client launcher](docs/CLIENT-LAUNCHER.md).
 
+This test branch adds **Read logs** to both launchers. It opens game/session archives, installation,
+launcher and replacement journals directly, with refresh, copy and full-file export. See
+[Diagnostics](docs/DIAGNOSTICS.md) for the new logging controls; these changes are not yet published.
+
 If the old 0.5.0 Player updater reports that this release requires a source build, download the new
 DLL-included EXE directly and select your existing installation folder. No compiler download is silently enabled.
 
@@ -169,6 +173,12 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 EXE installation: `<installation folder>/Game/WarcraftCS/WarcraftCS.ini`.
 Default source installation: `.local/warcraft-cs/WarcraftCS/WarcraftCS.ini`.
 Edit it and press F8 in FPS.
+
+- `[Logging] Detailed=true` enables control, validated-setting, movement and renderer details.
+  `IntervalMs=1000` samples movement/render summaries every second (100–60000 ms).
+  `MaxFileMB=8` bounds each runtime log to 1–64 MiB; `ArchiveCount=3` keeps 0–8 previous
+  sessions/segments. Startup and F8 apply all four values. Essential events/errors remain when details
+  are disabled. Updates preserve custom values. See [Diagnostics](docs/DIAGNOSTICS.md).
 
 - `[Audio] CSVolumePercent=100` controls all CS sounds independently of Warcraft audio. Range: **0–100**;
   **0** mutes CS, **100** retains the previous levels, and fractional values are accepted.

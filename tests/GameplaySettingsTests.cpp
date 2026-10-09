@@ -76,6 +76,17 @@ int main() {
     WritePrivateProfileStringA("Audio","CSVolumePercent","100",path.c_str());
     assert(GameplaySettings::Load(path).csVolumePercent==100);
     DeleteFileA(path.c_str());
+    // Diagnostic defaults, bounds and F8-style reloads use the actual INI parser.
+    { std::ofstream file(path); file << "[Logging]\nDetailed=false\nIntervalMs=1\nMaxFileMB=999\nArchiveCount=-1\n"; }
+    settings=GameplaySettings::Load(path);
+    assert(!settings.logging.detailed && settings.logging.intervalMs==100 && settings.logging.maxFileMB==64 && settings.logging.archiveCount==0);
+    WritePrivateProfileStringA("Logging","Detailed","true",path.c_str());
+    WritePrivateProfileStringA("Logging","IntervalMs","2500",path.c_str());
+    settings=GameplaySettings::Load(path); assert(settings.logging.detailed && settings.logging.intervalMs==2500);
+    { std::ofstream file(path); file << "[Logging]\nDetailed=invalid\nIntervalMs=nan\nMaxFileMB=broken\nArchiveCount=inf\n"; }
+    settings=GameplaySettings::Load(path);
+    assert(settings.logging.detailed && settings.logging.intervalMs==1000 && settings.logging.maxFileMB==8 && settings.logging.archiveCount==3);
+    DeleteFileA(path.c_str());
     // Visibility settings reject malformed values and bound work to the world camera's range.
     const PercentCase distances[]={{"0",0},{"900",900},{"-10",0},{"99999",5000},{"nan",1200},{"broken",1200}};
     for (const auto& test : distances) {

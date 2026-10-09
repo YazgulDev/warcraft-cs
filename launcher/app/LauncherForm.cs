@@ -16,6 +16,7 @@ namespace WarcraftCSLauncher {
         private readonly Label status = new Label();
         private readonly ProgressBar progress = new ProgressBar();
         private readonly ComboBox edition = new ComboBox();
+        private readonly Button readLogs = new Button();
         private bool busy;
         private bool checking;
         private ReleaseUpdate latest;
@@ -85,7 +86,10 @@ namespace WarcraftCSLauncher {
             update.Name="UpdateButton"; update.Text="Update"; update.SetBounds(163,717,125,38);
             update.Click += async (s,e) => await UpdateProject(); Controls.Add(update);
             check.Name="CheckUpdatesButton"; check.Text="Check for updates"; check.SetBounds(302,717,170,38); check.Click+=async(s,e)=>await CheckUpdates(); Controls.Add(check);
-            progress.SetBounds(578,727,178,18); Controls.Add(progress);
+            // Both EXEs can read journals while setup is busy and before download consent is granted.
+            readLogs.Name="ReadLogsButton"; readLogs.Text="Read logs"; readLogs.SetBounds(486,717,125,38);
+            readLogs.Click += (s,e) => { var viewer=new LogViewerForm(destination.Text,preview);viewer.Show(this); }; Controls.Add(readLogs);
+            progress.SetBounds(628,727,128,18); Controls.Add(progress);
             status.SetBounds(24,771,732,38); status.Text="Choose folders, agree to downloads, then click Install."; Controls.Add(status);
             log.SetBounds(24,813,732,80); log.Multiline=true; log.ReadOnly=true; log.ScrollBars=ScrollBars.Vertical;
             log.Font=new Font("Consolas", 9); Controls.Add(log);
@@ -104,7 +108,7 @@ namespace WarcraftCSLauncher {
                 // Restore folders and the edition only; saved preferences never grant download permission.
                 warcraft.Text=saved.WarcraftDirectory; cs.Text=saved.CounterStrikeDirectory; destination.Text=saved.InstallDirectory;
                 edition.SelectedIndex=GameEdition.Normalize(saved.GameEdition)==GameEdition.ReignOfChaos ? 1 : 0;
-            } catch { status.Text="Previous folder settings could not be loaded. Select folders again."; }
+            } catch (Exception error) { Report("Preferences load failed: "+error);status.Text="Previous folder settings could not be loaded. Select folders again."; }
         }
         private void FolderRow(string title, TextBox box, int y) {
             AddLabel(title,24,y,730,24,Font); box.SetBounds(24,y+27,619,30); Controls.Add(box);
@@ -133,19 +137,33 @@ namespace WarcraftCSLauncher {
             progress.Style=value ? ProgressBarStyle.Marquee : ProgressBarStyle.Blocks; RefreshActions();
         }
         private void Report(string line) {
-            if (InvokeRequired) { BeginInvoke(new Action<string>(Report), line); return; }
+            // Persist once before UI marshaling: child-process callbacks can outlive the launcher form.
+            if (!preview) LauncherLog.Write(line);
+            if (IsDisposed || Disposing) return;
+            if (InvokeRequired) {
+                try { BeginInvoke(new Action<string>(AppendReport),line); } catch (InvalidOperationException) { }
+                return;
+            }
+            AppendReport(line);
+        }
+        private void AppendReport(string line) {
+            if (IsDisposed || Disposing) return;
             log.AppendText(line+Environment.NewLine);
+            // Keep the embedded progress box responsive; complete output remains in the persistent journal.
+            if (log.TextLength > 128 * 1024) log.Text=log.Text.Substring(log.TextLength-64*1024);
         }
         private async Task Install(string mode) {
             if (!consent.Checked) return;
             // Install always uses this EXE's reviewed payload; only Update fetches a GitHub release.
             SetBusy(true); log.Clear(); status.Text="Installing... Progress and errors appear below.";
             var request=CurrentRequest(mode);
+            Report("Install started mode="+mode+" version="+CurrentVersion+" source="+SourcePayload.Revision+" destination="+destination.Text);
             try {
                 await SetupRunner.Install(request, consent.Checked, Report);
                 Directory.CreateDirectory(Path.GetDirectoryName(Preferences)); request.Save(Preferences);
                 status.Text="Ready. Press Play, select a living owned unit and press F6.";
-            } catch (Exception error) { Report(error.Message); status.Text="Installation incomplete. Check the log and try again."; }
+                Report("Install completed mode="+mode);
+            } catch (Exception error) { Report(error.ToString()); status.Text="Installation incomplete. Check the log and try again."; }
             finally { SetBusy(false); }
         }
         private ClientRequest CurrentRequest(string mode) {
@@ -171,6 +189,7 @@ namespace WarcraftCSLauncher {
             checking=true; RefreshActions();
             try {
                 var candidate=await Task.Run(()=>ReleaseClient.Latest());
+                Report("Update metadata received version="+(candidate==null ? "none" : candidate.Manifest.Version));
                 // The metadata request may finish after the user closes the window.
                 if (IsDisposed) return;
                 latest=candidate!=null && candidate.Manifest.IsNewer(CurrentVersion,SourcePayload.Revision,InstalledRevision()) ? candidate : null;
@@ -183,7 +202,7 @@ namespace WarcraftCSLauncher {
             } catch (Exception error) {
                 // API outages/rate limits never disable an existing installation or trigger an unverified download.
                 if (IsDisposed) return;
-                latest=null; Report("Update check unavailable: "+error.Message);
+                latest=null; Report("Update check unavailable: "+error);
                 if (!busy) status.Text="Update check unavailable. You can still Play or install the embedded version.";
             } finally { checking=false; if (!IsDisposed) RefreshActions(); }
             if (IsDisposed || busy || latest==null) return;
@@ -205,6 +224,7 @@ namespace WarcraftCSLauncher {
         private async Task ApplyUpdate(string mode) {
             if (busy || !consent.Checked || latest==null) return;
             var selected=latest; var request=CurrentRequest(mode); SetBusy(true);
+            Report("Update started target="+selected.Manifest.Version+" mode="+mode+" destination="+destination.Text);
             status.Text="Downloading and verifying the release, then updating the private installation...";
             try {
                 var package=await Task.Run(()=>ReleaseUpdater.Prepare(selected,request,true,ReleaseClient.Download));
@@ -212,13 +232,15 @@ namespace WarcraftCSLauncher {
                 await Task.Run(()=>SetupRunner.InstallSource(request,package.SourceDirectory,true,Report,package.LauncherFile));
                 Directory.CreateDirectory(Path.GetDirectoryName(Preferences)); request.Save(Preferences);
                 latest=null; status.Text="Updated. Saves, settings and original games were preserved.";
+                Report("Update setup completed version="+selected.Manifest.Version);
                 // Restart only after successful runtime setup; a failed setup never replaces the working launcher.
                 if (LauncherSelfUpdate.Schedule(package)) { SetBusy(false); Close(); return; }
-            } catch (Exception error) { Report(error.Message); status.Text="Update not completed. Check the log; retry when Warcraft is closed."; }
+            } catch (Exception error) { Report(error.ToString()); status.Text="Update not completed. Check the log; retry when Warcraft is closed."; }
             finally { if (!IsDisposed) SetBusy(false); }
         }
         private async Task Play() {
             SetBusy(true);
+            Report("Play requested edition="+edition.SelectedItem+" destination="+destination.Text);
             try {
                 var saved=new JavaScriptSerializer().Deserialize<System.Collections.Generic.Dictionary<string,string>>(File.ReadAllText(Path.Combine(destination.Text,"client-installed.json")));
                 var source=Path.GetFullPath(saved["source"]);
@@ -230,7 +252,8 @@ namespace WarcraftCSLauncher {
                 // Remember the chosen campaign after a successful launch without granting download consent.
                 Directory.CreateDirectory(Path.GetDirectoryName(Preferences)); request.Save(Preferences);
                 status.Text="Warcraft started. Select your unit and press F6.";
-            } catch (Exception error) { Report(error.Message); status.Text="Could not start Warcraft. Read the log."; }
+                Report("Play completed edition="+request.GameEdition);
+            } catch (Exception error) { Report(error.ToString()); status.Text="Could not start Warcraft. Read the log."; }
             finally { SetBusy(false); }
         }
     }

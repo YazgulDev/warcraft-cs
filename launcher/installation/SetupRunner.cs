@@ -32,6 +32,8 @@ namespace WarcraftCSLauncher {
         }
 
         public static void Run(string script, string arguments, Action<string> report) {
+            // Record backend start and exit even when the installer fails before opening install.log.
+            report("Setup process starting script="+script);
             var start = new ProcessStartInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System),
                 "WindowsPowerShell", "v1.0", "powershell.exe"),
                 "-NoProfile -ExecutionPolicy Bypass -File " + Quote(script) + " " + arguments);
@@ -48,6 +50,7 @@ namespace WarcraftCSLauncher {
                 process.OutputDataReceived += (s, e) => { if (e.Data != null) report(e.Data); };
                 process.ErrorDataReceived += (s, e) => { if (e.Data != null) report(e.Data); };
                 process.Start(); process.BeginOutputReadLine(); process.BeginErrorReadLine(); process.WaitForExit();
+                report("Setup process exited code="+process.ExitCode);
                 if (process.ExitCode != 0) throw new InvalidOperationException("Setup failed. Read the log above, resolve the reported issue, then try again.");
             }
         }

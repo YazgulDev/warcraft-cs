@@ -2,6 +2,7 @@
 #include "../input/InputDispatcher.hpp"
 #include "../platform/NativeFloatingText.hpp"
 #include "../platform/WarcraftApi.hpp"
+#include "../platform/DiagnosticLog.hpp"
 #include "../application/ShooterController.hpp"
 #include "../presentation/Overlay.hpp"
 #include "../platform/MapCameraGuard.hpp"
@@ -75,6 +76,9 @@ static void APIENTRY ScissorHook(GLint x, GLint y, GLsizei width, GLsizei height
 
 static InputDispatcher input(controller);
 static LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM key, LPARAM data) {
+    // Window lifecycle explains focus, resizing and orderly exits without logging text input.
+    if (message == WM_ACTIVATEAPP || message == WM_SIZE || message == WM_CLOSE || message == WM_DESTROY)
+        wc3::Log("window event=%u value=%u size=%ux%u", message, unsigned(key), LOWORD(data), HIWORD(data));
     // Rendering owns focus resource recovery; input owns message translation and key consumption.
     if (message == WM_ACTIVATEAPP && key) overlay.RefreshAfterFocus();
     auto handled = input.Handle(window, message, key, data, healthy);
@@ -105,10 +109,10 @@ static void SafeTick(uintptr_t ui) {
     // Disable the extension on a native fault, leaving the game callback intact.
     __try { controller.Tick(ui); }
     __except (EXCEPTION_EXECUTE_HANDLER) {
-        healthy = false; wc3::Log("Controller fault %08X; disabled", GetExceptionCode());
+        healthy = false; wc3::LogError("Controller fault %08X; disabled", GetExceptionCode());
         // A diagnostic/native failure must never keep FPS input or camera ownership locked over an exit dialog.
         __try { controller.RecoverFault(); }
-        __except (EXCEPTION_EXECUTE_HANDLER) { wc3::Log("Native view restoration failed; input remains released"); }
+        __except (EXCEPTION_EXECUTE_HANDLER) { wc3::LogError("Native view restoration failed; input remains released"); }
     }
 }
 static int __fastcall WorldHook(uintptr_t ui, uintptr_t unused) {
@@ -155,7 +159,12 @@ static int __fastcall WorldHook(uintptr_t ui, uintptr_t unused) {
     nativeUIPhase = true;
     return result;
 }
-static void __cdecl PauseHook(BOOL value) { controller.SetPaused(value != FALSE); originalPause(value); }
+static void __cdecl PauseHook(BOOL value) {
+    // Log real pause transitions rather than repeated map requests for the same state.
+    static BOOL previous = FALSE;
+    if (previous != value) { wc3::Log("native pause=%d", value); previous = value; }
+    controller.SetPaused(value != FALSE); originalPause(value);
+}
 static void __fastcall UIHook(uintptr_t frame, uintptr_t unused) {
     // Suppress classic console/cinematic backing only during live FPS; menus keep their UI.
     using GetUI = uintptr_t (__fastcall*)(int, int);
@@ -176,6 +185,9 @@ static void __fastcall PerspectiveHook(uintptr_t output, uintptr_t unused, float
     originalPerspective(output, unused, fov, aspect, nearZ, farZ);
 }
 static BOOL WINAPI SwapHook(HDC dc, UINT planes) {
+    static DWORD previous = 0;
+    static unsigned frames = 0;
+    ++frames;
     ObserveMap(CurrentUI());
     HWND window = WindowFromDC(dc);
     if (!gameWindow && window && GetWindowThreadProcessId(window, nullptr) == GetCurrentThreadId()) {
@@ -187,7 +199,17 @@ static BOOL WINAPI SwapHook(HDC dc, UINT planes) {
     overlayPass = true;
     if (healthy && GetTickCount() - lastWorld < 500) overlay.Draw(dc, controller);
     overlayPass = false; nativeUIPhase = false;
-    return originalSwap(dc, planes);
+    // Observe skipped frames too: a valid context alone does not establish an active FPS overlay.
+    if (DiagnosticLog::Due(previous)) {
+        RECT client = {}; if (window) GetClientRect(window, &client);
+        wc3::Trace("render frames=%u healthy=%d fps=%d worldAgeMs=%lu context=%p focus=%d window=%ldx%ld buying=%d scope=%d",
+            frames, healthy, controller.Visible(), GetTickCount() - lastWorld, wglGetCurrentContext(),
+            window == GetForegroundWindow(), client.right, client.bottom, controller.Buying(), controller.Scoped());
+        frames = 0;
+    }
+    BOOL result = originalSwap(dc, planes);
+    if (!result) wc3::LogError("SwapLayerBuffers failed win32=%lu", GetLastError());
+    return result;
 }
 static bool Hook(void* target, void* callback, void** original) {
     MH_STATUS create = MH_CreateHook(target, callback, original);
@@ -198,8 +220,19 @@ static bool Hook(void* target, void* callback, void** original) {
 static DWORD WINAPI Initialize(void*) {
     HMODULE game = nullptr;
     for (int i = 0; i < 100 && !game; ++i) { game = GetModuleHandleA("Game.dll"); if (!game) Sleep(100); }
+    // Load retention before opening so custom archive limits apply to the previous session too.
+    DiagnosticLog::Configure(GameplaySettings::Load(std::string(root) + "\\WarcraftCS.ini").logging);
     wc3::OpenLog(root);
-    if (!game || !wc3::Bind(game)) return 0;
+    SYSTEM_INFO system = {}; GetNativeSystemInfo(&system);
+    wc3::Log("Session start version=%s source=%s compiled=%s %s nativeArch=%u pid=%lu",
+        WCS_BUILD_VERSION, WCS_BUILD_SOURCE, __DATE__, __TIME__, system.wProcessorArchitecture, GetCurrentProcessId());
+    using GetVersion = LONG (WINAPI*)(OSVERSIONINFOW*);
+    auto getVersion = reinterpret_cast<GetVersion>(GetProcAddress(GetModuleHandleA("ntdll.dll"), "RtlGetVersion"));
+    OSVERSIONINFOW version = {}; version.dwOSVersionInfoSize = sizeof(version);
+    if (getVersion && getVersion(&version) == 0)
+        wc3::Log("Windows kernel=%lu.%lu build=%lu", version.dwMajorVersion, version.dwMinorVersion, version.dwBuildNumber);
+    if (!game) { wc3::LogError("Game.dll not loaded after startup wait"); return 0; }
+    if (!wc3::Bind(game)) { wc3::LogError("Native API bind failed; no hooks installed"); return 0; }
     // Direct RoC launches must also opt out of Windows bitmap scaling before Warcraft creates its window.
     // Launcher startup supplies HIGHDPIAWARE; leave an already-created window's awareness unchanged.
     if (!IsProcessDPIAware() && !FindWindowA("Warcraft III", nullptr))

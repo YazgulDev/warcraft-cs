@@ -18,6 +18,13 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         if (end==value.c_str() || *end || !std::isfinite(parsed)) { wc3::Log("Invalid config %s.%s; using default",section,key);return fallback; }
         return std::clamp(parsed,0.0f,maximum);
     };
+    // Bound diagnostic frequency/storage at the existing INI boundary, including malformed legacy values.
+    auto detailed = text("Logging", "Detailed", "true");
+    if (!_stricmp(detailed.c_str(), "false") || detailed == "0") result.logging.detailed = false;
+    else if (_stricmp(detailed.c_str(), "true") && detailed != "1") wc3::Log("Invalid Logging.Detailed; using true");
+    result.logging.intervalMs = unsigned(std::max(100.f, number("Logging", "IntervalMs", 1000, 60000)));
+    result.logging.maxFileMB = unsigned(std::max(1.f, number("Logging", "MaxFileMB", 8, 64)));
+    result.logging.archiveCount = unsigned(number("Logging", "ArchiveCount", 3, 8));
     result.runeAmmoPercent=number("Runes","AmmoPercent",20,100);
     result.runePickupRadius=number("Runes","PickupRadius",160,400);
     result.runeAmmoAllWeapons=_stricmp(text("Runes","AmmoWeapons","all").c_str(),"current")!=0;

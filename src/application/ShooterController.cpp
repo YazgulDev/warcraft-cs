@@ -1,4 +1,5 @@
 #include "ShooterController.hpp"
+#include "../platform/DiagnosticLog.hpp"
 #include "../combat/CombatDamage.hpp"
 #include "../platform/MapCameraGuard.hpp"
 #include "../platform/SpriteTransform.hpp"
@@ -306,12 +307,27 @@ void ShooterController::SwitchWeapon(int slot) {
 void ShooterController::ReloadSettings() {
     // Replace one complete snapshot; stale fractional credit must not survive a percentage/scope change.
     settings_=GameplaySettings::Load(root_+"\\WarcraftCS.ini");
+    // Startup and F8 share validated logging settings without discarding the active session.
+    DiagnosticLog::Configure(settings_.logging);
+    wc3::Log("Logging configured detailed=%d intervalMs=%u maxFileMB=%u archives=%u",
+        settings_.logging.detailed, settings_.logging.intervalMs, settings_.logging.maxFileMB, settings_.logging.archiveCount);
     // Startup and F8 share the same CS-only gain update; Warcraft's Miles mixer is untouched.
     audio_.SetVolumePercent(settings_.csVolumePercent);
     ammoRecovery_.Reset();ammoMessage_="SETTINGS RELOADED";refillTick_=GetTickCount();
     wc3::Log("Settings loaded runePercent=%.1f ammoWeapons=%s damageMode=%s awpOneShot=%d radius=%.1f friendlyFirePercent=%.1f",
         settings_.runeAmmoPercent,settings_.runeAmmoAllWeapons ? "all" : "current",
         settings_.heroDamage ? "hero" : "weapon",settings_.awpOneShot,settings_.runePickupRadius,settings_.friendlyFirePercent);
+    // Log the validated snapshot, including prices/sky choices, rather than arbitrary raw INI contents.
+    wc3::Trace("settings loadoutAll=%d bombs=%d/%d buyAccess=%d buyRadius=%.1f shops=%s csVolume=%.1f floatingText=%.1f squadRadius=%.1f follow=%.1f leash=%.1f maxUnits=%d csSky=%d nativeSky=%d defaultSky=%s",
+        settings_.startAllWeapons, settings_.startBombs, settings_.maxBombs, int(settings_.buyAccess), settings_.buyRadius,
+        settings_.shopTypes.c_str(), settings_.csVolumePercent, settings_.floatingTextDistance, settings_.squadRadius,
+        settings_.squadFollowDistance, settings_.squadLeash, settings_.squadMaxUnits, settings_.csSky, settings_.nativeSky, settings_.defaultSky.c_str());
+    for (int slot = 0; slot < WeaponSlots::Count; ++slot)
+        wc3::Trace("settings weapon=%s damage=%.1f heroMultiplier=%.2f price=%d ammoPrice=%d ammoPack=%d",
+            weapons[slot].name, settings_.damage[slot], settings_.heroMultiplier[slot], settings_.weaponPrice[slot], settings_.ammoPrice[slot], settings_.ammoPack[slot]);
+    wc3::Trace("settings secondaryDamage knife=%.1f sword=%.1f", settings_.knifeSecondaryDamage, settings_.swordSecondaryDamage);
+    for (unsigned code = 0; code < settings_.tilesetSky.size(); ++code)
+        if (!settings_.tilesetSky[code].empty()) wc3::Trace("settings tileset=%c sky=%s", code, settings_.tilesetSky[code].c_str());
 }
 void ShooterController::PickupItem() {
     if (status_.incapacitated || status_.contained || status_.hidden) return;
@@ -693,11 +709,10 @@ void ShooterController::Tick(uintptr_t ui) {
     else if (!suppressFire_ && !status_.disarmed && ((weapons[weapon_].automatic && Down(VK_LBUTTON)) || firePressed)) Fire();
     // Sample after any newly started animation: an older tick would wrap unsigned elapsed time.
     Camera(); audio_.Tick(GetTickCount());
-    // A low-frequency state trace makes cliff clearance, jump and stance tests observable.
+    // A configurable summary observes physics/camera without writing every simulation frame.
     static DWORD lastState = 0;
-    if (now - lastState > 1000) {
-        lastState = now;
-        wc3::Log("movement x=%.1f y=%.1f ground=%.1f feet=%.1f eye=%.1f speed=%.1f duck=%.2f grounded=%d cameraEye=%.1f cameraX=%.1f cameraY=%.1f pitch=%.1f distance=%.1f fly=%.1f yaw=%.3f cameraYaw=%.3f rawMouse=%d",
+    if (DiagnosticLog::Due(lastState)) {
+        wc3::Trace("movement x=%.1f y=%.1f ground=%.1f feet=%.1f eye=%.1f speed=%.1f duck=%.2f grounded=%d cameraEye=%.1f cameraX=%.1f cameraY=%.1f pitch=%.1f distance=%.1f fly=%.1f yaw=%.3f cameraYaw=%.3f rawMouse=%d",
             wc3::Real(wc3::GetUnitX(unit_)), wc3::Real(wc3::GetUnitY(unit_)),
             wc3::Ground(wc3::Real(wc3::GetUnitX(unit_)), wc3::Real(wc3::GetUnitY(unit_))),
             movement_.FeetZ(), movement_.EyeZ(), movement_.Speed(), movement_.Duck(), movement_.Grounded(),

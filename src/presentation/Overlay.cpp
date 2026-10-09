@@ -2,6 +2,7 @@
 #include "ScopeView.hpp"
 #include "ReticleView.hpp"
 #include "BuyMenuView.hpp"
+#include "../platform/DiagnosticLog.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -183,4 +184,18 @@ void Overlay::Draw(HDC dc, const ShooterController& controller) {
     glMatrixMode(GL_TEXTURE); glPopMatrix();
     glMatrixMode(oldMode); glPopAttrib();
     if (activeTexture) activeTexture(oldTexture);
+    // Report submission decisions, not pixel visibility; sampled GL errors can originate in the host frame.
+    if (DiagnosticLog::Due(lastDiagnostic_)) {
+        GLint viewport[4] = {}; GLboolean mask[4] = {};
+        glGetIntegerv(GL_VIEWPORT, viewport); glGetBooleanv(GL_COLOR_WRITEMASK, mask);
+        GLenum observedError = glGetError();
+        wc3::Trace("overlay submitted size=%dx%d weapon=%d loaded=%d reticle=%s recoil=%.2f viewport=%d,%d,%d,%d colorMask=%d%d%d%d lineStipple=%d polygonStipple=%d observedGlError=%04X",
+            width, height, index + 1, loaded_[index], unavailableView ? "hidden-unit" : controller.Scoped() ? "scope" : "hip-fire",
+            controller.Recoil(), viewport[0], viewport[1], viewport[2], viewport[3], mask[0], mask[1], mask[2], mask[3],
+            glIsEnabled(GL_LINE_STIPPLE), glIsEnabled(GL_POLYGON_STIPPLE), observedError);
+        if (observedError != GL_NO_ERROR) wc3::LogError("OpenGL error observed after overlay=%04X (host origin possible)", observedError);
+        wc3::Trace("player hp=%.1f ammo=%d reserve=%d contained=%d hidden=%d disabled=%d disarmed=%d status=%s",
+            controller.Health(), controller.Ammo(), controller.Reserve(), controller.Status().contained, controller.Status().hidden,
+            controller.Status().incapacitated, controller.Status().disarmed, controller.Status().Label());
+    }
 }

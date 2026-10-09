@@ -9,7 +9,7 @@ $config=Join-Path $folder 'legacy.ini'
 # Updates append missing keys inside existing sections while retaining all custom values.
 Update-GameplayConfig $template $config
 $text=Get-Content -LiteralPath $config -Raw
-foreach ($required in @('AmmoPercent=37','Price=0','Damage=81','FriendlyFirePercent=25','BombCount=20','Access=anywhere','AmmoPrice=80','CSVolumePercent=100')) {
+foreach ($required in @('AmmoPercent=37','Price=0','Damage=81','FriendlyFirePercent=25','BombCount=20','Access=anywhere','AmmoPrice=80','CSVolumePercent=100','Detailed=true','IntervalMs=1000','MaxFileMB=8','ArchiveCount=3')) {
     if (!$text.Contains($required)) { throw "Missing/patched preference: $required" }
 }
 if ([regex]::Matches($text,'(?m)^\[AK47\]').Count -ne 1) { throw 'Duplicate section can hide new INI keys.' }
@@ -37,3 +37,15 @@ if (!(Get-Content -LiteralPath $empty -Raw).Contains('BombCount=20')) { throw 'E
 $fresh=Join-Path $folder 'fresh.ini';Update-GameplayConfig $template $fresh
 if ((Get-FileHash -LiteralPath $fresh).Hash -ne (Get-FileHash -LiteralPath $template).Hash) { throw 'Fresh config differs from defaults.' }
 Write-Output 'PASS fresh/legacy/empty/repeated config updates preserve custom values and expose new settings.'
+# Logging preferences survive upgrades while missing sibling keys are inserted exactly once.
+$customLogging=Join-Path $folder 'custom-logging.ini'
+@('[Logging]','Detailed=false','IntervalMs=2500','MaxFileMB=2') | Set-Content -LiteralPath $customLogging -Encoding ascii
+Update-GameplayConfig $template $customLogging
+$loggingText=Get-Content -LiteralPath $customLogging -Raw
+foreach ($setting in @('Detailed=false','IntervalMs=2500','MaxFileMB=2','ArchiveCount=3')) {
+    if (!$loggingText.Contains($setting)) { throw "Logging migration lost preference/default: $setting" }
+}
+if ([regex]::Matches($loggingText,'(?m)^\[Logging\]').Count -ne 1) { throw 'Logging migration duplicated its section.' }
+$loggingBefore=(Get-FileHash -LiteralPath $customLogging).Hash
+Update-GameplayConfig $template $customLogging
+if ((Get-FileHash -LiteralPath $customLogging).Hash -ne $loggingBefore) { throw 'Repeated logging migration changed the file.' }

@@ -44,5 +44,10 @@ line stipple, color masks, polygon stipple and wireframe state. Run it separatel
 the numerical suites do not require an OpenGL window. This regression does not establish the cause
 of an individual GPU-driver report without reproducing that user's installation.
 
+`DiagnosticLog` is a Windows adapter for synchronized UTF-8 records, bounded files and session archives.
+`LoggingSettings` joins the existing validated INI snapshot and F8 reload path. Input/runtime/presentation
+emit events or sampled summaries without owning files. Launcher `diagnostics` owns discovery, bounded
+shared reads, persistent launcher records and full export; `LogViewerForm` is its UI adapter.
+
 After structural changes, run native tests, launcher tests, the native build and both launcher package
 checks. Hook/render changes also require a disposable native map. Never run fixtures in user saves.

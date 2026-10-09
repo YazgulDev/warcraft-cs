@@ -10,6 +10,8 @@ using Bits = uint32_t;
 float Real(Bits bits);
 bool Bind(HMODULE game);
 void Log(const char* format, ...);
+void Trace(const char* format, ...);
+void LogError(const char* format, ...);
 void OpenLog(const char* directory);
 float Ground(float x, float y);
 // Query real walkable geometry above terrain; removed/dead bridges cease to supply this surface.

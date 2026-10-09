@@ -7,6 +7,10 @@ Warcraft or retrying an installation/update. Help is provided when time allows.
 
 ## Logs and first checks
 
+On the diagnostic test branch, click **Read logs** in either launcher to inspect and export the selected
+installation's logs, including retained game sessions. The viewer works while the game/setup is running
+and before installation. See [Diagnostics](docs/DIAGNOSTICS.md) for retention and F8 logging settings.
+
 For a launcher installation, paths are relative to the **client installation folder** selected in
 the launcher (default `%LOCALAPPDATA%\WarcraftCS`):
 

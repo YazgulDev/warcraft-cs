@@ -1,4 +1,5 @@
 #include "WarcraftApi.hpp"
+#include "DiagnosticLog.hpp"
 #include <cstdio>
 #include <cstdarg>
 #include <cstring>
@@ -9,21 +10,22 @@ namespace wc3 {
 #define NATIVE(result, name, arguments, offset) result (__cdecl* name) arguments = nullptr;
 #include "NativeOffsets.inc"
 #undef NATIVE
-static FILE* logFile = nullptr;
 static uintptr_t nativeBase = 0;
 using SurfaceHeight = float (__fastcall*)(int, BOOL*, float, float, BOOL);
 static SurfaceHeight surfaceHeight = nullptr;
 void OpenLog(const char* directory) {
-    char path[MAX_PATH];
-    sprintf_s(path, "%s\\WarcraftCS.log", directory);
-    // Diagnostics must remain readable while the game is running.
-    logFile = _fsopen(path, "w", _SH_DENYNO);
+    // Preserve the public native API while the dedicated adapter owns session/file handling.
+    DiagnosticLog::Open(directory);
 }
 void Log(const char* format, ...) {
-    if (!logFile) return;
-    fprintf(logFile, "[%lu] ", GetTickCount());
-    va_list args; va_start(args, format); vfprintf(logFile, format, args); va_end(args);
-    fputc('\n', logFile); fflush(logFile);
+    va_list args; va_start(args, format); DiagnosticLog::Write("INFO", format, args); va_end(args);
+}
+void Trace(const char* format, ...) {
+    // High-frequency details can be disabled independently of essential events and faults.
+    va_list args; va_start(args, format); DiagnosticLog::Write("TRACE", format, args); va_end(args);
+}
+void LogError(const char* format, ...) {
+    va_list args; va_start(args, format); DiagnosticLog::Write("ERROR", format, args); va_end(args);
 }
 float Real(Bits bits) { float value; memcpy(&value, &bits, 4); return value; }
 bool Bind(HMODULE game) {
