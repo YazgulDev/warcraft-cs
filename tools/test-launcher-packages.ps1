@@ -22,6 +22,10 @@ foreach ($assembly in @($standardAssembly,$includedAssembly)) {
     $notesReader=[IO.StreamReader]::new($notesStream)
     try { $changes=$notesReader.ReadToEnd().Trim() } finally { $notesReader.Dispose() }
     Require ($changes -eq $manifest.ReleaseNotes -and $changes.StartsWith('- ')) 'Manifest and launcher change lists differ.'
+    # Check the actual resolver in each EXE, not just the text file beside its build scripts.
+    $notesType=$assembly.GetType('WarcraftCSLauncher.ReleaseNotesText')
+    $normalized=$notesType.GetMethod('Format').Invoke($null,@($changes))
+    Require ($normalized -eq (($changes -replace '\r?\n',"`r`n"))) 'Packaged change list is not accepted as plain English changes.'
     $stream=$assembly.GetManifestResourceStream('WarcraftCS.Source.zip');$memory=[IO.MemoryStream]::new()
     try {
         $stream.CopyTo($memory);$sha=[Security.Cryptography.SHA256]::Create()

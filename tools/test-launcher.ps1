@@ -34,7 +34,8 @@ Write-Output 'PASS backend refuses setup before reading even the request file wi
 $updateTests=Join-Path $build 'LauncherUpdateTests.exe'
 & $compiler /nologo /target:exe /platform:x64 "/out:$updateTests" "/resource:$payload,WarcraftCS.Source.zip" $notesResources /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll /r:System.Web.Extensions.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll (Join-Path $root 'tests/LauncherUpdateTests.cs') $sources
 if ($LASTEXITCODE) { throw 'Updater test compilation failed.' }
-& $updateTests (Join-Path $root ('.local/update-tests-'+[guid]::NewGuid().ToString('N')))
+# Include the complete published body to reproduce the normal API regression, not only empty-body fallback.
+& $updateTests (Join-Path $root ('.local/update-tests-'+[guid]::NewGuid().ToString('N'))) (Join-Path $root 'docs/RELEASE-0.6.1.md')
 if ($LASTEXITCODE) { throw 'Updater regression checks failed.' }
 # A project-authored DLL supplies version metadata only; no Warcraft binaries/assets or dependencies are used.
 $versionFixture=Join-Path $build 'VersionFixture.cs'

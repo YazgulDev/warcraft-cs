@@ -1,6 +1,6 @@
-- Добавлен параметр [Audio] CSVolumePercent для громкости звуков CS: от 0 до 100%, по умолчанию 100%.
-- Добавлено применение громкости по F8 в FPS, включая уже играющие звуки; перезапуск игры не требуется.
-- Громкость выстрелов, шагов, перезарядки и C4 регулируется отдельно от музыки и эффектов Warcraft.
-- Добавлена проверка значения громкости: неверные значения заменяются стандартными, выход за диапазон ограничивается.
-- Обновление добавляет новый параметр в старые настройки и сохраняет пользовательские значения.
-- Обновлены инструкции по установке, настройке звука и устранению проблем.
+- Added CSVolumePercent to control CS sound volume (0-100%, default 100%).
+- Added F8 volume reload for playing and future sounds without restarting the game.
+- Added separate CS volume control for shots, footsteps, reloads and C4.
+- Added volume validation and automatic limits for out-of-range values.
+- Updated config migration to add the volume setting and preserve custom values.
+- Updated installation, sound settings and troubleshooting instructions.

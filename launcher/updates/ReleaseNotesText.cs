@@ -4,30 +4,44 @@ using System.IO;
 using System.Text.RegularExpressions;
 
 namespace WarcraftCSLauncher {
-    // Version-specific reviewed lists survive GitHub rate limits without inventing changes for unknown releases.
+    // Compact English summaries are separate from the full release documentation.
     public static class ReleaseNotesText {
         public static string Resolve(ReleaseManifest manifest,string body) {
-            if (!String.IsNullOrWhiteSpace(manifest.ReleaseNotes)) return Format(manifest.ReleaseNotes);
-            if (!String.IsNullOrWhiteSpace(body)) return Format(body);
-            using (var stream=typeof(ReleaseNotesText).Assembly.GetManifestResourceStream("WarcraftCS.ReleaseNotes."+manifest.Version+".txt")) {
-                if (stream!=null) using (var reader=new StreamReader(stream)) return Format(reader.ReadToEnd());
+            string summary=Format(manifest.ReleaseNotes);
+            if (summary.Length!=0) return summary;
+            // Only the explicit metadata block may override a reviewed version-specific fallback.
+            var metadata=Regex.Match(body ?? "",@"<!--\s*launcher-summary\s*\r?\n(?<summary>[\s\S]*?)-->");
+            if (metadata.Success) {
+                summary=Format(metadata.Groups["summary"].Value);
+                if (summary.Length!=0) return summary;
             }
-            return "Список изменений для этой версии не опубликован. Подробности доступны на странице выпуска.";
+            using (var stream=typeof(ReleaseNotesText).Assembly.GetManifestResourceStream("WarcraftCS.ReleaseNotes."+manifest.Version+".txt")) {
+                if (stream!=null) using (var reader=new StreamReader(stream)) {
+                    summary=Format(reader.ReadToEnd());
+                    if (summary.Length!=0) return summary;
+                }
+            }
+            // Legacy bodies are accepted only if the entire body is already a concise change list.
+            summary=Format(body);
+            return summary.Length!=0 ? summary : "A short change list is not available for this version. See the release page for details.";
         }
         public static string Format(string text) {
-            var lines=new List<string>();bool previousBullet=false;
-            // WinForms needs CRLF. Join wrapped Markdown bullets so each change remains one logical line.
+            if (String.IsNullOrWhiteSpace(text)) return String.Empty;
+            var lines=new List<string>();
+            // Reject prose, headings, code and non-English scripts instead of turning documentation into changes.
             foreach (string raw in text.Replace("\r\n","\n").Replace('\r','\n').Split('\n')) {
                 string line=raw.Trim();
-                if (line.Length==0) { previousBullet=false;continue; }
+                if (line.Length==0) continue;
+                if (Regex.IsMatch(line,@"^(?:#{1,6}\s|```|~~~)")) return String.Empty;
                 bool bullet=Regex.IsMatch(line,@"^(?:[-*+]\s+|\d+[.)]\s+)");
-                bool heading=Regex.IsMatch(line,@"^#{1,6}\s+");
-                line=Regex.Replace(line,@"^(?:[-*+]\s+|\d+[.)]\s+|#{1,6}\s+)","");
+                line=Regex.Replace(line,@"^(?:[-*+]\s+|\d+[.)]\s+)","");
                 line=Regex.Replace(line,@"\[([^\]]+)\]\([^)]+\)","$1").Replace("**","").Replace("__","").Replace("`","");
-                if (!bullet && !heading && previousBullet) lines[lines.Count-1]+=" "+line;
-                else lines.Add("- "+line);
-                previousBullet=bullet || (!heading && previousBullet);
+                if (Regex.IsMatch(line,@"[\p{L}-[A-Za-z]]|[<>]|[\x00-\x08\x0b\x0c\x0e-\x1f]")) return String.Empty;
+                if (bullet && Regex.IsMatch(line,@"^(?:Added|Fixed|Changed|Updated|Improved|Removed|Enabled|Disabled|Preserved)\s+")) lines.Add("- "+line);
+                else if (!bullet && lines.Count!=0 && Char.IsWhiteSpace(raw[0])) lines[lines.Count-1]+=" "+line;
+                else return String.Empty;
             }
+            // WinForms needs CRLF; wrapped Markdown continuations remain one logical change.
             return String.Join("\r\n",lines);
         }
     }

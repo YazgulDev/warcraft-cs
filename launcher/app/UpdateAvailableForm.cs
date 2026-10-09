@@ -14,8 +14,10 @@ namespace WarcraftCSLauncher {
             MaximizeBox=false;MinimizeBox=false;ShowInTaskbar=false;
             Controls.Add(new Label {Text="Warcraft CS "+release.Manifest.Version+" is available",Left=20,Top=18,Width=640,Height=34,
                 Font=new Font(Font.FontFamily,16,FontStyle.Bold)});
-            // Display each reviewed change separately, including legacy manifests with no GitHub release body.
-            var notes=new TextBox {Name="ReleaseNotes",Text=ReleaseNotesText.Resolve(release.Manifest,release.Notes),
+            // Keep an already resolved metadata summary; reject full documentation supplied by a legacy caller.
+            string changeList=ReleaseNotesText.Format(release.Notes);
+            if (changeList.Length==0) changeList=ReleaseNotesText.Resolve(release.Manifest,release.Notes);
+            var notes=new TextBox {Name="ReleaseNotes",Text=changeList,
                 Left=20,Top=62,Width=640,Height=222,Multiline=true,ReadOnly=true,ScrollBars=ScrollBars.Vertical};
             Controls.Add(notes);
             var page=new LinkLabel {Text="Open release page",Left=20,Top=293,Width=640,Height=25};

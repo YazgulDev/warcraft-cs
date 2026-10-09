@@ -2,6 +2,8 @@
 
 ## Unreleased — test branches
 
+- Display compact English update summaries in both launchers; keep full GitHub documentation out of the changes box and prefer reviewed summaries over legacy release prose.
+- Support hidden launcher-summary metadata, translate the accurate 0.6.1 fallback list, and check real full-body API responses, dialog resolution and both packaged EXEs.
 - Make manual Update download and reinstall GitHub's latest stable release even when version/revision already match; startup checks still avoid repeated prompts.
 - Share full Warcraft file refresh between Install and Update, repairing missing/corrupt resources while preserving saves, INI preferences and private-only content. Back up edited original maps/campaign files before replacement.
 - Apply the current runtime repair policy when reinstalling older GitHub packages whose setup skips existing Game folders; retain Player/Developer mode, verified packages and running-game protection.

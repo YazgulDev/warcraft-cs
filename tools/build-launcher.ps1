@@ -17,13 +17,16 @@ $payload=Join-Path $build 'Source.zip'
 & git -c "safe.directory=$($root.Replace('\','/'))" -C $root archive --format=zip "--output=$payload" $tree
 if ($LASTEXITCODE) { throw 'Could not create source payload.' }
 $version=(Get-Content -LiteralPath (Join-Path $root 'VERSION') -Raw).Trim()
-# A build must carry reviewed per-line changes for its version, even when GitHub's API is unavailable.
+# Require the same compact English change-list contract that the launcher accepts at runtime.
 & git -c "safe.directory=$($root.Replace('\','/'))" -C $root diff --quiet -- launcher docs/launcher-changes tools/build-launcher.ps1
 if ($LASTEXITCODE) { throw 'Stage launcher sources and reviewed change lists before building.' }
 $changesFile=Join-Path $root ('docs/launcher-changes/'+$version+'.txt')
 if (!(Test-Path -LiteralPath $changesFile)) { throw 'Add a reviewed launcher change list for this version before building.' }
 $changes=(Get-Content -LiteralPath $changesFile -Raw -Encoding UTF8).Trim()
-if (!$changes -or @($changes -split '\r?\n' | Where-Object { $_ -notmatch '^- .+' }).Count) { throw 'Each launcher change must be a nonempty line beginning with - .' }
+if (!$changes -or @($changes -split '\r?\n' | Where-Object { $_ -notmatch '^- (Added|Fixed|Changed|Updated|Improved|Removed|Enabled|Disabled|Preserved)\s+.+' }).Count -or
+    [regex]::IsMatch($changes,'[\p{L}-[A-Za-z]]|[<>`]|[\x00-\x08\x0b\x0c\x0e-\x1f]')) {
+    throw 'Each launcher change must be one plain English line beginning with - Added, - Fixed, - Changed or another supported change verb.'
+}
 $notesResources=@(Get-ChildItem -LiteralPath (Join-Path $root 'docs/launcher-changes') -Filter '*.txt' -File | ForEach-Object {
     '/resource:'+ $_.FullName+',WarcraftCS.ReleaseNotes.'+$_.Name
 })

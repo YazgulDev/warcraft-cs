@@ -60,7 +60,7 @@ namespace WarcraftCSLauncher {
             string launcherName=included && manifest.HasDllIncludedVariant ? LauncherVariant.IncludedFile : LauncherVariant.SourceFile;
             if (!assets.ContainsKey(launcherName)) throw new InvalidDataException("The selected launcher variant is missing from this release.");
             object notes;
-            // Prefer manifest notes on both API paths; legacy releases can still supply the GitHub body.
+            // Resolve only compact change summaries; the full GitHub body belongs on the release page.
             string changeList=ReleaseNotesText.Resolve(manifest,release.TryGetValue("body",out notes) ? notes as string : null);
             return new ReleaseUpdate {Manifest=included ? manifest.ForDllIncludedLauncher() : manifest,
                 SourceUrl=assets["WarcraftCS-sources.zip"],LauncherUrl=assets[launcherName],LauncherName=launcherName,
