@@ -105,6 +105,23 @@ public static class LauncherTests {
         release.Notes="# Detailed release notes\n\nLong installation instructions.";
         using(var legacyNotes=new UpdateAvailableForm(release,"Developer",true))
             Require(((TextBox)legacyNotes.Controls["ReleaseNotes"]).Text=="Open the release page to see what changed.","Updater displays legacy long-form notes");
+        // Full public Markdown and its detailed bullets must not replace the separate hidden launcher summary.
+        release.Notes="# Detailed release notes\n\n## Configuration\n- Long configuration instructions.\n\n"+
+            "<!-- launcher-summary\n- Added CS sound volume parameter.\n- Updated Release Notes rules.\n-->\n\nMore full notes.";
+        using(var separated=new UpdateAvailableForm(release,"Developer",true)) {
+            var notes=(TextBox)separated.Controls["ReleaseNotes"];
+            Require(notes.Lines.Length==2 && notes.Lines[0]=="- Added CS sound volume parameter." &&
+                notes.Lines[1]=="- Updated Release Notes rules.","Hidden launcher summary missing or incorrectly rendered");
+            Require(!notes.Text.Contains("configuration") && !notes.Text.Contains("<!--") && !notes.Text.Contains("More full"),
+                "Full GitHub notes or metadata leaked into updater");
+        }
+        // Missing or incomplete metadata cannot spill the rest of the public release document into the dialog.
+        foreach(string invalid in new[] {null,"<!-- launcher-summary\n-->","<!-- launcher-summary\n- Incomplete metadata."}) {
+            release.Notes=invalid;
+            using(var missing=new UpdateAvailableForm(release,"Developer",true))
+                Require(((TextBox)missing.Controls["ReleaseNotes"]).Text=="Open the release page to see what changed.",
+                    "Invalid summary displays full or incomplete notes");
+        }
         Console.WriteLine("PASS launcher consent, original-directory protection, special-character paths, ZIP traversal and source payload");
         return 0;
     }

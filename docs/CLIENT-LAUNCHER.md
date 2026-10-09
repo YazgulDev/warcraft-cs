@@ -57,7 +57,8 @@ Existing game saves are not imported automatically; preserve your progress befor
 Startup checks the latest stable release of `YazgulDev/warcraft-cs`; **Check for updates** retries it.
 The separate **Update** button performs a fresh GitHub check and offers the latest project release.
 Checks always read metadata automatically, regardless of installation consent. When an update is found,
-a dialog shows the version and a short bullet list of changes. The release page links to complete notes.
+a dialog shows the version and a short bullet list of changes. The GitHub release page contains
+the complete Release Notes; a hidden `launcher-summary` comment supplies the separate dialog text.
 **Update** confirms downloads/installation; **Not now** or closing
 the window postpones it. The standard launcher always builds locally, including over a previous Player
 installation. The DLL-included launcher preserves its variant and saved Player/Developer mode.

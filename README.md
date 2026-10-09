@@ -94,6 +94,7 @@ or run `play.cmd -Edition ReignOfChaos`; `play.cmd` alone starts Frozen Throne.
 The launcher checks new stable GitHub releases automatically at every startup; **Check for updates**
 retries the check. The separate **Update** button fetches the latest stable project release from GitHub.
 A window shows its version and a short list of changes: **Update** confirms installation; **Not now** postpones it.
+The GitHub release page displays the complete Release Notes.
 The source-only launcher keeps source-only updates and builds locally, including when updating a previous
 Player installation. The DLL-included launcher retains its variant and saved Player/Developer mode.
 The dialog explains download requirements and consent.

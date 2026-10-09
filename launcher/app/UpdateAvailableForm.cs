@@ -36,9 +36,18 @@ namespace WarcraftCSLauncher {
             Controls.Add(update);Controls.Add(decline);AcceptButton=update;CancelButton=decline;
         }
         private static string ChangeSummary(string body) {
-            // Only the opening change list belongs in the updater; full notes and links remain on the release page.
+            // GitHub keeps the full Markdown notes; a hidden metadata block supplies the separate updater copy.
+            body=body ?? String.Empty;
+            const string marker="<!-- launcher-summary";
+            int start=body.IndexOf(marker,StringComparison.Ordinal);
+            if (start>=0) {
+                start+=marker.Length;
+                int end=body.IndexOf("-->",start,StringComparison.Ordinal);
+                body=end<0 ? String.Empty : body.Substring(start,end-start);
+            }
+            // Older releases may have an opening bullet list; never display their full installation prose.
             var changes=new List<string>();
-            using (var reader=new StringReader((body ?? String.Empty).Trim())) {
+            using (var reader=new StringReader(body.Trim())) {
                 string line;
                 while ((line=reader.ReadLine())!=null && line.Trim().StartsWith("- ",StringComparison.Ordinal))
                     changes.Add(line.Trim());

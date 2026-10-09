@@ -37,9 +37,9 @@ Initial source-only publication may bootstrap an empty master commit, create `re
 - Compare the immutable previous published tag with the new release tree and inspect the included commits/merges. A release branch may have advanced since publication; do not use its moving tip as the baseline.
 - Include every added feature/parameter, changed default or behavior, fix, relevant source/packaging/skill/documentation change, upgrade instructions and known limitations. Explain config keys, units/ranges and reload timing when parameters are added.
 - Reconcile the notes against the full diff and changelog before publication. Keep version, README/download information, validation claims and the uploaded GitHub release body consistent; do not claim checks that were not performed.
-- Record complete notes in the project's established release-document location. Keep historical full notes unchanged.
-- The GitHub release body shown by the updater must start with a short plain-text bullet list of what changed, for example `- Added CS sound volume parameter.` Include only changes actually shipped; examples are not permission to invent features.
-- Keep installation steps, validation details and developer explanations in the complete release document. After the opening bullet list, add a blank line and a link to those full notes; the updater displays only the change list. Use real line breaks and verify the dialog preserves them.
+- Publish complete Release Notes directly in the GitHub release body and in the project's established release-document location. A link to another document does not replace the full GitHub notes. Keep historical full notes unchanged.
+- Provide a separate short plain-text change list for the launcher in a hidden HTML comment appended to the full GitHub body: `<!-- launcher-summary`, then one `- Added ...` bullet per line, then `-->`. GitHub hides this metadata, while the launcher displays only its bullets. Include only changes actually shipped; examples are not permission to invent features.
+- Keep installation steps, validation details and developer explanations in the full visible GitHub notes. Use real line breaks in the launcher summary and verify both the complete GitHub page and the compact launcher dialog before publication. Never shorten the public release body to make the updater concise.
 
 ## Source-only commits and publication
 
