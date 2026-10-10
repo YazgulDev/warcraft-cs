@@ -33,6 +33,8 @@ $sources += '"' + (Join-Path $modRoot 'src/platform/DiagnosticLog.cpp') + '"'
 # World obstacle adapters supply movement with height-aware volumes from the active map's own models.
 # The native fog adapter owns FPS visibility overrides and restores the map when FPS ends.
 $sources += '"' + (Join-Path $modRoot 'src/platform/NativeFogOfWar.cpp') + '"'
+# Window/input recovery is a platform adapter shared by ordinary and opt-in test builds.
+$sources += '"' + (Join-Path $modRoot 'src/platform/GameWindowInput.cpp') + '"'
 $sources += '"' + (Join-Path $modRoot 'src/platform/MovementObstacles.cpp') + '"'
 # Shop access is native-world policy; inventory prices/navigation remain independently testable.
 $sources += @('economy/BuyAccess.cpp','presentation/BuyMenuView.cpp','presentation/SkyView.cpp','platform/MapEnvironment.cpp','platform/NativeSky.cpp','platform/NativeFloatingText.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }

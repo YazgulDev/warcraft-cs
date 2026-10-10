@@ -1,5 +1,22 @@
 # Validation of the 0.1.0 source baseline
 
+## Native campaign movie input recovery (test branch, 2026-10-10)
+
+Two disposable maps queued the owner's IntroX movie through PlayCinematic/ChangeLevel, then loaded
+a flat map containing one owned footman. The previous ordinary Player build reproduced the failure:
+Warcraft destroyed its original game HWND for movie playback and created a different HWND afterwards;
+F6 no longer reached the mod and FPS stayed inactive. The repaired ordinary build logged destruction
+and attachment to the replacement render window. After skipping IntroX, F6 enabled FPS, V displayed
+speed, W moved the unit, and screenshots showed the weapon and crosshair. Repeated F6 toggled RTS/FPS;
+N suppressed fog and the normal exit restored the map's fog switches. No controller faults occurred.
+Both test sessions closed through Warcraft's own exit dialogue. The real campaign, its progress and
+the user's installed files were not used; complete movie playback and a full campaign run are not claimed.
+
+Hidden Win32-window tests exercise native F6 forwarding before repair, consumption after repair,
+same-HWND procedure resets, repeated observation, an external forwarding subclass, two windows with
+different native procedures, late destruction, invalid/foreign HWND rejection and fresh attachment.
+The numerical test wrapper includes this adapter check. Ordinary x86 runtime compilation passes.
+
 ## Optional fog override (test branch, 2026-10-10)
 
 The actual owned 1.26a native registration table verifies FogEnable/FogMaskEnable `(B)V` and

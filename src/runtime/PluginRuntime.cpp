@@ -3,6 +3,7 @@
 #include "../platform/NativeFloatingText.hpp"
 #include "../platform/WarcraftApi.hpp"
 #include "../platform/DiagnosticLog.hpp"
+#include "../platform/GameWindowInput.hpp"
 #include "../application/ShooterController.hpp"
 #include "../presentation/Overlay.hpp"
 #include "../presentation/ReticleDiagnostics.hpp"
@@ -50,8 +51,8 @@ static Swap originalSwap = nullptr;
 static Pause originalPause = nullptr;
 static Perspective originalPerspective = nullptr;
 static RenderUI originalUI = nullptr;
-static WNDPROC originalWindow = nullptr;
-static HWND gameWindow = nullptr;
+static LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM key, LPARAM data);
+static GameWindowInput windowInput(WindowProc);
 static bool nativeUIPhase = false, overlayPass = false;
 static uintptr_t mapUI = 0;
 using DeleteContext = BOOL (WINAPI*)(HGLRC);
@@ -63,8 +64,8 @@ static DrawElements originalDrawElements = nullptr;
 using Viewport = void (APIENTRY*)(GLint, GLint, GLsizei, GLsizei);
 static Viewport originalViewport = nullptr, originalScissor = nullptr;
 static bool WorldRectangle(RECT& rect) {
-    return healthy && controller.Visible() && gameWindow &&
-        GetClientRect(gameWindow, &rect) && rect.right > 0 && rect.bottom > 0;
+    return healthy && controller.Visible() && windowInput.Window() &&
+        GetClientRect(windowInput.Window(), &rect) && rect.right > 0 && rect.bottom > 0;
 }
 static void APIENTRY ViewportHook(GLint x, GLint y, GLsizei width, GLsizei height) {
     RECT rect={};
@@ -80,13 +81,19 @@ static void APIENTRY ScissorHook(GLint x, GLint y, GLsizei width, GLsizei height
 
 static InputDispatcher input(controller);
 static LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM key, LPARAM data) {
+    // Each window forwards to its own native procedure, even while a replacement window is active.
+    WNDPROC previous=windowInput.Previous(window);
+    bool activeWindow=window==windowInput.Window();
     // Window lifecycle explains focus, resizing and orderly exits without logging text input.
     if (message == WM_ACTIVATEAPP || message == WM_SIZE || message == WM_CLOSE || message == WM_DESTROY)
         wc3::Log("window event=%u value=%u size=%ux%u", message, unsigned(key), LOWORD(data), HIWORD(data));
     // Rendering owns focus resource recovery; input owns message translation and key consumption.
-    if (message == WM_ACTIVATEAPP && key) overlay.RefreshAfterFocus();
-    auto handled = input.Handle(window, message, key, data, healthy);
-    return handled ? *handled : CallWindowProcA(originalWindow, window, message, key, data);
+    if (activeWindow && message == WM_ACTIVATEAPP && key) overlay.RefreshAfterFocus();
+    auto handled = activeWindow ? input.Handle(window, message, key, data, healthy) : std::optional<LRESULT>{};
+    LRESULT result=handled ? *handled : previous ? CallWindowProcA(previous, window, message, key, data) : DefWindowProcA(window,message,key,data);
+    // Forget destroyed HWNDs after native cleanup; reused handles must acquire a fresh procedure.
+    if (message==WM_NCDESTROY) {windowInput.Destroyed(window);if (activeWindow) controller.ResetMouse();}
+    return result;
 }
 static uintptr_t CurrentUI() {
     using GetUI = uintptr_t (__fastcall*)(int, int);
@@ -156,7 +163,7 @@ static int __fastcall WorldHook(uintptr_t ui, uintptr_t unused) {
         labelView.eye[2]=wc3::Real(wc3::GetCameraEyePositionZ());
         labelView.yaw=controller.ViewYaw();labelView.pitch=std::clamp(controller.ViewPitch(),-65.f,65.f);
         labelView.verticalFov=controller.ViewFov();
-        RECT rect={};if (gameWindow && GetClientRect(gameWindow,&rect) && rect.bottom>0) labelView.aspect=float(rect.right)/rect.bottom;
+        RECT rect={};if (windowInput.Window() && GetClientRect(windowInput.Window(),&rect) && rect.bottom>0) labelView.aspect=float(rect.right)/rect.bottom;
         labelView.maximumDistance=controller.Settings().floatingTextDistance;
     }
     NativeFloatingText::SetView(labelView);
@@ -198,11 +205,10 @@ static BOOL WINAPI SwapHook(HDC dc, UINT planes) {
     ++frames;
     ObserveMap(CurrentUI());
     HWND window = WindowFromDC(dc);
-    if (!gameWindow && window && GetWindowThreadProcessId(window, nullptr) == GetCurrentThreadId()) {
-        gameWindow = window;
-        originalWindow = reinterpret_cast<WNDPROC>(SetWindowLongPtrA(window, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(WindowProc)));
+    // Recheck the real render window after films: Warcraft may replace it or reset its input procedure.
+    if (windowInput.Observe(window)) {
         controller.AttachWindow(window);
-        wc3::Log("OpenGL window attached");
+        overlay.RefreshAfterFocus();
     }
     overlayPass = true;
     if (healthy && GetTickCount() - lastWorld < 500) overlay.Draw(dc, controller);

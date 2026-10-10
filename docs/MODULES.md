@@ -39,6 +39,13 @@ The window procedure forwards unconsumed messages and owns render-resource focus
 adapters isolate engine layouts; `WorldLabelVisibility` consumes a camera snapshot without Warcraft,
 Windows or OpenGL dependencies. Weapon data lives in `combat/Weapon.hpp` independently of the controller.
 
+`GameWindowInput` owns the current render-window subclass and a forwarding procedure per live HWND.
+The runtime observes that binding on each swap, including after a native movie destroys/replaces
+the game window. A known native-procedure reset is repaired; an external subclass already forwarding
+into the mod is preserved to avoid a recursive chain. Final destruction forwards native cleanup before
+discarding the record. The adapter logs attachment, recovery failures and destruction. Its hidden-window
+regression uses actual Win32 message forwarding without game files or a visible test window.
+
 `MovementPhysics` integrates momentum, jumping and gravity without engine calls. `WarcraftCollision`
 sweeps the player footprint against terrain, native bridge decks and solid model volumes supplied by
 `MovementObstacles`. The obstacle adapter owns model/type caches and clears them on map changes.

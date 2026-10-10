@@ -2,6 +2,7 @@
 
 ## Unreleased — test branches
 
+- Restore F6 and other mod controls after native campaign movies replace Warcraft's window; also recover a known native input-procedure reset and log attachment/destruction/recovery.
 - Add N to disable/restore fog of war in offline FPS, including the unexplored black mask; restore each map's switches for RTS, menus and cinematics.
 - Add `[Interface] DisableFogOfWar=false` (`true`/`false` or `1`/`0`), startup/F8 reload and upgrade preservation; N changes only the session.
 - Remove Sword and Melee RMB shortcut hints from the HUD while keeping their controls.

@@ -143,6 +143,8 @@ Your original installations remain unchanged. Additional installation and remova
 
 Choose **Single Player → Custom Game** or **Campaign**, select your own living unit and press F6.
 Individual maps do not need editing. Enable FPS again after changing maps.
+Native campaign movies can replace Warcraft's window; mod controls reconnect automatically after
+playback so F6 enables FPS in the next mission.
 
 Optional launches:
 
