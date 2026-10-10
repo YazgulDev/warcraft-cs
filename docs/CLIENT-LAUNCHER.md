@@ -57,7 +57,8 @@ Existing game saves are not imported automatically; preserve your progress befor
 Startup checks the latest stable release of `YazgulDev/warcraft-cs`; **Check for updates** retries it.
 The separate **Update** button performs a fresh GitHub check and offers the latest project release.
 Checks always read metadata automatically, regardless of installation consent. When an update is found,
-a dialog shows the version and notes. **Update** confirms downloads/installation; **Not now** or closing
+a dialog shows the version and a compact English change list. The release page contains complete notes.
+**Update** confirms downloads/installation; **Not now** or closing
 the window postpones it. The standard launcher always builds locally, including over a previous Player
 installation. The DLL-included launcher preserves its variant and saved Player/Developer mode.
 The dialog explains its dependencies and
@@ -89,7 +90,7 @@ the existing installation folder to migrate. Their missing-bundle guard prevents
 Legacy 0.3/0.4 source-build requests retain local compilation when they lack a mode field.
 
 Version comparisons prevent downgrades. Source revisions also detect repaired assets of the same version,
-so release/0.6.1 can receive fixes without moving its published v0.6.1 tag. Use the attached sources ZIP for
+so a release branch can receive fixes without moving its published tag. Use the attached sources ZIP for
 the updated build; GitHub's automatic tag archives continue to represent the original tag snapshot.
 
 The `dist` folder remains generated/untracked. Release assets include the EXE, checksum, exact embedded

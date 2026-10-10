@@ -12,7 +12,7 @@ The normal GitHub API path and its rate-limit manifest fallback resolve notes in
 valid English manifest list, valid `launcher-summary` metadata, embedded list for the exact version,
 legacy body consisting entirely of English change bullets, English unavailable message.
 Never reuse another version's list or claim unpublished fixes in a historical list. The 0.6.1 list
-describes the published audio update; test-branch crosshair/logging work is not part of that release.
+describes the published audio update; the crosshair/logging changes belong to 0.7.0.
 
 Full GitHub release documentation is never converted into change bullets. Headings, code blocks,
 configuration examples and installation prose cannot override the exact-version fallback. Markdown

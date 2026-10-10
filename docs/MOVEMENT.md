@@ -1,7 +1,6 @@
-# Experimental movement
+# Bunnyhop and airborne movement
 
-The combined test build is developed on `feature/add-half-life-strafe-bunnyhop`, based on release 0.6.1.
-It has not been merged or published as a release.
+These movement features ship in 0.7.0. Their original feature branches are retained for development history.
 
 The requested reference is LamWarp's [How to Bunny Hop](https://www.youtube.com/watch?v=WschEm9uYao).
 Run up with W, jump, and release W. Hold A while smoothly turning the mouse left, then D while turning

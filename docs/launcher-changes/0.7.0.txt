@@ -1,0 +1,15 @@
+- Added Half-Life-style air strafing and accelerating bunnyhops.
+- Added jumping over low objects and gravity-driven cliff falls.
+- Added configurable movement settings and held-Space autojump.
+- Added V to show or hide your speed in CS units per second.
+- Added N to disable or restore fog of war in offline FPS.
+- Fixed F6 and mod controls after campaign movies.
+- Improved hip-fire and sniper crosshair drawing.
+- Added detailed gameplay, movement and crosshair diagnostics.
+- Added Read logs with refresh, copy and export in both launchers.
+- Disabled AWP instant kills by default; normal damage is configurable.
+- Fixed Update to reinstall the latest GitHub release and repair game files.
+- Preserved saves, custom settings and private content during reinstalls.
+- Fixed compact English update changes in both launchers.
+- Removed basic movement, reload, jump, crouch and melee HUD hints.
+- Updated installation, troubleshooting and support documentation.

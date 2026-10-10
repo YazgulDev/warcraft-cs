@@ -7,7 +7,7 @@ Warcraft or retrying an installation/update. Help is provided when time allows.
 
 ## Logs and first checks
 
-On the diagnostic test branch, click **Read logs** in either launcher to inspect and export the selected
+In 0.7.0 or newer, click **Read logs** in either launcher to inspect and export the selected
 installation's logs, including retained game sessions. The viewer works while the game/setup is running
 and before installation. See [Diagnostics](docs/DIAGNOSTICS.md) for retention and F8 logging settings.
 
@@ -17,7 +17,7 @@ the launcher (default `%LOCALAPPDATA%\WarcraftCS`):
 | What failed | What to collect |
 | --- | --- |
 | Install or Update | The exact message in the launcher and `install.log`, if created. Early validation/download failures may appear only in the launcher. |
-| Game, F6, weapons or audio | `Game/WarcraftCS/WarcraftCS.log` after reproducing the problem. Copy it before launching again: each game session replaces this log. |
+| Game, F6, weapons or audio | `Game/WarcraftCS/WarcraftCS.log` after reproducing the problem; previous sessions are retained as numbered archives according to the INI settings. |
 | Launcher replacement/restart | `launcher-replacement.log` in the update's `updates/<revision>/` folder, if present. |
 | Source setup | The PowerShell error/output and `WarcraftCS/WarcraftCS.log` inside the prepared runtime, if the game was started. |
 

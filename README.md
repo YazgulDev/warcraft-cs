@@ -1,4 +1,4 @@
-# Warcraft CS — 0.6.1
+# Warcraft CS — 0.7.0
 
 Counter-Strike 1.6 inside Warcraft III: control your own hero or unit in first person,
 shoot, and play regular maps, campaigns and compatible custom maps.
@@ -11,12 +11,13 @@ Neither variant includes game files, models, sounds, maps or saves.
 You need your own installed copies of both games.**
 This is an early prototype with known limitations.
 
-**[Download 0.6.1](https://github.com/YazgulDev/warcraft-cs/releases/tag/v0.6.1)** ·
-[Release Notes](docs/RELEASE-0.6.1.md) · [Installation](INSTALL.md) · [Requirements](REQUIREMENTS.md)
+**[Download 0.7.0](https://github.com/YazgulDev/warcraft-cs/releases/tag/v0.7.0)** ·
+[Release Notes](docs/RELEASE-0.7.0.md) · [Installation](INSTALL.md) · [Requirements](REQUIREMENTS.md)
 · [Troubleshooting](TROUBLESHOOTING.md) · [Discussions](https://github.com/YazgulDev/warcraft-cs/discussions)
 
-0.6.1 adds configurable CS sound volume with live F8 reload and reusable rules for game settings
-and complete Release Notes. The project also includes the CS-style gold buy menu, configurable
+0.7.0 adds accelerating bunnyhops, airborne traversal, optional speed and fog controls, detailed logs,
+crosshair and campaign-movie input fixes, compact English update notes and full game reinstalls.
+The project also includes the CS-style gold buy menu, configurable
 starting equipment, multiple C4, RoC/TFT selection and `play-roc.bat`, fullscreen/Alt-Tab recovery,
 native/optional CS skies, bridge movement and corrected FPS rendering. Earlier changes are in the [changelog](CHANGELOG.md).
 
@@ -27,10 +28,14 @@ native/optional CS skies, bridge movement and corrected FPS rendering. Earlier c
 - F6 switches between FPS and RTS; fullscreen launch, relative mouse look and hidden player-unit model.
 - Consistent fullscreen DPI scaling and texture/context recovery after Alt-Tab; native hero portraits keep their layout.
 - WASD, jumping, crouching, acceleration, friction and weapon movement speeds inspired by CS.
+- Half-Life-style air strafing and held-Space bunnyhops; jump over low solids and fall from cliffs.
+- V toggles a horizontal speed counter; N toggles offline FPS fog and the unexplored mask.
+- Filled crosshair geometry and automatic control recovery after native campaign movies.
 - Classic AK/M4 and USP/AWP punch calculations, recoil recovery and burst behavior.
 - Primary and secondary melee attacks, locally imported CS sounds and a blood-free hit indicator.
 - CS-only volume in INI, including shots, reloads, footsteps and C4; F8 applies it to ongoing and future sounds.
 - Damage to units, buildings and gates; configurable allied damage (50% by default). C4 deals 2500 base area damage.
+- AWP uses ordinary configured damage by default; instant enemy kills remain an explicit INI option.
 - Warcraft stuns, roots, slows and attack restrictions also limit FPS actions.
 - E picks up items/runes through the real inventory; a successful rune restores 20% ammunition by default.
 - H recruits your own units to follow and fight, O makes them follow without attacking, J releases them.
@@ -98,7 +103,7 @@ After confirmation it reinstalls that release even when the installed version an
 A window shows its version and notes: **Update** confirms installation; **Not now** postpones it.
 Both launchers show one change per line. Reviewed lists in `docs/launcher-changes/<version>.txt`
 are included in the update manifest and embedded for known legacy versions, so GitHub API limits
-do not replace the 0.6.1 changes with a generic announcement. See the release page for full notes.
+do not replace release changes with a generic announcement. See the release page for full notes.
 The source-only launcher keeps source-only updates and builds locally, including when updating a previous
 Player installation. The DLL-included launcher retains its variant and saved Player/Developer mode.
 The dialog explains download requirements and consent.
@@ -116,9 +121,9 @@ The launcher itself is unsigned; dependency installers have verified vendor sign
 Detailed folder examples, first launch, updates and removal: [INSTALL.md](INSTALL.md).
 Developer build instructions: [Client launcher](docs/CLIENT-LAUNCHER.md).
 
-This test branch adds **Read logs** to both launchers. It opens game/session archives, installation,
+Both launchers include **Read logs**. It opens game/session archives, installation,
 launcher and replacement journals directly, with refresh, copy and full-file export. See
-[Diagnostics](docs/DIAGNOSTICS.md) for the new logging controls; these changes are not yet published.
+[Diagnostics](docs/DIAGNOSTICS.md) for logging controls and retention.
 
 If the old 0.5.0 Player updater reports that this release requires a source build, download the new
 DLL-included EXE directly and select your existing installation folder. No compiler download is silently enabled.
@@ -130,7 +135,7 @@ Run in PowerShell, replacing the game paths with your own:
 ```powershell
 git clone https://github.com/YazgulDev/warcraft-cs.git
 cd warcraft-cs
-git switch release/0.6.1
+git switch release/0.7.0
 .\setup.cmd -WarcraftDirectory "E:\Warcraft III" -CounterStrikeDirectory "C:\SteamGames\steamapps\common\Half-Life\cstrike"
 .\play.cmd
 ```
@@ -197,7 +202,7 @@ Edit it and press F8 in FPS.
   Turning in the air builds speed; straight jumps retain the run-up. `JumpBoostPercent=0` is the default,
   with an optional 0–100% bonus per moving takeoff. Low objects can be cleared above their bounds; tall solids remain blocked.
   Walking/jumping off a cliff starts a gravity-driven fall. Tune these [movement settings](docs/MOVEMENT.md);
-  all apply on F8 without resetting the current jump. This is an experimental feature on the test branch.
+  all apply on F8 without resetting the current jump. Default speed cap: 1000 CS units/s; configurable up to 2000.
 
 - `[Audio] CSVolumePercent=100` controls all CS sounds independently of Warcraft audio. Range: **0–100**;
   **0** mutes CS, **100** retains the previous levels, and fractional values are accepted.

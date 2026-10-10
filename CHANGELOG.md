@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased — test branches
+## 0.7.0 — 2026-10-10
 
 - Restore F6 and other mod controls after native campaign movies replace Warcraft's window; also recover a known native input-procedure reset and log attachment/destruction/recovery.
 - Add N to disable/restore fog of war in offline FPS, including the unexplored black mask; restore each map's switches for RTS, menus and cinematics.
@@ -26,7 +26,8 @@
 - Allow height-aware jumps over low objects and gradual gravity-driven falls from cliffs.
 - Preserve tall/unknown blockers, swept collision, bridge surfaces, map bounds and spell movement restrictions.
 - Add editable `[Movement]` settings, migration preservation and independent/native movement oracles.
-- No release merge, version bump or publication; see [movement notes](docs/MOVEMENT.md).
+- Merge all completed feature histories through release/0.6.1 and master, then create release/0.7.0; retain previous branches and immutable tags.
+- Publish both launcher variants, source-only packages, verified hashes and complete notes since v0.6.1; see [RELEASE-0.7.0](docs/RELEASE-0.7.0.md).
 
 ## 0.6.1 — 2026-10-09
 

@@ -5,7 +5,7 @@ and Counter-Strike 1.6. Reforged and other Warcraft patches are unsupported.
 This offline, single-player prototype does not download games or redistribute their content.
 Full campaign/custom-map compatibility has not been verified.
 See [REQUIREMENTS.md](REQUIREMENTS.md) for the complete system, owned-file and dependency checklist.
-Current release: **0.6.1**; [all changes and download variants](docs/RELEASE-0.6.1.md).
+Current release: **0.7.0**; [all changes and download variants](docs/RELEASE-0.7.0.md).
 Antivirus can block the unsigned hook module; see the [short explanation and checks](TROUBLESHOOTING.md#antivirus).
 
 ## Windows EXE: recommended for clients
@@ -108,7 +108,7 @@ Press **F8 in FPS** to apply it immediately, including sounds already playing. W
 music/effects are unaffected. For source installs, edit the prepared runtime's `WarcraftCS/WarcraftCS.ini`.
 Updates add this key to older configs without replacing an existing custom value.
 
-Experimental movement in the bunnyhop test branch uses the same settings file. Run up with **W**, jump,
+Half-Life-style movement uses the same settings file. Run up with **W**, jump,
 release W, then alternate **A + mouse left / D + mouse right**. Hold **Space** to chain landings.
 The `[Movement]` section controls autojump, optional takeoff boost (default **0**), speed cap,
 air acceleration, jump strength, gravity and step height; **F8 in FPS** applies changes.
@@ -153,7 +153,7 @@ The manual script requires `cstrike` itself rather than its Half-Life parent.
 ```powershell
 git clone https://github.com/YazgulDev/warcraft-cs.git
 cd warcraft-cs
-git switch release/0.6.1
+git switch release/0.7.0
 .\setup.cmd -WarcraftDirectory "E:\Warcraft III" -CounterStrikeDirectory "C:\SteamGames\steamapps\common\Half-Life\cstrike"
 .\play.cmd
 ```

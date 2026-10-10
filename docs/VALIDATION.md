@@ -1,5 +1,20 @@
 # Validation of the 0.1.0 source baseline
 
+## 0.7.0 release consolidation (2026-10-10)
+
+All completed feature tips are ancestors of the consolidated release; the old crosshair patch is
+equivalent to the retained implementation and the older summary parser is superseded by the tested
+English resolver. Merges retain their histories without reverting newer behavior. Source changes
+are compared with the immutable v0.6.1 tag. Previous tags and release/feature branches remain intact.
+
+The complete independent gameplay/window/logging wrapper, actual OpenGL reticle and sky tests,
+production-XAudio2 silent gain test, launcher/update/reinstall/replacement regressions, Miles provider
+checks and config migration in PowerShell 7/Windows PowerShell 5.1 pass. Native evidence below was
+recorded with the same consolidated gameplay implementation in disposable maps; release changes
+update version, notes and documentation. No full campaign or additional driver-specific claim is made.
+Both launchers package the reviewed 0.7.0 English list and identical audited sources; publication
+uses complete release notes with separate hidden launcher-summary metadata.
+
 ## Native campaign movie input recovery (test branch, 2026-10-10)
 
 Two disposable maps queued the owner's IntroX movie through PlayCinematic/ChangeLevel, then loaded

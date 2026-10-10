@@ -1,4 +1,4 @@
-# Diagnostic logging (test branch)
+# Diagnostic logging
 
 Both source-only and DLL-included launchers have **Read logs**. It works before installation,
 without download consent and while setup or Warcraft is running. The selected installation folder
@@ -65,5 +65,5 @@ retain their existing storage policy. Logs can fail to persist when the disk/pat
 
 For a missing-crosshair report, reproduce with the affected weapon and attach the current game log,
 an FPS screenshot, launcher version/mode, GPU/driver and map/edition. The source fingerprint distinguishes
-different test DLLs carrying the same version number. These diagnostic changes are on a test branch;
-the published 0.6.1 launcher/DLLs must be replaced by the test build to record these new fields.
+different DLLs carrying the same version number. These diagnostic fields ship in 0.7.0;
+update older launchers and modules to record them.
