@@ -131,6 +131,8 @@ void ShooterController::InterfaceRequest(bool show) {
     }
 }
 void ShooterController::Disable(bool restoreCamera) {
+    // Restore the current map before native RTS/menu input takes over.
+    nativeFog_.Update(false);fogToggleRequested_=false;
     buyMenu_.Close();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1;suppressFire_=true;
     mouseLook_.Reset();
     squad_.Release(); // Native RTS regains followers and their ordinary attack policy on F6/F10.
@@ -154,6 +156,7 @@ void ShooterController::Disable(bool restoreCamera) {
     wc3::Log("FPS disabled");
 }
 void ShooterController::ResetMap() {
+    nativeFog_.Reset();fogToggleRequested_=false; // An unloaded map's fog snapshot must be forgotten.
     collision_.Reset(); // Custom-map model bounds must never leak into the next world's collision.
     nativeSky_.Reset();
     mapTileset_=0;
@@ -317,6 +320,8 @@ void ShooterController::ReloadSettings() {
     settings_=GameplaySettings::Load(root_+"\\WarcraftCS.ini");
     // F8 restores the saved preference; V is a session switch and never rewrites the player's INI.
     showSpeed_=settings_.showSpeed;
+    fogOfWarDisabled_=settings_.disableFogOfWar;
+    wc3::Log("Fog of war configured disabled=%d",fogOfWarDisabled_);
     wc3::Log("Speed display configured visible=%d units=CS",showSpeed_);
     // Startup and F8 share validated logging settings without discarding the active session.
     DiagnosticLog::Configure(settings_.logging);
@@ -530,13 +535,20 @@ void ShooterController::Tick(uintptr_t ui) {
     toggleRequested_ = false;
     // Menus/cinematics return ownership to the map; live FPS may temporarily fill a missing native sky.
     nativeSky_.Update(ui_,Visible() && settings_.nativeSky && !settings_.csSky,mapTileset_);
+    nativeFog_.Update(Visible() && fogOfWarDisabled_);
     // A queued display tap cannot take effect after FPS is suspended or left.
-    if (!active_ || suspended_) { mouseLook_.Reset();weaponWheel_.Reset();itemRequested_=false;squadRequested_=0;speedToggleRequested_=false;return; }
+    if (!active_ || suspended_) { mouseLook_.Reset();weaponWheel_.Reset();itemRequested_=false;squadRequested_=0;speedToggleRequested_=fogToggleRequested_=false;return; }
     if (settingsRequested_) { settingsRequested_=false;ReloadSettings(); }
     if (speedToggleRequested_) {
         speedToggleRequested_=false;showSpeed_=!showSpeed_;
         wc3::Log("Speed display toggled visible=%d units=CS",showSpeed_);
     }
+    if (fogToggleRequested_) {
+        fogToggleRequested_=false;fogOfWarDisabled_=!fogOfWarDisabled_;
+        wc3::Log("Fog of war toggled disabled=%d",fogOfWarDisabled_);
+    }
+    // Apply N/F8 immediately, including restoration when the override is switched off.
+    nativeFog_.Update(fogOfWarDisabled_);
     // An explicit local test request creates one stationary target for damage verification.
     // Normal launches never create units; the request is consumed once on the game thread.
     static DWORD lastRequestCheck = 0;

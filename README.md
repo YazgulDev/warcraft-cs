@@ -176,6 +176,7 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 | H / O / J | Your units: follow and fight / follow without attacking / release squad |
 | F8 | Reload settings |
 | V | Show/hide horizontal speed in CS units/s |
+| N | Disable/restore fog of war while in FPS |
 
 ## Configuration
 
@@ -238,6 +239,11 @@ Edit it and press F8 in FPS.
   the session, including across F6 switches; startup/F8 restores the INI value (`true`/`false`, also `1`/`0`).
   The counter uses CS/GoldSrc units/s, matching `MaxBunnySpeed`; vertical jump/fall velocity is excluded.
   Updates add missing keys and preserve custom values. The HUD omits basic WASD/reload/jump/crouch hints.
+- `[Interface] DisableFogOfWar=false` keeps map visibility by default (`true`/`false`, also `1`/`0`).
+  Set `true` or press N in offline FPS to remove both explored fog and the unexplored black mask.
+  N changes only the session; startup/F8 loads the saved preference. F6, menus and cinematics restore
+  the map's captured fog/mask settings; returning to FPS reapplies the session choice. Updates preserve
+  custom values. Sword and secondary-melee shortcuts are omitted from the HUD; their controls remain.
 - `[Interface] FloatingTextDistance=1200` limits native world labels to the FPS camera view and distance
   in Warcraft units. Set `0` to hide world labels and press F8; RTS, harvesting and screen-space map text keep native behavior.
 

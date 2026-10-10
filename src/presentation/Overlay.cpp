@@ -160,13 +160,14 @@ void Overlay::Draw(HDC dc, const ShooterController& controller) {
         Text(float(width - statusSize * 9), statusY, message, statusFont_);
     }
     // Advertise wheel switching beside the existing direct-selection slots.
-    Text(25, 59, "1-7 / WHEEL: WEAPONS | 6: C4 (HOLD FIRE) | 7: SWORD | MELEE RMB: THRUST | E: ITEM | F8: CONFIG");
+    // Sword/secondary-melee remain usable, but their shortcuts no longer clutter the HUD.
+    Text(25, 59, "1-7 / WHEEL: WEAPONS | 6: C4 (HOLD FIRE) | E: ITEM | F8: CONFIG");
     // The squad mode/count remains visible after its short confirmation disappears.
     // Show the independent release key beside both recruitment policies.
     char squad[128];sprintf_s(squad,"H: FIGHT | O: FOLLOW | J: RELEASE | SQUAD %u %s",unsigned(controller.SquadCount()),controller.SquadCount() ? (controller.SquadPassive() ? "FOLLOW" : "COMBAT") : "");
     Text(25,88,squad);
     // Keep mod-specific shortcuts; familiar movement, reload, jump and crouch need no permanent tutorial.
-    Text(25, 30, "Warcraft CS by Yazgul | F6: RTS | B: BUY | .: AMMO | V: SPEED");
+    Text(25, 30, "Warcraft CS by Yazgul | F6: RTS | B: BUY | .: AMMO | V: SPEED | N: FOG");
     char economy[96];sprintf_s(economy,"GOLD %d | B: BUY | .: AMMO | F7: FREE AMMO | F9: ALL WEAPONS",controller.Gold());Text(25,117,economy);
     if (controller.RefillNotice()) Text(statusPad, statusY - statusSize - 16, controller.AmmoMessage(), statusFont_);
     // Horizontal CS units match MaxBunnySpeed, excluding vertical falling/jumping velocity.

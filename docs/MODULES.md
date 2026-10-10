@@ -49,6 +49,11 @@ The optional speed counter uses the same boundaries: `InputDispatcher` queues a 
 draws the counter above status notices. `GameplaySettings` supplies the startup/F8 preference;
 the display switch never mutates physics or writes the player's configuration.
 
+`NativeFogOfWar` owns the independent native fog/mask snapshot and temporary offline FPS override.
+The controller queues N through the input mailbox, applies the session/config preference and restores
+visibility on FPS exit or suspension. Map unload forgets the old snapshot rather than writing it
+into another map. The adapter's state transitions are tested with synthetic native switches.
+
 Apply SOLID at real boundaries: cohesive collaborators, explicit dependencies, narrow contracts and
 composition. Adapter isolates native hooks; dispatcher/mailbox separates input from simulation timing.
 The application controller still contains legacy combat and diagnostic paths; this change does not

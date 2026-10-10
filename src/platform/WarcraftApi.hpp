@@ -5,6 +5,11 @@
 #include <vector>
 
 namespace wc3 {
+// Independent native visibility switches, used only by the offline FPS override adapter.
+extern void (__cdecl* FogEnable)(BOOL);
+extern void (__cdecl* FogMaskEnable)(BOOL);
+extern BOOL (__cdecl* IsFogEnabled)();
+extern BOOL (__cdecl* IsFogMaskEnabled)();
 extern int (__cdecl* GetTerrainCliffLevel)(float*,float*);
 using Handle = uint32_t;
 using Bits = uint32_t;

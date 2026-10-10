@@ -1,5 +1,20 @@
 # Validation of the 0.1.0 source baseline
 
+## Optional fog override (test branch, 2026-10-10)
+
+The actual owned 1.26a native registration table verifies FogEnable/FogMaskEnable `(B)V` and
+IsFogEnabled/IsFogMaskEnabled `()B`. A disposable flat map started with both switches enabled.
+The ordinary Player build removed fog and the black mask on N, ignored repeat/release packets,
+restored fog/mask on F6, reapplied the session choice on re-entry, and restored them on the next N.
+F8 applied true and false DisableFogOfWar preferences. Real screenshots and native transition logs
+were inspected; the HUD no longer contains Sword or Melee RMB hints. The test game closed normally.
+
+Independent adapter tests cover all four fog/mask baselines, no repeated writes, suppression after
+map-script changes, exact restoration, fresh re-entry capture and map-unload snapshot invalidation.
+INI validation covers missing/empty/invalid/case-insensitive/0/1 values and true/false reloads;
+PS7/Windows PS5 migration retains custom preferences and inserts missing defaults without duplicates.
+Only the private runtime/map/config was used. The user's installed game and saves were unchanged.
+
 ## Optional speed counter (test branch, 2026-10-10)
 
 Real Warcraft III 1.26a on a disposable single-player map verified the ordinary Player build,

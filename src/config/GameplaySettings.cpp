@@ -57,6 +57,11 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.showSpeed=!_stricmp(showSpeed.c_str(),"true") || showSpeed=="1";
     if (!showSpeed.empty() && _stricmp(showSpeed.c_str(),"true") && _stricmp(showSpeed.c_str(),"false") &&
         showSpeed!="0" && showSpeed!="1") wc3::Log("Invalid Interface.ShowSpeed; using false");
+    // Only an explicit opt-in reveals unexplored areas; legacy/malformed settings retain map fog.
+    auto disableFog=text("Interface","DisableFogOfWar","false");
+    result.disableFogOfWar=!_stricmp(disableFog.c_str(),"true") || disableFog=="1";
+    if (!disableFog.empty() && _stricmp(disableFog.c_str(),"true") && _stricmp(disableFog.c_str(),"false") &&
+        disableFog!="0" && disableFog!="1") wc3::Log("Invalid Interface.DisableFogOfWar; using false");
     // Legacy files keep their CS volume; malformed values cannot enter the native audio mixer.
     result.csVolumePercent=number("Audio","CSVolumePercent",100,100);
     // Keep formation spacing positive and leash beyond it so units can finish nearby fights.

@@ -23,6 +23,8 @@ struct GameplaySettings {
     float floatingTextDistance=1200;
     // Startup/F8 preference; V may change visibility for the current session.
     bool showSpeed=false;
+    // Temporary FPS visibility preference; ordinary map fog is restored outside FPS.
+    bool disableFogOfWar=false;
     // Scale only the CS mixer; 100 preserves legacy levels and zero mutes every CS voice.
     float csVolumePercent=100;
     // Recruitment and spacing are configurable without rewriting map data or unit ownership.
