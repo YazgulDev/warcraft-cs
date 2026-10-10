@@ -24,5 +24,6 @@ private:
     int statusFontSize_ = 0;
     HGLRC context_ = nullptr;
     bool refreshPending_ = false;
+    DWORD lastDiagnostic_ = 0;
     SkyView sky_;
 };

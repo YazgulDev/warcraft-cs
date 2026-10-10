@@ -1,5 +1,91 @@
 # Validation of the 0.1.0 source baseline
 
+## Native campaign movie input recovery (test branch, 2026-10-10)
+
+Two disposable maps queued the owner's IntroX movie through PlayCinematic/ChangeLevel, then loaded
+a flat map containing one owned footman. The previous ordinary Player build reproduced the failure:
+Warcraft destroyed its original game HWND for movie playback and created a different HWND afterwards;
+F6 no longer reached the mod and FPS stayed inactive. The repaired ordinary build logged destruction
+and attachment to the replacement render window. After skipping IntroX, F6 enabled FPS, V displayed
+speed, W moved the unit, and screenshots showed the weapon and crosshair. Repeated F6 toggled RTS/FPS;
+N suppressed fog and the normal exit restored the map's fog switches. No controller faults occurred.
+Both test sessions closed through Warcraft's own exit dialogue. The real campaign, its progress and
+the user's installed files were not used; complete movie playback and a full campaign run are not claimed.
+
+Hidden Win32-window tests exercise native F6 forwarding before repair, consumption after repair,
+same-HWND procedure resets, repeated observation, an external forwarding subclass, two windows with
+different native procedures, late destruction, invalid/foreign HWND rejection and fresh attachment.
+The numerical test wrapper includes this adapter check. Ordinary x86 runtime compilation passes.
+
+## Optional fog override (test branch, 2026-10-10)
+
+The actual owned 1.26a native registration table verifies FogEnable/FogMaskEnable `(B)V` and
+IsFogEnabled/IsFogMaskEnabled `()B`. A disposable flat map started with both switches enabled.
+The ordinary Player build removed fog and the black mask on N, ignored repeat/release packets,
+restored fog/mask on F6, reapplied the session choice on re-entry, and restored them on the next N.
+F8 applied true and false DisableFogOfWar preferences. Real screenshots and native transition logs
+were inspected; the HUD no longer contains Sword or Melee RMB hints. The test game closed normally.
+
+Independent adapter tests cover all four fog/mask baselines, no repeated writes, suppression after
+map-script changes, exact restoration, fresh re-entry capture and map-unload snapshot invalidation.
+INI validation covers missing/empty/invalid/case-insensitive/0/1 values and true/false reloads;
+PS7/Windows PS5 migration retains custom preferences and inserts missing defaults without duplicates.
+Only the private runtime/map/config was used. The user's installed game and saves were unchanged.
+
+## Optional speed counter (test branch, 2026-10-10)
+
+Real Warcraft III 1.26a on a disposable single-player map verified the ordinary Player build,
+without a compiled movement oracle. The HUD omits WASD/reload/jump/crouch explanations. V shows
+250 CS units/s during a normal USP run and hides the counter on the next press; Windows key-repeat
+and release packets do not cause another toggle. V in RTS does not change FPS visibility. F8 applies
+both true and false INI preferences; screenshots confirm the counter stacks above reload notices
+without covering health/ammunition. The test game exited through its own confirmation dialog.
+
+The real INI loader checks missing/empty/malformed values, case-insensitive booleans and 0/1, plus
+repeated snapshot loads. Config migration checks fresh/legacy files, true/false custom values,
+single Interface/key occurrences and idempotence. Only a private runtime/config/map was used;
+the user's installed game and saves were not modified. The default remains ShowSpeed=false.
+
+## Full launcher reinstall (test branch)
+
+Manual Update selects an identical latest GitHub release for repair; startup checks remain quiet
+when version and revision match. Both launcher variants describe full private-game reinstall.
+Production file-copy tests repair damaged/missing core files, official maps and original audio;
+retain progress, custom INI, private assets/maps and the installed proxy until mod setup completes;
+and back up edited official content without duplicating unchanged backups on a repeat run.
+Original/overlapping/unmarked/active runtimes and junction redirection are rejected before file writes.
+
+The setup-runner integration uses current embedded repair code with synthetic legacy/modern releases
+in Player/Developer mode. Game-version metadata is provided by a project-authored test DLL. Only
+conversion/module installation is stubbed; production source extraction, Windows PowerShell launch,
+request serialization and runtime repair execute. This verifies repair before the downloaded backend,
+module/asset replacement and save/config preservation without an actual game or dependency downloads.
+
+## Unreleased bunnyhop test branch (2026-10-09)
+
+Movement, native collision, real INI parsing and migration checks pass. The numerical oracles cover
+repeated/manual jumps, acceleration and speed caps, stationary takeoffs, frame-rate behavior, air
+strafing, gravity-driven cliff falls, low props, tall/unknown blockers, full bridge footprints,
+uphill takeoff/landing momentum, shallow-water support and root/stun/slow restrictions. Configuration
+checks cover documented bounds/defaults, malformed/non-finite values, repeated reloads and preservation
+of custom movement values during repeated updates in both PowerShell 7 and Windows PowerShell 5.1.
+All existing independent gameplay suites also pass.
+
+An explicit movement fixture in a disposable Lost Temple copy on Warcraft III 1.26a verifies five
+native checks: five held-Space hops accelerate from 375 to 551 Warcraft units/s; a scaled barricade
+stops a walking actor but is cleared by jumping; a native town hall blocks the attempted jump; and
+walking off an actual cliff falls gradually from 128 to 17.2 world units and lands. Native model
+transforms include the separate visual-scale getter. Terrain uses the verified interpolated height
+backend; ordinary GetLocationZ support is preserved for shallow water. Game logs and captures were
+inspected. Test requests and destructive fixtures are excluded from ordinary builds.
+
+This is feature-branch verification, without a release/version change. No campaign save or complete
+campaign was tested. Irregular/imported geometry and other maps still require playtesting; collisions
+use model boxes, not triangle-perfect mesh contact. F8's existing production reload path applies the
+movement snapshot; no new live F8 keyboard session is claimed.
+
+## Original source baseline
+
 Windows, native x86 Warcraft III 1.26a / Game.dll 1.26.0.6401, OpenGL, offline private runtime.
 No game footage, game content, raw memory dumps or personal campaign saves are included here.
 
@@ -200,3 +286,21 @@ The configurable-game-settings and feature-release-workflow skills pass the skil
 are available in the repository and installed personal skills, and are adopted by AGENTS.md.
 No new complete campaign, live Warcraft F8-input session or clean-machine dependency install
 is claimed for this audio/settings change.
+
+## Experimental Half-Life-style air strafing
+
+Independent production-physics trials run for eight seconds at 30/60/144 FPS with alternating
+A/D turns, no W after the run-up and no takeoff bonus. Speed rises from 375 to approximately
+792/1055/960 Warcraft units/s. Straight held-Space hops preserve 375; disabling air acceleration
+removes gain, and disabling BunnyHop removes excess speed on every takeoff. Manual jumping,
+stationary jumps, root/stun/slow restrictions, optional custom boosts and live cap replacement pass.
+
+Actual production swept collision in a synthetic native world covers low props, tall/unknown
+blockers, bridge destruction/edges, hills, cliff falling and water support. A maximum-speed trial
+approaches 3000 Warcraft units/s and stops before a thin wall even when the frame's destination
+would be beyond it. Real INI loading feeds physics and supports changing a cap without resetting
+the current vertical velocity. Migration preserves older custom bonuses and adds the zero default.
+
+The opt-in native scene includes separate `strafe` and straight `hop` trials. This revision's
+real-game verification remains pending because the user's Warcraft process is active; no campaign
+or running module is replaced. Measurements above are independent physics results only.

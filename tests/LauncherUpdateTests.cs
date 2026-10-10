@@ -40,6 +40,16 @@ public static class LauncherUpdateTests {
         var request=new ClientRequest {WarcraftDirectory=wc,CounterStrikeDirectory=cs,InstallDirectory=Path.Combine(root,"Client"),InstallMode="Developer"};
         // Use a real source-only assembly: the updater now inspects the candidate for unexpected runtime resources.
         byte[] source=Archive(),exe=File.ReadAllBytes(Assembly.GetExecutingAssembly().Location); var update=Package(source,exe);
+        // Manual Update must repair an already-current installation; automatic checks stay quiet.
+        Require(UpdateSelection.Select(update,"0.3.0",update.Manifest.Revision,update.Manifest.Revision,false,false)==null,
+            "Startup reoffers an identical release");
+        Require(UpdateSelection.Select(update,"0.3.0",update.Manifest.Revision,update.Manifest.Revision,false,true)==update,
+            "Manual Update cannot reinstall an identical release");
+        Require(UpdateSelection.Select(null,"0.3.0",update.Manifest.Revision,null,false,true)==null,
+            "Unavailable metadata selected an unverified reinstall");
+        Require(UpdateSelection.Select(update,"0.3.0",update.Manifest.Revision,null,true,false)==null &&
+            UpdateSelection.Select(update,"0.3.0",update.Manifest.Revision,null,true,true)==update,
+            "Legacy same-version checks and explicit repair are not separated");
         update.Manifest.Validate("v0.3.0");
         Require(update.Manifest.IsNewer("0.2.0",update.Manifest.Revision,null),"New release skipped");
         Require(!update.Manifest.IsNewer("0.4.0","old",null),"Downgrade allowed");
@@ -74,12 +84,49 @@ public static class LauncherUpdateTests {
         // The rate-limit fallback must preserve the stable-version/checksum contract and canonical package URLs.
         var fallback=ReleaseClient.ParseLatestManifest(Encoding.UTF8.GetBytes("\uFEFF"+serializer.Serialize(update.Manifest)));
         Require(fallback.SourceUrl==update.SourceUrl && fallback.LauncherUrl==update.LauncherUrl,"Fallback changes package origin");
+        // Markdown wraps and Unix newlines must not collapse separate change items in the Windows textbox.
+        string markdown="* **Added** sound volume control\n  and F8 reload.\n- Fixed the update change list.";
+        string formatted="- Added sound volume control and F8 reload.\r\n- Fixed the update change list.";
+        Require(ReleaseNotesText.Format(markdown)==formatted,"Per-line Markdown formatting failed");
+        Require(ReleaseNotesText.Format(formatted)==formatted,"Resolved notes must remain stable when displayed");
+        string legacyMetadata=serializer.Serialize(new {draft=false,prerelease=false,tag_name="v0.3.0",assets=assets,body=markdown});
+        Require(ReleaseClient.Parse(legacyMetadata,url=>Encoding.UTF8.GetBytes(serializer.Serialize(update.Manifest))).Notes==formatted,
+            "Legacy GitHub body changes lost");
+        var knownManifest=Package(source,exe).Manifest;knownManifest.Version="0.6.1";
+        Require(ReleaseClient.ParseLatestManifest(Encoding.UTF8.GetBytes(serializer.Serialize(knownManifest))).Notes.Contains("CSVolumePercent"),
+            "Legacy manifest fallback lacks the published version's changes");
+        Require(!fallback.Notes.Contains("CSVolumePercent"),"Unknown version reuses another release's changes");
+        // Reproduce the screenshot with the real full release body on a successful GitHub API response.
+        string fullBody=File.ReadAllText(args[1]);
+        var knownAssets=new List<object>();
+        foreach (string name in new[] {"WarcraftCS-update.json","WarcraftCS-sources.zip",LauncherVariant.SourceFile,LauncherVariant.IncludedFile})
+            knownAssets.Add(new {name=name,browser_download_url="https://github.com/YazgulDev/warcraft-cs/releases/download/v0.6.1/"+name});
+        knownManifest.DllIncludedLauncherSha256=new string('b',64);knownManifest.DllIncludedRuntimeSha256=new string('c',64);
+        string knownMetadata=serializer.Serialize(new {draft=false,prerelease=false,tag_name="v0.6.1",assets=knownAssets,body=fullBody});
+        string cached=ReleaseNotesText.Resolve(knownManifest,null);
+        foreach (bool included in new[] {false,true}) {
+            var apiNotes=ReleaseClient.Parse(knownMetadata,url=>Encoding.UTF8.GetBytes(serializer.Serialize(knownManifest)),included).Notes;
+            var fallbackNotes=ReleaseClient.ParseLatestManifest(Encoding.UTF8.GetBytes(serializer.Serialize(knownManifest)),included).Notes;
+            Require(apiNotes==cached && fallbackNotes==cached && apiNotes.Split(new[] {"\r\n"},StringSplitOptions.None).Length==6,
+                "Full GitHub body overrides compact changes in one variant/API path");
+        }
+        Require(ReleaseNotesText.Format(fullBody)=="" && ReleaseNotesText.Format("- Добавлен параметр звука.")=="" &&
+            ReleaseNotesText.Format("- Added sound control.\n  ```ini\n  Volume=50\n  ```")=="", "Documentation or non-English summaries accepted");
+        string markedBody=fullBody+"\n<!-- launcher-summary\n"+markdown+"\n-->\n";
+        Require(ReleaseNotesText.Resolve(knownManifest,markedBody)==formatted,"Explicit launcher metadata was ignored");
+        knownManifest.ReleaseNotes="- Добавлен параметр звука.";
+        Require(ReleaseNotesText.Resolve(knownManifest,fullBody)==cached,"Old Russian manifest bypasses English fallback");
+        knownManifest.ReleaseNotes=null;
+        Require(ReleaseNotesText.Resolve(update.Manifest,fullBody)==fallback.Notes && fallback.Notes.StartsWith("A short change list"),
+            "Unknown version exposes full docs or a non-English unavailable message");
+        Require(ReleaseNotesText.Resolve(update.Manifest,markedBody)==formatted,"Unknown version loses explicit launcher metadata");
         Reject(()=>ReleaseClient.ParseLatestManifest(Encoding.UTF8.GetBytes("{\"Version\":\"0.3.0-beta\"}")),"Fallback permits unstable manifest");
         var runtimeDigest=update.Manifest.RuntimeSha256;
         update.Manifest.RuntimeSha256="invalid";Reject(()=>update.Manifest.Validate("v0.3.0"),"Malformed Player hash accepted");
         update.Manifest.RuntimeSha256=runtimeDigest;
         // Dual releases keep independent hashes and preserve source-only / DLL-included choices on both API paths.
         var dual=Package(source,exe);
+        dual.Manifest.ReleaseNotes="- Added sound volume control.\n- Fixed the update change list.";
         dual.Manifest.DllIncludedLauncherSha256=new string('b',64);
         dual.Manifest.DllIncludedRuntimeSha256=new string('c',64);
         dual.Manifest.Validate("v0.3.0");
@@ -93,6 +140,10 @@ public static class LauncherUpdateTests {
         Require(bundled.LauncherName==LauncherVariant.IncludedFile && bundled.Manifest.SupportsPlayer,"Included selection loses DLLs");
         Require(bundled.Manifest.LauncherSha256==dual.Manifest.DllIncludedLauncherSha256 && bundled.Manifest.RuntimeSha256==dual.Manifest.DllIncludedRuntimeSha256,"Included selection uses standard checksums");
         var bundledFallback=ReleaseClient.ParseLatestManifest(dualFetch("manifest"),true);
+        string expectedNotes=ReleaseNotesText.Format(dual.Manifest.ReleaseNotes);
+        Require(standard.Notes==expectedNotes && bundled.Notes==expectedNotes && bundledFallback.Notes==expectedNotes &&
+            bundled.Manifest.ReleaseNotes==dual.Manifest.ReleaseNotes,"Variant/API fallback lost manifest changes");
+        Require(ReleaseClient.Parse(legacyMetadata,dualFetch).Notes==expectedNotes,"Manifest list must take priority over legacy body");
         Require(bundledFallback.LauncherUrl==bundled.LauncherUrl && bundledFallback.Manifest.LauncherSha256==bundled.Manifest.LauncherSha256,"Included fallback changes variant");
         Reject(()=>ReleaseClient.Parse(metadata,dualFetch,true),"Missing included asset accepted");
         dual.Manifest.DllIncludedRuntimeSha256=null;Reject(()=>dual.Manifest.Validate("v0.3.0"),"Incomplete included checksum pair accepted");

@@ -32,6 +32,8 @@ namespace WarcraftCSLauncher {
             if (running) throw new InvalidOperationException("Close the existing Warcraft III window before starting Warcraft CS.");
             using (var game=Process.Start(start)) {
                 if (game==null) throw new InvalidOperationException("Warcraft could not be started.");
+                // Record the actual process and launch arguments independently of the running game journal.
+                LauncherLog.Write("Game started pid="+game.Id+" executable="+start.FileName+" arguments="+start.Arguments);
             }
         }
     }

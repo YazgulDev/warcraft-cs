@@ -1,4 +1,5 @@
 #include "../src/config/GameplaySettings.hpp"
+#include "MovementStrafeInput.hpp"
 #include "../src/inventory/AmmoRecovery.hpp"
 #include "../src/combat/CombatDamage.hpp"
 #include <cassert>
@@ -10,9 +11,14 @@ int main() {
     GameplaySettings settings;
     assert(settings.ContactDamage(0,false,100)==36);
     assert(settings.ContactDamage(4,true,100)==65);
-    assert(settings.FinishingAWP(3));
+    // Default AWP hits use their configured base damage rather than health-dependent finishing damage.
+    assert(!settings.FinishingAWP(3));
+    assert(CombatDamage::Amount(settings.ContactDamage(3,false,100),false,
+        CombatDamage::FinishesTarget(settings.FinishingAWP(3),false),5000)==115);
     assert(settings.friendlyFirePercent==50);
     assert(settings.floatingTextDistance==1200);
+    assert(!settings.showSpeed);
+    assert(!settings.disableFogOfWar);
     assert(settings.csVolumePercent==100);
     assert(!settings.startAllWeapons && settings.startBombs==20 && settings.maxBombs==100 );
     assert(settings.buyAccess==GameplaySettings::BuyAccess::Anywhere && !settings.csSky);
@@ -38,6 +44,52 @@ int main() {
     recovery.Reset();bomb=0;recovery.Restore(5,0,1,0,bomb,none);assert(bomb==0);
     char directory[MAX_PATH];GetCurrentDirectoryA(MAX_PATH,directory);
     std::string path=std::string(directory)+"\\settings-test.ini";
+    // Exercise the real optional HUD/fog preference boundary and live snapshot reloads.
+    const struct { const char* value; bool enabled; } speedCases[] = {
+        {"",false},{"false",false},{"true",true},{"TrUe",true},{"0",false},{"1",true},{"broken",false}
+    };
+    int speedIndex=0;
+    for (const auto& test:speedCases) {
+        const auto sample=path+".speed-"+std::to_string(speedIndex++);
+        { std::ofstream file(sample);file<<"[Interface]\nShowSpeed="<<test.value<<"\nDisableFogOfWar="<<test.value<<"\n"; }
+        assert(GameplaySettings::Load(sample).showSpeed==test.enabled);
+        assert(GameplaySettings::Load(sample).disableFogOfWar==test.enabled);
+        DeleteFileA(sample.c_str());
+    }
+    const auto speedReload=path+".speed-reload";
+    DeleteFileA(speedReload.c_str());assert(!GameplaySettings::Load(speedReload).showSpeed);
+    WritePrivateProfileStringA("Interface","ShowSpeed","true",speedReload.c_str());
+    WritePrivateProfileStringA("Interface","DisableFogOfWar","true",speedReload.c_str());
+    assert(GameplaySettings::Load(speedReload).showSpeed);
+    assert(GameplaySettings::Load(speedReload).disableFogOfWar);
+    WritePrivateProfileStringA("Interface","ShowSpeed","false",speedReload.c_str());
+    WritePrivateProfileStringA("Interface","DisableFogOfWar","false",speedReload.c_str());
+    assert(!GameplaySettings::Load(speedReload).showSpeed);
+    assert(!GameplaySettings::Load(speedReload).disableFogOfWar);DeleteFileA(speedReload.c_str());
+    // Exercise the actual INI boundary, including absent/invalid defaults and explicit opt-in/out reloads.
+    const struct { const char* value; bool enabled; } awpCases[] = {
+        {"",false},{"false",false},{"true",true},{"TrUe",true},{"0",false},{"1",true},{"broken",false}
+    };
+    int awpIndex=0;
+    for (const auto& test:awpCases) {
+        std::string sample=path+".awp-"+std::to_string(awpIndex++);
+        { std::ofstream file(sample);file<<"[Damage]\nAWPOneShot="<<test.value<<"\n"; }
+        auto configured=GameplaySettings::Load(sample);DeleteFileA(sample.c_str());
+        assert(configured.awpOneShot==test.enabled && configured.FinishingAWP(3)==test.enabled);
+        assert(!configured.FinishingAWP(0));
+        float damage=CombatDamage::Amount(configured.ContactDamage(3,false,0),false,
+            CombatDamage::FinishesTarget(configured.FinishingAWP(3),false),5000);
+        assert(test.enabled ? damage>5000 : damage==115);
+        assert(CombatDamage::Amount(configured.ContactDamage(3,false,0),true,
+            CombatDamage::FinishesTarget(configured.FinishingAWP(3),true),5000)==57.5f);
+        configured.heroDamage=true;assert(!configured.FinishingAWP(3));
+    }
+    std::string awpReload=path+".awp-reload";DeleteFileA(awpReload.c_str());
+    assert(!GameplaySettings::Load(awpReload).FinishingAWP(3));
+    WritePrivateProfileStringA("Damage","AWPOneShot","true",awpReload.c_str());
+    assert(GameplaySettings::Load(awpReload).FinishingAWP(3));
+    WritePrivateProfileStringA("Damage","AWPOneShot","false",awpReload.c_str());
+    assert(!GameplaySettings::Load(awpReload).FinishingAWP(3));DeleteFileA(awpReload.c_str());
     // Invalid formation values cannot produce zero slots or a combat leash shorter than the spacing.
     { std::ofstream file(path);file<<"[Runes]\nAmmoPercent=35\nAmmoWeapons=current\nPickupRadius=999\n[Damage]\nMode=hero\n[AK47]\nHeroMultiplier=2.5\nDamage=nan\n[USP]\nDamage=broken\n[Squad]\nRecruitRadius=9999\nMaxUnits=0\nFollowDistance=0\nCombatLeash=0\n"; }
     settings=GameplaySettings::Load(path);DeleteFileA(path.c_str());
@@ -76,6 +128,17 @@ int main() {
     WritePrivateProfileStringA("Audio","CSVolumePercent","100",path.c_str());
     assert(GameplaySettings::Load(path).csVolumePercent==100);
     DeleteFileA(path.c_str());
+    // Diagnostic defaults, bounds and F8-style reloads use the actual INI parser.
+    { std::ofstream file(path); file << "[Logging]\nDetailed=false\nIntervalMs=1\nMaxFileMB=999\nArchiveCount=-1\n"; }
+    settings=GameplaySettings::Load(path);
+    assert(!settings.logging.detailed && settings.logging.intervalMs==100 && settings.logging.maxFileMB==64 && settings.logging.archiveCount==0);
+    WritePrivateProfileStringA("Logging","Detailed","true",path.c_str());
+    WritePrivateProfileStringA("Logging","IntervalMs","2500",path.c_str());
+    settings=GameplaySettings::Load(path); assert(settings.logging.detailed && settings.logging.intervalMs==2500);
+    { std::ofstream file(path); file << "[Logging]\nDetailed=invalid\nIntervalMs=nan\nMaxFileMB=broken\nArchiveCount=inf\n"; }
+    settings=GameplaySettings::Load(path);
+    assert(settings.logging.detailed && settings.logging.intervalMs==1000 && settings.logging.maxFileMB==8 && settings.logging.archiveCount==3);
+    DeleteFileA(path.c_str());
     // Visibility settings reject malformed values and bound work to the world camera's range.
     const PercentCase distances[]={{"0",0},{"900",900},{"-10",0},{"99999",5000},{"nan",1200},{"broken",1200}};
     for (const auto& test : distances) {
@@ -95,5 +158,38 @@ int main() {
     settings=GameplaySettings::Load(path);DeleteFileA(path.c_str());
     assert(settings.buyAccess==GameplaySettings::BuyAccess::FriendlyBuildings && settings.startBombs==0 && settings.tilesetSky['A']=="forest");
     assert(settings.nativeSky && !settings.csSky);
+    // Real INI parsing bounds every movement knob before the physics snapshot is applied.
+    { std::ofstream file(path); file << "[Movement]\nBunnyHop=false\nAutoJump=false\nJumpBoostPercent=250\nMaxBunnySpeed=1\nAirAcceleration=nan\nJumpSpeed=0\nGravity=9999\nStepHeight=-5\n"; }
+    settings=GameplaySettings::Load(path);DeleteFileA(path.c_str());
+    assert(!settings.movement.bunnyHop && !settings.movement.autoJump);
+    assert(settings.movement.jumpBoostPercent==100 && settings.movement.maxBunnySpeed==250);
+    assert(settings.movement.airAcceleration==10 && settings.movement.jumpSpeed==1);
+    assert(settings.movement.gravity==3000 && settings.movement.stepHeight==0);
+    { std::ofstream file(path); file << "[Movement]\nBunnyHop=broken\nAutoJump=\nJumpBoostPercent=inf\nMaxBunnySpeed=nan\nJumpSpeed=broken\nGravity=nan\nStepHeight=200\n"; }
+    settings=GameplaySettings::Load(path);DeleteFileA(path.c_str());
+    assert(settings.movement.bunnyHop && settings.movement.autoJump);
+    assert(settings.movement.jumpBoostPercent==0 && settings.movement.maxBunnySpeed==1000);
+    assert(settings.movement.jumpSpeed==268.328f && settings.movement.gravity==800 && settings.movement.stepHeight==64);
+    WritePrivateProfileStringA("Movement","JumpBoostPercent","15",path.c_str());
+    assert(GameplaySettings::Load(path).movement.jumpBoostPercent==15);
+    WritePrivateProfileStringA("Movement","JumpBoostPercent","0",path.c_str());
+    assert(GameplaySettings::Load(path).movement.jumpBoostPercent==0);
+    // Consume the actual parsed snapshot in physics, then replace it as F8 does while airborne.
+    { std::ofstream file(path); file << "[Movement]\nMaxBunnySpeed=400\nJumpBoostPercent=0\nAirAcceleration=10\n"; }
+    MovementPhysics movement; movement.Configure(GameplaySettings::Load(path).movement); movement.Reset(0);
+    MoveInput run; run.forward=1;
+    for(int frame=0;frame<60;++frame) movement.Step(run,1.f/60,250);
+    for(int frame=0;frame<360;++frame) {
+        auto input=MovementStrafeInput(movement,float(frame)/60);
+        movement.Step(input,1.f/60,250); movement.ResolveFloor(0);
+    }
+    assert(movement.Speed()>590 && movement.Speed()<=600.01f);
+    WritePrivateProfileStringA("Movement","MaxBunnySpeed","300",path.c_str());
+    float feet=movement.FeetZ(), vertical=movement.VerticalVelocity();
+    movement.Configure(GameplaySettings::Load(path).movement);
+    assert(movement.FeetZ()==feet && movement.VerticalVelocity()==vertical);
+    movement.Step(MovementStrafeInput(movement,6),1.f/60,250);
+    assert(movement.Speed()<=450.01f);
+    DeleteFileA(path.c_str());
     return 0;
 }

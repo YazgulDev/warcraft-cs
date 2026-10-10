@@ -12,6 +12,7 @@ $root=Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'audio-runtime.ps1')
 . (Join-Path $PSScriptRoot 'prebuilt-runtime.ps1')
 . (Join-Path $PSScriptRoot 'gameplay-config.ps1')
+. (Join-Path $PSScriptRoot 'warcraft-runtime.ps1')
 . (Join-Path $root 'tools/sword-model.ps1')
 # Keep the owner's Grudge model and full authored animation set across repeated setup runs.
 $SwordModel=Get-WarcraftCsSwordModel $root $SwordModel
@@ -45,22 +46,8 @@ if (Test-Path -LiteralPath $runtime) {
         }
     }
 }
-# Setup resumes only its own marked private runtime; never overwrite an unrelated game directory.
-$marker=Join-Path $runtime '.warcraft-cs-private-runtime'
-if (Test-Path -LiteralPath $runtime) {
-    if (!(Test-Path -LiteralPath $marker)) { throw "Runtime directory already exists without a setup marker: $runtime" }
-} else {
-    New-Item -ItemType Directory -Path $runtime -Force | Out-Null
-    # Copy owned runtime files locally, excluding personal progress and installers. No game file is shipped by Git.
-    Get-ChildItem -LiteralPath $warcraft -File | Where-Object { $_.Extension -in @('.exe','.dll','.mpq','.manifest') -and $_.Name -notlike 'unins*' } |
-        ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination $runtime }
-    foreach ($folder in @('Maps','Campaigns','Movies','AI Scripts')) {
-        $source=Join-Path $warcraft $folder
-        if (Test-Path -LiteralPath $source) { Copy-Item -LiteralPath $source -Destination $runtime -Recurse }
-    }
-    Copy-Item -LiteralPath (Join-Path $runtime 'Mss32.dll') -Destination (Join-Path $runtime 'WarcraftOriginalMss.dll')
-    Set-Content -LiteralPath $marker -Value 'Private owned Warcraft runtime; do not redistribute.' -Encoding ascii
-}
+# Install and Update refresh the complete owned runtime, including damaged/missing files on retries.
+Copy-WarcraftRuntime $warcraft $runtime
 # Keep this outside first-install copying so updates repair the missing providers in older clients.
 Copy-WarcraftAudioRuntime $warcraft $runtime
 $venv=Join-Path $root '.local/venv'

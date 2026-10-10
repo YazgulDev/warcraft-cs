@@ -17,6 +17,19 @@ $payload=Join-Path $build 'Source.zip'
 & git -c "safe.directory=$($root.Replace('\','/'))" -C $root archive --format=zip "--output=$payload" $tree
 if ($LASTEXITCODE) { throw 'Could not create source payload.' }
 $version=(Get-Content -LiteralPath (Join-Path $root 'VERSION') -Raw).Trim()
+# Require the same compact English change-list contract that the launcher accepts at runtime.
+& git -c "safe.directory=$($root.Replace('\','/'))" -C $root diff --quiet -- launcher docs/launcher-changes tools/build-launcher.ps1
+if ($LASTEXITCODE) { throw 'Stage launcher sources and reviewed change lists before building.' }
+$changesFile=Join-Path $root ('docs/launcher-changes/'+$version+'.txt')
+if (!(Test-Path -LiteralPath $changesFile)) { throw 'Add a reviewed launcher change list for this version before building.' }
+$changes=(Get-Content -LiteralPath $changesFile -Raw -Encoding UTF8).Trim()
+if (!$changes -or @($changes -split '\r?\n' | Where-Object { $_ -notmatch '^- (Added|Fixed|Changed|Updated|Improved|Removed|Enabled|Disabled|Preserved)\s+.+' }).Count -or
+    [regex]::IsMatch($changes,'[\p{L}-[A-Za-z]]|[<>`]|[\x00-\x08\x0b\x0c\x0e-\x1f]')) {
+    throw 'Each launcher change must be one plain English line beginning with - Added, - Fixed, - Changed or another supported change verb.'
+}
+$notesResources=@(Get-ChildItem -LiteralPath (Join-Path $root 'docs/launcher-changes') -Filter '*.txt' -File | ForEach-Object {
+    '/resource:'+ $_.FullName+',WarcraftCS.ReleaseNotes.'+$_.Name
+})
 $assembly=Join-Path $build 'LauncherVersion.cs'
 ('[assembly: System.Reflection.AssemblyTitle("Warcraft CS by Yazgul Launcher")]'+[Environment]::NewLine+
  '[assembly: System.Reflection.AssemblyVersion("'+$version+'.0")]') | Set-Content -LiteralPath $assembly -Encoding utf8
@@ -24,7 +37,7 @@ $sources=@(Get-ChildItem -LiteralPath (Join-Path $root 'launcher') -Filter '*.cs
 $exe=Join-Path $OutputDirectory 'WarcraftCSLauncher.exe'
 # The primary executable and every public ZIP contain reviewed sources without prebuilt native modules.
 $references=@('/r:System.Windows.Forms.dll','/r:System.Drawing.dll','/r:System.IO.Compression.dll','/r:System.IO.Compression.FileSystem.dll','/r:System.Web.Extensions.dll')
-& $compiler /nologo /target:winexe /platform:x64 /optimize+ "/out:$exe" "/resource:$payload,WarcraftCS.Source.zip" $references $assembly $sources
+& $compiler /nologo /target:winexe /platform:x64 /optimize+ "/out:$exe" "/resource:$payload,WarcraftCS.Source.zip" $notesResources $references $assembly $sources
 if ($LASTEXITCODE) { throw 'Launcher compilation failed.' }
 Get-Item -LiteralPath $exe | Select-Object FullName,Length
 Get-FileHash -LiteralPath $exe -Algorithm SHA256 | Select-Object Hash
@@ -33,7 +46,7 @@ $sourceArchive=Join-Path $OutputDirectory 'WarcraftCS-sources.zip'
 Copy-Item -LiteralPath $payload -Destination $sourceArchive -Force
 $sourceHash=(Get-FileHash -LiteralPath $sourceArchive -Algorithm SHA256).Hash.ToLowerInvariant()
 $launcherHash=(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
-$manifest=@{Version=$version;Revision=$sourceHash;SourceSha256=$sourceHash;LauncherSha256=$launcherHash}
+$manifest=@{Version=$version;ReleaseNotes=$changes;Revision=$sourceHash;SourceSha256=$sourceHash;LauncherSha256=$launcherHash}
 if (!$SourceOnly) {
     # Keep the native ZIP in private build output; only the separately named EXE distributes this payload.
     & git -c "safe.directory=$($root.Replace('\','/'))" -C $root diff --quiet -- src tools/build.ps1 tools/build-runtime-package.ps1 config NOTICE licenses LICENSE-MIT LICENSE-APACHE
@@ -42,7 +55,7 @@ if (!$SourceOnly) {
     & (Join-Path $PSScriptRoot 'build-runtime-package.ps1') -SourceRevision $sourceHash -OutputFile $runtimeArchive -WarcraftDirectory $WarcraftDirectory
     if ($LASTEXITCODE) { throw 'Runtime packaging failed.' }
     $included=Join-Path $OutputDirectory 'WarcraftCSLauncher_DLL_Included.exe'
-    & $compiler /nologo /target:winexe /platform:x64 /optimize+ "/out:$included" "/resource:$payload,WarcraftCS.Source.zip" "/resource:$runtimeArchive,WarcraftCS.Runtime.zip" $references $assembly $sources
+    & $compiler /nologo /target:winexe /platform:x64 /optimize+ "/out:$included" "/resource:$payload,WarcraftCS.Source.zip" "/resource:$runtimeArchive,WarcraftCS.Runtime.zip" $notesResources $references $assembly $sources
     if ($LASTEXITCODE) { throw 'DLL-included launcher compilation failed.' }
     $manifest.DllIncludedLauncherSha256=(Get-FileHash -LiteralPath $included -Algorithm SHA256).Hash.ToLowerInvariant()
     $manifest.DllIncludedRuntimeSha256=(Get-FileHash -LiteralPath $runtimeArchive -Algorithm SHA256).Hash.ToLowerInvariant()

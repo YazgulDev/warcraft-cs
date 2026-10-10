@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 namespace WarcraftCSLauncher {
     public sealed class ReleaseManifest {
         public string Version { get; set; }
+        public string ReleaseNotes { get; set; }
         public string Revision { get; set; }
         public string SourceSha256 { get; set; }
         public string LauncherSha256 { get; set; }
@@ -29,7 +30,8 @@ namespace WarcraftCSLauncher {
         }
         public ReleaseManifest ForDllIncludedLauncher() {
             if (!HasDllIncludedVariant) return this; // Legacy releases used one bundled executable.
-            return new ReleaseManifest {Version=Version,Revision=Revision,SourceSha256=SourceSha256,
+            // Variant selection preserves the same reviewed change list alongside its independent hashes.
+            return new ReleaseManifest {Version=Version,ReleaseNotes=ReleaseNotes,Revision=Revision,SourceSha256=SourceSha256,
                 LauncherSha256=DllIncludedLauncherSha256,RuntimeSha256=DllIncludedRuntimeSha256};
         }
         public bool IsNewer(string currentVersion, string currentRevision, string installedRevision) {

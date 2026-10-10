@@ -1,0 +1,6 @@
+- Added CSVolumePercent to control CS sound volume (0-100%, default 100%).
+- Added F8 volume reload for playing and future sounds without restarting the game.
+- Added separate CS volume control for shots, footsteps, reloads and C4.
+- Added volume validation and automatic limits for out-of-range values.
+- Updated config migration to add the volume setting and preserve custom values.
+- Updated installation, sound settings and troubleshooting instructions.

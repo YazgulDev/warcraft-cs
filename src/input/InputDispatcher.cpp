@@ -2,6 +2,19 @@
 #include "../application/ShooterController.hpp"
 
 std::optional<LRESULT> InputDispatcher::Handle(HWND window, UINT message, WPARAM key, LPARAM data, bool healthy) {
+    // Record mod controls only: never log WM_CHAR, pasted text or unrelated desktop keystrokes.
+    bool controlKey = key == VK_F6 || (healthy && controller_.Visible() &&
+        (key == 'W' || key == 'A' || key == 'S' || key == 'D' || key == 'R' || key == 'B' ||
+         key == 'E' || key == 'H' || key == 'O' || key == 'J' || key == 'V' || key == 'N' || key == VK_SPACE || key == VK_CONTROL ||
+         key == VK_SHIFT || key == VK_ESCAPE || key == VK_OEM_PERIOD ||
+         (key >= '0' && key <= '9') || (key >= VK_F7 && key <= VK_F10)));
+    if (controlKey && (message == WM_KEYUP || ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN) && !(data & (1L << 30)))))
+        wc3::Trace("control key=%u event=%s fps=%d buying=%d healthy=%d", unsigned(key),
+            message == WM_KEYUP ? "up" : "down", controller_.Visible(), controller_.Buying(), healthy);
+    if (healthy && controller_.Visible() && (message == WM_LBUTTONDOWN || message == WM_LBUTTONUP ||
+        message == WM_RBUTTONDOWN || message == WM_RBUTTONUP || message == WM_MOUSEWHEEL))
+        wc3::Trace("control mouseMessage=%u wheel=%d buying=%d", message,
+            message == WM_MOUSEWHEEL ? GET_WHEEL_DELTA_WPARAM(key) : 0, controller_.Buying());
     if (message==WM_INPUT) {
         // Raw packets retain fast movement and keep 360-degree look independent of cursor recentering.
         controller_.MouseInput(data,healthy && controller_.Visible() && !controller_.Buying() && GetForegroundWindow()==window);
@@ -18,6 +31,13 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window, UINT message, WPARAM
     }
     // Consume FPS inputs so Warcraft does not also issue RTS orders or select units.
     if (healthy && controller_.Visible()) {
+        // One V/N press toggles its display option; repeats and releases never flip it again.
+        if ((key=='V' || key=='N') && (message==WM_KEYDOWN || message==WM_KEYUP)) {
+            if (message==WM_KEYDOWN && !(data&(1L<<30))) {
+                if (key=='V') controller_.RequestSpeedToggle();else controller_.RequestFogToggle();
+            }
+            return 0;
+        }
         // B/period and menu rows are mailbox events; no native economy calls occur in the input handler.
         if ((message==WM_KEYDOWN || message==WM_KEYUP) && (key=='B' || key==VK_OEM_PERIOD ||
             (controller_.Buying() && key>='0' && key<='9'))) {

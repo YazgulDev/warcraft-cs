@@ -18,14 +18,50 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         if (end==value.c_str() || *end || !std::isfinite(parsed)) { wc3::Log("Invalid config %s.%s; using default",section,key);return fallback; }
         return std::clamp(parsed,0.0f,maximum);
     };
+    // Bound diagnostic frequency/storage at the existing INI boundary, including malformed legacy values.
+    auto detailed = text("Logging", "Detailed", "true");
+    if (!_stricmp(detailed.c_str(), "false") || detailed == "0") result.logging.detailed = false;
+    else if (_stricmp(detailed.c_str(), "true") && detailed != "1") wc3::Log("Invalid Logging.Detailed; using true");
+    result.logging.intervalMs = unsigned(std::max(100.f, number("Logging", "IntervalMs", 1000, 60000)));
+    result.logging.maxFileMB = unsigned(std::max(1.f, number("Logging", "MaxFileMB", 8, 64)));
+    result.logging.archiveCount = unsigned(number("Logging", "ArchiveCount", 3, 8));
     result.runeAmmoPercent=number("Runes","AmmoPercent",20,100);
+    // Missing settings enable the requested hopping; malformed switches preserve documented defaults.
+    auto boolean = [&](const char* key, bool fallback) {
+        auto value = text("Movement", key, fallback ? "true" : "false");
+        if (!_stricmp(value.c_str(), "true")) return true;
+        if (!_stricmp(value.c_str(), "false")) return false;
+        return fallback;
+    };
+    result.movement.bunnyHop = boolean("BunnyHop", true);
+    result.movement.autoJump = boolean("AutoJump", true);
+    result.movement.jumpBoostPercent = number("Movement", "JumpBoostPercent", 0, 100);
+    result.movement.maxBunnySpeed = std::max(250.0f, number("Movement", "MaxBunnySpeed", 1000, 2000));
+    result.movement.airAcceleration = number("Movement", "AirAcceleration", 10, 100);
+    result.movement.jumpSpeed = std::max(1.0f, number("Movement", "JumpSpeed", 268.328f, 800));
+    result.movement.gravity = std::max(100.0f, number("Movement", "Gravity", 800, 3000));
+    result.movement.stepHeight = number("Movement", "StepHeight", 27, 64);
     result.runePickupRadius=number("Runes","PickupRadius",160,400);
     result.runeAmmoAllWeapons=_stricmp(text("Runes","AmmoWeapons","all").c_str(),"current")!=0;
     result.heroDamage=_stricmp(text("Damage","Mode","weapon").c_str(),"hero")==0;
-    result.awpOneShot=_stricmp(text("Damage","AWPOneShot","true").c_str(),"false")!=0;
+    // Missing or malformed settings must not silently enable instant kills; explicit preferences still reload on F8.
+    auto awpOneShot=text("Damage","AWPOneShot","false");
+    result.awpOneShot=!_stricmp(awpOneShot.c_str(),"true") || awpOneShot=="1";
+    if (!awpOneShot.empty() && _stricmp(awpOneShot.c_str(),"true") && _stricmp(awpOneShot.c_str(),"false") &&
+        awpOneShot!="0" && awpOneShot!="1") wc3::Log("Invalid Damage.AWPOneShot; using false");
     // Old configs retain 50%; zero disables allied damage and full damage is capped at 100%.
     result.friendlyFirePercent=number("Damage","FriendlyFirePercent",50,100);
     result.floatingTextDistance=number("Interface","FloatingTextDistance",1200,5000);
+    // Keep the optional counter hidden for old/invalid configs; accept explicit boolean preferences.
+    auto showSpeed=text("Interface","ShowSpeed","false");
+    result.showSpeed=!_stricmp(showSpeed.c_str(),"true") || showSpeed=="1";
+    if (!showSpeed.empty() && _stricmp(showSpeed.c_str(),"true") && _stricmp(showSpeed.c_str(),"false") &&
+        showSpeed!="0" && showSpeed!="1") wc3::Log("Invalid Interface.ShowSpeed; using false");
+    // Only an explicit opt-in reveals unexplored areas; legacy/malformed settings retain map fog.
+    auto disableFog=text("Interface","DisableFogOfWar","false");
+    result.disableFogOfWar=!_stricmp(disableFog.c_str(),"true") || disableFog=="1";
+    if (!disableFog.empty() && _stricmp(disableFog.c_str(),"true") && _stricmp(disableFog.c_str(),"false") &&
+        disableFog!="0" && disableFog!="1") wc3::Log("Invalid Interface.DisableFogOfWar; using false");
     // Legacy files keep their CS volume; malformed values cannot enter the native audio mixer.
     result.csVolumePercent=number("Audio","CSVolumePercent",100,100);
     // Keep formation spacing positive and leash beyond it so units can finish nearby fights.

@@ -6,6 +6,7 @@
 #include "../platform/WarcraftCollision.hpp"
 #include "../presentation/FirstPersonCamera.hpp"
 #include "../platform/NativeSky.hpp"
+#include "../platform/NativeFogOfWar.hpp"
 #include "../audio/GameAudio.hpp"
 #include "../presentation/HitFeedback.hpp"
 #include "../combat/UnitStatus.hpp"
@@ -51,6 +52,12 @@ public:
     size_t SquadCount() const { return squad_.Count(); }
     bool SquadPassive() const { return squad_.Passive(); }
     void RequestSettingsReload() { settingsRequested_=true; }
+    // Queue the display switch for the simulation thread, like the other FPS controls.
+    void RequestSpeedToggle() { speedToggleRequested_=true; }
+    // Fog changes follow the same input-to-simulation mailbox as the speed display.
+    void RequestFogToggle() { fogToggleRequested_=true; }
+    bool SpeedVisible() const { return showSpeed_; }
+    float DisplaySpeed() const { return movement_.Speed()/MovementPhysics::worldScale; }
     // Buy-menu events are consumed on Warcraft's simulation thread, never inside WindowProc.
     void RequestBuyToggle() { buyToggleRequested_=true; }
     void RequestBuyAmmo() { buyAmmoRequested_=true; }
@@ -144,6 +151,8 @@ private:
     int scopeLevel_ = 0;
     bool toggleRequested_ = false, menuRequested_ = false, refillRequested_ = false, allWeaponsRequested_=false;
     bool itemRequested_=false,settingsRequested_=false,itemNearby_=false;
+    bool speedToggleRequested_=false,showSpeed_=false;
+    bool fogToggleRequested_=false,fogOfWarDisabled_=false;
     int squadRequested_=0;
     bool keys_[256] = {};
     int weapon_ = 0, ammo_[WeaponSlots::Count] = {}, reserve_[WeaponSlots::Count] = {};
@@ -157,6 +166,7 @@ private:
     WarcraftCollision collision_;
     FirstPersonCamera camera_;
     NativeSky nativeSky_;
+    NativeFogOfWar nativeFog_;
     MouseLook mouseLook_;
     WeaponWheel weaponWheel_;
     GameplaySettings settings_;

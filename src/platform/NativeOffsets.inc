@@ -1,5 +1,12 @@
 // Classic 1.26a signatures/RVAs checked against JassSpyCode and RenderEdge.
+// Owned 1.26a registration at 3D4D95..3D4DE0 verifies (B)V setters and ()B getters.
+NATIVE(void, FogEnable, (BOOL), 0x3BB1E0)
+NATIVE(void, FogMaskEnable, (BOOL), 0x3BB210)
+NATIVE(BOOL, IsFogEnabled, (), 0x3BB200)
+NATIVE(BOOL, IsFogMaskEnabled, (), 0x3BB230)
 NATIVE(Handle, GetLocalPlayer, (), 0x3BBB60)
+// Owned 1.26a registration at 3D9719 verifies GetTerrainCliffLevel (RR)I.
+NATIVE(int, GetTerrainCliffLevel, (float*,float*), 0x3B4190)
 NATIVE(Handle, Player, (int), 0x3BBB30)
 NATIVE(Handle, CreateGroup, (), 0x3D2900)
 NATIVE(Handle, CreateUnit, (Handle, int, float*, float*, float*), 0x3C5230)
@@ -36,6 +43,9 @@ NATIVE(BOOL, IsUnitAlly, (Handle, Handle), 0x3C7A70)
 NATIVE(BOOL, IsUnitVisible, (Handle, Handle), 0x3C7AF0)
 NATIVE(BOOL, IsTerrainPathable, (float*, float*, int), 0x3B42D0)
 NATIVE(void, SetUnitPosition, (Handle, float*, float*), 0x3C5A50)
+// Verified in the owned 1.26a name/signature registration at 3D5F8D/3D5FA1.
+NATIVE(void, SetUnitX, (Handle, float*), 0x3C5970)
+NATIVE(void, SetUnitY, (Handle, float*), 0x3C59E0)
 NATIVE(void, SetUnitFacing, (Handle, float*), 0x3C5AF0)
 NATIVE(void, SetUnitVertexColor, (Handle, int, int, int, int), 0x3C6340)
 NATIVE(BOOL, IssueImmediateOrderById, (Handle, int), 0x3C8900)

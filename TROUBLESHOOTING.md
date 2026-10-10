@@ -7,6 +7,10 @@ Warcraft or retrying an installation/update. Help is provided when time allows.
 
 ## Logs and first checks
 
+On the diagnostic test branch, click **Read logs** in either launcher to inspect and export the selected
+installation's logs, including retained game sessions. The viewer works while the game/setup is running
+and before installation. See [Diagnostics](docs/DIAGNOSTICS.md) for retention and F8 logging settings.
+
 For a launcher installation, paths are relative to the **client installation folder** selected in
 the launcher (default `%LOCALAPPDATA%\WarcraftCS`):
 
@@ -62,6 +66,7 @@ Verify these requirements first:
 | Symptom | What to do |
 | --- | --- |
 | Black window, rendering or driver problem | The mod uses OpenGL. Try a windowed launch (`play.cmd -Windowed` for source installs) and check your GPU driver. Include GPU/driver version and whether Alt-Tab triggered it. |
+| Crosshair missing in FPS | Attach an FPS screenshot showing whether the weapon and HP/ammunition HUD remain visible, plus the runtime log, mod version, launcher/Player or Developer mode, GPU and driver version. The crosshair is drawn by code and has no separate image to reinstall. A successfully acquired overlay context does not prove the crosshair's pixels were visible. Test builds with renderer diagnostics also log `Overlay GL vendor=... renderer=... version=... lineStipple=...`. |
 | CS audio is too loud or muted | Set `[Audio] CSVolumePercent` in the private `WarcraftCS.ini` to 0–100; 100 is the original mix and 0 mutes CS. Press F8 in FPS to apply it. This key requires 0.6.1 or newer. |
 | Warcraft music/native effects have the wrong volume | Adjust Warcraft's own sound settings. The CS volume parameter affects only the CS mixer. |
 | CS sky is missing | Check `[Sky] Enabled` and the selected texture names, then rerun setup with your own CS textures if caches are missing. `[Sky] WarcraftEnabled` controls the native Warcraft sky. F8 reloads settings. |

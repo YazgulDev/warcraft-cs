@@ -1,4 +1,5 @@
 #include "ShooterController.hpp"
+#include "../platform/DiagnosticLog.hpp"
 #include "../combat/CombatDamage.hpp"
 #include "../platform/MapCameraGuard.hpp"
 #include "../platform/SpriteTransform.hpp"
@@ -30,6 +31,7 @@ void ShooterController::Configure(const char* root, uintptr_t gameBase) {
     gameBase_ = gameBase;
     hitboxes_.Configure(gameBase);
     destructableHitboxes_.Configure(gameBase);
+    collision_.Configure(gameBase);
     audio_.Configure(root_);
     if (!nativeSky_.Configure(gameBase)) wc3::Log("Native sky signature mismatch; preview disabled");
     ReloadSettings();
@@ -129,6 +131,8 @@ void ShooterController::InterfaceRequest(bool show) {
     }
 }
 void ShooterController::Disable(bool restoreCamera) {
+    // Restore the current map before native RTS/menu input takes over.
+    nativeFog_.Update(false);fogToggleRequested_=false;
     buyMenu_.Close();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1;suppressFire_=true;
     mouseLook_.Reset();
     squad_.Release(); // Native RTS regains followers and their ordinary attack policy on F6/F10.
@@ -144,13 +148,16 @@ void ShooterController::Disable(bool restoreCamera) {
     meleeContact_ = meleeReady_ = 0; recoil_.Reset();
     audio_.Stop(); stepDistance_ = 0;
     hits_.Clear(); refillRequested_ = false; allWeaponsRequested_=false; refillTick_ = 0;
-    itemRequested_=settingsRequested_=itemNearby_=false;squadRequested_=0;
+    // Discard pending V without losing the session's chosen display visibility.
+    itemRequested_=settingsRequested_=itemNearby_=speedToggleRequested_=false;squadRequested_=0;
     movement_.Stop();
     weaponWheel_.Reset(); // A partial notch must not survive leaving FPS.
     status_ = {};
     wc3::Log("FPS disabled");
 }
 void ShooterController::ResetMap() {
+    nativeFog_.Reset();fogToggleRequested_=false; // An unloaded map's fog snapshot must be forgotten.
+    collision_.Reset(); // Custom-map model bounds must never leak into the next world's collision.
     nativeSky_.Reset();
     mapTileset_=0;
     mouseLook_.Reset();
@@ -166,7 +173,7 @@ void ShooterController::ResetMap() {
     std::fill(std::begin(keys_), std::end(keys_), false); lastShot_ = 0;
     audio_.Stop(); stepDistance_ = 0; reloadEnd_ = 0;
     menuRequested_ = false;
-    itemRequested_=settingsRequested_=itemNearby_=false;squadRequested_=0;ammoRecovery_.Reset();
+    itemRequested_=settingsRequested_=itemNearby_=speedToggleRequested_=false;squadRequested_=0;ammoRecovery_.Reset();
     hits_.Clear(); refillRequested_ = false; allWeaponsRequested_=false; refillTick_ = 0; fixtureTarget_ = 0; blastFixtures_.clear();
     ResetLoadout();
 }
@@ -220,6 +227,11 @@ void ShooterController::AimAndMove(float dt) {
         if (status_.speedScale < 0.99f) movement_.LimitSpeed(speed * MovementPhysics::worldScale);
         bool tookOff = wasGrounded && !movement_.Grounded();
         collision_.Move(unit_, movement_, dt);
+        // Transition records expose retained takeoff/landing momentum without per-frame disk writes.
+        if (tookOff || ((!wasGrounded || tookOff) && movement_.Grounded()))
+            wc3::Trace("movement contact takeoff=%d landed=%d speed=%.1f goldSrcSpeed=%.1f velocity=%.1f,%.1f,%.1f forward=%.0f right=%.0f yaw=%.2f",
+                tookOff, movement_.Grounded(), movement_.Speed(), movement_.Speed()/MovementPhysics::worldScale,
+                movement_.VelocityX(), movement_.VelocityY(), movement_.VerticalVelocity(), input.forward, input.right, yaw_);
         // CS uses a surface step for moving takeoff (150 GoldSrc units/s); standing jumps are silent.
         if (tookOff && movement_.Speed() >= 150.0f * MovementPhysics::worldScale) {
             SurfaceStep(1.0f); wc3::Log("jump sound: concrete takeoff");
@@ -306,12 +318,37 @@ void ShooterController::SwitchWeapon(int slot) {
 void ShooterController::ReloadSettings() {
     // Replace one complete snapshot; stale fractional credit must not survive a percentage/scope change.
     settings_=GameplaySettings::Load(root_+"\\WarcraftCS.ini");
+    // F8 restores the saved preference; V is a session switch and never rewrites the player's INI.
+    showSpeed_=settings_.showSpeed;
+    fogOfWarDisabled_=settings_.disableFogOfWar;
+    wc3::Log("Fog of war configured disabled=%d",fogOfWarDisabled_);
+    wc3::Log("Speed display configured visible=%d units=CS",showSpeed_);
+    // Startup and F8 share validated logging settings without discarding the active session.
+    DiagnosticLog::Configure(settings_.logging);
+    wc3::Log("Logging configured detailed=%d intervalMs=%u maxFileMB=%u archives=%u",
+        settings_.logging.detailed, settings_.logging.intervalMs, settings_.logging.maxFileMB, settings_.logging.archiveCount);
     // Startup and F8 share the same CS-only gain update; Warcraft's Miles mixer is untouched.
     audio_.SetVolumePercent(settings_.csVolumePercent);
+    movement_.Configure(settings_.movement); // F8 changes tuning without resetting a jump or accumulated momentum.
+    wc3::Trace("settings movement bunnyHop=%d autoJump=%d jumpBoostPercent=%.1f maxBunnySpeed=%.1f airAcceleration=%.1f jumpSpeed=%.3f gravity=%.1f stepHeight=%.1f",
+        settings_.movement.bunnyHop, settings_.movement.autoJump, settings_.movement.jumpBoostPercent,
+        settings_.movement.maxBunnySpeed, settings_.movement.airAcceleration, settings_.movement.jumpSpeed,
+        settings_.movement.gravity, settings_.movement.stepHeight);
     ammoRecovery_.Reset();ammoMessage_="SETTINGS RELOADED";refillTick_=GetTickCount();
     wc3::Log("Settings loaded runePercent=%.1f ammoWeapons=%s damageMode=%s awpOneShot=%d radius=%.1f friendlyFirePercent=%.1f",
         settings_.runeAmmoPercent,settings_.runeAmmoAllWeapons ? "all" : "current",
         settings_.heroDamage ? "hero" : "weapon",settings_.awpOneShot,settings_.runePickupRadius,settings_.friendlyFirePercent);
+    // Log the validated snapshot, including prices/sky choices, rather than arbitrary raw INI contents.
+    wc3::Trace("settings loadoutAll=%d bombs=%d/%d buyAccess=%d buyRadius=%.1f shops=%s csVolume=%.1f floatingText=%.1f squadRadius=%.1f follow=%.1f leash=%.1f maxUnits=%d csSky=%d nativeSky=%d defaultSky=%s",
+        settings_.startAllWeapons, settings_.startBombs, settings_.maxBombs, int(settings_.buyAccess), settings_.buyRadius,
+        settings_.shopTypes.c_str(), settings_.csVolumePercent, settings_.floatingTextDistance, settings_.squadRadius,
+        settings_.squadFollowDistance, settings_.squadLeash, settings_.squadMaxUnits, settings_.csSky, settings_.nativeSky, settings_.defaultSky.c_str());
+    for (int slot = 0; slot < WeaponSlots::Count; ++slot)
+        wc3::Trace("settings weapon=%s damage=%.1f heroMultiplier=%.2f price=%d ammoPrice=%d ammoPack=%d",
+            weapons[slot].name, settings_.damage[slot], settings_.heroMultiplier[slot], settings_.weaponPrice[slot], settings_.ammoPrice[slot], settings_.ammoPack[slot]);
+    wc3::Trace("settings secondaryDamage knife=%.1f sword=%.1f", settings_.knifeSecondaryDamage, settings_.swordSecondaryDamage);
+    for (unsigned code = 0; code < settings_.tilesetSky.size(); ++code)
+        if (!settings_.tilesetSky[code].empty()) wc3::Trace("settings tileset=%c sky=%s", code, settings_.tilesetSky[code].c_str());
 }
 void ShooterController::PickupItem() {
     if (status_.incapacitated || status_.contained || status_.hidden) return;
@@ -498,8 +535,20 @@ void ShooterController::Tick(uintptr_t ui) {
     toggleRequested_ = false;
     // Menus/cinematics return ownership to the map; live FPS may temporarily fill a missing native sky.
     nativeSky_.Update(ui_,Visible() && settings_.nativeSky && !settings_.csSky,mapTileset_);
-    if (!active_ || suspended_) { mouseLook_.Reset();weaponWheel_.Reset();itemRequested_=false;squadRequested_=0;return; }
+    nativeFog_.Update(Visible() && fogOfWarDisabled_);
+    // A queued display tap cannot take effect after FPS is suspended or left.
+    if (!active_ || suspended_) { mouseLook_.Reset();weaponWheel_.Reset();itemRequested_=false;squadRequested_=0;speedToggleRequested_=fogToggleRequested_=false;return; }
     if (settingsRequested_) { settingsRequested_=false;ReloadSettings(); }
+    if (speedToggleRequested_) {
+        speedToggleRequested_=false;showSpeed_=!showSpeed_;
+        wc3::Log("Speed display toggled visible=%d units=CS",showSpeed_);
+    }
+    if (fogToggleRequested_) {
+        fogToggleRequested_=false;fogOfWarDisabled_=!fogOfWarDisabled_;
+        wc3::Log("Fog of war toggled disabled=%d",fogOfWarDisabled_);
+    }
+    // Apply N/F8 immediately, including restoration when the override is switched off.
+    nativeFog_.Update(fogOfWarDisabled_);
     // An explicit local test request creates one stationary target for damage verification.
     // Normal launches never create units; the request is consumed once on the game thread.
     static DWORD lastRequestCheck = 0;
@@ -693,11 +742,10 @@ void ShooterController::Tick(uintptr_t ui) {
     else if (!suppressFire_ && !status_.disarmed && ((weapons[weapon_].automatic && Down(VK_LBUTTON)) || firePressed)) Fire();
     // Sample after any newly started animation: an older tick would wrap unsigned elapsed time.
     Camera(); audio_.Tick(GetTickCount());
-    // A low-frequency state trace makes cliff clearance, jump and stance tests observable.
+    // A configurable summary observes physics/camera without writing every simulation frame.
     static DWORD lastState = 0;
-    if (now - lastState > 1000) {
-        lastState = now;
-        wc3::Log("movement x=%.1f y=%.1f ground=%.1f feet=%.1f eye=%.1f speed=%.1f duck=%.2f grounded=%d cameraEye=%.1f cameraX=%.1f cameraY=%.1f pitch=%.1f distance=%.1f fly=%.1f yaw=%.3f cameraYaw=%.3f rawMouse=%d",
+    if (DiagnosticLog::Due(lastState)) {
+        wc3::Trace("movement x=%.1f y=%.1f ground=%.1f feet=%.1f eye=%.1f speed=%.1f duck=%.2f grounded=%d cameraEye=%.1f cameraX=%.1f cameraY=%.1f pitch=%.1f distance=%.1f fly=%.1f yaw=%.3f cameraYaw=%.3f rawMouse=%d",
             wc3::Real(wc3::GetUnitX(unit_)), wc3::Real(wc3::GetUnitY(unit_)),
             wc3::Ground(wc3::Real(wc3::GetUnitX(unit_)), wc3::Real(wc3::GetUnitY(unit_))),
             movement_.FeetZ(), movement_.EyeZ(), movement_.Speed(), movement_.Duck(), movement_.Grounded(),
