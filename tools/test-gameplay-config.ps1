@@ -32,6 +32,21 @@ $audioBefore=(Get-FileHash -LiteralPath $customAudio).Hash
 Update-GameplayConfig $template $customAudio
 if ((Get-FileHash -LiteralPath $customAudio).Hash -ne $audioBefore) { throw 'Repeated audio migration changed the config.' }
 $empty=Join-Path $folder 'empty.ini'
+# The optional speed counter migrates into an existing Interface section without resetting preferences.
+foreach ($preference in @('true','false')) {
+    $speedConfig=Join-Path $folder ('custom-speed-'+$preference+'.ini')
+    @('[Interface]',('ShowSpeed='+$preference),'FloatingTextDistance=777') | Set-Content -LiteralPath $speedConfig -Encoding ascii
+    Update-GameplayConfig $template $speedConfig
+    $speedText=Get-Content -LiteralPath $speedConfig -Raw
+    if (!$speedText.Contains('ShowSpeed='+$preference) -or !$speedText.Contains('FloatingTextDistance=777') -or
+        [regex]::Matches($speedText,'(?m)^ShowSpeed=').Count -ne 1 -or [regex]::Matches($speedText,'(?m)^\[Interface\]').Count -ne 1) {
+        throw 'Speed counter migration reset or duplicated preferences.'
+    }
+    $speedBefore=(Get-FileHash -LiteralPath $speedConfig).Hash
+    Update-GameplayConfig $template $speedConfig
+    if ((Get-FileHash -LiteralPath $speedConfig).Hash -ne $speedBefore) { throw 'Speed migration is not idempotent.' }
+}
+if (!$text.Contains('ShowSpeed=false')) { throw 'Legacy config lacks the default speed counter key.' }
 # Movement upgrades retain personal jump tuning and add missing siblings exactly once.
 $customMovement=Join-Path $folder 'custom-movement.ini'
 @('[Movement]','JumpBoostPercent=15','AutoJump=false','[Damage]','FriendlyFirePercent=0') | Set-Content -LiteralPath $customMovement -Encoding ascii

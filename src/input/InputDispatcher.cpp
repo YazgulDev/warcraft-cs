@@ -5,7 +5,7 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window, UINT message, WPARAM
     // Record mod controls only: never log WM_CHAR, pasted text or unrelated desktop keystrokes.
     bool controlKey = key == VK_F6 || (healthy && controller_.Visible() &&
         (key == 'W' || key == 'A' || key == 'S' || key == 'D' || key == 'R' || key == 'B' ||
-         key == 'E' || key == 'H' || key == 'O' || key == 'J' || key == VK_SPACE || key == VK_CONTROL ||
+         key == 'E' || key == 'H' || key == 'O' || key == 'J' || key == 'V' || key == VK_SPACE || key == VK_CONTROL ||
          key == VK_SHIFT || key == VK_ESCAPE || key == VK_OEM_PERIOD ||
          (key >= '0' && key <= '9') || (key >= VK_F7 && key <= VK_F10)));
     if (controlKey && (message == WM_KEYUP || ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN) && !(data & (1L << 30)))))
@@ -31,6 +31,11 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window, UINT message, WPARAM
     }
     // Consume FPS inputs so Warcraft does not also issue RTS orders or select units.
     if (healthy && controller_.Visible()) {
+        // One V press toggles the counter; held-key repeats and releases never flip it again.
+        if (key=='V' && (message==WM_KEYDOWN || message==WM_KEYUP)) {
+            if (message==WM_KEYDOWN && !(data&(1L<<30))) controller_.RequestSpeedToggle();
+            return 0;
+        }
         // B/period and menu rows are mailbox events; no native economy calls occur in the input handler.
         if ((message==WM_KEYDOWN || message==WM_KEYUP) && (key=='B' || key==VK_OEM_PERIOD ||
             (controller_.Buying() && key>='0' && key<='9'))) {

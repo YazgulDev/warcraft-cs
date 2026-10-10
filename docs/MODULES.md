@@ -44,6 +44,11 @@ sweeps the player footprint against terrain, native bridge decks and solid model
 `MovementObstacles`. The obstacle adapter owns model/type caches and clears them on map changes.
 `GameplaySettings` loads movement tuning; the controller applies that snapshot on startup and F8.
 
+The optional speed counter uses the same boundaries: `InputDispatcher` queues a V press,
+`ShooterController` owns session visibility and exposes horizontal speed in CS units, and `Overlay`
+draws the counter above status notices. `GameplaySettings` supplies the startup/F8 preference;
+the display switch never mutates physics or writes the player's configuration.
+
 Apply SOLID at real boundaries: cohesive collaborators, explicit dependencies, narrow contracts and
 composition. Adapter isolates native hooks; dispatcher/mailbox separates input from simulation timing.
 The application controller still contains legacy combat and diagnostic paths; this change does not

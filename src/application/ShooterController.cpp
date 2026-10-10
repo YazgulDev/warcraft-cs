@@ -146,7 +146,8 @@ void ShooterController::Disable(bool restoreCamera) {
     meleeContact_ = meleeReady_ = 0; recoil_.Reset();
     audio_.Stop(); stepDistance_ = 0;
     hits_.Clear(); refillRequested_ = false; allWeaponsRequested_=false; refillTick_ = 0;
-    itemRequested_=settingsRequested_=itemNearby_=false;squadRequested_=0;
+    // Discard pending V without losing the session's chosen display visibility.
+    itemRequested_=settingsRequested_=itemNearby_=speedToggleRequested_=false;squadRequested_=0;
     movement_.Stop();
     weaponWheel_.Reset(); // A partial notch must not survive leaving FPS.
     status_ = {};
@@ -169,7 +170,7 @@ void ShooterController::ResetMap() {
     std::fill(std::begin(keys_), std::end(keys_), false); lastShot_ = 0;
     audio_.Stop(); stepDistance_ = 0; reloadEnd_ = 0;
     menuRequested_ = false;
-    itemRequested_=settingsRequested_=itemNearby_=false;squadRequested_=0;ammoRecovery_.Reset();
+    itemRequested_=settingsRequested_=itemNearby_=speedToggleRequested_=false;squadRequested_=0;ammoRecovery_.Reset();
     hits_.Clear(); refillRequested_ = false; allWeaponsRequested_=false; refillTick_ = 0; fixtureTarget_ = 0; blastFixtures_.clear();
     ResetLoadout();
 }
@@ -314,6 +315,9 @@ void ShooterController::SwitchWeapon(int slot) {
 void ShooterController::ReloadSettings() {
     // Replace one complete snapshot; stale fractional credit must not survive a percentage/scope change.
     settings_=GameplaySettings::Load(root_+"\\WarcraftCS.ini");
+    // F8 restores the saved preference; V is a session switch and never rewrites the player's INI.
+    showSpeed_=settings_.showSpeed;
+    wc3::Log("Speed display configured visible=%d units=CS",showSpeed_);
     // Startup and F8 share validated logging settings without discarding the active session.
     DiagnosticLog::Configure(settings_.logging);
     wc3::Log("Logging configured detailed=%d intervalMs=%u maxFileMB=%u archives=%u",
@@ -526,8 +530,13 @@ void ShooterController::Tick(uintptr_t ui) {
     toggleRequested_ = false;
     // Menus/cinematics return ownership to the map; live FPS may temporarily fill a missing native sky.
     nativeSky_.Update(ui_,Visible() && settings_.nativeSky && !settings_.csSky,mapTileset_);
-    if (!active_ || suspended_) { mouseLook_.Reset();weaponWheel_.Reset();itemRequested_=false;squadRequested_=0;return; }
+    // A queued display tap cannot take effect after FPS is suspended or left.
+    if (!active_ || suspended_) { mouseLook_.Reset();weaponWheel_.Reset();itemRequested_=false;squadRequested_=0;speedToggleRequested_=false;return; }
     if (settingsRequested_) { settingsRequested_=false;ReloadSettings(); }
+    if (speedToggleRequested_) {
+        speedToggleRequested_=false;showSpeed_=!showSpeed_;
+        wc3::Log("Speed display toggled visible=%d units=CS",showSpeed_);
+    }
     // An explicit local test request creates one stationary target for damage verification.
     // Normal launches never create units; the request is consumed once on the game thread.
     static DWORD lastRequestCheck = 0;

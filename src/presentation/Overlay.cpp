@@ -165,10 +165,17 @@ void Overlay::Draw(HDC dc, const ShooterController& controller) {
     // Show the independent release key beside both recruitment policies.
     char squad[128];sprintf_s(squad,"H: FIGHT | O: FOLLOW | J: RELEASE | SQUAD %u %s",unsigned(controller.SquadCount()),controller.SquadCount() ? (controller.SquadPassive() ? "FOLLOW" : "COMBAT") : "");
     Text(25,88,squad);
-    // Keep the creator credit visible alongside the controls.
-    Text(25, 30, "Warcraft CS by Yazgul | F6: RTS | B: BUY | .: AMMO | WASD | SPACE: JUMP | CTRL: DUCK | R: RELOAD");
+    // Keep mod-specific shortcuts; familiar movement, reload, jump and crouch need no permanent tutorial.
+    Text(25, 30, "Warcraft CS by Yazgul | F6: RTS | B: BUY | .: AMMO | V: SPEED");
     char economy[96];sprintf_s(economy,"GOLD %d | B: BUY | .: AMMO | F7: FREE AMMO | F9: ALL WEAPONS",controller.Gold());Text(25,117,economy);
     if (controller.RefillNotice()) Text(statusPad, statusY - statusSize - 16, controller.AmmoMessage(), statusFont_);
+    // Horizontal CS units match MaxBunnySpeed, excluding vertical falling/jumping velocity.
+    // Stack above notices/status so the optional counter never covers health or ammunition.
+    if (controller.SpeedVisible()) {
+        char speed[64];sprintf_s(speed,"SPEED %.0f u/s (CS)",controller.DisplaySpeed());
+        int rows=1+(controller.RefillNotice() ? 1 : 0)+(*controller.Status().Label() ? 1 : 0);
+        Text(statusPad,statusY-(statusSize+16)*rows,speed,statusFont_);
+    }
     // Ground items advertise interaction without issuing a walk-to-item RTS order.
     if (controller.ItemNearby()) Text(width*.5f-120,height*.72f,"E: PICK UP ITEM",statusFont_);
     // Explain blocked controls next to the status HUD while the corresponding Warcraft effect lasts.
@@ -195,6 +202,8 @@ void Overlay::Draw(HDC dc, const ShooterController& controller) {
     if (activeTexture) activeTexture(oldTexture);
     // Report submission decisions, not pixel visibility; sampled GL errors can originate in the host frame.
     if (DiagnosticLog::Due(lastDiagnostic_)) {
+        // Sample display submission with the same bounded cadence as existing overlay diagnostics.
+        wc3::Trace("overlay speed visible=%d speedCS=%.1f",controller.SpeedVisible(),controller.DisplaySpeed());
         GLint viewport[4] = {}; GLboolean mask[4] = {};
         glGetIntegerv(GL_VIEWPORT, viewport); glGetBooleanv(GL_COLOR_WRITEMASK, mask);
         GLenum observedError = glGetError();

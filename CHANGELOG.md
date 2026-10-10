@@ -2,6 +2,9 @@
 
 ## Unreleased — test branches
 
+- Remove permanent WASD/reload/jump/crouch HUD hints; retain mod-specific shortcuts and creator credit.
+- Add V to show/hide horizontal speed in CS/GoldSrc units/s, matching MaxBunnySpeed and excluding vertical velocity.
+- Add `[Interface] ShowSpeed=false` (`true`/`false` or `1`/`0`); startup/F8 restores this preference, V changes only the session, and updates preserve custom values.
 - Display compact English update summaries in both launchers; keep full GitHub documentation out of the changes box and prefer reviewed summaries over legacy release prose.
 - Support hidden launcher-summary metadata, translate the accurate 0.6.1 fallback list, and check real full-body API responses, dialog resolution and both packaged EXEs.
 - Make manual Update download and reinstall GitHub's latest stable release even when version/revision already match; startup checks still avoid repeated prompts.

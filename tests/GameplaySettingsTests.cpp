@@ -17,6 +17,7 @@ int main() {
         CombatDamage::FinishesTarget(settings.FinishingAWP(3),false),5000)==115);
     assert(settings.friendlyFirePercent==50);
     assert(settings.floatingTextDistance==1200);
+    assert(!settings.showSpeed);
     assert(settings.csVolumePercent==100);
     assert(!settings.startAllWeapons && settings.startBombs==20 && settings.maxBombs==100 );
     assert(settings.buyAccess==GameplaySettings::BuyAccess::Anywhere && !settings.csSky);
@@ -42,6 +43,23 @@ int main() {
     recovery.Reset();bomb=0;recovery.Restore(5,0,1,0,bomb,none);assert(bomb==0);
     char directory[MAX_PATH];GetCurrentDirectoryA(MAX_PATH,directory);
     std::string path=std::string(directory)+"\\settings-test.ini";
+    // Exercise the real optional HUD preference boundary and live snapshot reloads.
+    const struct { const char* value; bool enabled; } speedCases[] = {
+        {"",false},{"false",false},{"true",true},{"TrUe",true},{"0",false},{"1",true},{"broken",false}
+    };
+    int speedIndex=0;
+    for (const auto& test:speedCases) {
+        const auto sample=path+".speed-"+std::to_string(speedIndex++);
+        { std::ofstream file(sample);file<<"[Interface]\nShowSpeed="<<test.value<<"\n"; }
+        assert(GameplaySettings::Load(sample).showSpeed==test.enabled);
+        DeleteFileA(sample.c_str());
+    }
+    const auto speedReload=path+".speed-reload";
+    DeleteFileA(speedReload.c_str());assert(!GameplaySettings::Load(speedReload).showSpeed);
+    WritePrivateProfileStringA("Interface","ShowSpeed","true",speedReload.c_str());
+    assert(GameplaySettings::Load(speedReload).showSpeed);
+    WritePrivateProfileStringA("Interface","ShowSpeed","false",speedReload.c_str());
+    assert(!GameplaySettings::Load(speedReload).showSpeed);DeleteFileA(speedReload.c_str());
     // Exercise the actual INI boundary, including absent/invalid defaults and explicit opt-in/out reloads.
     const struct { const char* value; bool enabled; } awpCases[] = {
         {"",false},{"false",false},{"true",true},{"TrUe",true},{"0",false},{"1",true},{"broken",false}

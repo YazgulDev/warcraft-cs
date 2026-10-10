@@ -1,5 +1,19 @@
 # Validation of the 0.1.0 source baseline
 
+## Optional speed counter (test branch, 2026-10-10)
+
+Real Warcraft III 1.26a on a disposable single-player map verified the ordinary Player build,
+without a compiled movement oracle. The HUD omits WASD/reload/jump/crouch explanations. V shows
+250 CS units/s during a normal USP run and hides the counter on the next press; Windows key-repeat
+and release packets do not cause another toggle. V in RTS does not change FPS visibility. F8 applies
+both true and false INI preferences; screenshots confirm the counter stacks above reload notices
+without covering health/ammunition. The test game exited through its own confirmation dialog.
+
+The real INI loader checks missing/empty/malformed values, case-insensitive booleans and 0/1, plus
+repeated snapshot loads. Config migration checks fresh/legacy files, true/false custom values,
+single Interface/key occurrences and idempotence. Only a private runtime/config/map was used;
+the user's installed game and saves were not modified. The default remains ShowSpeed=false.
+
 ## Full launcher reinstall (test branch)
 
 Manual Update selects an identical latest GitHub release for repair; startup checks remain quiet

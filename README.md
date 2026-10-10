@@ -175,6 +175,7 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 | E | Pick up the nearest item/rune if the unit has an available inventory |
 | H / O / J | Your units: follow and fight / follow without attacking / release squad |
 | F8 | Reload settings |
+| V | Show/hide horizontal speed in CS units/s |
 
 ## Configuration
 
@@ -233,6 +234,10 @@ Edit it and press F8 in FPS.
 - `[Sky] WarcraftEnabled=true` (default) shows Warcraft's stock summer/winter sky in FPS on maps without
   a sky. Keep `Enabled=false` for this mode. Existing map skies are preserved; F6 and cinematics
   restore the map's original sky. Set `WarcraftEnabled=false` and press F8 to disable the preview.
+- `[Interface] ShowSpeed=false` hides the horizontal speed counter by default. V toggles it during
+  the session, including across F6 switches; startup/F8 restores the INI value (`true`/`false`, also `1`/`0`).
+  The counter uses CS/GoldSrc units/s, matching `MaxBunnySpeed`; vertical jump/fall velocity is excluded.
+  Updates add missing keys and preserve custom values. The HUD omits basic WASD/reload/jump/crouch hints.
 - `[Interface] FloatingTextDistance=1200` limits native world labels to the FPS camera view and distance
   in Warcraft units. Set `0` to hide world labels and press F8; RTS, harvesting and screen-space map text keep native behavior.
 

@@ -21,6 +21,8 @@ struct GameplaySettings {
     float friendlyFirePercent = 50;
     // Limit world labels to nearby FPS activity without altering native resource production.
     float floatingTextDistance=1200;
+    // Startup/F8 preference; V may change visibility for the current session.
+    bool showSpeed=false;
     // Scale only the CS mixer; 100 preserves legacy levels and zero mutes every CS voice.
     float csVolumePercent=100;
     // Recruitment and spacing are configurable without rewriting map data or unit ownership.

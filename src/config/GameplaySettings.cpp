@@ -52,6 +52,11 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     // Old configs retain 50%; zero disables allied damage and full damage is capped at 100%.
     result.friendlyFirePercent=number("Damage","FriendlyFirePercent",50,100);
     result.floatingTextDistance=number("Interface","FloatingTextDistance",1200,5000);
+    // Keep the optional counter hidden for old/invalid configs; accept explicit boolean preferences.
+    auto showSpeed=text("Interface","ShowSpeed","false");
+    result.showSpeed=!_stricmp(showSpeed.c_str(),"true") || showSpeed=="1";
+    if (!showSpeed.empty() && _stricmp(showSpeed.c_str(),"true") && _stricmp(showSpeed.c_str(),"false") &&
+        showSpeed!="0" && showSpeed!="1") wc3::Log("Invalid Interface.ShowSpeed; using false");
     // Legacy files keep their CS volume; malformed values cannot enter the native audio mixer.
     result.csVolumePercent=number("Audio","CSVolumePercent",100,100);
     // Keep formation spacing positive and leash beyond it so units can finish nearby fights.
