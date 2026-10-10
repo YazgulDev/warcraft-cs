@@ -1,4 +1,5 @@
 #include "ScopeView.hpp"
+#include "ReticleView.hpp"
 #include <windows.h>
 #include <gl/GL.h>
 #include <algorithm>
@@ -15,9 +16,6 @@ void ScopeView::Draw(float width, float height) {
         glVertex2f(cx + x * outside, cy + y * outside);
     }
     glEnd();
-    // Thin black hairs replace the green hip-fire crosshair inside the clear lens.
-    glLineWidth(std::max(1.0f, height / 720.0f)); glBegin(GL_LINES);
-    glVertex2f(cx - radius, cy); glVertex2f(cx + radius, cy);
-    glVertex2f(cx, cy - radius); glVertex2f(cx, cy + radius);
-    glEnd();
+    // Scope hairs share the filled reticle path so inherited line stipple cannot hide aiming marks.
+    ReticleView::DrawScope(cx, cy, radius, std::max(1.0f, height / 720.0f));
 }

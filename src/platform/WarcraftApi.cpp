@@ -1,4 +1,5 @@
 #include "WarcraftApi.hpp"
+#include "DiagnosticLog.hpp"
 #include <cstdio>
 #include <cstdarg>
 #include <cstring>
@@ -9,21 +10,26 @@ namespace wc3 {
 #define NATIVE(result, name, arguments, offset) result (__cdecl* name) arguments = nullptr;
 #include "NativeOffsets.inc"
 #undef NATIVE
-static FILE* logFile = nullptr;
 static uintptr_t nativeBase = 0;
 using SurfaceHeight = float (__fastcall*)(int, BOOL*, float, float, BOOL);
 static SurfaceHeight surfaceHeight = nullptr;
+using TerrainRoot = uintptr_t (__cdecl*)();
+using TerrainHeight = float (__thiscall*)(uintptr_t, const float*, int);
+static TerrainRoot terrainRoot = nullptr;
+static TerrainHeight terrainHeight = nullptr;
 void OpenLog(const char* directory) {
-    char path[MAX_PATH];
-    sprintf_s(path, "%s\\WarcraftCS.log", directory);
-    // Diagnostics must remain readable while the game is running.
-    logFile = _fsopen(path, "w", _SH_DENYNO);
+    // Preserve the public native API while the dedicated adapter owns session/file handling.
+    DiagnosticLog::Open(directory);
 }
 void Log(const char* format, ...) {
-    if (!logFile) return;
-    fprintf(logFile, "[%lu] ", GetTickCount());
-    va_list args; va_start(args, format); vfprintf(logFile, format, args); va_end(args);
-    fputc('\n', logFile); fflush(logFile);
+    va_list args; va_start(args, format); DiagnosticLog::Write("INFO", format, args); va_end(args);
+}
+void Trace(const char* format, ...) {
+    // High-frequency details can be disabled independently of essential events and faults.
+    va_list args; va_start(args, format); DiagnosticLog::Write("TRACE", format, args); va_end(args);
+}
+void LogError(const char* format, ...) {
+    va_list args; va_start(args, format); DiagnosticLog::Write("ERROR", format, args); va_end(args);
 }
 float Real(Bits bits) { float value; memcpy(&value, &bits, 4); return value; }
 bool Bind(HMODULE game) {
@@ -46,6 +52,13 @@ bool Bind(HMODULE game) {
         Log("Unsupported native walkable-surface helper"); return false;
     }
     surfaceHeight = reinterpret_cast<SurfaceHeight>(base+0x126F0);
+    // 126F0 calls 1F5A0 for the terrain object, then 763F00 with position/mode and an ST0 result.
+    const unsigned char terrainSignature[]={0x8B,0x44,0x24,0x08,0x83,0xF8,0xFD};
+    if(memcmp(reinterpret_cast<void*>(base+0x763F00),terrainSignature,sizeof(terrainSignature))) {
+        Log("Unsupported native terrain-height helper");return false;
+    }
+    terrainRoot=reinterpret_cast<TerrainRoot>(base+0x1F5A0);
+    terrainHeight=reinterpret_cast<TerrainHeight>(base+0x763F00);
     nativeBase = base;
 #define NATIVE(result, name, arguments, offset) name = reinterpret_cast<decltype(name)>(base + offset);
 #include "NativeOffsets.inc"
@@ -65,6 +78,13 @@ bool WalkableSurface(float x, float y, float& height) {
     float z = surfaceHeight(-1,&raised,x,y,TRUE);
     if (!raised || !std::isfinite(z)) return false;
     height = z; return true;
+}
+float TerrainGround(float x, float y) {
+    // Query the same interpolated terrain as mode -1, before 126F0 adds walkable object heights.
+    // Its FALSE flag cannot exclude objects with mode -1; mode -3 uses a different raw height grid.
+    if (!terrainRoot || !terrainHeight) return Ground(x,y);
+    float position[]={x,y,0};
+    return terrainHeight(terrainRoot(),position,-1);
 }
 std::string UnitModelPath(int type) {
     auto read = [](uintptr_t address, void* value, size_t size) {

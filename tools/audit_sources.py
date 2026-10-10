@@ -10,7 +10,9 @@ ROOT=Path(__file__).resolve().parents[1]
 ROOT_FILES = {'README.md','INSTALL.md','TROUBLESHOOTING.md','NOTICE','LICENSE-MIT','LICENSE-APACHE',
               'AGENTS.md','CONTRIBUTING.md','CHANGELOG.md','VERSION','requirements.txt','.gitignore',
               # Keep the explicit RoC entry point in source archives without allowing arbitrary batch files.
-              '.gitattributes','setup.cmd','play.cmd','play-roc.bat','REQUIREMENTS.md'}
+              '.gitattributes','setup.cmd','play.cmd','play-roc.bat','REQUIREMENTS.md',
+              # Allow the owned support form explicitly without admitting arbitrary GitHub workflows or files.
+              '.github/DISCUSSION_TEMPLATE/q-a.yml'}
 ROOTS = {'src','tests','tools','setup','config','skills','licenses','docs','launcher'}
 EXTENSIONS = {'.cpp','.hpp','.inc','.py','.ps1','.ini','.md','.yaml','.txt','.cs'}
 RULES = {

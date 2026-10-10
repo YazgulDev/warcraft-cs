@@ -1,6 +1,9 @@
 #include "Overlay.hpp"
 #include "ScopeView.hpp"
+#include "ReticleView.hpp"
+#include "ReticleDiagnostics.hpp"
 #include "BuyMenuView.hpp"
+#include "../platform/DiagnosticLog.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -44,11 +47,16 @@ void Overlay::ContextDeleted(HGLRC context) {
     wc3::Log("Overlay context deleted; GPU names forgotten");
 }
 void Overlay::Draw(HDC dc, const ShooterController& controller) {
-    if (!controller.Visible() || !wglGetCurrentContext()) return;
+    // Explain early returns as well as submitted geometry when investigating a missing aiming mark.
+    if (!controller.Visible()) { ReticleDiagnostics::Skip("fps-inactive"); return; }
+    if (!wglGetCurrentContext()) { ReticleDiagnostics::Skip("no-gl-context"); return; }
     HGLRC current = wglGetCurrentContext();
     if (context_ != current) {
         ResetGraphics(false); context_ = current;
         wc3::Log("Overlay context acquired: %p", current);
+        // Record the actual driver renderer for reports where the overlay initializes but primitives disappear.
+        wc3::Log("Overlay GL vendor=%s renderer=%s version=%s lineStipple=%d",
+            glGetString(GL_VENDOR), glGetString(GL_RENDERER), glGetString(GL_VERSION), glIsEnabled(GL_LINE_STIPPLE));
     } else if (refreshPending_) {
         // Keep surviving resources: blind deletion after Alt-Tab can touch IDs recycled by the game.
         bool valid=(!font_ || glIsList(font_)) && (!statusFont_ || glIsList(statusFont_));
@@ -61,9 +69,14 @@ void Overlay::Draw(HDC dc, const ShooterController& controller) {
     refreshPending_ = false;
     // Preserve every GL state touched so Warcraft's next frame renders normally.
     GLint oldMode; glGetIntegerv(GL_MATRIX_MODE, &oldMode); glPushAttrib(GL_ALL_ATTRIB_BITS);
-    HWND window = WindowFromDC(dc); RECT client; GetClientRect(window, &client);
+    HWND window = WindowFromDC(dc); RECT client = {};
+    if (!window || !GetClientRect(window, &client)) {
+        ReticleDiagnostics::Skip("client-rect-unavailable"); glPopAttrib(); return;
+    }
     int width = client.right, height = client.bottom;
-    if (height <= 0 || width <= 0) { glPopAttrib(); return; }
+    if (height <= 0 || width <= 0) {
+        ReticleDiagnostics::Skip("empty-client-rect", width, height); glPopAttrib(); return;
+    }
     glViewport(0, 0, width, height);
     // Warcraft uses multiple texture units; isolate the overlay on unit zero.
     using ActiveTexture = void (APIENTRY*)(GLenum);
@@ -117,6 +130,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller) {
     // A swallowed/transported unit has no world viewpoint: hide equipment and retain the health/status HUD.
     bool unavailableView = controller.Status().contained || controller.Status().hidden;
     if (unavailableView) {
+        ReticleDiagnostics::Skip(controller.Status().contained ? "unit-contained" : "unit-hidden", width, height);
         glColor4f(0.015f, 0.015f, 0.015f, 1);
         glBegin(GL_QUADS); glVertex2f(0, 0); glVertex2f(float(width), 0);
         glVertex2f(float(width), float(height)); glVertex2f(0, float(height)); glEnd();
@@ -125,15 +139,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller) {
             "SWALLOWED: DIGESTING | F6: RETURN TO RTS TO RESCUE THIS UNIT" : "UNIT IS OUTSIDE THE WORLD | F6: RETURN TO RTS");
     }
     else if (controller.Scoped()) ScopeView::Draw(float(width), float(height));
-    else {
-        glColor4f(0.5f, 1.0f, 0.25f, 1); glLineWidth(2);
-        // The FPS world frame fills the window, so the camera ray intersects its true center.
-        float x = width * 0.5f, y = height * 0.5f, gap = 5 + controller.Recoil() * 4;
-        glBegin(GL_LINES);
-        glVertex2f(x - gap - 10, y); glVertex2f(x - gap, y); glVertex2f(x + gap, y); glVertex2f(x + gap + 10, y);
-        glVertex2f(x, y - gap - 10); glVertex2f(x, y - gap); glVertex2f(x, y + gap); glVertex2f(x, y + gap + 10);
-        glEnd();
-    }
+    else ReticleView::DrawHipFire(float(width), float(height), controller.Recoil());
     // Scale the bottom HUD from a readable 42-pixel font at 1080p, with safe edge padding.
     int statusSize = std::clamp(int(std::lround(height * (42.0f / 1080.0f))), 26, 84);
     Font(dc, statusSize);
@@ -154,15 +160,23 @@ void Overlay::Draw(HDC dc, const ShooterController& controller) {
         Text(float(width - statusSize * 9), statusY, message, statusFont_);
     }
     // Advertise wheel switching beside the existing direct-selection slots.
-    Text(25, 59, "1-7 / WHEEL: WEAPONS | 6: C4 (HOLD FIRE) | 7: SWORD | MELEE RMB: THRUST | E: ITEM | F8: CONFIG");
+    // Sword/secondary-melee remain usable, but their shortcuts no longer clutter the HUD.
+    Text(25, 59, "1-7 / WHEEL: WEAPONS | 6: C4 (HOLD FIRE) | E: ITEM | F8: CONFIG");
     // The squad mode/count remains visible after its short confirmation disappears.
     // Show the independent release key beside both recruitment policies.
     char squad[128];sprintf_s(squad,"H: FIGHT | O: FOLLOW | J: RELEASE | SQUAD %u %s",unsigned(controller.SquadCount()),controller.SquadCount() ? (controller.SquadPassive() ? "FOLLOW" : "COMBAT") : "");
     Text(25,88,squad);
-    // Keep the creator credit visible alongside the controls.
-    Text(25, 30, "Warcraft CS by Yazgul | F6: RTS | B: BUY | .: AMMO | WASD | SPACE: JUMP | CTRL: DUCK | R: RELOAD");
+    // Keep mod-specific shortcuts; familiar movement, reload, jump and crouch need no permanent tutorial.
+    Text(25, 30, "Warcraft CS by Yazgul | F6: RTS | B: BUY | .: AMMO | V: SPEED | N: FOG");
     char economy[96];sprintf_s(economy,"GOLD %d | B: BUY | .: AMMO | F7: FREE AMMO | F9: ALL WEAPONS",controller.Gold());Text(25,117,economy);
     if (controller.RefillNotice()) Text(statusPad, statusY - statusSize - 16, controller.AmmoMessage(), statusFont_);
+    // Horizontal CS units match MaxBunnySpeed, excluding vertical falling/jumping velocity.
+    // Stack above notices/status so the optional counter never covers health or ammunition.
+    if (controller.SpeedVisible()) {
+        char speed[64];sprintf_s(speed,"SPEED %.0f u/s (CS)",controller.DisplaySpeed());
+        int rows=1+(controller.RefillNotice() ? 1 : 0)+(*controller.Status().Label() ? 1 : 0);
+        Text(statusPad,statusY-(statusSize+16)*rows,speed,statusFont_);
+    }
     // Ground items advertise interaction without issuing a walk-to-item RTS order.
     if (controller.ItemNearby()) Text(width*.5f-120,height*.72f,"E: PICK UP ITEM",statusFont_);
     // Explain blocked controls next to the status HUD while the corresponding Warcraft effect lasts.
@@ -187,4 +201,20 @@ void Overlay::Draw(HDC dc, const ShooterController& controller) {
     glMatrixMode(GL_TEXTURE); glPopMatrix();
     glMatrixMode(oldMode); glPopAttrib();
     if (activeTexture) activeTexture(oldTexture);
+    // Report submission decisions, not pixel visibility; sampled GL errors can originate in the host frame.
+    if (DiagnosticLog::Due(lastDiagnostic_)) {
+        // Sample display submission with the same bounded cadence as existing overlay diagnostics.
+        wc3::Trace("overlay speed visible=%d speedCS=%.1f",controller.SpeedVisible(),controller.DisplaySpeed());
+        GLint viewport[4] = {}; GLboolean mask[4] = {};
+        glGetIntegerv(GL_VIEWPORT, viewport); glGetBooleanv(GL_COLOR_WRITEMASK, mask);
+        GLenum observedError = glGetError();
+        wc3::Trace("overlay submitted size=%dx%d weapon=%d loaded=%d reticle=%s recoil=%.2f viewport=%d,%d,%d,%d colorMask=%d%d%d%d lineStipple=%d polygonStipple=%d observedGlError=%04X",
+            width, height, index + 1, loaded_[index], unavailableView ? "hidden-unit" : controller.Scoped() ? "scope" : "hip-fire",
+            controller.Recoil(), viewport[0], viewport[1], viewport[2], viewport[3], mask[0], mask[1], mask[2], mask[3],
+            glIsEnabled(GL_LINE_STIPPLE), glIsEnabled(GL_POLYGON_STIPPLE), observedError);
+        if (observedError != GL_NO_ERROR) wc3::LogError("OpenGL error observed after overlay=%04X (host origin possible)", observedError);
+        wc3::Trace("player hp=%.1f ammo=%d reserve=%d contained=%d hidden=%d disabled=%d disarmed=%d status=%s",
+            controller.Health(), controller.Ammo(), controller.Reserve(), controller.Status().contained, controller.Status().hidden,
+            controller.Status().incapacitated, controller.Status().disarmed, controller.Status().Label());
+    }
 }

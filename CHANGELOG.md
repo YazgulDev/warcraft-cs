@@ -1,5 +1,47 @@
 # Changelog
 
+## Unreleased — test branches
+
+- Restore F6 and other mod controls after native campaign movies replace Warcraft's window; also recover a known native input-procedure reset and log attachment/destruction/recovery.
+- Add N to disable/restore fog of war in offline FPS, including the unexplored black mask; restore each map's switches for RTS, menus and cinematics.
+- Add `[Interface] DisableFogOfWar=false` (`true`/`false` or `1`/`0`), startup/F8 reload and upgrade preservation; N changes only the session.
+- Remove Sword and Melee RMB shortcut hints from the HUD while keeping their controls.
+- Remove permanent WASD/reload/jump/crouch HUD hints; retain mod-specific shortcuts and creator credit.
+- Add V to show/hide horizontal speed in CS/GoldSrc units/s, matching MaxBunnySpeed and excluding vertical velocity.
+- Add `[Interface] ShowSpeed=false` (`true`/`false` or `1`/`0`); startup/F8 restores this preference, V changes only the session, and updates preserve custom values.
+- Display compact English update summaries in both launchers; keep full GitHub documentation out of the changes box and prefer reviewed summaries over legacy release prose.
+- Support hidden launcher-summary metadata, translate the accurate 0.6.1 fallback list, and check real full-body API responses, dialog resolution and both packaged EXEs.
+- Make manual Update download and reinstall GitHub's latest stable release even when version/revision already match; startup checks still avoid repeated prompts.
+- Share full Warcraft file refresh between Install and Update, repairing missing/corrupt resources while preserving saves, INI preferences and private-only content. Back up edited original maps/campaign files before replacement.
+- Apply the current runtime repair policy when reinstalling older GitHub packages whose setup skips existing Game folders; retain Player/Developer mode, verified packages and running-game protection.
+- Disable AWP instant enemy kills by default (`[Damage] AWPOneShot=false`); ordinary damage remains 115 before native armor.
+- Require explicit `true`/`1` for AWP finishing; missing/empty/invalid values use false. F8 reload and custom-value preservation remain supported.
+- Draw hip-fire and scope reticles with filled geometry while preserving their shape and inherited OpenGL state.
+- Add configurable bounded diagnostics, dedicated reticle draw/skip/error records and Read logs in both launchers.
+- Show reviewed per-line update changes in both launchers, including the GitHub API rate-limit path.
+
+- Add accelerating A/D-and-mouse air strafes, held-Space autojump and live movement tuning.
+- Use air acceleration immediately on takeoff and retain momentum through landings. Straight jumps preserve the run-up; default `JumpBoostPercent=0` disables the separate automatic takeoff bonus.
+- Bound accumulated speed with `MaxBunnySpeed=1000` GoldSrc units/s; disabling BunnyHop clips excess momentum on each takeoff. Preserve custom boosts and caps during upgrades.
+- Allow height-aware jumps over low objects and gradual gravity-driven falls from cliffs.
+- Preserve tall/unknown blockers, swept collision, bridge surfaces, map bounds and spell movement restrictions.
+- Add editable `[Movement]` settings, migration preservation and independent/native movement oracles.
+- No release merge, version bump or publication; see [movement notes](docs/MOVEMENT.md).
+
+## 0.6.1 — 2026-10-09
+
+- Add `[Audio] CSVolumePercent` (0–100, default 100) for CS shots, reloads, footsteps, melee and C4.
+- Apply the CS-only master gain at startup and on F8, including queued/playing sounds; preserve per-event levels and Warcraft's own audio.
+- Validate missing/empty/malformed/non-finite values and clamp finite percentages; expose native gain readback for diagnostics.
+- Preserve custom audio values while migrating old configs; cover default insertion, repeat setup and duplicate-section/key prevention.
+- Add and install `configurable-game-settings`: new game tuning must ship config keys, validated defaults, reload semantics and update preservation.
+- Update installed/repository `feature-release-workflow` to require all release changes in Release Notes, based on the previous immutable published tag; reuse a version explicitly supplied by the user.
+- Adopt both rules in AGENTS/contributor guidance; update README, installation/troubleshooting, module ownership, validation notes and current version/branch/download references.
+- Add real INI/audio migration checks and a production-XAudio2 test with silent synthetic PCM, live gain changes, mute/restore and defensive bounds.
+- Rebuild both launcher variants, audited sources, checksums, updater manifest and source-only distribution for 0.6.1; preserve previous branches/tags and update compatibility.
+
+Complete changes since v0.6.0 and validation scope: [RELEASE-0.6.1](docs/RELEASE-0.6.1.md).
+
 ## 0.6.0 — 2026-10-09
 
 - Merge all completed feature work since 0.5.1, retaining earlier release/feature branches and immutable tags.

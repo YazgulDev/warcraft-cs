@@ -1,0 +1,49 @@
+# Collect actionable support details without asking users to upload game content.
+title: "[Help] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Read [Troubleshooting](https://github.com/YazgulDev/warcraft-cs/blob/release/0.6.1/TROUBLESHOOTING.md) first.
+        Help is provided when time allows. Remove personal data from logs; do not upload game files or saves.
+  - type: input
+    id: release
+    attributes:
+      label: Release and installation mode
+      description: Include the version, launcher variant, and Player or Developer mode.
+      placeholder: "0.6.1, DLL-included launcher, Player"
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Windows and graphics
+      description: Windows version, GPU and driver version.
+    validations:
+      required: true
+  - type: input
+    id: game
+    attributes:
+      label: Warcraft and map
+      description: Game.dll version, RoC/TFT, map or campaign name/version. Say if the problem occurs before launching.
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Steps to reproduce, expected result, actual result, and exact error.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or output
+      description: Attach sanitized install.log or WarcraftCS.log, paste the error, or explain why no log was created.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: attempted
+    attributes:
+      label: What have you already tried?

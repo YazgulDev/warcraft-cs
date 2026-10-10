@@ -1,4 +1,4 @@
-# Warcraft CS — 0.6.0
+# Warcraft CS — 0.6.1
 
 Counter-Strike 1.6 inside Warcraft III: control your own hero or unit in first person,
 shoot, and play regular maps, campaigns and compatible custom maps.
@@ -11,12 +11,14 @@ Neither variant includes game files, models, sounds, maps or saves.
 You need your own installed copies of both games.**
 This is an early prototype with known limitations.
 
-**[Download 0.6.0](https://github.com/YazgulDev/warcraft-cs/releases/tag/v0.6.0)** ·
-[Release Notes](docs/RELEASE-0.6.0.md) · [Installation](INSTALL.md) · [Requirements](REQUIREMENTS.md)
+**[Download 0.6.1](https://github.com/YazgulDev/warcraft-cs/releases/tag/v0.6.1)** ·
+[Release Notes](docs/RELEASE-0.6.1.md) · [Installation](INSTALL.md) · [Requirements](REQUIREMENTS.md)
+· [Troubleshooting](TROUBLESHOOTING.md) · [Discussions](https://github.com/YazgulDev/warcraft-cs/discussions)
 
-0.6.0 adds the CS-style gold buy menu, configurable starting equipment and multiple C4 charges,
-RoC/TFT selection and `play-roc.bat`, improved fullscreen/Alt-Tab recovery, native Warcraft skies,
-optional CS skies, bridge movement and corrected FPS rendering. All changes since 0.5.1 are in the Release Notes.
+0.6.1 adds configurable CS sound volume with live F8 reload and reusable rules for game settings
+and complete Release Notes. The project also includes the CS-style gold buy menu, configurable
+starting equipment, multiple C4, RoC/TFT selection and `play-roc.bat`, fullscreen/Alt-Tab recovery,
+native/optional CS skies, bridge movement and corrected FPS rendering. Earlier changes are in the [changelog](CHANGELOG.md).
 
 ## Features
 
@@ -92,19 +94,31 @@ or run `play.cmd -Edition ReignOfChaos`; `play.cmd` alone starts Frozen Throne.
 
 The launcher checks new stable GitHub releases automatically at every startup; **Check for updates**
 retries the check. The separate **Update** button fetches the latest stable project release from GitHub.
+After confirmation it reinstalls that release even when the installed version and revision already match.
 A window shows its version and notes: **Update** confirms installation; **Not now** postpones it.
+Both launchers show one change per line. Reviewed lists in `docs/launcher-changes/<version>.txt`
+are included in the update manifest and embedded for known legacy versions, so GitHub API limits
+do not replace the 0.6.1 changes with a generic announcement. See the release page for full notes.
 The source-only launcher keeps source-only updates and builds locally, including when updating a previous
 Player installation. The DLL-included launcher retains its variant and saved Player/Developer mode.
 The dialog explains download requirements and consent.
 Warcraft must be closed. Player installs verified bundled DLLs; Developer rebuilds them locally. Both
 modes convert owned assets and update the launcher if needed. Saves, INI settings and private sword selections are
 retained. Each session requires the download agreement. Offline Play remains available.
+Install and Update both recopy owned Warcraft files, regenerate private CS assets and reinstall/build
+the selected mod DLLs. Missing/corrupt game resources are repaired in the marked private `Game` folder.
+Private-only maps remain; edited content that shares an original map/campaign filename is backed up
+under `backups/runtime-content/<id>/` before replacement. Original game installs remain unchanged.
 
 No download or installation starts before agreement. Microsoft tools may need administrator approval,
 several GB of space and a Windows restart for local compilation. Only the separately named EXE includes prebuilt modules.
 The launcher itself is unsigned; dependency installers have verified vendor signatures.
 Detailed folder examples, first launch, updates and removal: [INSTALL.md](INSTALL.md).
 Developer build instructions: [Client launcher](docs/CLIENT-LAUNCHER.md).
+
+This test branch adds **Read logs** to both launchers. It opens game/session archives, installation,
+launcher and replacement journals directly, with refresh, copy and full-file export. See
+[Diagnostics](docs/DIAGNOSTICS.md) for the new logging controls; these changes are not yet published.
 
 If the old 0.5.0 Player updater reports that this release requires a source build, download the new
 DLL-included EXE directly and select your existing installation folder. No compiler download is silently enabled.
@@ -116,7 +130,7 @@ Run in PowerShell, replacing the game paths with your own:
 ```powershell
 git clone https://github.com/YazgulDev/warcraft-cs.git
 cd warcraft-cs
-git switch release/0.6.0
+git switch release/0.6.1
 .\setup.cmd -WarcraftDirectory "E:\Warcraft III" -CounterStrikeDirectory "C:\SteamGames\steamapps\common\Half-Life\cstrike"
 .\play.cmd
 ```
@@ -129,6 +143,8 @@ Your original installations remain unchanged. Additional installation and remova
 
 Choose **Single Player → Custom Game** or **Campaign**, select your own living unit and press F6.
 Individual maps do not need editing. Enable FPS again after changing maps.
+Native campaign movies can replace Warcraft's window; mod controls reconnect automatically after
+playback so F6 enables FPS in the next mission.
 
 Optional launches:
 
@@ -147,7 +163,7 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 | --- | --- |
 | F6 / F10 | Toggle FPS ↔ RTS / pause menu and return to RTS |
 | WASD / mouse | Move / look and aim |
-| Shift / Ctrl / Space | Walk / crouch / jump |
+| Shift / Ctrl / Space | Walk / crouch / jump (hold Space for repeated hops by default) |
 | Left mouse button | Shoot or primary melee attack |
 | Right mouse button | Knife/sword: strong attack; AWP: cycle two zoom levels and normal view |
 | R / F7 | Reload / refill all carried ammunition for free |
@@ -161,12 +177,27 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 | E | Pick up the nearest item/rune if the unit has an available inventory |
 | H / O / J | Your units: follow and fight / follow without attacking / release squad |
 | F8 | Reload settings |
+| V | Show/hide horizontal speed in CS units/s |
+| N | Disable/restore fog of war while in FPS |
 
 ## Configuration
 
 EXE installation: `<installation folder>/Game/WarcraftCS/WarcraftCS.ini`.
 Default source installation: `.local/warcraft-cs/WarcraftCS/WarcraftCS.ini`.
 Edit it and press F8 in FPS.
+
+- `[Logging] Detailed=true` enables control, validated-setting, movement and renderer details.
+  `IntervalMs=1000` samples movement/render summaries every second (100–60000 ms).
+  `MaxFileMB=8` bounds each runtime log to 1–64 MiB; `ArchiveCount=3` keeps 0–8 previous
+  sessions/segments. Startup and F8 apply all four values. Essential events/errors remain when details
+  are disabled. Updates preserve custom values. See [Diagnostics](docs/DIAGNOSTICS.md).
+
+- `[Movement]` enables Half-Life-inspired bunnyhopping and air strafing. Run with W, jump, release W,
+  then alternate A + mouse left and D + mouse right. Hold Space to jump on landing and retain momentum.
+  Turning in the air builds speed; straight jumps retain the run-up. `JumpBoostPercent=0` is the default,
+  with an optional 0–100% bonus per moving takeoff. Low objects can be cleared above their bounds; tall solids remain blocked.
+  Walking/jumping off a cliff starts a gravity-driven fall. Tune these [movement settings](docs/MOVEMENT.md);
+  all apply on F8 without resetting the current jump. This is an experimental feature on the test branch.
 
 - `[Audio] CSVolumePercent=100` controls all CS sounds independently of Warcraft audio. Range: **0–100**;
   **0** mutes CS, **100** retains the previous levels, and fractional values are accepted.
@@ -175,7 +206,10 @@ Edit it and press F8 in FPS.
 - `[Runes] AmmoPercent=20`; `AmmoWeapons=all` or `current`.
 - `[Damage] Mode=weapon` uses fixed weapon damage. `Mode=hero` uses the current average Warcraft
   attack of **any** controlled unit, including creeps, multiplied by each weapon's `HeroMultiplier`.
-- `[Damage] AWPOneShot=true` finishes enemies with one AWP hit only in `weapon` mode.
+- `[Damage] AWPOneShot=false` is the test-build default: AWP uses `[AWP] Damage` (115 by default)
+  and native armor. Set `true` to enable instant enemy kills in `weapon` mode; F8 applies changes.
+  Missing/empty/invalid values use `false`; `true`/`false` and `1`/`0` are accepted.
+  Updates preserve existing values, so older configs with `AWPOneShot=true` need an explicit edit to disable it.
 - `[Damage] FriendlyFirePercent=50` sets damage to owned/allied units and buildings, including
   firearms, both melee attacks and C4 (including its planter). Range: 0–100; 0 disables allied damage,
   100 applies full damage. Press F8 to reload; C4 retains the settings from when it was planted.
@@ -203,6 +237,15 @@ Edit it and press F8 in FPS.
 - `[Sky] WarcraftEnabled=true` (default) shows Warcraft's stock summer/winter sky in FPS on maps without
   a sky. Keep `Enabled=false` for this mode. Existing map skies are preserved; F6 and cinematics
   restore the map's original sky. Set `WarcraftEnabled=false` and press F8 to disable the preview.
+- `[Interface] ShowSpeed=false` hides the horizontal speed counter by default. V toggles it during
+  the session, including across F6 switches; startup/F8 restores the INI value (`true`/`false`, also `1`/`0`).
+  The counter uses CS/GoldSrc units/s, matching `MaxBunnySpeed`; vertical jump/fall velocity is excluded.
+  Updates add missing keys and preserve custom values. The HUD omits basic WASD/reload/jump/crouch hints.
+- `[Interface] DisableFogOfWar=false` keeps map visibility by default (`true`/`false`, also `1`/`0`).
+  Set `true` or press N in offline FPS to remove both explored fog and the unexplored black mask.
+  N changes only the session; startup/F8 loads the saved preference. F6, menus and cinematics restore
+  the map's captured fog/mask settings; returning to FPS reapplies the session choice. Updates preserve
+  custom values. Sword and secondary-melee shortcuts are omitted from the HUD; their controls remain.
 - `[Interface] FloatingTextDistance=1200` limits native world labels to the FPS camera view and distance
   in Warcraft units. Set `0` to hide world labels and press F8; RTS, harvesting and screen-space map text keep native behavior.
 
@@ -256,6 +299,20 @@ Planned work:
 - [ ] Make further improvements based on playtesting and feedback.
 - [ ] Add multiplayer support(possibly)
 - [ ] Add Warcraft Reforge support(possibly)
+
+## Help
+
+Warcraft CS is a hobby project. Help is provided when time allows; replies and fixes are not guaranteed.
+
+1. Read [Troubleshooting](TROUBLESHOOTING.md) and check the launcher's error message.
+2. If the problem remains, ask in [Discussions — Q&A](https://github.com/YazgulDev/warcraft-cs/discussions/categories/q-a).
+   Include the release version, Player/Developer mode, Windows version, GPU, steps to reproduce
+   and the relevant log: `install.log` in your client folder for setup, or
+   `Game/WarcraftCS/WarcraftCS.log` for in-game problems.
+3. Remove personal information from logs before uploading them. Do not attach game files or saves.
+
+Working installations are useful feedback too: share your Windows/GPU details and whether you tested
+Reign of Chaos, The Frozen Throne, a campaign or a custom map. Use **Ideas** for feature requests.
 
 ## Source layout and validation
 

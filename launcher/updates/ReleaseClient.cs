@@ -29,7 +29,8 @@ namespace WarcraftCSLauncher {
             // The rate-limit fallback selects the same explicit launcher variant and hashes as the API path.
             string name=included && manifest.HasDllIncludedVariant ? LauncherVariant.IncludedFile : LauncherVariant.SourceFile;
             return new ReleaseUpdate {Manifest=included ? manifest.ForDllIncludedLauncher() : manifest,
-                SourceUrl=root+"WarcraftCS-sources.zip",LauncherUrl=root+name,LauncherName=name};
+                SourceUrl=root+"WarcraftCS-sources.zip",LauncherUrl=root+name,LauncherName=name,
+                Notes=ReleaseNotesText.Resolve(manifest,null)};
         }
         private static ReleaseManifest ReadManifest(byte[] data) {
             return new JavaScriptSerializer().Deserialize<ReleaseManifest>(Encoding.UTF8.GetString(data).TrimStart('\uFEFF'));
@@ -59,9 +60,11 @@ namespace WarcraftCSLauncher {
             string launcherName=included && manifest.HasDllIncludedVariant ? LauncherVariant.IncludedFile : LauncherVariant.SourceFile;
             if (!assets.ContainsKey(launcherName)) throw new InvalidDataException("The selected launcher variant is missing from this release.");
             object notes;
+            // Resolve only compact change summaries; the full GitHub body belongs on the release page.
+            string changeList=ReleaseNotesText.Resolve(manifest,release.TryGetValue("body",out notes) ? notes as string : null);
             return new ReleaseUpdate {Manifest=included ? manifest.ForDllIncludedLauncher() : manifest,
                 SourceUrl=assets["WarcraftCS-sources.zip"],LauncherUrl=assets[launcherName],LauncherName=launcherName,
-                Notes=release.TryGetValue("body",out notes) ? notes as string : null};
+                Notes=changeList};
         }
         public static void ValidateAssetUrl(string url, string tag, string name) {
             // Restrict executable/source downloads to this repository's canonical GitHub release assets.

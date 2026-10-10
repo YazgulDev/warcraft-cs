@@ -38,6 +38,7 @@ Initial source-only publication may bootstrap an empty master commit, create `re
 - Include every added feature/parameter, changed default or behavior, fix, relevant source/packaging/skill/documentation change, upgrade instructions and known limitations. Explain config keys, units/ranges and reload timing when parameters are added.
 - Reconcile the notes against the full diff and changelog before publication. Keep version, README/download information, validation claims and the uploaded GitHub release body consistent; do not claim checks that were not performed.
 - Record the complete notes in the project's established release-document location and publish that reviewed content with the release. Keep historical release notes unchanged.
+- Keep the launcher summary separate: maintain `docs/launcher-changes/<version>.txt` as a compact English list, one `- Added ...`, `- Fixed ...` or other supported change verb per line. Populate the manifest from that file and append the same list to the full GitHub body in a hidden `<!-- launcher-summary` comment ending with `-->`. Include only shipped changes; keep instructions, code and validation in the full visible notes. Verify both launcher variants against the complete API body and the manifest fallback before publication.
 
 ## Source-only commits and publication
 

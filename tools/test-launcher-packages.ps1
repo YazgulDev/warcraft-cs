@@ -16,6 +16,16 @@ Require ((Get-FileHash -LiteralPath $standard).Hash -eq $manifest.LauncherSha256
 Require ((Get-FileHash -LiteralPath $included).Hash -eq $manifest.DllIncludedLauncherSha256) 'Included executable checksum differs.'
 Require (!$manifest.RuntimeSha256) 'Primary manifest advertises DLLs to legacy clients.'
 foreach ($assembly in @($standardAssembly,$includedAssembly)) {
+    # Each variant and the rate-limit manifest carry the same reviewed version-specific change list.
+    $notesStream=$assembly.GetManifestResourceStream('WarcraftCS.ReleaseNotes.'+$manifest.Version+'.txt')
+    Require ($null -ne $notesStream) 'Embedded version change list missing.'
+    $notesReader=[IO.StreamReader]::new($notesStream)
+    try { $changes=$notesReader.ReadToEnd().Trim() } finally { $notesReader.Dispose() }
+    Require ($changes -eq $manifest.ReleaseNotes -and $changes.StartsWith('- ')) 'Manifest and launcher change lists differ.'
+    # Check the actual resolver in each EXE, not just the text file beside its build scripts.
+    $notesType=$assembly.GetType('WarcraftCSLauncher.ReleaseNotesText')
+    $normalized=$notesType.GetMethod('Format').Invoke($null,@($changes))
+    Require ($normalized -eq (($changes -replace '\r?\n',"`r`n"))) 'Packaged change list is not accepted as plain English changes.'
     $stream=$assembly.GetManifestResourceStream('WarcraftCS.Source.zip');$memory=[IO.MemoryStream]::new()
     try {
         $stream.CopyTo($memory);$sha=[Security.Cryptography.SHA256]::Create()

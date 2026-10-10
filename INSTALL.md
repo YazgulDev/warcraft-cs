@@ -5,7 +5,7 @@ and Counter-Strike 1.6. Reforged and other Warcraft patches are unsupported.
 This offline, single-player prototype does not download games or redistribute their content.
 Full campaign/custom-map compatibility has not been verified.
 See [REQUIREMENTS.md](REQUIREMENTS.md) for the complete system, owned-file and dependency checklist.
-Current release: **0.6.0**; [all changes and download variants](docs/RELEASE-0.6.0.md).
+Current release: **0.6.1**; [all changes and download variants](docs/RELEASE-0.6.1.md).
 Antivirus can block the unsigned hook module; see the [short explanation and checks](TROUBLESHOOTING.md#antivirus).
 
 ## Windows EXE: recommended for clients
@@ -51,7 +51,8 @@ Read the download summary and linked terms. Tick **I agree to download and insta
 | **Install — Player** in the DLL-included EXE | Players | Bundled project DLLs; no Build Tools or Windows SDK. Python/NumPy may be prepared for owned asset conversion. |
 | **Install — Developer** in the DLL-included EXE | Source installation | The same local compilation as the standard EXE. |
 
-Install uses the EXE's embedded version. The separate **Update** button checks GitHub and installs its latest stable project release after confirmation.
+Install uses the EXE's embedded version. The separate **Update** button downloads GitHub's latest stable
+project release after confirmation and fully reinstalls it, including when that version is already installed.
 
 No download or installation starts before agreement.
 
@@ -107,6 +108,12 @@ Press **F8 in FPS** to apply it immediately, including sounds already playing. W
 music/effects are unaffected. For source installs, edit the prepared runtime's `WarcraftCS/WarcraftCS.ini`.
 Updates add this key to older configs without replacing an existing custom value.
 
+Experimental movement in the bunnyhop test branch uses the same settings file. Run up with **W**, jump,
+release W, then alternate **A + mouse left / D + mouse right**. Hold **Space** to chain landings.
+The `[Movement]` section controls autojump, optional takeoff boost (default **0**), speed cap,
+air acceleration, jump strength, gravity and step height; **F8 in FPS** applies changes.
+See [Movement settings](docs/MOVEMENT.md) for defaults, ranges and manual-jump mode.
+
 The EXE creates these files inside your selected installation folder:
 
 - `Game`: private Warcraft runtime. Settings: `Game\WarcraftCS\WarcraftCS.ini`.
@@ -115,7 +122,11 @@ The EXE creates these files inside your selected installation folder:
 - `install.log`: setup diagnostics; `downloads`/`dependencies`: installer cache/private Python when needed.
 
 To update, save your progress, close the private Warcraft window and click **Update**
-with the same destination. The setup only updates its marked private runtime and preserves saves. At startup, a new-release dialog
+with the same destination. Setup recopies owned Warcraft files, repairs missing/corrupt game resources,
+reconverts CS assets and reinstalls/builds the mod DLLs in its marked private runtime. Saves, custom INI
+values, private sword selection and private-only maps are preserved. Edited maps/campaign files with
+the same name as original content are copied into `backups/runtime-content/<id>/` before replacement.
+Update requires GitHub access; Install remains the offline embedded-version path. At startup, a new-release dialog
 shows its version/notes and offers **Update** or **Not now**. Confirmation installs in your existing
 mode supported by your current launcher. Standard EXEs keep source-only updates and compile locally;
 DLL-included EXEs keep their variant and saved Player/Developer mode. Selecting an installation button changes the mode.
@@ -142,7 +153,7 @@ The manual script requires `cstrike` itself rather than its Half-Life parent.
 ```powershell
 git clone https://github.com/YazgulDev/warcraft-cs.git
 cd warcraft-cs
-git switch release/0.6.0
+git switch release/0.6.1
 .\setup.cmd -WarcraftDirectory "E:\Warcraft III" -CounterStrikeDirectory "C:\SteamGames\steamapps\common\Half-Life\cstrike"
 .\play.cmd
 ```
