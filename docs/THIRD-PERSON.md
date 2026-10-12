@@ -3,8 +3,8 @@
 Select a living owned mobile unit and press **F7** to enter third person directly.
 Press **F7** again in third person to return to RTS; F7 in FPS switches directly to third person.
 Press **T** again to return to FPS; **F6** returns to RTS from either mode.
-Locomotion accepts mobile units, including ranged units. Native primary melee attacks remain supported;
-ranged attacks/projectiles are outside this combat prototype. Buildings, hidden and loaded units cannot be selected.
+Locomotion and primary attacks accept mobile melee and ranged units, including map-defined heroes.
+Buildings, hidden and loaded units cannot be selected.
 
 - Mouse aims and turns the hero; WASD moves relative to that bearing. Movement uses the hero's
   effective native speed, including slows, haste and roots. Existing jump/crouch controls remain.
@@ -17,6 +17,15 @@ ranged attacks/projectiles are outside this combat prototype. Buildings, hidden 
 - LMB plays the hero's attack animation even with no target. Hold it to repeat after recovery.
   A delayed horizontal forward sweep damages one nearest physical contact. Enemies behind the hero,
   outside melee reach or behind terrain/solid objects cannot receive the contact.
+- Ranged attacks converge from the unit's body toward the reticle contact. A second trace prevents firing
+  through a wall beside the body. Reach uses the unit's current native primary attack range by default.
+  Confirmed unit contacts dispatch the map's native missile and attack effects; empty attacks still play
+  their animation. Native homing, impact behavior and map triggers retain ownership after launch.
+  Disabling native attack effects, or attacking a destructable, uses an instant damage fallback.
+- Autoattack cancellation tracks retained targets per unit, so repeated Stop commands cannot continuously
+  reset a manual attack. Automatic pursuit remains blocked; movement and aiming stay under player control.
+  Native preparation/impact guards also reject attacks from lingering autonomous behavior; scoped manual
+  attacks and follow-only squad policies retain their explicit ownership.
 - Damage uses current native unit attack, the third-person multiplier, native armor and the existing
   allied-damage percentage. Native attack effects are controlled by `[Combat] EnableAttackEffects`.
   No CS ammo, CS weapon damage multipliers or AWP finishing are used for hero swings.
@@ -44,6 +53,11 @@ All `[ThirdPerson]` values are editable in the existing private `WarcraftCS.ini`
 | AttackRange | 150 | 30–400 units to the target model surface |
 | AttackArc | 50 | 1–120 degrees, full horizontal sweep |
 | AttackHeight | 64 | 0–200 units above the feet |
+| MeleeHeightTolerance | 32 | 0–100 units above/below AttackHeight; include short creep bodies |
+| UseNativeAttackRange | true | read current native primary ranged reach, including map/item changes |
+| RangedAttackRange | 600 | 30–5000 world units; manual reach or fallback if native range is unavailable |
+| RangedRangeMultiplier | 1 | 0.1–5 times ranged reach; final reach bounded to 30–5000 world units |
+| NativeRangedProjectiles | true | preserve native missile flight when attack effects are enabled; false selects instant contacts |
 | AttackInterval | 2.2 | 0.2–5 seconds before repeating a swing |
 | ContactDelay | 0.56 | 0–3 seconds, capped by AttackInterval |
 | DamageMultiplier | 1 | 0–10 times current native attack |
@@ -65,8 +79,9 @@ Movement settings reload on F8; phase durations apply at the next physical conta
 Updates insert missing keys and preserve existing custom values. A legacy custom RunCycleDistance
 keeps automatic animation speed disabled until explicitly enabled, so its chosen stride still applies.
 
-Known limits: one horizontal melee contact, no cleave sweep implementation or native ranged projectile
-simulation. Arbitrary unit animation sets, extreme camera settings and every custom map are not verified.
+Known limits: one melee contact per swing and no custom cleave sweep implementation. Native ranged missiles
+retain the map's original tracking/impact rules after launch. Arbitrary unit animation sets, extreme camera
+settings and every custom map are not verified.
 The prototype remains offline Warcraft III 1.26a only.
 
 Validation: an isolated Arthas map verified WASD movement, melee contact with native armor,
@@ -79,3 +94,8 @@ motion phase transitions also have automated regression checks.
 The expanded native scene verified direct RTS entry/exit, FPS entry and T switching, plus run/Shift-walk
 for Arthas, footman, knight, rifleman, tauren, Maiev, a wolf and a harpy. The captured movement cycles were inspected.
 Live F8 checks confirmed both the visual multiplier and the manual stride change playback while moving.
+Combat checks verified held melee against an attacking creep without repeated Stop, native ranged missiles
+for Archmage, Blood Mage and Priestess of the Moon, range limits/manual reach reload, building occlusion,
+live damage multiplier, zero allied damage, instant projectile opt-out, stun interruption and FPS contact regression.
+A separate private DotA fixture verified Slardar's held attacks, no autonomous damage while idle or extra
+impacts between manual contacts, and Sniper's native projectile. Captured attack cycles were visually inspected.

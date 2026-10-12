@@ -1,5 +1,6 @@
 #include "../src/presentation/ThirdPersonPose.hpp"
 #include "../src/combat/HeroAttackTimeline.hpp"
+#include "../src/combat/NativeOrderCancellation.hpp"
 #include "../src/presentation/HeroMotionState.hpp"
 #include "../src/presentation/ModelMotionProfile.hpp"
 #include "../src/config/GameplaySettings.hpp"
@@ -8,6 +9,12 @@
 #include <fstream>
 namespace wc3 {void Log(const char*,...) {}}
 int main() {
+    // Stop may leave a sticky target in Dota. Repeated idle observations must not interrupt manual attack playback.
+    NativeOrderCancellation orders;
+    assert(orders.Observe(1,100,0));assert(!orders.Observe(1,100,851972));assert(!orders.Observe(1,100,0));
+    assert(orders.Observe(1,200,0));assert(orders.Observe(1,200,851983));
+    assert(!orders.Observe(1,0,0));assert(orders.Observe(1,200,0));assert(orders.Observe(2,200,0));
+    assert(!orders.Observe(1,200,0));
     // Camera direction, pivot and boom stay collinear through complete turns and shortened collision distances.
     auto pose=ThirdPersonPose::Calculate(100,200,80,0,0,35,350);
     assert(pose.eye[0]==-250 && pose.eye[1]==200 && pose.eye[2]==115);
@@ -70,5 +77,14 @@ int main() {
     WritePrivateProfileStringA("ThirdPerson","AutoAnimationSpeed","false",path);
     WritePrivateProfileStringA("ThirdPerson","AnimationSpeedMultiplier","999",path);
     auto manual=GameplaySettings::Load(path);assert(!manual.thirdPerson.autoAnimationSpeed && manual.thirdPerson.animationSpeedMultiplier==3);
+    // Ranged/manual reach and the short-creep sweep obey actual INI bounds and explicit opt-outs on reload.
+    WritePrivateProfileStringA("ThirdPerson","UseNativeAttackRange","false",path);
+    WritePrivateProfileStringA("ThirdPerson","NativeRangedProjectiles","false",path);
+    WritePrivateProfileStringA("ThirdPerson","RangedAttackRange","999999",path);
+    WritePrivateProfileStringA("ThirdPerson","RangedRangeMultiplier","nan",path);
+    WritePrivateProfileStringA("ThirdPerson","MeleeHeightTolerance","-10",path);
+    auto ranged=GameplaySettings::Load(path);
+    assert(!ranged.thirdPerson.useNativeAttackRange && !ranged.thirdPerson.nativeRangedProjectiles);
+    assert(ranged.thirdPerson.rangedAttackRange==5000 && ranged.thirdPerson.rangedRangeMultiplier==1 && ranged.thirdPerson.meleeHeightTolerance==0);
     DeleteFileA(path);
 }

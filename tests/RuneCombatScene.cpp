@@ -50,6 +50,7 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
         else if(BackgroundGameplay::Enabled() && command=="view")controller.RequestViewToggle();
         else if(BackgroundGameplay::Enabled() && command=="third")controller.RequestThirdPersonToggle();
         else if(BackgroundGameplay::Enabled() && command=="heroattack")controller.TestHeroAttack();
+        else if(BackgroundGameplay::Enabled() && command=="holdattack") {DWORD duration=0;input>>duration;controller.TestHoldAttack(duration);}
         else if(BackgroundGameplay::Enabled() && command=="targetstats")controller.TestLogTarget();
         else if(BackgroundGameplay::Enabled() && command=="pause") {int value=0;input>>value;wc3::PauseUnit(unit,value!=0);}
         else if(BackgroundGameplay::Enabled() && command=="camerawall") {
@@ -86,11 +87,13 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
         else if(BackgroundGameplay::Enabled() && command=="blocker") {
             // A separate disposable effect/physical body tests the production nearest-hit selection.
             if(blocker && wc3::GetUnitTypeId(blocker))wc3::RemoveUnit(blocker);blocker=0;
-            std::string raw;float distance=150,fly=-1;int invulnerable=1,pathing=1,owner=12,reveal=0;input>>raw>>distance>>fly>>invulnerable>>pathing>>owner>>reveal;
+            std::string raw;float distance=150,fly=-1;int invulnerable=1,pathing=1,owner=12,reveal=0,exact=0;input>>raw>>distance>>fly>>invulnerable>>pathing>>owner>>reveal>>exact;
             if(raw.size()==4) {
                 int id=(raw[0]<<24)|(raw[1]<<16)|(raw[2]<<8)|raw[3];float facing=180;
                 float x=wc3::Real(wc3::GetUnitX(unit))+distance,y=wc3::Real(wc3::GetUnitY(unit));
                 blocker=wc3::CreateUnit(wc3::Player(owner>=0 && owner<=15 ? owner : 12),id,&x,&y,&facing);wc3::PauseUnit(blocker,TRUE);
+                // A native building may snap sideways on creation. Exact fixture placement tests real in-line occlusion.
+                if(exact){wc3::SetUnitX(blocker,&x);wc3::SetUnitY(blocker,&y);}
                 using Switch=void (__cdecl*)(wc3::Handle,BOOL);
                 reinterpret_cast<Switch>(base+0x3C72F0)(blocker,invulnerable!=0);
                 reinterpret_cast<Switch>(base+0x3C5FA0)(blocker,pathing!=0);
@@ -101,9 +104,9 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
                 // Map hide/show lifecycles can make a Locust effect enumerable without removing its ability.
                 // Reproduce that visible state in this fixture rather than altering the production group query.
                 if(reveal) {reinterpret_cast<Switch>(base+0x3CE730)(blocker,FALSE);reinterpret_cast<Switch>(base+0x3CE730)(blocker,TRUE);}
-                wc3::Log("fixture blocker unit=%08X type=%08X locust=%d transparent=%d fly=%.1f hp=%.1f visible=%d owner=%d",blocker,id,
+                wc3::Log("fixture blocker unit=%08X type=%08X locust=%d transparent=%d fly=%.1f hp=%.1f visible=%d owner=%d x=%.1f y=%.1f",blocker,id,
                     wc3::GetUnitAbilityLevel(blocker,0x416C6F63),WeaponTargetFilter::PassThrough(blocker,base),
-                    wc3::Real(wc3::GetUnitFlyHeight(blocker)),wc3::Real(wc3::GetUnitState(blocker,0)),wc3::IsUnitVisible(blocker,wc3::GetLocalPlayer()),owner);
+                    wc3::Real(wc3::GetUnitFlyHeight(blocker)),wc3::Real(wc3::GetUnitState(blocker,0)),wc3::IsUnitVisible(blocker,wc3::GetLocalPlayer()),owner,wc3::Real(wc3::GetUnitX(blocker)),wc3::Real(wc3::GetUnitY(blocker)));
             }
         }
         else if(BackgroundGameplay::Enabled() && command=="passive") {

@@ -1,4 +1,5 @@
 #include "FpsCombatGuard.hpp"
+#include "../combat/NativeOrderCancellation.hpp"
 #include <cstring>
 
 namespace {
@@ -131,13 +132,17 @@ void FpsCombatGuard::CancelAttacks(wc3::Handle unit) {
 }
 void FpsCombatGuard::CancelOrders(wc3::Handle unit) {
     if (!targetVerified) return;
-    int order=wc3::GetUnitCurrentOrder(unit);bool target=HasAttackTarget(unit);
+    int order=wc3::GetUnitCurrentOrder(unit);
+    uintptr_t object=wc3::UnitObject(unit),attack=object ? *reinterpret_cast<uintptr_t*>(object+0x1E8) : 0;
+    uintptr_t target=attack ? nativeTarget(attack) : 0;
+    static NativeOrderCancellation cancellation;
     // Retaliation/auto-acquisition has a native target even when GetUnitCurrentOrder reports zero.
     // Clear that behavior before its windup completes; do not flood idle units with stop events.
-    if (target || (order && order!=851972)) {
+    // A retained target after Stop is not a new attack. Repeated Stop cancels the player's TPS animation in Dota.
+    if (cancellation.Observe(unit,target,order)) {
         wc3::IssueImmediateOrderById(unit,851972);
         // The native target reference can linger after stop; keep diagnostics bounded during close combat.
         static DWORD lastLog=0;DWORD now=GetTickCount();
-        if (now-lastLog>=1000) { lastLog=now;wc3::Log("FPS canceled native order=%d target=%d unit=%08X",order,target,unit); }
+        if (now-lastLog>=1000) { lastLog=now;wc3::Log("FPS canceled native order=%d target=%08X unit=%08X",order,target,unit); }
     }
 }

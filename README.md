@@ -204,7 +204,7 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 
 The local third-person prototype adds **F7** to enter directly with a selected owned mobile unit.
 WASD runs and Shift+WASD walks using that unit's authored model animations. F7/F6 return to RTS;
-T switches FPS/third person. The reticle, native melee attacks and Z/X/C/V spells remain available.
+T switches FPS/third person. The reticle, native melee/ranged primary attacks and Z/X/C/V spells remain available.
 See [third-person controls, settings and limits](docs/THIRD-PERSON.md).
 
 EXE installation: `<installation folder>/Game/WarcraftCS/WarcraftCS.ini`.

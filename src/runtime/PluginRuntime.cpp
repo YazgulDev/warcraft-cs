@@ -326,7 +326,10 @@ static DWORD WINAPI Initialize(void*) {
     ActorRenderFilter::Install(base, Hook);
     actorJumpView.Install(base,Hook);
     // Scoped base-damage replacement leaves all ordinary RTS attacks untouched.
-    NativeWeaponAttack::Install(base,Hook);
+    // Manual contacts may prepare/fire while direct control rejects autonomous wind-up and extra impacts.
+    NativeWeaponAttack::Install(base,Hook,[]() {return healthy ? controller.ViewActor() : 0;},
+        [](uintptr_t unit) {return healthy && controller.BlocksPassiveUnit(unit);},
+        [](uintptr_t attack) {return healthy && controller.BlocksPassiveAttack(attack);});
     NativeFloatingText::Install(base, Hook);
     FpsCombatGuard::Install(base, []() { return healthy ? controller.ViewActor() : 0; },
         [](uintptr_t unit) { return healthy && controller.BlocksPassiveUnit(unit); },

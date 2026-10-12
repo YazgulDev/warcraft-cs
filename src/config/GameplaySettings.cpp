@@ -32,6 +32,13 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.thirdPerson.attackRange=std::max(30.f,number("ThirdPerson","AttackRange",150,400));
     result.thirdPerson.attackArc=std::max(1.f,number("ThirdPerson","AttackArc",50,120));
     result.thirdPerson.attackHeight=number("ThirdPerson","AttackHeight",64,200);
+    // Ranged targeting remains bounded even with malformed map stats/config; melee sweeps include short creep bodies.
+    auto nativeRange=text("ThirdPerson","UseNativeAttackRange","true"),projectiles=text("ThirdPerson","NativeRangedProjectiles","true");
+    result.thirdPerson.useNativeAttackRange=_stricmp(nativeRange.c_str(),"false") && nativeRange!="0";
+    result.thirdPerson.nativeRangedProjectiles=_stricmp(projectiles.c_str(),"false") && projectiles!="0";
+    result.thirdPerson.rangedAttackRange=std::max(30.f,number("ThirdPerson","RangedAttackRange",600,5000));
+    result.thirdPerson.rangedRangeMultiplier=std::max(.1f,number("ThirdPerson","RangedRangeMultiplier",1,5));
+    result.thirdPerson.meleeHeightTolerance=number("ThirdPerson","MeleeHeightTolerance",32,100);
     result.thirdPerson.attackInterval=std::max(.2f,number("ThirdPerson","AttackInterval",2.2f,5));
     result.thirdPerson.contactDelay=std::min(result.thirdPerson.attackInterval,number("ThirdPerson","ContactDelay",.56f,3));
     result.thirdPerson.damageMultiplier=number("ThirdPerson","DamageMultiplier",1,10);

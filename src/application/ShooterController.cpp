@@ -104,7 +104,8 @@ void ShooterController::UpdateBuyMenu() {
 bool ShooterController::Down(int key) const {
 #ifdef WCS_GAMEPLAY_TEST
     // Background fixtures must never interpret keys typed into the user's other applications.
-    if(BackgroundGameplay::Enabled())return (key==testWalkKey_ || (testWalking_ && key==settings_.shortcuts.Key(ShortcutAction::Walk))) && GetTickCount()<testWalkUntil_;
+    if(BackgroundGameplay::Enabled())return (key==VK_LBUTTON && GetTickCount()<testAttackUntil_) ||
+        ((key==testWalkKey_ || (testWalking_ && key==settings_.shortcuts.Key(ShortcutAction::Walk))) && GetTickCount()<testWalkUntil_);
 #endif
     return key>0 && key<256 && (GetAsyncKeyState(key) & 0x8000) != 0;
 }
@@ -902,9 +903,13 @@ void ShooterController::Tick(uintptr_t ui) {
     AimAndMove(dt);
     // Planting requires a held button; other weapons preserve their existing click/automatic behavior.
     if(thirdPerson_) {
-        // Native swings consume no CS ammo; holding LMB repeats only after native-IAS-scaled recovery.
-        if(!spells_.Active() && !suppressFire_ && Down(VK_LBUTTON))heroAttack_.Begin(unit_,now*.001,settings_,status_);
-        if(heroAttack_.Tick(unit_,now*.001,yaw_,movement_.FeetZ()+wc3::Real(wc3::GetUnitFlyHeight(unit_)),
+        // Restore locomotion's temporary rate before playing a native attack. Held LMB respects IAS-scaled recovery.
+        if(!spells_.Active() && !suppressFire_ && Down(VK_LBUTTON) && !heroAttack_.Busy(now*.001)) {
+            unitLocomotion_.Release();heroAttack_.Begin(unit_,now*.001,settings_,status_);
+        }
+        // Reuse the real reticle only at contact; idle/recovery frames need no extra camera collision enumeration.
+        float attackOrigin[3]={},attackDirection[3]={};if(heroAttack_.ContactDue(now*.001))AimRay(attackOrigin,attackDirection);
+        if(heroAttack_.Tick(unit_,now*.001,yaw_,movement_.FeetZ()+wc3::Real(wc3::GetUnitFlyHeight(unit_)),attackOrigin,attackDirection,
             spells_.Active(),settings_,status_,hitboxes_,destructableHitboxes_))hits_.Record();
         // Native casts/stuns and the active swing keep pose ownership; physics still supplies jump height.
         unitLocomotion_.Update(unit_,now*.001,movement_.Grounded(),movement_.Speed(),

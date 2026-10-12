@@ -1,12 +1,21 @@
 # Changelog
 
-## Unreleased — Arthas third-person prototype
+## Unreleased — Third-person unit control
+
+- Fix repeated Stop commands resetting manual attacks next to creeps, including DotA Slardar. Track retained
+  targets per actor and reject autonomous native preparation/impacts while preserving scoped manual attacks,
+  ordinary RTS combat, spell ownership and follow-only squad policies.
+- Add aimed primary ranged attacks with native map missile flight, attack effects, native attack range and
+  configurable range/multiplier/projectile fallback. Keep CS ammo and recoil separate from unit combat.
+- Expand melee contact vertically for short creep models with configurable MeleeHeightTolerance. Restore
+  native animation rate before an attack and compute the reticle trace only when contact is due.
+- Move the melee adapter to UnitAttack; add native guard/lifecycle, retained-target and configuration tests.
 
 - Add configurable F7 direct third-person entry from RTS/FPS and F7 return to RTS. Move free ammo refill to
   F11; migrate the old F7 default without resetting custom layouts. Keep T view switching and F6 recovery.
 - Extend movement presentation to mobile units: choose authored model indices for walk/run/swim/fly and leap
   fallback poses; Shift walks, WASD runs. Match native UnitUI gait speeds, with configurable automatic
-  playback, multiplier and manual stride fallback. Combat remains the native melee prototype.
+  playback, multiplier and manual stride fallback.
 
 - Add speed-matched native run/idle playback and takeoff/air/landing poses for Arthas; render the visible
   body at its physical jump height and restore its model transform before the next tick. Stock Arthas has no
@@ -19,7 +28,7 @@
   native attack damage/armor/passives, live attack-speed modifiers and the configured friendly-fire percentage.
 - Separate hero attacks from CS weapon ammunition, recoil, scope and damage multipliers.
 - Add collision-shortened camera geometry and [ThirdPerson] camera/swing settings, validated F8 reload and
-  preservation of custom settings on updates. Prototype timing is tuned for Arthas; ranged attacks are excluded.
+  preservation of custom settings on updates. Default attack timing remains tuned for Arthas.
 - Add attack timeline/camera/config regressions and explicit disposable native Arthas test commands.
 - Document controls, timing semantics, module ownership and prototype limitations in docs/THIRD-PERSON.md.
 

@@ -6,7 +6,7 @@
 #include "../platform/WarcraftCollision.hpp"
 #include "../presentation/FirstPersonCamera.hpp"
 #include "../presentation/ThirdPersonCamera.hpp"
-#include "../platform/HeroMeleeAttack.hpp"
+#include "../platform/UnitAttack.hpp"
 #include "../platform/UnitLocomotion.hpp"
 #include "../platform/NativeSky.hpp"
 #include "../platform/NativeFogOfWar.hpp"
@@ -120,7 +120,9 @@ public:
 #endif
 #ifdef WCS_GAMEPLAY_TEST
     // Opt-in native oracle uses the production windup/contact, without injecting desktop mouse input.
-    void TestHeroAttack() {if(ThirdPerson())heroAttack_.Begin(unit_,GetTickCount()*.001,settings_,status_);}
+    void TestHeroAttack() {if(ThirdPerson()){unitLocomotion_.Release();heroAttack_.Begin(unit_,GetTickCount()*.001,settings_,status_);}}
+    // Held attack exercises the normal production branch and autoattack guard, rather than starting the timeline directly.
+    void TestHoldAttack(DWORD duration) {testAttackUntil_=GetTickCount()+std::min(duration,DWORD(10000));}
     void TestLogTarget() const {wc3::Log("fixture target hp=%.1f actorMana=%.1f",fixtureTarget_ ? wc3::Real(wc3::GetUnitState(fixtureTarget_,0)) : -1,wc3::Real(wc3::GetUnitState(unit_,2)));}
     // Match the real movement key-down path, including deliberate channel interruption.
     void TestWalk(int key,DWORD duration,bool walking=false) {RequestSpellCancel();testWalkKey_=key;testWalking_=walking;testWalkUntil_=GetTickCount()+std::min(duration,DWORD(2000));}
@@ -156,7 +158,7 @@ public:
     static const Weapon weapons[WeaponSlots::Count];
 private:
 #ifdef WCS_GAMEPLAY_TEST
-    int testWalkKey_=0;bool testWalking_=false;DWORD testWalkUntil_=0;
+    int testWalkKey_=0;bool testWalking_=false;DWORD testWalkUntil_=0,testAttackUntil_=0;
 #endif
     bool Pressed(int key);
     bool Down(int key) const;
@@ -224,7 +226,7 @@ private:
     WarcraftCollision collision_;
     FirstPersonCamera camera_;
     ThirdPersonCamera thirdCamera_;
-    HeroMeleeAttack heroAttack_;
+    UnitAttack heroAttack_;
     UnitLocomotion unitLocomotion_;
     bool thirdPerson_=false,viewToggleRequested_=false,thirdPersonRequested_=false;
     NativeSky nativeSky_;
