@@ -83,6 +83,9 @@ Known limits: one melee contact per swing and no custom cleave sweep implementat
 retain the map's original tracking/impact rules after launch. Arbitrary unit animation sets, extreme camera
 settings and every custom map are not verified.
 The prototype remains offline Warcraft III 1.26a only.
+Native attack retry/wind-up and attack-pose callbacks are suppressed during direct control, including
+Sniper. Blocking only native damage still allowed a visible autonomous attack cycle.
+Manual LMB attacks and ordinary RTS behavior retain their separate dispatch paths.
 
 Validation: an isolated Arthas map verified WASD movement, melee contact with native armor,
 empty swings, configured allied damage, interruption by incapacitation, Holy Light damage,
@@ -99,3 +102,7 @@ for Archmage, Blood Mage and Priestess of the Moon, range limits/manual reach re
 live damage multiplier, zero allied damage, instant projectile opt-out, stun interruption and FPS contact regression.
 A separate private DotA fixture verified Slardar's held attacks, no autonomous damage while idle or extra
 impacts between manual contacts, and Sniper's native projectile. Captured attack cycles were visually inspected.
+The follow-up Sniper fixture verified idle control without manual swings/damage, repeated LMB missile contacts
+and native collision-profile decoding. Four preserved-map ramp trials crossed in both directions along two axes.
+Portable regressions cover steep grounded sweeps at 20 FPS, narrow native footprints, legacy opt-out,
+non-colliding/invalid profiles and retained bridge/tree/wall/cliff protections. Other custom-map routes remain unverified.

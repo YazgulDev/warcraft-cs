@@ -2,6 +2,10 @@
 
 ## Unreleased — Third-person unit control
 
+- Suppress retained-target native wind-up timers and attack poses in direct control, fixing Sniper's visible autoattack loop while preserving manual ranged missiles and RTS attacks.
+- Use live Warcraft actor/creature collision footprints on narrow ramps; non-colliding map helpers no longer supply solid model obstacles. Buildings and trees retain solid volumes. `[Movement] UseNativeUnitCollision=true` reloads on F8; false restores legacy creature boxes/actor radius.
+- Resolve grounded support between swept movement substeps, fixing fast uphill traversal without weakening walls or cliff collision. Extend disposable movement and collision-profile regression coverage.
+
 - Fix repeated Stop commands resetting manual attacks next to creeps, including DotA Slardar. Track retained
   targets per actor and reject autonomous native preparation/impacts while preserving scoped manual attacks,
   ordinary RTS combat, spell ownership and follow-only squad policies.

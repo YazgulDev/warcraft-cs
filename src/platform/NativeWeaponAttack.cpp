@@ -17,12 +17,32 @@ using Impact=void (__thiscall*)(uintptr_t,uintptr_t,int,int,int,int,int);
 using Prepare=void (__thiscall*)(uintptr_t,uintptr_t,float*,float*);
 Impact originalImpact=nullptr;
 Prepare originalPrepare=nullptr;
+using Windup=void (__thiscall*)(uintptr_t,int);
+using AttackPose=void (__thiscall*)(uintptr_t,uintptr_t);
+Windup originalWindup=nullptr;
+AttackPose originalAttackPose=nullptr;
 uintptr_t ControlledObject() {return wc3::UnitObject(controlledActor ? controlledActor() : 0);}
-void __fastcall GuardImpact(uintptr_t attack,uintptr_t,uintptr_t target,int a,int b,int c,int d,int e) {
+bool SuppressAutonomous(uintptr_t attack) {
     auto actor=ControlledObject();
-    // A retained native AI target can still reach impact without a new order. Only our scoped manual contact may fire.
     bool controlled=(actor && *reinterpret_cast<uintptr_t*>(actor+0x1E8)==attack) || (passiveAttack && passiveAttack(attack));
-    if(controlled && !(contact && contact->attack==attack)) {
+    return controlled && !(contact && contact->attack==attack);
+}
+void __fastcall GuardWindup(uintptr_t attack,uintptr_t,int phase) {
+    // An existing target bypasses order validation and restarts its own attack timer. Stop that cycle before it winds up.
+    if(!SuppressAutonomous(attack))originalWindup(attack,phase);
+}
+void __fastcall GuardAttackPose(uintptr_t attack,uintptr_t,uintptr_t actor) {
+    // Blocking damage alone leaves native attack animations/rate changes visible on ranged heroes.
+    // Explicit TPS animations use SetUnitAnimation instead, so this native AI pose can be suppressed independently.
+    if(!SuppressAutonomous(attack))originalAttackPose(attack,actor);
+    else {
+        static DWORD last=0;DWORD now=GetTickCount();
+        if(now-last>=1000){last=now;wc3::Trace("FPS blocked autonomous attack pose component=%08X",attack);}
+    }
+}
+void __fastcall GuardImpact(uintptr_t attack,uintptr_t,uintptr_t target,int a,int b,int c,int d,int e) {
+    // A retained native AI target can still reach impact without a new order. Only our scoped manual contact may fire.
+    if(SuppressAutonomous(attack)) {
         static DWORD last=0;DWORD now=GetTickCount();
         if(now-last>=1000){last=now;wc3::Trace("FPS blocked autonomous impact component=%08X",attack);}return;
     }
@@ -98,17 +118,23 @@ void NativeWeaponAttack::Install(uintptr_t base,HookInstaller hook,wc3::Handle (
     const unsigned char prepare[]={0x51,0x57,0x8B,0xF9};
     const unsigned char finish[]={0x8B,0x81,0xE0,0x01,0x00,0x00};
     const unsigned char range[]={0x56,0x8B,0xF1,0x8B,0x86,0xC0,0x02,0x00,0x00};
+    const unsigned char windup[]={0x53,0x55,0x56,0x8B,0xF1,0x8B,0x46,0x70};
+    const unsigned char pose[]={0x83,0xEC,0x08,0x56,0x57,0x8B,0xF9};
     std::memcpy(&relative,reinterpret_cast<void*>(base+0xCF82B),4);
     bool verified=!std::memcmp(reinterpret_cast<void*>(base+0xCF660),impact,sizeof(impact)) &&
         !std::memcmp(reinterpret_cast<void*>(base+0xC6940),roll,sizeof(roll)) &&
         !std::memcmp(reinterpret_cast<void*>(base+0x281580),prepare,sizeof(prepare)) &&
         !std::memcmp(reinterpret_cast<void*>(base+0x276330),finish,sizeof(finish)) &&
         !std::memcmp(reinterpret_cast<void*>(base+0xC6B30),range,sizeof(range)) &&
+        !std::memcmp(reinterpret_cast<void*>(base+0xCF5C0),windup,sizeof(windup)) &&
+        !std::memcmp(reinterpret_cast<void*>(base+0xC8930),pose,sizeof(pose)) &&
         !std::memcmp(reinterpret_cast<void*>(base+0xD0225),cleanup,sizeof(cleanup)) && 0xCF82F+relative==0xC6940;
     available=verified && hook(reinterpret_cast<void*>(base+0xC6940),reinterpret_cast<void*>(DamageRoll),reinterpret_cast<void**>(&originalRoll)) &&
         hook(reinterpret_cast<void*>(base+0xC6B30),reinterpret_cast<void*>(ContactRange),reinterpret_cast<void**>(&originalRange)) &&
         hook(reinterpret_cast<void*>(base+0xCF660),reinterpret_cast<void*>(GuardImpact),reinterpret_cast<void**>(&originalImpact)) &&
-        hook(reinterpret_cast<void*>(base+0x281580),reinterpret_cast<void*>(GuardPrepare),reinterpret_cast<void**>(&originalPrepare));
+        hook(reinterpret_cast<void*>(base+0x281580),reinterpret_cast<void*>(GuardPrepare),reinterpret_cast<void**>(&originalPrepare)) &&
+        hook(reinterpret_cast<void*>(base+0xCF5C0),reinterpret_cast<void*>(GuardWindup),reinterpret_cast<void**>(&originalWindup)) &&
+        hook(reinterpret_cast<void*>(base+0xC8930),reinterpret_cast<void*>(GuardAttackPose),reinterpret_cast<void**>(&originalAttackPose));
     wc3::Log("Native weapon attack effects verified=%d installed=%d",verified,available);
 }
 namespace {

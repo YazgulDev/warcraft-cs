@@ -28,6 +28,7 @@ simulation step applies the new speed cap. Jump speed applies to the next takeof
 
 | `[Movement]` key | Default | Range and units |
 | --- | --- | --- |
+| UseNativeUnitCollision | true | true/false; live Warcraft actor/creature footprints. Ignore Locust/pathing-disabled helpers; buildings/trees retain solid model volumes. false restores visual creature boxes and the 24-unit actor footprint |
 | BunnyHop | true | true/false; preserves excess takeoff momentum and enables the optional boost and air speed cap. false clips excess speed to the current weapon's running speed at each takeoff |
 | AutoJump | true | true/false; false requires a new Space press per jump |
 | JumpBoostPercent | 0 | 0–100 percent per moving takeoff; optional arcade bonus, separate from air strafe acceleration |
@@ -51,7 +52,10 @@ takeoff limiter in favor of the editable cap. Like discrete GoldSrc air accelera
 input timing and simulation step. Independent eight-second trials with alternating turns produce about
 792, 1055 and 960 Warcraft units/s at 30, 60 and 144 FPS, respectively, starting from 375 with no takeoff bonus.
 These are deterministic physics measurements, not a native-game performance or speed guarantee.
-Conservative model boxes can reject narrow passages or irregular props. Native walkable bridge decks
+Ground support is resolved after each swept substep, so fast uphill movement does not reuse the floor
+from the beginning of the frame. Unknown native collision profiles retain conservative bounds.
+The collision preference reloads on F8; updates preserve an explicit opt-out.
+Conservative building/prop boxes can still reject narrow passages or irregular props. Native walkable bridge decks
 remain the surface authority rather than the box surrounding the complete bridge mesh.
 
 The tree-collision test branch replaces canopy-sized standing extents with decoded trunk bounds,

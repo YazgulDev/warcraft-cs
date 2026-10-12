@@ -10,6 +10,16 @@
 namespace wc3 { void Log(const char*,...) {} }
 int main() {
     GameplaySettings settings;
+    assert(settings.movement.useNativeUnitCollision);
+    // Exercise the actual INI reload boundary; malformed values retain the enabled movement fix.
+    char collisionFolder[MAX_PATH]={};GetCurrentDirectoryA(MAX_PATH,collisionFolder);
+    const std::string collisionReload=std::string(collisionFolder)+"\\native-unit-collision-test.ini";
+    for(auto value:{"true","false","broken","","nan"}) {
+        WritePrivateProfileStringA("Movement","UseNativeUnitCollision",value,collisionReload.c_str());
+        auto parsed=GameplaySettings::Load(collisionReload);
+        assert(parsed.movement.useNativeUnitCollision==(strcmp(value,"false")!=0));
+    }
+    DeleteFileA(collisionReload.c_str());
     assert(settings.ContactDamage(0,false,100)==100);
     assert(settings.ContactDamage(4,true,100)==162.5f);
     // Default AWP hits use their configured base damage rather than health-dependent finishing damage.

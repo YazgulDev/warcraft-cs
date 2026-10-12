@@ -65,6 +65,9 @@ regression uses actual Win32 message forwarding without game files or a visible 
 `MovementPhysics` integrates momentum, jumping and gravity without engine calls. `WarcraftCollision`
 sweeps the player footprint against terrain, native bridge decks and solid model volumes supplied by
 `MovementObstacles`. The obstacle adapter owns model/type caches and clears them on map changes.
+`UnitCollisionProfile` reads live Warcraft collision radius/mask, converts native cell radii to world units
+and separates non-colliding map helpers from visual bodies. Movement consumes this profile independently
+of weapon target filtering; unknown profiles retain conservative geometry. Grounded support follows each sweep substep.
 `GameplaySettings` loads movement tuning; the controller applies that snapshot on startup and F8.
 
 `RenderSettings` is part of that validated snapshot. `NativeFrameRate` verifies the supported native
@@ -163,7 +166,9 @@ inventory/recovery capacity. F8 clamps existing surplus reserve and resets fract
 snapshot only. SpellCaster checks the shared native snapshot before replacing an active order.
 
 `NativeWeaponAttack` owns the version-verified native preparation/impact/cleanup adapter. A thread-local
-contact scope substitutes only the weapon's base roll during synchronous impact; native passive rolls,
+manual-contact scope also gates native wind-up retries and attack poses, preventing retained AI targets
+from restarting ranged attack animations. Ordinary RTS units and active fighting followers remain native.
+The same contact scope substitutes only the weapon's base roll during synchronous impact; native passive rolls,
 critical modifiers and attack callbacks remain engine-owned. It temporarily uses instant impact and
 extends only the matching primary impact range getter to the verified ray contact's center distance.
 Ordinary RTS, unrelated components, secondary attack ranges and preparation keep native range. It

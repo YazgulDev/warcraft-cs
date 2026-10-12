@@ -2,6 +2,7 @@
 #include "BackgroundGameplay.hpp"
 #include "../src/platform/NativeSpellSlots.hpp"
 #include "../src/platform/WeaponTargetFilter.hpp"
+#include "../src/platform/UnitCollisionProfile.hpp"
 #include <fstream>
 #include <sstream>
 #include <vector>
@@ -62,6 +63,26 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
         else if(BackgroundGameplay::Enabled() && command=="motionstats") {
             // This oracle observes restored simulation height/rate, outside the transient world render scope.
             wc3::Log("fixture motion fly=%.2f rate=%.2f feet=%.2f",wc3::Real(wc3::GetUnitFlyHeight(unit)),wc3::AnimationRate(unit),controller.ActorFeet());
+            auto body=UnitCollisionProfile::Read(unit,base);
+            wc3::Log("fixture body known=%d colliding=%d radius=%.1f",body.known,body.colliding,body.radius);
+        }
+        else if(BackgroundGameplay::Enabled() && command=="position") {
+            // Exact placement is confined to a disposable oracle; normal controllers never teleport actors.
+            if(!controller.Visible())unit=wc3::PickOwnedUnit();
+            float x=0,y=0;input>>x>>y;wc3::SetUnitX(unit,&x);wc3::SetUnitY(unit,&y);
+            wc3::Log("fixture position x=%.1f y=%.1f terrain=%.1f ground=%.1f",x,y,wc3::TerrainGround(x,y),wc3::Ground(x,y));
+        }
+        else if(BackgroundGameplay::Enabled() && command=="obstacles") {
+            // Identify map helpers that visually overlap a ramp but have no actual Warcraft collision.
+            float x=wc3::Real(wc3::GetUnitX(unit)),y=wc3::Real(wc3::GetUnitY(unit)),range=600;
+            auto group=wc3::CreateGroup();wc3::GroupEnumUnitsInRange(group,&x,&y,&range,0);
+            while(auto other=wc3::FirstOfGroup(group)) {
+                wc3::GroupRemoveUnit(group,other);
+                wc3::Log("fixture obstacle unit=%08X type=%08X x=%.1f y=%.1f locust=%d transparent=%d model=%s",other,wc3::GetUnitTypeId(other),
+                    wc3::Real(wc3::GetUnitX(other)),wc3::Real(wc3::GetUnitY(other)),wc3::GetUnitAbilityLevel(other,0x416C6F63),
+                    WeaponTargetFilter::PassThrough(other,base),wc3::UnitModelPath(wc3::GetUnitTypeId(other)).c_str());
+            }
+            wc3::DestroyGroup(group);
         }
         else if(BackgroundGameplay::Enabled() && command=="spell") {int slot=0;input>>slot;controller.RequestSpell(slot-1);}
         else if(BackgroundGameplay::Enabled() && command=="bars")controller.RequestHealthBarToggle();
