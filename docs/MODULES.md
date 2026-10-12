@@ -14,6 +14,8 @@ and keeps actor render visibility separate from movement/spell ownership.
 It compares the live native sequence before reusing a cached pose, repairing AI overwrites without resetting a correct gait.
 `UnitAttack::Preview` returns a read-only `UnitAimTarget` using the same geometry as attack contact;
 `TargetMarkerView` projects that snapshot without native handle reads or gameplay writes.
+The snapshot supplies terrain-conforming circle vertices and enemy classification; the renderer keeps
+world depth for the ring and screen-space brackets, without altering native unit selection.
 `ActorJumpView` captures the native model's skinning inputs between world passes and applies physical
 body elevation through that same skinning function for world drawing. It restores the model/cache
 at the swap boundary before the next tick. It does not write unit fly height, grant

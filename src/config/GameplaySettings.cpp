@@ -45,6 +45,8 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     // The marker can be hidden without changing contact range, attack targeting or map state.
     auto indicator=text("ThirdPerson","ShowTargetIndicator","true");
     result.thirdPerson.showTargetIndicator=_stricmp(indicator.c_str(),"false") && indicator!="0";
+    // Radius uses Warcraft world units and reloads with the other third-person settings.
+    result.thirdPerson.targetCircleRadius=std::max(16.f,number("ThirdPerson","TargetCircleRadius",64,256));
     // Native pose playback follows physical motion; unknown toggles keep the requested animation defaults.
     auto motion=text("ThirdPerson","MovementAnimations","true");
     if(!_stricmp(motion.c_str(),"false") || motion=="0")result.thirdPerson.movementAnimations=false;

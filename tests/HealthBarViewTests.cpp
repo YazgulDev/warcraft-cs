@@ -1,4 +1,5 @@
 #include "../src/presentation/HealthBarRenderer.hpp"
+#include "../src/presentation/TargetMarkerView.hpp"
 #include <windows.h>
 #include <gl/GL.h>
 #include <cassert>
@@ -39,6 +40,26 @@ int main() {
     glClear(GL_COLOR_BUFFER_BIT);bar.ally=false;HealthBarRenderer::Draw({bar},view,320,240,8,15000);assert(Colored(false)>100);
     glClearDepth(.5);glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
     HealthBarRenderer::Draw({bar},view,320,240,8,15000);assert(Colored(false)==0);
+    // Real WGL ring pixels prove enemy/yellow colors, terrain depth occlusion and caller-state restoration.
+    glClearDepth(1);glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+    glMatrixMode(GL_PROJECTION);glLoadIdentity();glOrtho(0,320,240,0,-1,1);
+    glMatrixMode(GL_MODELVIEW);glLoadIdentity();
+    UnitAimTarget target;target.handle=1;target.enemy=true;target.position[0]=-500; // Hide brackets to measure only the ground circle.
+    for(size_t i=0;i<target.circle.size();++i) {
+        float angle=float(i)*6.28318530718f/target.circle.size();
+        target.circle[i]={400+64*std::cos(angle),64*std::sin(angle),3};
+    }
+    glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE);
+    assert(TargetMarkerView::Draw(target,view,320,240,8,15000));assert(Colored(false)>30);
+    glGetBooleanv(GL_COLOR_WRITEMASK,mask);assert(!mask[0]);
+    glGetIntegerv(GL_DEPTH_FUNC,&depthFunc);assert(depthFunc==GL_GREATER);
+    glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE);glClear(GL_COLOR_BUFFER_BIT);
+    target.enemy=false;TargetMarkerView::Draw(target,view,320,240,8,15000);
+    unsigned char pixels[320*240*3];glReadPixels(0,0,320,240,GL_RGB,GL_UNSIGNED_BYTE,pixels);
+    int yellow=0;for(int i=0;i<320*240*3;i+=3)if(pixels[i]>200 && pixels[i+1]>200 && pixels[i+2]<100)++yellow;
+    assert(yellow>30 && Colored(false)==0);
+    glClearDepth(.5);glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+    target.enemy=true;TargetMarkerView::Draw(target,view,320,240,8,15000);assert(Colored(false)==0);
     assert(glGetError()==GL_NO_ERROR);wglMakeCurrent(nullptr,nullptr);wglDeleteContext(context);ReleaseDC(window,dc);DestroyWindow(window);
     std::puts("Health bar projection, team pixels, fractions, occlusion and GL state passed.");
 }

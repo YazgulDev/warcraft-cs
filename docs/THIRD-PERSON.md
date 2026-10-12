@@ -6,8 +6,12 @@ Press **T** again to return to FPS; **F6** returns to RTS from either mode.
 Locomotion and primary attacks accept mobile melee and ranged units, including map-defined heroes.
 Buildings, hidden and loaded units cannot be selected.
 
-An in-range contact receives colored brackets and **TARGET IN RANGE**: red for an enemy, green for
-an ally, gold for a destructable. The marker predicts the same nearest contact as LMB, including
+An in-range contact receives colored brackets (red for an enemy, green for an ally, gold for a destructable)
+and a ground circle: red for an actual enemy, yellow for allied/neutral units and destructables.
+The circle follows terrain/bridge decks and is covered by opaque scenery; no text caption is displayed.
+`[ThirdPerson] TargetCircleRadius=64` sets its world-space radius, bounded to 16..256 Warcraft units.
+Missing/malformed values use 64. F8 reloads the radius; updates preserve a custom value.
+The marker predicts the same nearest contact as LMB, including
 camera parallax, configured/native reach and terrain/body obstruction. Melee uses the full configured
 forward sweep, so its nearest contact can sit beside the central reticle. Prediction never attacks,
 orders or selects the target. `[ThirdPerson] ShowTargetIndicator=true` enables it; false hides it.
@@ -124,3 +128,6 @@ An isolated DotA scene verified walk-to-idle, forced native sprite replacement, 
 attacking creep, reachable/unreachable targets and manual contact for Sniper, Rifleman and the map's
 Hamg/Treant melee definition. Sniper's marker opt-out/re-enable also passed live F8 reload.
 The marker screenshots were visually inspected. Other models/maps remain unverified.
+Ground-circle checks verified red/yellow pixels, world-depth occlusion and OpenGL state restoration.
+An isolated DotA scene verified enemy and own-unit circles and live F8 radius changes from 64 to 96.
+Both native circle screenshots were visually inspected.

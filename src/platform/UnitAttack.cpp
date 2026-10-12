@@ -36,6 +36,18 @@ UnitAimTarget UnitAttack::Preview(wc3::Handle unit,float yaw,float feet,const fl
     auto target=kind==1 ? PickMelee(unit,yaw,feet,settings,units,destructables) :
         PickRanged(unit,feet,origin,direction,settings,units,destructables);
     target.allied=target.handle && !target.destructable && wc3::IsUnitAlly(target.handle,wc3::GetOwningPlayer(unit));
+    if(target.handle) {
+        // Only actual enemies get red. Neutral/passive, allied and destructable contacts use yellow.
+        target.enemy=!target.destructable && wc3::IsUnitEnemy(target.handle,wc3::GetOwningPlayer(unit));
+        float x=wc3::Real(target.destructable ? wc3::GetDestructableX(target.handle) : wc3::GetUnitX(target.handle));
+        float y=wc3::Real(target.destructable ? wc3::GetDestructableY(target.handle) : wc3::GetUnitY(target.handle));
+        for(size_t i=0;i<target.circle.size();++i) {
+            float angle=float(i)*6.28318530718f/target.circle.size();
+            float px=x+std::cos(angle)*settings.thirdPerson.targetCircleRadius;
+            float py=y+std::sin(angle)*settings.thirdPerson.targetCircleRadius;
+            target.circle[i]={px,py,wc3::Ground(px,py)+3}; // Lift the decal just above terrain/bridge decks.
+        }
+    }
     return target;
 }
 UnitAimTarget UnitAttack::PickMelee(wc3::Handle actor,float yaw,float feet,const GameplaySettings& settings,

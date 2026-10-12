@@ -92,5 +92,15 @@ int main() {
     assert(!GameplaySettings::Load(path).thirdPerson.showTargetIndicator);
     WritePrivateProfileStringA("ThirdPerson","ShowTargetIndicator","broken",path);
     assert(GameplaySettings::Load(path).thirdPerson.showTargetIndicator);
+    // Circle radius is a world-space setting: validate its real INI fallback, bounds and subsequent reload.
+    assert(GameplaySettings::Load(path).thirdPerson.targetCircleRadius==64);
+    WritePrivateProfileStringA("ThirdPerson","TargetCircleRadius","99999",path);
+    assert(GameplaySettings::Load(path).thirdPerson.targetCircleRadius==256);
+    WritePrivateProfileStringA("ThirdPerson","TargetCircleRadius","nan",path);
+    assert(GameplaySettings::Load(path).thirdPerson.targetCircleRadius==64);
+    WritePrivateProfileStringA("ThirdPerson","TargetCircleRadius","0",path);
+    assert(GameplaySettings::Load(path).thirdPerson.targetCircleRadius==16);
+    WritePrivateProfileStringA("ThirdPerson","TargetCircleRadius","96",path);
+    assert(GameplaySettings::Load(path).thirdPerson.targetCircleRadius==96);
     DeleteFileA(path);
 }

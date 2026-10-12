@@ -206,6 +206,9 @@ The local third-person prototype adds **F7** to enter directly with a selected o
 WASD runs and Shift+WASD walks using that unit's authored model animations. F7/F6 return to RTS;
 T switches FPS/third person. The reticle, native melee/ranged primary attacks and Z/X/C/V spells remain available.
 See [third-person controls, settings and limits](docs/THIRD-PERSON.md).
+Reachable targets have brackets and a ground circle: red for enemies, yellow for other contacts.
+`[ThirdPerson] ShowTargetIndicator` hides/shows both; `TargetCircleRadius=64` sets the circle radius
+in Warcraft units (16..256). Change them in `Game/WarcraftCS/WarcraftCS.ini` and press F8 to reload.
 
 EXE installation: `<installation folder>/Game/WarcraftCS/WarcraftCS.ini`.
 Default source installation: `.local/warcraft-cs/WarcraftCS/WarcraftCS.ini`.

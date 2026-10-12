@@ -17,9 +17,10 @@ if ([regex]::Matches($text,'(?m)^\[Audio\]').Count -ne 1) { throw 'Audio migrati
 $before=(Get-FileHash -LiteralPath $config).Hash
 if(!$text.Contains('ShowTargetIndicator=true')) { throw 'Target indicator default missing from migration.' }
 $customMarker=Join-Path $folder 'custom-target-marker.ini'
-@('[ThirdPerson]','ShowTargetIndicator=false') | Set-Content -LiteralPath $customMarker -Encoding ascii
+@('[ThirdPerson]','ShowTargetIndicator=false','TargetCircleRadius=96') | Set-Content -LiteralPath $customMarker -Encoding ascii
 Update-GameplayConfig $template $customMarker
 if(!(Get-Content -LiteralPath $customMarker -Raw).Contains('ShowTargetIndicator=false')) { throw 'Migration reset the hidden target marker preference.' }
+if(!(Get-Content -LiteralPath $customMarker -Raw).Contains('TargetCircleRadius=96') -or !$text.Contains('TargetCircleRadius=64')) { throw 'Circle radius migration/default failed.' }
 Update-GameplayConfig $template $config
 if ((Get-FileHash -LiteralPath $config).Hash -ne $before) { throw 'Repeated config update changed an already merged file.' }
 # Reserve/scaling upgrades preserve existing values and do not silently replace a player's damage/economy mode.

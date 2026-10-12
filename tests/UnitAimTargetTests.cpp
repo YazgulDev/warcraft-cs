@@ -46,6 +46,7 @@ int main(){
     IsUnitHidden=[](Handle)->BOOL{return hidden;};IsUnitLoaded=[](Handle)->BOOL{return loaded;};
     IsUnitVisible=[](Handle,Handle)->BOOL{return visible;};GetLocalPlayer=[]()->Handle{return 1;};
     GetOwningPlayer=[](Handle)->Handle{return 1;};IsUnitAlly=[](Handle,Handle)->BOOL{return ally;};
+    IsUnitEnemy=[](Handle,Handle)->BOOL{return !ally;};
     UnitDamageTarget=[](Handle,Handle,float* amount,BOOL,BOOL,int,int,int)->BOOL{++damageEvents;health-=*amount;return TRUE;};
     UnitAttack attack;GameplaySettings settings;UnitHitboxes units;DestructableHitboxes objects;
     float origin[]={-500,0,64},direction[]={1,0,0};
@@ -53,6 +54,9 @@ int main(){
     // The real picker predicts native reach and parallax while generating no attack/animation/damage event.
     auto picked=preview();assert(picked.handle==2 && !picked.destructable && picked.position[0]>=229 && picked.position[0]<=231);
     assert(animations==0 && damageEvents==0 && health==420);
+    assert(picked.enemy && picked.circle[0][0]==314 && picked.circle[0][2]==3);
+    settings.thirdPerson.targetCircleRadius=96;assert(preview().circle[0][0]==346);
+    settings.thirdPerson.targetCircleRadius=64;
     reach=100;assert(!preview().handle);reach=600;
     targetX=1500;assert(!preview().handle);targetX=250;
     wall=true;assert(!preview().handle);wall=false;
@@ -61,7 +65,7 @@ int main(){
     visible=false;assert(!preview().handle);visible=true;
     transparent=true;assert(!preview().handle);transparent=false;
     health=0;assert(!preview().handle);health=420;
-    ally=true;assert(preview().allied);ally=false;
+    ally=true;assert(preview().allied && !preview().enemy);ally=false;
     settings.thirdPerson.useNativeAttackRange=false;settings.thirdPerson.rangedAttackRange=100;assert(!preview().handle);
     settings.thirdPerson.rangedAttackRange=600;
     // A delayed manual contact selects the same body the idle preview marked, preserving zero idle damage.

@@ -5,6 +5,7 @@ struct ThirdPersonSettings {
     bool enabled=true;
     bool movementAnimations=true;
     bool showTargetIndicator=true;
+    float targetCircleRadius=64;
     bool autoAnimationSpeed=true;
     float animationSpeedMultiplier=1;
     float runCycleDistance=210, takeoffDuration=.10f, landingDuration=.16f;

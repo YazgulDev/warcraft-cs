@@ -249,9 +249,9 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
             }
         } else if (command=="enemy") {
             // A distant attacker reproduces pursuit as well as close retaliation in the disposable scene.
-            float distance=100;int paused=0;input>>distance>>paused;
+            float distance=100;int paused=0,owner=12;input>>distance>>paused>>owner;
             float x=wc3::Real(wc3::GetUnitX(unit))+distance,y=wc3::Real(wc3::GetUnitY(unit)),facing=180;
-            enemy=wc3::CreateUnit(wc3::Player(12),0x68666F6F,&x,&y,&facing);
+            enemy=wc3::CreateUnit(owner==-1 ? wc3::GetLocalPlayer() : wc3::Player(owner),0x68666F6F,&x,&y,&facing);
             using Order=BOOL (__cdecl*)(wc3::Handle,int,wc3::Handle);
             auto order=reinterpret_cast<Order>(base+0x3C89D0);
             // Native melee retaliation tries to autoattack/chase; FPS must leave the actor stationary and enemy undamaged.
@@ -277,7 +277,8 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
         controller.TestLogAmmo();
         // Prediction must track reachable contacts without producing native attack events or damage.
         const auto& aim=controller.AimTarget();
-        wc3::Log("fixture aim target=%08X enemy=%08X object=%d distance=%.1f",aim.handle,enemy,aim.destructable,aim.distance);
+        wc3::Log("fixture aim target=%08X enemy=%08X object=%d distance=%.1f hostile=%d circleX=%.1f circleZ=%.1f",aim.handle,enemy,aim.destructable,aim.distance,
+            aim.enemy,aim.circle[0][0],aim.circle[0][2]);
         const auto& status=controller.Status();const auto& settings=controller.Settings();
         wc3::Log("fixture scaling attackSpeed=%.3f nativeMove=%.1f reference=%.1f fireEnabled=%d moveEnabled=%d damageMode=%d",
             status.attackSpeed,status.nativeSpeed,settings.movement.unitMoveSpeedReference,

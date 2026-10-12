@@ -3,7 +3,7 @@
 ## Unreleased — Third-person unit control
 
 - Recover native sprite pose overwrites while standing/running in direct control; leave casts, stuns and manual attacks in charge of their animations.
-- Mark the reachable third-person attack contact with red enemy, green ally or gold destructable brackets and a TARGET IN RANGE caption. Preview shares melee/ranged contact, native range and occlusion rules with LMB. `[ThirdPerson] ShowTargetIndicator=true` supports F8 reload and config-preserving updates.
+- Mark the reachable third-person attack contact with red enemy, green ally or gold destructable brackets and a terrain-conforming ground circle (red enemy/yellow other targets). Remove the TARGET IN RANGE caption. Preview shares melee/ranged contact, native range and occlusion rules with LMB. `[ThirdPerson] ShowTargetIndicator=true` and `TargetCircleRadius=64` (16..256 world units) support F8 reload and config-preserving updates.
 - Suppress retained-target native wind-up timers and attack poses in direct control, fixing Sniper's visible autoattack loop while preserving manual ranged missiles and RTS attacks.
 - Use live Warcraft actor/creature collision footprints on narrow ramps; non-colliding map helpers no longer supply solid model obstacles. Buildings and trees retain solid volumes. `[Movement] UseNativeUnitCollision=true` reloads on F8; false restores legacy creature boxes/actor radius.
 - Resolve grounded support between swept movement substeps, fixing fast uphill traversal without weakening walls or cliff collision. Extend disposable movement and collision-profile regression coverage.
