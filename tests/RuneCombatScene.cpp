@@ -47,6 +47,16 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
         std::istringstream input(line);std::string command;input>>command;
         // The background oracle uses the same controller mailboxes without sending desktop input.
         if(BackgroundGameplay::Enabled() && command=="toggle")controller.RequestToggle();
+        else if(BackgroundGameplay::Enabled() && command=="view")controller.RequestViewToggle();
+        else if(BackgroundGameplay::Enabled() && command=="heroattack")controller.TestHeroAttack();
+        else if(BackgroundGameplay::Enabled() && command=="targetstats")controller.TestLogTarget();
+        else if(BackgroundGameplay::Enabled() && command=="pause") {int value=0;input>>value;wc3::PauseUnit(unit,value!=0);}
+        else if(BackgroundGameplay::Enabled() && command=="camerawall") {
+            // A tall, solid native building behind the actor probes boom collision without altering terrain.
+            float x=wc3::Real(wc3::GetUnitX(unit))-220,y=wc3::Real(wc3::GetUnitY(unit)),facing=0;
+            party.push_back(wc3::CreateUnit(wc3::GetLocalPlayer(),0x68746F77,&x,&y,&facing));
+        }
+        else if(BackgroundGameplay::Enabled() && command=="walk") {std::string key;DWORD ms=0;input>>key>>ms;controller.TestWalk(ShortcutBindings::Parse(key),ms);}
         else if(BackgroundGameplay::Enabled() && command=="spell") {int slot=0;input>>slot;controller.RequestSpell(slot-1);}
         else if(BackgroundGameplay::Enabled() && command=="bars")controller.RequestHealthBarToggle();
         else if(BackgroundGameplay::Enabled() && command=="minimap")controller.RequestMinimapToggle();
@@ -141,11 +151,18 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
         else if(BackgroundGameplay::Enabled() && command=="mana") {
             float mana=0;input>>mana;Mana(base,unit,mana);wc3::Log("fixture mana=%.1f",wc3::Real(wc3::GetUnitState(unit,2)));
         }
-        else if (command=="hero" || command=="creep") {
+        else if (command=="hero" || command=="creep" || command=="arthas") {
             // A native hero has an inventory, unlike an unupgraded starting worker.
             // Move the private actor away from the starting workers so squad membership has an exact oracle.
             float x=wc3::Real(wc3::GetUnitX(unit))-1000,y=wc3::Real(wc3::GetUnitY(unit)),facing=0;
-            auto hero=wc3::CreateUnit(wc3::GetLocalPlayer(),command=="hero" ? 0x4870616C : 0x68666F6F,&x,&y,&facing);
+            auto hero=wc3::CreateUnit(wc3::GetLocalPlayer(),command=="arthas" ? 0x48617274 : command=="hero" ? 0x4870616C : 0x68666F6F,&x,&y,&facing);
+            if(command=="arthas") {
+                // Only the opt-in disposable oracle learns stock Arthas spells; normal maps remain untouched.
+                using Level=void (__cdecl*)(wc3::Handle,int,BOOL);using Learn=void (__cdecl*)(wc3::Handle,int);
+                reinterpret_cast<Level>(base+0x3C6D70)(hero,10,FALSE);
+                for(int id:{0x41486862,0x41486473,0x41486164,0x41487265})reinterpret_cast<Learn>(base+0x3C7050)(hero,id);
+                Mana(base,hero,1000);
+            }
             using Clear=void (__cdecl*)();using Select=void (__cdecl*)(wc3::Handle,BOOL);
             reinterpret_cast<Clear>(base+0x3BBAA0)();reinterpret_cast<Select>(base+0x3C7910)(hero,TRUE);
             wc3::Log("fixture hero=%08X attack=%.1f",hero,wc3::UnitAttackAverage(hero));

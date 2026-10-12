@@ -206,6 +206,15 @@ float UnitAttackAverage(Handle unit) {
     int high=reinterpret_cast<Damage>(nativeBase+0xC6CD0)(attack,0);
     return (float(low)+float(high))*.5f;
 }
+void Animate(Handle unit,const char* sequence) {
+    // Owned 1.26a registration at 3D619B maps SetUnitAnimation (Hunit;S)V to 3C61A0.
+    // Its string conversion is synchronous, using the same bounded wrapper as AddSpecialEffect.
+    using Animation=void (__cdecl*)(Handle,Handle);
+    const unsigned char signature[]={0x8B,0x44,0x24,0x08,0x8B,0x4C,0x24,0x04};
+    if(!unit || !nativeBase || std::memcmp(reinterpret_cast<void*>(nativeBase+0x3C61A0),signature,sizeof(signature)))return;
+    uintptr_t node[8]={},wrapper[3]={};node[7]=reinterpret_cast<uintptr_t>(sequence);wrapper[2]=reinterpret_cast<uintptr_t>(node);
+    reinterpret_cast<Animation>(nativeBase+0x3C61A0)(unit,reinterpret_cast<Handle>(wrapper));
+}
 std::string DestructableModelPath(int type) {
     // Use CreateDestructable's active-definition filename builder, including directory and variation suffixes.
     // +0x268A50 is its replacement texture slot, not the model; single-variation gates use variation zero.

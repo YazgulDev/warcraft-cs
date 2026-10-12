@@ -131,7 +131,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         static const char* names[] = {"ak47", "m4a1", "usp", "awp", "knife", "c4", "sword"};
         loaded_[index] = guns_[index].Load(root_ + "\\assets\\" + names[index] + ".wcg");
     }
-    if (loaded_[index] && !controller.Status().contained && !controller.Status().hidden && !controller.Scoped() && (index != WeaponSlots::C4 || controller.Ammo() > 0)) {
+    if (!controller.ThirdPerson() && loaded_[index] && !controller.Status().contained && !controller.Status().hidden && !controller.Scoped() && (index != WeaponSlots::C4 || controller.Ammo() > 0)) {
         // Give the weapon its own depth pass: back faces must not paint over the skin.
         glDepthMask(GL_TRUE); glClearDepth(1); glClear(GL_DEPTH_BUFFER_BIT);
         glEnable(GL_DEPTH_TEST); glDepthFunc(GL_LEQUAL); glDepthRange(0, 1);
@@ -162,6 +162,9 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         ShooterController::weapons[index].name, controller.Ammo(), controller.Reserve(),controller.Gold());
     // Melee equipment has no magazine; show only its name instead of a misleading empty-ammo counter.
     if (WeaponSlots::Melee(index)) sprintf_s(status, "HP %.0f   %s   GOLD %d", controller.Health(), ShooterController::weapons[index].name,controller.Gold());
+    // Hero combat has no magazine or CS weapon label; expose the mode and live native attack instead.
+    if(controller.ThirdPerson())sprintf_s(status,"HP %.0f   HERO ATTACK %.0f   GOLD %d",controller.Health(),
+        controller.Status().attackDamage*controller.Settings().thirdPerson.damageMultiplier,controller.Gold());
     float statusPad = statusSize * 0.75f, statusY = height - statusPad;
     glColor4f(1.0f, 0.85f, 0.3f, 1); Text(statusPad, statusY, status, statusFont_);
     // Installation progress and fuse are independent of which weapon is currently equipped.
@@ -178,7 +181,9 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     auto mapLayout=MinimapLayout::Calculate(width,height,controller.Settings().minimapSizePercent);
     if(controller.MinimapVisible())minimap.Draw(mapLayout);
     std::string controls="Warcraft CS by Yazgul | "+key(ShortcutAction::ToggleFPS)+": RTS | "+key(ShortcutAction::ReloadSettings)+": CONFIG | "+key(ShortcutAction::Minimap)+": MINIMAP | "+key(ShortcutAction::Speed)+": SPEED | "+key(ShortcutAction::Fog)+": FOG";
+    controls+=" | "+key(ShortcutAction::ToggleView)+(controller.ThirdPerson() ? ": FPS" : ": THIRD PERSON");
     std::string equipment="WHEEL: WEAPONS | "+key(ShortcutAction::Weapon6)+": C4 | "+key(ShortcutAction::Pickup)+": ITEM | "+key(ShortcutAction::Buy)+": BUY | "+key(ShortcutAction::BuyAmmo)+": AMMO";
+    if(controller.ThirdPerson())equipment="LMB: HERO ATTACK | WASD: MOVE | "+key(ShortcutAction::Pickup)+": ITEM | "+key(ShortcutAction::Buy)+": BUY";
     std::string abilities=key(ShortcutAction::HealthBars)+": HEALTH BARS | "+key(ShortcutAction::Spell1)+"/"+key(ShortcutAction::Spell2)+"/"+key(ShortcutAction::Spell3)+"/"+key(ShortcutAction::Spell4)+": SPELLS | "+key(ShortcutAction::SelfCast)+": SELF";
     char squad[256];sprintf_s(squad,"%s: FIGHT | %s: FOLLOW | %s: RELEASE | SQUAD %u %s | %s: FREE AMMO | %s: ALL WEAPONS",
         key(ShortcutAction::SquadFight).c_str(),key(ShortcutAction::SquadFollow).c_str(),key(ShortcutAction::SquadRelease).c_str(),unsigned(controller.SquadCount()),controller.SquadCount() ? (controller.SquadPassive() ? "FOLLOW" : "COMBAT") : "",key(ShortcutAction::Refill).c_str(),key(ShortcutAction::AllWeapons).c_str());

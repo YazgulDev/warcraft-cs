@@ -56,7 +56,9 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM k
         // Buy row numbers belong to the open catalog even when weapon shortcuts were remapped.
         if(controller_.Buying() && key>='0' && key<='9') {if(tap)controller_.RequestBuyKey(int(key-'0'));return 0;}
         if(tap) {
-            if(match(ShortcutAction::Buy))controller_.RequestBuyToggle();
+            // A queued view switch cannot alter native rendering/input from inside WindowProc.
+            if(match(ShortcutAction::ToggleView))controller_.RequestViewToggle();
+            else if(match(ShortcutAction::Buy))controller_.RequestBuyToggle();
             else if(match(ShortcutAction::BuyAmmo))controller_.RequestBuyAmmo();
             // Minimap follows the same configurable, one-tap input routing as other HUD switches.
             else if(match(ShortcutAction::Minimap))controller_.RequestMinimapToggle();

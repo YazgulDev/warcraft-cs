@@ -189,7 +189,8 @@ static int __fastcall WorldHook(uintptr_t ui, uintptr_t unused) {
     healthBarView=labelView;healthBarView.maximumDistance=controller.Settings().healthBars.distance;
     healthBarView.verticalFov=healthVerticalFov;healthBarView.aspect=healthAspect;
     // Suppress only the controlled actor during world drawing; menus, portraits and RTS still render it.
-    ActorRenderFilter::Begin(healthy ? controller.ViewActor() : 0);
+    // Both modes own movement/input, but only FPS filters out the controlled body.
+    ActorRenderFilter::Begin(healthy ? controller.HiddenActor() : 0);
     int result = originalWorld(ui, unused);
     ActorRenderFilter::End();
     // Crop the native map after the world pass without altering Warcraft's UI layout.

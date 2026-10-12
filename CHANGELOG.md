@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased — Arthas third-person prototype
+
+- Add T (configurable ToggleView) to switch active FPS/TPS, retaining F6 RTS recovery, inventory and position.
+- Show the native melee actor with WASD/mouse control, a reticle and existing Z/X/C/V native spell casting.
+- Add native hero attack animations, empty swings and delayed single-contact forward melee sweeps; preserve
+  native attack damage/armor/passives, live attack-speed modifiers and the configured friendly-fire percentage.
+- Separate hero attacks from CS weapon ammunition, recoil, scope and damage multipliers.
+- Add collision-shortened camera geometry and [ThirdPerson] camera/swing settings, validated F8 reload and
+  preservation of custom settings on updates. Prototype timing is tuned for Arthas; ranged attacks are excluded.
+- Add attack timeline/camera/config regressions and explicit disposable native Arthas test commands.
+- Document controls, timing semantics, module ownership and prototype limitations in docs/THIRD-PERSON.md.
+
 ## 0.8.0 — 2026-10-12
 
 - Fix bullets and melee contacts being intercepted by nonphysical effect units such as Broodmother

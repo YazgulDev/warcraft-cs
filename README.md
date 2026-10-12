@@ -201,6 +201,10 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 
 ## Configuration
 
+The local third-person prototype adds **T** to switch active FPS to a visible Arthas camera and native
+melee attacks. WASD, the reticle and Z/X/C/V spells remain available. F6 returns to RTS.
+See [third-person controls, settings and limits](docs/THIRD-PERSON.md).
+
 EXE installation: `<installation folder>/Game/WarcraftCS/WarcraftCS.ini`.
 Default source installation: `.local/warcraft-cs/WarcraftCS/WarcraftCS.ini`.
 Edit it and press F8 in FPS.

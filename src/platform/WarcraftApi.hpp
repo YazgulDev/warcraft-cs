@@ -38,6 +38,8 @@ std::vector<Handle> NearbyDestructables(float x, float y, float radius);
 std::vector<Handle> NearbyItems(float x,float y,float radius);
 // Current native min/max attack includes dice, hero attributes, items and buffs; FPS uses their mean.
 float UnitAttackAverage(Handle unit);
+// Animation only: no attack target or automatic pursuit order is assigned.
+void Animate(Handle unit,const char* sequence);
 extern int (__cdecl* GetUnitCurrentOrder)(Handle);
 extern Handle (__cdecl* CreateItem)(int,float*,float*);
 extern void (__cdecl* RemoveItem)(Handle);

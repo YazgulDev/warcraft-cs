@@ -1,5 +1,11 @@
 # Source modules
 
+The third-person prototype uses `ThirdPersonPose`/`ThirdPersonCamera` in presentation for boom geometry
+and native collision clearance. `HeroAttackTimeline` in combat owns delayed, single-contact swings and
+recovery. `HeroMeleeAttack` in platform adapts those swings to native animation, widget geometry and
+unit damage effects; it never issues pursuit orders. The controller coordinates these collaborators
+and keeps actor render visibility separate from movement/spell ownership.
+
 Sources are grouped by responsibility. Includes name the owning module explicitly; each public type
 has its own header and implementation. There is no global header search path masking dependencies.
 

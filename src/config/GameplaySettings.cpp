@@ -19,6 +19,22 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         if (end==value.c_str() || *end || !std::isfinite(parsed)) { wc3::Log("Invalid config %s.%s; using default",section,key);return fallback; }
         return std::clamp(parsed,0.0f,maximum);
     };
+    // Third-person camera and Arthas swing tuning reload as part of the existing validated snapshot.
+    auto thirdEnabled=text("ThirdPerson","Enabled","true");
+    if(!_stricmp(thirdEnabled.c_str(),"false") || thirdEnabled=="0")result.thirdPerson.enabled=false;
+    result.thirdPerson.distance=std::max(80.f,number("ThirdPerson","CameraDistance",500,1000));
+    result.thirdPerson.height=number("ThirdPerson","CameraHeight",35,200);
+    // Pitch uses a signed range unlike ordinary nonnegative tuning.
+    auto pitchText=text("ThirdPerson","InitialPitch","-12");char* pitchEnd=nullptr;
+    float pitch=std::strtof(pitchText.c_str(),&pitchEnd);
+    if(pitchEnd!=pitchText.c_str() && !*pitchEnd && std::isfinite(pitch))result.thirdPerson.initialPitch=std::clamp(pitch,-60.f,30.f);
+    result.thirdPerson.clearance=number("ThirdPerson","CameraClearance",16,64);
+    result.thirdPerson.attackRange=std::max(30.f,number("ThirdPerson","AttackRange",150,400));
+    result.thirdPerson.attackArc=std::max(1.f,number("ThirdPerson","AttackArc",50,120));
+    result.thirdPerson.attackHeight=number("ThirdPerson","AttackHeight",64,200);
+    result.thirdPerson.attackInterval=std::max(.2f,number("ThirdPerson","AttackInterval",2.2f,5));
+    result.thirdPerson.contactDelay=std::min(result.thirdPerson.attackInterval,number("ThirdPerson","ContactDelay",.56f,3));
+    result.thirdPerson.damageMultiplier=number("ThirdPerson","DamageMultiplier",1,10);
     // Unknown values retain the documented default; explicit false/0 bypasses attack-effect dispatch.
     auto attackEffects=text("Combat","EnableAttackEffects","true");
     if(!_stricmp(attackEffects.c_str(),"false") || attackEffects=="0")result.enableAttackEffects=false;

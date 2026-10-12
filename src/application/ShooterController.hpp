@@ -5,6 +5,8 @@
 #include "../movement/MovementPhysics.hpp"
 #include "../platform/WarcraftCollision.hpp"
 #include "../presentation/FirstPersonCamera.hpp"
+#include "../presentation/ThirdPersonCamera.hpp"
+#include "../platform/HeroMeleeAttack.hpp"
 #include "../platform/NativeSky.hpp"
 #include "../platform/NativeFogOfWar.hpp"
 #include "../audio/GameAudio.hpp"
@@ -41,6 +43,9 @@ public:
     void ResetMouse() { mouseLook_.Reset(); weaponWheel_.Reset(); }
     void RequestWeaponWheel(int delta) { weaponWheel_.Add(delta); }
     void RequestToggle() { toggleRequested_ = true; }
+    // T switches presentation/combat while preserving the same controlled unit and spell system.
+    void RequestViewToggle() {viewToggleRequested_=true;}
+    bool ThirdPerson() const {return thirdPerson_;}
     void RequestMenu() { menuRequested_ = true; }
     void RequestRefill() { refillRequested_ = true; }
     // F9 grants all slots through the same game-thread mailbox as F7.
@@ -82,8 +87,8 @@ public:
     const GameplaySettings& Settings() const { return settings_; }
     bool OwnsWeapon(int slot) const { return slot>=0 && slot<WeaponSlots::Count && inventory_.owned[slot]; }
     int Gold() const { return gold_; }
-    float ViewYaw() const { return yaw_+recoil_.Yaw(); }
-    float ViewPitch() const { return pitch_+recoil_.Pitch(); }
+    float ViewYaw() const { return yaw_+(thirdPerson_ ? 0 : recoil_.Yaw()); }
+    float ViewPitch() const { return pitch_+(thirdPerson_ ? 0 : recoil_.Pitch()); }
     float ViewFov() const { return scopeLevel_==2 ? 10.0f : Scoped() ? 40.0f : 85.0f; }
     const std::string& SkyName() const {
         const auto& choice=settings_.tilesetSky[static_cast<unsigned char>(mapTileset_)];
@@ -92,6 +97,8 @@ public:
     bool Visible() const { return active_ && !suspended_; }
     // Presentation may identify the controlled actor only while the first-person view owns the screen.
     wc3::Handle ViewActor() const { return Visible() ? unit_ : 0; }
+    // Actor visibility is separate from simulation ownership: TPS retains guards but shows the native body.
+    wc3::Handle HiddenActor() const {return ThirdPerson() ? 0 : ViewActor();}
     // Block only map camera writes during live FPS; our camera pass and cinematic/RTS writes remain allowed.
     bool BlocksMapCamera() const { return Visible() && !ownCameraRequest_; }
     void SetPaused(bool value) { paused_ = value; }
@@ -107,6 +114,11 @@ public:
     wc3::Handle TestUnit() const { return Visible() ? unit_ : 0; }
 #endif
 #ifdef WCS_GAMEPLAY_TEST
+    // Opt-in native oracle uses the production windup/contact, without injecting desktop mouse input.
+    void TestHeroAttack() {if(ThirdPerson())heroAttack_.Begin(unit_,GetTickCount()*.001,settings_,status_);}
+    void TestLogTarget() const {wc3::Log("fixture target hp=%.1f actorMana=%.1f",fixtureTarget_ ? wc3::Real(wc3::GetUnitState(fixtureTarget_,0)) : -1,wc3::Real(wc3::GetUnitState(unit_,2)));}
+    // Match the real movement key-down path, including deliberate channel interruption.
+    void TestWalk(int key,DWORD duration) {RequestSpellCancel();testWalkKey_=key;testWalkUntil_=GetTickCount()+std::min(duration,DWORD(2000));}
     // Disposable scenes exercise the real weapon contact path without desktop mouse input.
     void TestStrike(int slot) {
         if(slot<0 || slot>=WeaponSlots::Count || slot==WeaponSlots::C4)return;
@@ -138,11 +150,16 @@ public:
     void Configure(const char* root, uintptr_t gameBase);
     static const Weapon weapons[WeaponSlots::Count];
 private:
+#ifdef WCS_GAMEPLAY_TEST
+    int testWalkKey_=0;DWORD testWalkUntil_=0;
+#endif
     bool Pressed(int key);
     bool Down(int key) const;
     bool Down(ShortcutAction action) const {return Down(settings_.shortcuts.Key(action));}
     bool Pressed(ShortcutAction action) {return Pressed(settings_.shortcuts.Key(action));}
     void Toggle();
+    void ToggleView();
+    void AimRay(float* origin,float* direction);
     void Disable(bool restoreCamera);
     void AimAndMove(float dt);
     void Fire(bool secondary = false);
@@ -201,6 +218,9 @@ private:
     MovementPhysics movement_;
     WarcraftCollision collision_;
     FirstPersonCamera camera_;
+    ThirdPersonCamera thirdCamera_;
+    HeroMeleeAttack heroAttack_;
+    bool thirdPerson_=false,viewToggleRequested_=false;
     NativeSky nativeSky_;
     NativeFogOfWar nativeFog_;
     MouseLook mouseLook_;

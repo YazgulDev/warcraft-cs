@@ -166,6 +166,18 @@ foreach($section in @('Shortcuts','Spells')) {
 $shortcutsBefore=(Get-FileHash -LiteralPath $customShortcuts).Hash
 Update-GameplayConfig $template $customShortcuts
 if((Get-FileHash -LiteralPath $customShortcuts).Hash -ne $shortcutsBefore) {throw 'Shortcut/spell migration is not idempotent.'}
+# Third-person updates retain chosen camera/damage values and a custom view key, adding missing defaults once.
+$third=Join-Path $folder 'custom-third-person.ini'
+@('[ThirdPerson]','CameraDistance=480','DamageMultiplier=1.5','[Shortcuts]','ToggleView=TAB') | Set-Content -LiteralPath $third -Encoding ascii
+Update-GameplayConfig $template $third
+$thirdText=Get-Content -LiteralPath $third -Raw
+foreach($setting in @('CameraDistance=480','DamageMultiplier=1.5','ToggleView=TAB','AttackRange=150','ContactDelay=0.56')) {
+    if(!$thirdText.Contains($setting)){throw "Third-person migration lost preference/default: $setting"}
+}
+if([regex]::Matches($thirdText,'(?m)^\[ThirdPerson\]').Count -ne 1){throw 'Duplicate third-person section.'}
+$thirdBefore=(Get-FileHash -LiteralPath $third).Hash
+Update-GameplayConfig $template $third
+if((Get-FileHash -LiteralPath $third).Hash -ne $thirdBefore){throw 'Third-person migration is not idempotent.'}
 # Preserve custom squad preferences and insert the new rear/yield settings once in the existing section.
 $customSquad=Join-Path $folder 'custom-squad.ini'
 @('[Squad]','FollowDistance=240','RearFormation=false','PlayerClearance=160','OrderIntervalMs=250') | Set-Content -LiteralPath $customSquad -Encoding ascii
