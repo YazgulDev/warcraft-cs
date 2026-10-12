@@ -21,10 +21,24 @@ bool UnitAttack::Tick(wc3::Handle unit,double now,float yaw,float feet,const flo
     }
     // Locomotion owns stand/run/jump poses separately; contact never overwrites native spell animation.
     if(!timeline_.Contact(now))return false;
-    return NativeWeaponAttack::PrimaryKind(unit)==1 ? Contact(unit,yaw,feet,settings,units,destructables) :
-        RangedContact(unit,feet,aimOrigin,aimDirection,settings,units,destructables);
+    auto target=Preview(unit,yaw,feet,aimOrigin,aimDirection,settings,units,destructables);
+    if(!target.handle) {
+        // Keep one miss diagnostic per manual contact; idle prediction must not flood the journal.
+        wc3::Log("Third-person %s miss unit=%08X",NativeWeaponAttack::PrimaryKind(unit)==1 ? "melee" : "ranged",unit);
+        return false;
+    }
+    return Damage(unit,target.handle,target.destructable,target.distance,NativeWeaponAttack::PrimaryKind(unit)!=1,settings);
 }
-bool UnitAttack::Contact(wc3::Handle actor,float yaw,float feet,const GameplaySettings& settings,
+UnitAimTarget UnitAttack::Preview(wc3::Handle unit,float yaw,float feet,const float* origin,const float* direction,
+    const GameplaySettings& settings,UnitHitboxes& units,DestructableHitboxes& destructables) {
+    // Prediction has no animation/order/damage side effects and shares the exact contact policy with LMB.
+    int kind=NativeWeaponAttack::PrimaryKind(unit);if(!kind)return {};
+    auto target=kind==1 ? PickMelee(unit,yaw,feet,settings,units,destructables) :
+        PickRanged(unit,feet,origin,direction,settings,units,destructables);
+    target.allied=target.handle && !target.destructable && wc3::IsUnitAlly(target.handle,wc3::GetOwningPlayer(unit));
+    return target;
+}
+UnitAimTarget UnitAttack::PickMelee(wc3::Handle actor,float yaw,float feet,const GameplaySettings& settings,
     UnitHitboxes& units,DestructableHitboxes& destructables) {
     const auto& tuning=settings.thirdPerson;
     float origin[]={wc3::Real(wc3::GetUnitX(actor)),wc3::Real(wc3::GetUnitY(actor)),feet+tuning.attackHeight};
@@ -34,7 +48,7 @@ bool UnitAttack::Contact(wc3::Handle actor,float yaw,float feet,const GameplaySe
     while(auto unit=wc3::FirstOfGroup(group)) {wc3::GroupRemoveUnit(group,unit);candidates.push_back(unit);}
     wc3::DestroyGroup(group);
     auto objects=wc3::NearbyDestructables(x,y,radius);
-    wc3::Handle target=0;bool destructable=false;
+    wc3::Handle target=0;bool destructable=false;float point[3]={};
     // Sweep the authored forward arc. Each sample competes with terrain/gates, so a side ray cannot pierce a wall.
     for(int height=-1;height<=1;++height)for(int ray=0;ray<=10;++ray) {
         // Short creeps should not slip beneath one waist-height ray. Each layer still respects terrain/solid bodies.
@@ -54,11 +68,14 @@ bool UnitAttack::Contact(wc3::Handle actor,float yaw,float feet,const GameplaySe
             float entry=0;if(wc3::Real(wc3::GetDestructableLife(object))>.405f &&
                 destructables.Intersect(object,origin,direction,limit,entry)) {limit=entry;contact=object;isObject=true;}
         }
-        if(contact && limit<=nearest) {nearest=limit;target=contact;destructable=isObject;}
+        if(contact && limit<=nearest) {
+            nearest=limit;target=contact;destructable=isObject;
+            for(int i=0;i<3;++i)point[i]=origin[i]+direction[i]*limit;
+        }
     }
-    if(!target) {wc3::Log("Third-person melee miss unit=%08X yaw=%.1f",actor,yaw);return false;}
+    if(!target)return {};
     float distance=destructable ? nearest : std::hypot(wc3::Real(wc3::GetUnitX(target))-x,wc3::Real(wc3::GetUnitY(target))-y);
-    return Damage(actor,target,destructable,distance,false,settings);
+    return {target,destructable,false,distance,{point[0],point[1],point[2]}};
 }
 bool UnitAttack::Damage(wc3::Handle actor,wc3::Handle target,bool destructable,float distance,bool ranged,const GameplaySettings& settings) {
     const auto& tuning=settings.thirdPerson;
@@ -75,7 +92,7 @@ bool UnitAttack::Damage(wc3::Handle actor,wc3::Handle target,bool destructable,f
     wc3::Log("Third-person hit target=%08X hpBefore=%.1f hpAfter=%.1f damage=%.1f allied=%d effects=%d ranged=%d projectile=%d",target,before,after,damage,allied,effects,ranged,projectile && effects);
     return after<before;
 }
-bool UnitAttack::RangedContact(wc3::Handle actor,float feet,const float* aimOrigin,const float* aimDirection,
+UnitAimTarget UnitAttack::PickRanged(wc3::Handle actor,float feet,const float* aimOrigin,const float* aimDirection,
     const GameplaySettings& settings,UnitHitboxes& units,DestructableHitboxes& destructables) {
     const auto& tuning=settings.thirdPerson;
     float range=tuning.useNativeAttackRange ? NativeWeaponAttack::PrimaryRange(actor) : 0;
@@ -109,11 +126,12 @@ bool UnitAttack::RangedContact(wc3::Handle actor,float feet,const float* aimOrig
     float limit=range;bool object=false;trace(origin,aimDirection,limit,object);
     for(int i=0;i<3;++i){point[i]=origin[i]+aimDirection[i]*limit;direction[i]=point[i]-muzzle[i];}
     float length=std::sqrt(direction[0]*direction[0]+direction[1]*direction[1]+direction[2]*direction[2]);
-    if(length<.001f)return false;
+    if(length<.001f)return {};
     for(auto& component:direction)component/=length;
     // A small extension crosses the picked surface instead of missing it by float rounding; the native range is still capped.
     limit=std::min(range,length+1.f);auto target=trace(muzzle,direction,limit,object);
-    if(!target){wc3::Log("Third-person ranged miss unit=%08X range=%.1f",actor,range);return false;}
+    if(!target)return {};
     float distance=object ? limit : std::hypot(wc3::Real(wc3::GetUnitX(target))-x,wc3::Real(wc3::GetUnitY(target))-y);
-    return Damage(actor,target,object,distance,true,settings);
+    for(int i=0;i<3;++i)point[i]=muzzle[i]+direction[i]*limit;
+    return {target,object,false,distance,{point[0],point[1],point[2]}};
 }

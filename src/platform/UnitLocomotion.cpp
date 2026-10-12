@@ -39,13 +39,22 @@ void UnitLocomotion::Update(wc3::Handle unit,double now,bool grounded,float spee
     using Pose=HeroMotionState::Pose;
     const auto& sequence=next==Pose::Run ? profile_.run : next==Pose::Walk ? profile_.walk :
         next==Pose::Takeoff ? profile_.takeoff : next==Pose::Air ? profile_.air : next==Pose::Land ? profile_.land : profile_.stand;
-    if(!poseKnown_ || next!=pose_) {
+    int actual=wc3::AnimationSequence(unit);
+    bool overwritten=poseKnown_ && sequence.index>=0 && actual>=0 && actual!=sequence.index;
+    bool transition=!poseKnown_ || next!=pose_;
+    if(transition || overwritten) {
         // Never request an Arthas-only pose from another model or restart its gait every frame.
         // Shift changes pace without resetting a shared Walk cycle; shared leap clips also continue naturally.
-        if(sequence.index>=0 && (!poseKnown_ || sequence.index!=sequence_))wc3::AnimateIndex(unit,sequence.index);
+        // Native retaliation/movement can replace the sprite without changing our cached state.
+        // Repair only a different live sequence; normal looping gaits never restart every frame.
+        if(sequence.index>=0 && (!poseKnown_ || sequence.index!=sequence_ || overwritten))wc3::AnimateIndex(unit,sequence.index);
         sequence_=sequence.index;
         pose_=next;poseKnown_=true;
-        wc3::Log("Hero locomotion pose=%d grounded=%d speed=%.1f sequence=%s index=%d",int(next),grounded,speed,sequence.name.c_str(),sequence.index);
+        if(transition)wc3::Log("Hero locomotion pose=%d grounded=%d speed=%.1f sequence=%s index=%d",int(next),grounded,speed,sequence.name.c_str(),sequence.index);
+        // A persistent AI retry can overwrite every update; bounded telemetry keeps that repair from filling logs.
+        if(overwritten && (lastRepair_==0 || GetTickCount()-lastRepair_>=1000)) {
+            lastRepair_=GetTickCount();wc3::Trace("Hero locomotion repaired native sequence=%d expected=%d",actual,sequence.index);
+        }
     }
     float rate=baselineRate_;
     if(next==Pose::Run || next==Pose::Walk) {

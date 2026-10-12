@@ -42,6 +42,9 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.thirdPerson.attackInterval=std::max(.2f,number("ThirdPerson","AttackInterval",2.2f,5));
     result.thirdPerson.contactDelay=std::min(result.thirdPerson.attackInterval,number("ThirdPerson","ContactDelay",.56f,3));
     result.thirdPerson.damageMultiplier=number("ThirdPerson","DamageMultiplier",1,10);
+    // The marker can be hidden without changing contact range, attack targeting or map state.
+    auto indicator=text("ThirdPerson","ShowTargetIndicator","true");
+    result.thirdPerson.showTargetIndicator=_stricmp(indicator.c_str(),"false") && indicator!="0";
     // Native pose playback follows physical motion; unknown toggles keep the requested animation defaults.
     auto motion=text("ThirdPerson","MovementAnimations","true");
     if(!_stricmp(motion.c_str(),"false") || motion=="0")result.thirdPerson.movementAnimations=false;

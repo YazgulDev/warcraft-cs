@@ -48,6 +48,7 @@ public:
     void RequestViewToggle() {viewToggleRequested_=true;}
     void RequestThirdPersonToggle() {thirdPersonRequested_=true;}
     bool ThirdPerson() const {return thirdPerson_;}
+    const UnitAimTarget& AimTarget() const {return aimTarget_;}
     void RequestMenu() { menuRequested_ = true; }
     void RequestRefill() { refillRequested_ = true; }
     // F9 grants all slots through the same game-thread mailbox as F7.
@@ -228,6 +229,7 @@ private:
     ThirdPersonCamera thirdCamera_;
     UnitAttack heroAttack_;
     UnitLocomotion unitLocomotion_;
+    UnitAimTarget aimTarget_;
     bool thirdPerson_=false,viewToggleRequested_=false,thirdPersonRequested_=false;
     NativeSky nativeSky_;
     NativeFogOfWar nativeFog_;

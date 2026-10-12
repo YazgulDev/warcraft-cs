@@ -6,6 +6,14 @@ Press **T** again to return to FPS; **F6** returns to RTS from either mode.
 Locomotion and primary attacks accept mobile melee and ranged units, including map-defined heroes.
 Buildings, hidden and loaded units cannot be selected.
 
+An in-range contact receives colored brackets and **TARGET IN RANGE**: red for an enemy, green for
+an ally, gold for a destructable. The marker predicts the same nearest contact as LMB, including
+camera parallax, configured/native reach and terrain/body obstruction. Melee uses the full configured
+forward sweep, so its nearest contact can sit beside the central reticle. Prediction never attacks,
+orders or selects the target. `[ThirdPerson] ShowTargetIndicator=true` enables it; false hides it.
+Missing/malformed values retain true. F8 reloads this option, and updates preserve an explicit false.
+Casting, stun, disarm, hidden/cargo states and buy menus suppress the indicator.
+
 - Mouse aims and turns the hero; WASD moves relative to that bearing. Movement uses the hero's
   effective native speed, including slows, haste and roots. Existing jump/crouch controls remain.
 - WASD runs and Shift+WASD walks. Each model supplies its actual Stand/Walk/Run indices; Swim/Fly and
@@ -86,6 +94,9 @@ The prototype remains offline Warcraft III 1.26a only.
 Native attack retry/wind-up and attack-pose callbacks are suppressed during direct control, including
 Sniper. Blocking only native damage still allowed a visible autonomous attack cycle.
 Manual LMB attacks and ordinary RTS behavior retain their separate dispatch paths.
+Locomotion also observes the actual native sprite sequence: if AI replaces a cached Stand/Walk/Run
+pose, direct control restores it. Correct looping sequences are not restarted; casts/stuns/attacks
+still own their animation and movement-animation opt-out still yields to Warcraft.
 
 Validation: an isolated Arthas map verified WASD movement, melee contact with native armor,
 empty swings, configured allied damage, interruption by incapacitation, Holy Light damage,
@@ -106,3 +117,10 @@ The follow-up Sniper fixture verified idle control without manual swings/damage,
 and native collision-profile decoding. Four preserved-map ramp trials crossed in both directions along two axes.
 Portable regressions cover steep grounded sweeps at 20 FPS, narrow native footprints, legacy opt-out,
 non-colliding/invalid profiles and retained bridge/tree/wall/cliff protections. Other custom-map routes remain unverified.
+Target-prediction regressions exercise the actual attack picker with camera parallax, changing native/manual
+range, terrain obstruction, hidden/loaded/invisible/passable/dead units, allied contacts and melee reach.
+Idle prediction produces no animation or damage; manual contact selects the same predicted body.
+An isolated DotA scene verified walk-to-idle, forced native sprite replacement, standing next to an
+attacking creep, reachable/unreachable targets and manual contact for Sniper, Rifleman and the map's
+Hamg/Treant melee definition. Sniper's marker opt-out/re-enable also passed live F8 reload.
+The marker screenshots were visually inspected. Other models/maps remain unverified.

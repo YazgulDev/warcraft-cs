@@ -15,6 +15,11 @@ foreach ($required in @('AmmoPercent=37','Price=0','Damage=81','FriendlyFirePerc
 if ([regex]::Matches($text,'(?m)^\[AK47\]').Count -ne 1) { throw 'Duplicate section can hide new INI keys.' }
 if ([regex]::Matches($text,'(?m)^\[Audio\]').Count -ne 1) { throw 'Audio migration duplicated or omitted its section.' }
 $before=(Get-FileHash -LiteralPath $config).Hash
+if(!$text.Contains('ShowTargetIndicator=true')) { throw 'Target indicator default missing from migration.' }
+$customMarker=Join-Path $folder 'custom-target-marker.ini'
+@('[ThirdPerson]','ShowTargetIndicator=false') | Set-Content -LiteralPath $customMarker -Encoding ascii
+Update-GameplayConfig $template $customMarker
+if(!(Get-Content -LiteralPath $customMarker -Raw).Contains('ShowTargetIndicator=false')) { throw 'Migration reset the hidden target marker preference.' }
 Update-GameplayConfig $template $config
 if ((Get-FileHash -LiteralPath $config).Hash -ne $before) { throw 'Repeated config update changed an already merged file.' }
 # Reserve/scaling upgrades preserve existing values and do not silently replace a player's damage/economy mode.

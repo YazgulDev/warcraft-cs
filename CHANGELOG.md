@@ -2,6 +2,8 @@
 
 ## Unreleased — Third-person unit control
 
+- Recover native sprite pose overwrites while standing/running in direct control; leave casts, stuns and manual attacks in charge of their animations.
+- Mark the reachable third-person attack contact with red enemy, green ally or gold destructable brackets and a TARGET IN RANGE caption. Preview shares melee/ranged contact, native range and occlusion rules with LMB. `[ThirdPerson] ShowTargetIndicator=true` supports F8 reload and config-preserving updates.
 - Suppress retained-target native wind-up timers and attack poses in direct control, fixing Sniper's visible autoattack loop while preserving manual ranged missiles and RTS attacks.
 - Use live Warcraft actor/creature collision footprints on narrow ramps; non-colliding map helpers no longer supply solid model obstacles. Buildings and trees retain solid volumes. `[Movement] UseNativeUnitCollision=true` reloads on F8; false restores legacy creature boxes/actor radius.
 - Resolve grounded support between swept movement substeps, fixing fast uphill traversal without weakening walls or cliff collision. Extend disposable movement and collision-profile regression coverage.
@@ -12,7 +14,7 @@
 - Add aimed primary ranged attacks with native map missile flight, attack effects, native attack range and
   configurable range/multiplier/projectile fallback. Keep CS ammo and recoil separate from unit combat.
 - Expand melee contact vertically for short creep models with configurable MeleeHeightTolerance. Restore
-  native animation rate before an attack and compute the reticle trace only when contact is due.
+  native animation rate before an attack and keep damage dispatch on the manual contact timeline.
 - Move the melee adapter to UnitAttack; add native guard/lifecycle, retained-target and configuration tests.
 
 - Add configurable F7 direct third-person entry from RTS/FPS and F7 return to RTS. Move free ammo refill to

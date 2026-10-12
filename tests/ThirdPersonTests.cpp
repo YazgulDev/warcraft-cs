@@ -86,5 +86,11 @@ int main() {
     auto ranged=GameplaySettings::Load(path);
     assert(!ranged.thirdPerson.useNativeAttackRange && !ranged.thirdPerson.nativeRangedProjectiles);
     assert(ranged.thirdPerson.rangedAttackRange==5000 && ranged.thirdPerson.rangedRangeMultiplier==1 && ranged.thirdPerson.meleeHeightTolerance==0);
+    // The actual config boundary supports hiding/reloading the marker and defaults safely on malformed values.
+    assert(ranged.thirdPerson.showTargetIndicator);
+    WritePrivateProfileStringA("ThirdPerson","ShowTargetIndicator","false",path);
+    assert(!GameplaySettings::Load(path).thirdPerson.showTargetIndicator);
+    WritePrivateProfileStringA("ThirdPerson","ShowTargetIndicator","broken",path);
+    assert(GameplaySettings::Load(path).thirdPerson.showTargetIndicator);
     DeleteFileA(path);
 }

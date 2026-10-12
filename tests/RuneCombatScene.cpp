@@ -65,6 +65,12 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
             wc3::Log("fixture motion fly=%.2f rate=%.2f feet=%.2f",wc3::Real(wc3::GetUnitFlyHeight(unit)),wc3::AnimationRate(unit),controller.ActorFeet());
             auto body=UnitCollisionProfile::Read(unit,base);
             wc3::Log("fixture body known=%d colliding=%d radius=%.1f",body.known,body.colliding,body.radius);
+            wc3::Log("fixture animation sequence=%d",wc3::AnimationSequence(unit));
+        }
+        else if(BackgroundGameplay::Enabled() && command=="forcepose") {
+            // Reproduce a native AI overwrite while the controller's cached locomotion state remains unchanged.
+            int index=0;input>>index;wc3::AnimateIndex(unit,index);
+            wc3::Log("fixture forced sequence=%d observed=%d",index,wc3::AnimationSequence(unit));
         }
         else if(BackgroundGameplay::Enabled() && command=="position") {
             // Exact placement is confined to a disposable oracle; normal controllers never teleport actors.
@@ -243,7 +249,7 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
             }
         } else if (command=="enemy") {
             // A distant attacker reproduces pursuit as well as close retaliation in the disposable scene.
-            float distance=100;input>>distance;
+            float distance=100;int paused=0;input>>distance>>paused;
             float x=wc3::Real(wc3::GetUnitX(unit))+distance,y=wc3::Real(wc3::GetUnitY(unit)),facing=180;
             enemy=wc3::CreateUnit(wc3::Player(12),0x68666F6F,&x,&y,&facing);
             using Order=BOOL (__cdecl*)(wc3::Handle,int,wc3::Handle);
@@ -251,6 +257,11 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
             // Native melee retaliation tries to autoattack/chase; FPS must leave the actor stationary and enemy undamaged.
             wc3::Log("fixture attack enemyOrder=%d",order(enemy,851983,unit));
             wc3::Log("fixture attack actorOrder=%d",order(unit,851983,enemy));
+            if(paused)wc3::PauseUnit(enemy,TRUE); // Stable near/far targets isolate the read-only reach indicator.
+        } else if(BackgroundGameplay::Enabled() && command=="aimenemy" && enemy) {
+            // Aim through the production reticle mailbox at the fixture body's waist, without desktop input.
+            float x=wc3::Real(wc3::GetUnitX(enemy)),y=wc3::Real(wc3::GetUnitY(enemy));
+            std::ofstream request(std::string(root)+"\\test-target.request");request<<"aim "<<x<<" "<<y<<" "<<wc3::Ground(x,y)+60;
         } else if (command=="cleanup") {
             for (auto item:items) if (wc3::GetItemTypeId(item)) wc3::RemoveItem(item);
             items.clear();if (enemy && wc3::GetUnitTypeId(enemy)) wc3::RemoveUnit(enemy);enemy=0;
@@ -264,6 +275,9 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
             wc3::Real(wc3::GetUnitX(unit)),wc3::Real(wc3::GetUnitY(unit)),wc3::Real(wc3::GetUnitState(unit,0)),
             wc3::UnitAttackAverage(unit),wc3::GetUnitCurrentOrder(unit),enemy ? wc3::Real(wc3::GetUnitState(enemy,0)) : -1);
         controller.TestLogAmmo();
+        // Prediction must track reachable contacts without producing native attack events or damage.
+        const auto& aim=controller.AimTarget();
+        wc3::Log("fixture aim target=%08X enemy=%08X object=%d distance=%.1f",aim.handle,enemy,aim.destructable,aim.distance);
         const auto& status=controller.Status();const auto& settings=controller.Settings();
         wc3::Log("fixture scaling attackSpeed=%.3f nativeMove=%.1f reference=%.1f fireEnabled=%d moveEnabled=%d damageMode=%d",
             status.attackSpeed,status.nativeSpeed,settings.movement.unitMoveSpeedReference,

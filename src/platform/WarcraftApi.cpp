@@ -215,6 +215,13 @@ void Animate(Handle unit,const char* sequence) {
     uintptr_t node[8]={},wrapper[3]={};node[7]=reinterpret_cast<uintptr_t>(sequence);wrapper[2]=reinterpret_cast<uintptr_t>(node);
     reinterpret_cast<Animation>(nativeBase+0x3C61A0)(unit,reinterpret_cast<Handle>(wrapper));
 }
+int AnimationSequence(Handle unit) {
+    // Owned 1.26a sprite getter reads the signed sequence at +2C; its -2 pending sentinel maps to Stand.
+    const unsigned char getter[]={0x0F,0xB7,0x41,0x2C,0x66,0x3D,0xFE,0xFF};
+    auto object=UnitObject(unit);uintptr_t body=object ? *reinterpret_cast<uintptr_t*>(object+0x28) : 0;
+    if(!body || !nativeBase || std::memcmp(reinterpret_cast<void*>(nativeBase+0x4D2FD0),getter,sizeof(getter)))return -1;
+    return reinterpret_cast<int (__thiscall*)(uintptr_t)>(nativeBase+0x4D2FD0)(body);
+}
 float AnimationRate(Handle unit) {
     // Verified SetUnitTimeScale stores the native baseline on CUnit+300 (26DD00).
     auto object=UnitObject(unit);float rate=object ? *reinterpret_cast<float*>(object+0x300) : 1;

@@ -22,4 +22,5 @@ private:
     bool ownsRate_=false,poseKnown_=false;
     HeroMotionState::Pose pose_=HeroMotionState::Pose::Stand;
     HeroMotionState motion_;
+    DWORD lastRepair_=0;
 };

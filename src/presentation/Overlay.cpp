@@ -1,6 +1,7 @@
 #include "Overlay.hpp"
 #include "ScopeView.hpp"
 #include "ReticleView.hpp"
+#include "TargetMarkerView.hpp"
 #include "ReticleDiagnostics.hpp"
 #include "BuyMenuView.hpp"
 #include "HudHints.hpp"
@@ -154,6 +155,11 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     }
     else if (controller.Scoped()) ScopeView::Draw(float(width), float(height));
     else ReticleView::DrawHipFire(float(width), float(height), controller.Recoil());
+    if(!unavailableView && !controller.Buying() && controller.ThirdPerson() && controller.Settings().thirdPerson.showTargetIndicator &&
+        TargetMarkerView::Draw(controller.AimTarget(),barView,width,height,nearPlane,farPlane)) {
+        // Keep the readable caption beside the reticle; brackets identify which reachable body would receive LMB.
+        glColor3f(1,.85f,.3f);Text(width*.5f+28,height*.5f+30,"TARGET IN RANGE");
+    }
     // Scale the bottom HUD from a readable 42-pixel font at 1080p, with safe edge padding.
     int statusSize = std::clamp(int(std::lround(height * (42.0f / 1080.0f))), 26, 84);
     Font(dc, statusSize);

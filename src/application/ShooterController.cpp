@@ -606,6 +606,7 @@ void ShooterController::PlantC4(float dt) {
 const char* ShooterController::Animation() const { return animation_.c_str(); }
 float ShooterController::AnimationTime() const { return (GetTickCount() - animationTick_) * 0.001f * animationRate_; }
 void ShooterController::Tick(uintptr_t ui) {
+    aimTarget_={}; // Clear before every early return, mode change, menu or lost-control state.
     if (ui_ && ui != ui_) ResetMap(); ui_ = ui;
     DWORD now = GetTickCount();
     // High-resolution elapsed time smooths movement at the new cap without speeding up gameplay timers.
@@ -914,6 +915,13 @@ void ShooterController::Tick(uintptr_t ui) {
         // Native casts/stuns and the active swing keep pose ownership; physics still supplies jump height.
         unitLocomotion_.Update(unit_,now*.001,movement_.Grounded(),movement_.Speed(),
             spells_.Active() || status_.incapacitated || status_.contained || status_.hidden || heroAttack_.Busy(now*.001),settings_.thirdPerson,Down(ShortcutAction::Walk) || movement_.Duck()>.5f);
+        // A separate read-only snapshot advertises the same contact without starting or advancing an attack.
+        if(settings_.thirdPerson.showTargetIndicator && !spells_.Active() && !status_.incapacitated && !status_.disarmed &&
+            !status_.contained && !status_.hidden) {
+            float origin[3],direction[3];AimRay(origin,direction);
+            aimTarget_=heroAttack_.Preview(unit_,yaw_,movement_.FeetZ()+wc3::Real(wc3::GetUnitFlyHeight(unit_)),origin,direction,
+                settings_,hitboxes_,destructableHitboxes_);
+        }
     } else if (!spells_.Active() && !suppressFire_ && weapon_ == WeaponSlots::C4) PlantC4(dt);
     else if (!spells_.Active() && !suppressFire_ && !status_.disarmed && WeaponSlots::Melee(weapon_) && secondaryPressed) Fire(true);
     else if (!spells_.Active() && !suppressFire_ && !status_.disarmed && ((weapons[weapon_].automatic && Down(VK_LBUTTON)) || firePressed)) Fire();
