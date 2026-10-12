@@ -137,6 +137,7 @@ void ShooterController::SurfaceStep(float volume) {
 void ShooterController::InterfaceRequest(bool show) {
     cinematicRequested_ = !show;
     if (active_ && !show) {
+        heroLocomotion_.Release(); // Native cinematics own animation playback immediately.
         nativeSky_.Update(ui_,false,mapTileset_);
         // Yield before the map applies its cinematic layout/camera; keep the mission unit visible.
         spells_.Cancel();spellRequested_=-1;spellCancelRequested_=false;
@@ -145,6 +146,7 @@ void ShooterController::InterfaceRequest(bool show) {
     }
 }
 void ShooterController::Disable(bool restoreCamera) {
+    heroLocomotion_.Release();
     heroAttack_.Cancel();viewToggleRequested_=false;
     if(thirdPerson_ && unit_ && wc3::GetUnitTypeId(unit_))wc3::Animate(unit_,"stand");
     thirdPerson_=false;
@@ -175,6 +177,7 @@ void ShooterController::Disable(bool restoreCamera) {
     wc3::Log("FPS disabled");
 }
 void ShooterController::ResetMap() {
+    heroLocomotion_.Reset(); // Map handles are already unloaded: discard, do not restore stale actors.
     heroAttack_.Reset();thirdPerson_=viewToggleRequested_=false;
     spellHud_={};spellHudTick_=spellHudLog_=0; // Forget per-map art and cooldown snapshots with their ability handles.
     spells_.Reset();spellRequested_=-1;spellCancelRequested_=false; // Forget unloaded-map orders without touching stale handles.
@@ -226,6 +229,7 @@ void ShooterController::ToggleView() {
         Notice("THIRD PERSON NEEDS AN ENABLED MELEE ACTOR (ARTHAS)");return;
     }
     // Inventory and physical position stay intact; no queued gunshot or delayed swing crosses the transition.
+    heroLocomotion_.Release();heroLocomotion_.Reset();
     spells_.Cancel();heroAttack_.Cancel();CancelPlant();meleeContact_=0;reloadEnd_=0;scopeLevel_=0;
     buyMenu_.Close();recoil_.Reset();audio_.Stop();mouseLook_.Reset();weaponWheel_.Reset();suppressFire_=true;
     thirdPerson_=!thirdPerson_;pitch_=thirdPerson_ ? settings_.thirdPerson.initialPitch : 0;
@@ -614,6 +618,7 @@ void ShooterController::Tick(uintptr_t ui) {
     requireForeground=!BackgroundGameplay::Enabled();
 #endif
     if (requireForeground && foregroundPid != GetCurrentProcessId()) {
+        heroLocomotion_.Release();
         // Drop background packets; refocusing establishes a fresh cursor anchor without a view jump.
         mouseLook_.Reset();
         weaponWheel_.Reset();
@@ -634,7 +639,7 @@ void ShooterController::Tick(uintptr_t ui) {
         wc3::Log("FPS %s for campaign/UI", suspended ? "suspended" : "resumed");
     }
     suspended_ = suspended;
-    if (suspended_) { heroAttack_.Cancel();viewToggleRequested_=false;spells_.Cancel();spellRequested_=-1;spellCancelRequested_=false;CancelPlant(); meleeContact_ = 0;buyMenu_.Close();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1; }
+    if (suspended_) { heroLocomotion_.Release();heroAttack_.Cancel();viewToggleRequested_=false;spells_.Cancel();spellRequested_=-1;spellCancelRequested_=false;CancelPlant(); meleeContact_ = 0;buyMenu_.Close();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1; }
     // Restore Warcraft input before forwarding F10, which cinematic UI otherwise ignores.
     if (menuRequested_) {
         menuRequested_ = false; Disable(true);
@@ -802,6 +807,7 @@ void ShooterController::Tick(uintptr_t ui) {
     }
     recoil_.Step(dt, Down(VK_LBUTTON) && !status_.incapacitated && !status_.disarmed, weapon_);
     if (status_.incapacitated) {
+        heroLocomotion_.Release(); // Early disabled-state returns must not retain the running time scale.
         spells_.Cancel();spellRequested_=-1;spellCancelRequested_=false;
         buyMenu_.Close();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1;suppressFire_=true;
         // Discard scrolling during disabled states rather than replaying a switch after recovery.
@@ -821,6 +827,7 @@ void ShooterController::Tick(uintptr_t ui) {
     UpdateBuyMenu();
     if (!Down(VK_LBUTTON) && !Down(VK_RBUTTON)) suppressFire_=false;
     if (Buying()) {
+        heroLocomotion_.Release();
         heroAttack_.Cancel();
         spells_.Cancel();spellRequested_=-1;spellCancelRequested_=false;
         itemRequested_=false;squadRequested_=0; // Menu taps cannot queue RTS interaction for after closing.
@@ -888,7 +895,10 @@ void ShooterController::Tick(uintptr_t ui) {
         // Native swings consume no CS ammo; holding LMB repeats only after native-IAS-scaled recovery.
         if(!spells_.Active() && !suppressFire_ && Down(VK_LBUTTON))heroAttack_.Begin(unit_,now*.001,settings_,status_);
         if(heroAttack_.Tick(unit_,now*.001,yaw_,movement_.FeetZ()+wc3::Real(wc3::GetUnitFlyHeight(unit_)),
-            movement_.Speed()>1,spells_.Active(),settings_,status_,hitboxes_,destructableHitboxes_))hits_.Record();
+            spells_.Active(),settings_,status_,hitboxes_,destructableHitboxes_))hits_.Record();
+        // Native casts/stuns and the active swing keep pose ownership; physics still supplies jump height.
+        heroLocomotion_.Update(unit_,now*.001,movement_.Grounded(),movement_.Speed(),
+            spells_.Active() || status_.incapacitated || status_.contained || status_.hidden || heroAttack_.Busy(now*.001),settings_.thirdPerson);
     } else if (!spells_.Active() && !suppressFire_ && weapon_ == WeaponSlots::C4) PlantC4(dt);
     else if (!spells_.Active() && !suppressFire_ && !status_.disarmed && WeaponSlots::Melee(weapon_) && secondaryPressed) Fire(true);
     else if (!spells_.Active() && !suppressFire_ && !status_.disarmed && ((weapons[weapon_].automatic && Down(VK_LBUTTON)) || firePressed)) Fire();

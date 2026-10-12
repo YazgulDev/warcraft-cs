@@ -7,6 +7,10 @@ Ranged heroes and their projectiles are outside this prototype.
 
 - Mouse aims and turns the hero; WASD moves relative to that bearing. Movement uses the hero's
   effective native speed, including slows, haste and roots. Existing jump/crouch controls remain.
+- Run/idle playback follows actual movement speed. Space lifts the visible body with the physical jump;
+  takeoff, airborne and landing phases reuse native Stand Hit/Stand Ready poses. Stock Arthas has no
+  authored Jump sequence; this is a pose-based prototype rather than an imported skeleton animation.
+  Casting, incapacitation and melee swings keep native animation ownership. F6/T restore playback rate.
 - LMB plays the hero's attack animation even with no target. Hold it to repeat after recovery.
   A delayed horizontal forward sweep damages one nearest physical contact. Enemies behind the hero,
   outside melee reach or behind terrain/solid objects cannot receive the contact.
@@ -37,11 +41,17 @@ All `[ThirdPerson]` values are editable in the existing private `WarcraftCS.ini`
 | AttackInterval | 2.2 | 0.2–5 seconds before repeating a swing |
 | ContactDelay | 0.56 | 0–3 seconds, capped by AttackInterval |
 | DamageMultiplier | 1 | 0–10 times current native attack |
+| MovementAnimations | true | enable run/idle/leap pose playback; visual jump height remains physical |
+| RunCycleDistance | 210 | 40–1000 world units travelled per Walk cycle; rate follows actual speed |
+| TakeoffDuration | 0.10 | 0.02–0.3 seconds for the takeoff pose |
+| LandingDuration | 0.16 | 0–0.5 seconds for the landing pose; zero skips it |
 
 Camera and contact rules reload on F8; initial pitch applies on the next view transition.
 Swing timing reloads for the next swing. Delay and recovery scale with native attack-speed modifiers;
 the configurable defaults are fitted to Arthas, not universal timings for every Warcraft model.
-Animation playback uses the native sequence without globally replacing the unit's animation time scale.
+Combat playback uses the native sequence without replacing its attack animation time scale.
+Locomotion temporarily owns playback rate and restores the map's previous rate when yielding.
+Movement settings reload on F8; phase durations apply at the next physical contact.
 Updates insert missing keys and preserve existing custom values.
 
 Known limits: one horizontal melee contact, no cleave sweep implementation or native ranged projectile
@@ -51,4 +61,7 @@ The prototype remains offline Warcraft III 1.26a only.
 Validation: an isolated Arthas map verified WASD movement, melee contact with native armor,
 empty swings, configured allied damage, interruption by incapacitation, Holy Light damage,
 Divine Shield, camera shortening behind a building and repeated FPS/third-person transitions.
-The configuration, camera geometry and attack timeline also have automated regression checks.
+Native checks also verify speed-matched running, all leap phases, body elevation with unchanged unit
+fly height, rate restoration on stun/T and live F8 stride changes. A captured jump was visually checked
+through takeoff, apex and landing. Configuration migration, camera geometry, the attack timeline and
+motion phase transitions also have automated regression checks.

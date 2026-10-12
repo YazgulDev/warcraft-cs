@@ -168,10 +168,10 @@ Update-GameplayConfig $template $customShortcuts
 if((Get-FileHash -LiteralPath $customShortcuts).Hash -ne $shortcutsBefore) {throw 'Shortcut/spell migration is not idempotent.'}
 # Third-person updates retain chosen camera/damage values and a custom view key, adding missing defaults once.
 $third=Join-Path $folder 'custom-third-person.ini'
-@('[ThirdPerson]','CameraDistance=480','DamageMultiplier=1.5','[Shortcuts]','ToggleView=TAB') | Set-Content -LiteralPath $third -Encoding ascii
+@('[ThirdPerson]','CameraDistance=480','DamageMultiplier=1.5','RunCycleDistance=260','MovementAnimations=false','[Shortcuts]','ToggleView=TAB') | Set-Content -LiteralPath $third -Encoding ascii
 Update-GameplayConfig $template $third
 $thirdText=Get-Content -LiteralPath $third -Raw
-foreach($setting in @('CameraDistance=480','DamageMultiplier=1.5','ToggleView=TAB','AttackRange=150','ContactDelay=0.56')) {
+foreach($setting in @('CameraDistance=480','DamageMultiplier=1.5','ToggleView=TAB','AttackRange=150','ContactDelay=0.56','RunCycleDistance=260','MovementAnimations=false','TakeoffDuration=0.10','LandingDuration=0.16')) {
     if(!$thirdText.Contains($setting)){throw "Third-person migration lost preference/default: $setting"}
 }
 if([regex]::Matches($thirdText,'(?m)^\[ThirdPerson\]').Count -ne 1){throw 'Duplicate third-person section.'}

@@ -13,6 +13,7 @@
 #include "../presentation/ReticleDiagnostics.hpp"
 #include "../platform/MapCameraGuard.hpp"
 #include "../platform/ActorRenderFilter.hpp"
+#include "../platform/ActorJumpView.hpp"
 #include "../platform/FpsCombatGuard.hpp"
 #include "../platform/NativeMovementGuard.hpp"
 #include "../platform/NativeWeaponAttack.hpp"
@@ -42,6 +43,7 @@
 #endif
 
 static ShooterController controller;
+static ActorJumpView actorJumpView;
 static Overlay overlay;
 static NativeFrameRate frameRate;
 static NativeCameraFarClip cameraFarClip;
@@ -115,7 +117,7 @@ static uintptr_t CurrentUI() {
 static void ObserveMap(uintptr_t ui) {
     if (mapUI == ui) return;
     // A real UI unload/replacement marks map boundaries; a rendering pause is only a focus pause.
-    controller.ResetMap();overlay.MapChanged(); mapUI = ui;
+    actorJumpView.Reset();controller.ResetMap();overlay.MapChanged(); mapUI = ui;
     healthBars.Reset();healthBarView.active=false; // Native models/snapshots belong to the current map.
     if (ui) healthy = true;
     wc3::Log("Map lifecycle: %s ui=%08X", ui ? "loaded" : "unloaded", ui);
@@ -148,6 +150,7 @@ static int __fastcall WorldHook(uintptr_t ui, uintptr_t unused) {
     lastWorld = now;
     // RenderWorld's this pointer is not CGameUI; query the real UI for cinematic flags.
     uintptr_t gameUI = CurrentUI(); ObserveMap(gameUI);
+    actorJumpView.End(); // Restore an unfinished prior frame before gameplay consumes render caches.
     // Lift the native channel ceiling before the FPS camera writes its validated distance.
     cameraFarClip.Update(healthy && controller.Visible());
     if (healthy && gameUI) SafeTick(gameUI);
@@ -191,6 +194,8 @@ static int __fastcall WorldHook(uintptr_t ui, uintptr_t unused) {
     // Suppress only the controlled actor during world drawing; menus, portraits and RTS still render it.
     // Both modes own movement/input, but only FPS filters out the controlled body.
     ActorRenderFilter::Begin(healthy ? controller.HiddenActor() : 0);
+    // World submission queues model batches; keep the raised transform until their actual draw completes.
+    actorJumpView.Begin(healthy ? controller.JumpViewActor() : 0,controller.ActorFeet());
     int result = originalWorld(ui, unused);
     ActorRenderFilter::End();
     // Crop the native map after the world pass without altering Warcraft's UI layout.
@@ -253,6 +258,7 @@ static BOOL WINAPI SwapHook(HDC dc, UINT planes) {
     static unsigned frames = 0;
     ++frames;
     ObserveMap(CurrentUI());
+    actorJumpView.End(); // Queued world geometry has drawn before swap; restore before the next native tick.
     // Menus, cinematics, faults and F6 release the camera limit even without another world batch.
     cameraFarClip.Update(healthy && controller.Visible());
     HWND window = WindowFromDC(dc);
@@ -318,6 +324,7 @@ static DWORD WINAPI Initialize(void*) {
     // Map timers may request RTS camera presets repeatedly; live FPS owns those native camera writes.
     MapCameraGuard::Install(base, []() { return healthy && controller.BlocksMapCamera(); }, Hook);
     ActorRenderFilter::Install(base, Hook);
+    actorJumpView.Install(base,Hook);
     // Scoped base-damage replacement leaves all ordinary RTS attacks untouched.
     NativeWeaponAttack::Install(base,Hook);
     NativeFloatingText::Install(base, Hook);

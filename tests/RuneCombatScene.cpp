@@ -57,6 +57,10 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
             party.push_back(wc3::CreateUnit(wc3::GetLocalPlayer(),0x68746F77,&x,&y,&facing));
         }
         else if(BackgroundGameplay::Enabled() && command=="walk") {std::string key;DWORD ms=0;input>>key>>ms;controller.TestWalk(ShortcutBindings::Parse(key),ms);}
+        else if(BackgroundGameplay::Enabled() && command=="motionstats") {
+            // This oracle observes restored simulation height/rate, outside the transient world render scope.
+            wc3::Log("fixture motion fly=%.2f rate=%.2f feet=%.2f",wc3::Real(wc3::GetUnitFlyHeight(unit)),wc3::AnimationRate(unit),controller.ActorFeet());
+        }
         else if(BackgroundGameplay::Enabled() && command=="spell") {int slot=0;input>>slot;controller.RequestSpell(slot-1);}
         else if(BackgroundGameplay::Enabled() && command=="bars")controller.RequestHealthBarToggle();
         else if(BackgroundGameplay::Enabled() && command=="minimap")controller.RequestMinimapToggle();

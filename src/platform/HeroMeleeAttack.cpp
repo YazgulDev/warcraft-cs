@@ -12,21 +12,16 @@ bool HeroMeleeAttack::Supported(wc3::Handle unit) {
 bool HeroMeleeAttack::Begin(wc3::Handle unit,double now,const GameplaySettings& settings,const UnitStatus& status) {
     if(status.disarmed || status.incapacitated || !Supported(unit) ||
         !timeline_.Begin(now,settings.thirdPerson.contactDelay,settings.thirdPerson.attackInterval,status.attackSpeed))return false;
-    wc3::Animate(unit,"attack");pose_=Pose::Attack;
+    wc3::Animate(unit,"attack");
     wc3::Log("Third-person swing unit=%08X attack=%.1f speed=%.2f",unit,status.attackDamage,status.attackSpeed);return true;
 }
-bool HeroMeleeAttack::Tick(wc3::Handle unit,double now,float yaw,float feet,bool moving,bool casting,
+bool HeroMeleeAttack::Tick(wc3::Handle unit,double now,float yaw,float feet,bool casting,
     const GameplaySettings& settings,const UnitStatus& status,UnitHitboxes& units,DestructableHitboxes& destructables) {
     if(casting || status.incapacitated || status.disarmed || status.hidden || status.contained) {
         Cancel();return false;
     }
-    bool hit=timeline_.Contact(now) && Contact(unit,yaw,feet,settings,units,destructables);
-    if(!timeline_.Busy(now)) {
-        auto next=moving ? Pose::Walk : Pose::Stand;
-        // Only animation transitions write the sprite; learned spells retain native animation ownership.
-        if(next!=pose_) {wc3::Animate(unit,moving ? "walk" : "stand");pose_=next;}
-    }
-    return hit;
+    // Locomotion owns stand/run/jump poses separately; contact never overwrites native spell animation.
+    return timeline_.Contact(now) && Contact(unit,yaw,feet,settings,units,destructables);
 }
 bool HeroMeleeAttack::Contact(wc3::Handle actor,float yaw,float feet,const GameplaySettings& settings,
     UnitHitboxes& units,DestructableHitboxes& destructables) {

@@ -35,6 +35,12 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.thirdPerson.attackInterval=std::max(.2f,number("ThirdPerson","AttackInterval",2.2f,5));
     result.thirdPerson.contactDelay=std::min(result.thirdPerson.attackInterval,number("ThirdPerson","ContactDelay",.56f,3));
     result.thirdPerson.damageMultiplier=number("ThirdPerson","DamageMultiplier",1,10);
+    // Native pose playback follows physical motion; unknown toggles keep the requested animation defaults.
+    auto motion=text("ThirdPerson","MovementAnimations","true");
+    if(!_stricmp(motion.c_str(),"false") || motion=="0")result.thirdPerson.movementAnimations=false;
+    result.thirdPerson.runCycleDistance=std::max(40.f,number("ThirdPerson","RunCycleDistance",210,1000));
+    result.thirdPerson.takeoffDuration=std::max(.02f,number("ThirdPerson","TakeoffDuration",.10f,.3f));
+    result.thirdPerson.landingDuration=number("ThirdPerson","LandingDuration",.16f,.5f);
     // Unknown values retain the documented default; explicit false/0 bypasses attack-effect dispatch.
     auto attackEffects=text("Combat","EnableAttackEffects","true");
     if(!_stricmp(attackEffects.c_str(),"false") || attackEffects=="0")result.enableAttackEffects=false;

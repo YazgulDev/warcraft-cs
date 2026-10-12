@@ -2,6 +2,11 @@
 
 ## Unreleased — Arthas third-person prototype
 
+- Add speed-matched native run/idle playback and takeoff/air/landing poses for Arthas; render the visible
+  body at its physical jump height and restore its model transform before the next tick. Stock Arthas has no
+  authored Jump sequence, so the prototype reuses its native Hit/Ready poses. Preserve casting/stun/attack
+  ownership and restore playback rate on T/F6/cinematics/focus loss. Add configurable stride/phase durations.
+
 - Add T (configurable ToggleView) to switch active FPS/TPS, retaining F6 RTS recovery, inventory and position.
 - Show the native melee actor with WASD/mouse control, a reticle and existing Z/X/C/V native spell casting.
 - Add native hero attack animations, empty swings and delayed single-contact forward melee sweeps; preserve

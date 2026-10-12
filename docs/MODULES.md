@@ -6,6 +6,13 @@ recovery. `HeroMeleeAttack` in platform adapts those swings to native animation,
 unit damage effects; it never issues pursuit orders. The controller coordinates these collaborators
 and keeps actor render visibility separate from movement/spell ownership.
 
+`HeroMotionState` in presentation tracks physical takeoff/air/landing and ground locomotion transitions.
+`HeroLocomotion` adapts those poses to native sequences/rates and yields to casts/stuns/melee.
+`ActorJumpView` captures the native model's skinning inputs between world passes and applies physical
+body elevation through that same skinning function for world drawing. It restores the model/cache
+at the swap boundary before the next tick. It does not write unit fly height, grant
+flying movement or change pathing. Map unload discards stale model pointers.
+
 Sources are grouped by responsibility. Includes name the owning module explicitly; each public type
 has its own header and implementation. There is no global header search path masking dependencies.
 

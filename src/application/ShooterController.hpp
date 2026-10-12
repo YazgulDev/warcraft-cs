@@ -7,6 +7,7 @@
 #include "../presentation/FirstPersonCamera.hpp"
 #include "../presentation/ThirdPersonCamera.hpp"
 #include "../platform/HeroMeleeAttack.hpp"
+#include "../platform/HeroLocomotion.hpp"
 #include "../platform/NativeSky.hpp"
 #include "../platform/NativeFogOfWar.hpp"
 #include "../audio/GameAudio.hpp"
@@ -99,6 +100,9 @@ public:
     wc3::Handle ViewActor() const { return Visible() ? unit_ : 0; }
     // Actor visibility is separate from simulation ownership: TPS retains guards but shows the native body.
     wc3::Handle HiddenActor() const {return ThirdPerson() ? 0 : ViewActor();}
+    // Physical feet are a presentation snapshot; the render adapter never changes native fly height.
+    float ActorFeet() const {return movement_.FeetZ();}
+    wc3::Handle JumpViewActor() const {return ThirdPerson() && !status_.contained && !status_.hidden ? ViewActor() : 0;}
     // Block only map camera writes during live FPS; our camera pass and cinematic/RTS writes remain allowed.
     bool BlocksMapCamera() const { return Visible() && !ownCameraRequest_; }
     void SetPaused(bool value) { paused_ = value; }
@@ -220,6 +224,7 @@ private:
     FirstPersonCamera camera_;
     ThirdPersonCamera thirdCamera_;
     HeroMeleeAttack heroAttack_;
+    HeroLocomotion heroLocomotion_;
     bool thirdPerson_=false,viewToggleRequested_=false;
     NativeSky nativeSky_;
     NativeFogOfWar nativeFog_;

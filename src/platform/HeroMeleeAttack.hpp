@@ -10,15 +10,14 @@
 class HeroMeleeAttack {
 public:
     static bool Supported(wc3::Handle unit);
-    void Reset() {timeline_.Reset();pose_=Pose::None;}
-    void Cancel() {timeline_.Cancel();pose_=Pose::None;}
+    void Reset() {timeline_.Reset();}
+    void Cancel() {timeline_.Cancel();}
+    bool Busy(double now) const {return timeline_.Busy(now);}
     bool Begin(wc3::Handle unit,double now,const GameplaySettings& settings,const UnitStatus& status);
-    bool Tick(wc3::Handle unit,double now,float yaw,float feet,bool moving,bool casting,
+    bool Tick(wc3::Handle unit,double now,float yaw,float feet,bool casting,
         const GameplaySettings& settings,const UnitStatus& status,UnitHitboxes& units,DestructableHitboxes& destructables);
 private:
     bool Contact(wc3::Handle unit,float yaw,float feet,const GameplaySettings& settings,
         UnitHitboxes& units,DestructableHitboxes& destructables);
-    enum class Pose {None,Stand,Walk,Attack};
-    Pose pose_=Pose::None;
     HeroAttackTimeline timeline_;
 };
