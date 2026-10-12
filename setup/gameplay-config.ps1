@@ -13,6 +13,30 @@ function Update-GameplayConfig([string]$Template,[string]$Destination) {
     $lines=[Collections.Generic.List[string]]::new()
     $lines.AddRange([string[]]@(Get-Content -LiteralPath $Destination))
     $changed=$false
+    $oldSection='';$customStride=$false
+    foreach($existing in $lines) {
+        if($existing -match '^\s*\[([^\]]+)\]\s*$'){$oldSection=$Matches[1];continue}
+        if($oldSection -eq 'ThirdPerson' -and $existing -match '^\s*RunCycleDistance\s*=\s*(\d+(?:\.\d+)?)\s*$') {
+            $stride=[double]::Parse($Matches[1],[Globalization.CultureInfo]::InvariantCulture)
+            if($stride -ge 40 -and $stride -le 1000 -and $stride -ne 210){$customStride=$true}
+        }
+    }
+    # Only the old default changes: F7 is now TPS entry. Preserve custom refill keys and the rest of the layout.
+    $shortcutSection=$false;$refillIndex=-1;$thirdBinding=$false
+    $usedShortcuts=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    for($i=0;$i -lt $lines.Count;$i++) {
+        if($lines[$i] -match '^\s*\[([^\]]+)\]\s*$'){$shortcutSection=$Matches[1] -eq 'Shortcuts';continue}
+        if($shortcutSection -and $lines[$i] -match '^\s*([^;#=]+?)\s*=\s*(.*?)\s*$') {
+            $name=$Matches[1].Trim();$value=$Matches[2].Trim();[void]$usedShortcuts.Add($value)
+            if($name -eq 'ToggleThirdPerson'){$thirdBinding=$true}
+            if($name -eq 'Refill' -and $value -eq 'F7'){$refillIndex=$i}
+        }
+    }
+    if(!$thirdBinding -and $refillIndex -ge 0) {
+        $replacement='NONE'
+        foreach($candidate in @('F11','F12','F5','F4')) {if(!$usedShortcuts.Contains($candidate)){$replacement=$candidate;break}}
+        $lines[$refillIndex]='Refill='+$replacement;$changed=$true
+    }
     foreach ($entry in $defaults) {
         $start=-1;$end=$lines.Count
         for ($i=0;$i -lt $lines.Count;$i++) {
@@ -34,6 +58,8 @@ function Update-GameplayConfig([string]$Template,[string]$Destination) {
             if ($line -match '^\s*([^;#=]+?)\s*=') {
                 # Insert into the original section, never append a duplicate INI section ignored by Win32.
                 if ($keys.Add($Matches[1].Trim())) {
+                    # Preserve an existing chosen manual stride rather than hiding it behind the new automatic default.
+                    if($entry.name -eq 'ThirdPerson' -and $Matches[1].Trim() -eq 'AutoAnimationSpeed' -and $customStride){$line='AutoAnimationSpeed=false'}
                     foreach ($comment in $comments) { $lines.Insert($end,$comment);$end++ }
                     $lines.Insert($end,$line);$end++;$changed=$true
                 }

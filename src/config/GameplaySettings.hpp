@@ -4,6 +4,7 @@
 #include "RenderSettings.hpp"
 #include "HealthBarSettings.hpp"
 #include "SpellSettings.hpp"
+#include "ThirdPersonSettings.hpp"
 #include "../input/ShortcutBindings.hpp"
 
 #include "../movement/MovementSettings.hpp"
@@ -17,6 +18,7 @@ struct GameplaySettings {
     HealthBarSettings healthBars;
     ShortcutBindings shortcuts;
     SpellSettings spells;
+    ThirdPersonSettings thirdPerson;
 
     MovementSettings movement;
     float runeAmmoPercent = 40;

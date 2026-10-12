@@ -206,6 +206,38 @@ float UnitAttackAverage(Handle unit) {
     int high=reinterpret_cast<Damage>(nativeBase+0xC6CD0)(attack,0);
     return (float(low)+float(high))*.5f;
 }
+void Animate(Handle unit,const char* sequence) {
+    // Owned 1.26a registration at 3D619B maps SetUnitAnimation (Hunit;S)V to 3C61A0.
+    // Its string conversion is synchronous, using the same bounded wrapper as AddSpecialEffect.
+    using Animation=void (__cdecl*)(Handle,Handle);
+    const unsigned char signature[]={0x8B,0x44,0x24,0x08,0x8B,0x4C,0x24,0x04};
+    if(!unit || !nativeBase || std::memcmp(reinterpret_cast<void*>(nativeBase+0x3C61A0),signature,sizeof(signature)))return;
+    uintptr_t node[8]={},wrapper[3]={};node[7]=reinterpret_cast<uintptr_t>(sequence);wrapper[2]=reinterpret_cast<uintptr_t>(node);
+    reinterpret_cast<Animation>(nativeBase+0x3C61A0)(unit,reinterpret_cast<Handle>(wrapper));
+}
+float AnimationRate(Handle unit) {
+    // Verified SetUnitTimeScale stores the native baseline on CUnit+300 (26DD00).
+    auto object=UnitObject(unit);float rate=object ? *reinterpret_cast<float*>(object+0x300) : 1;
+    return std::isfinite(rate) && rate>=0 && rate<=10 ? rate : 1;
+}
+void AnimateIndex(Handle unit,int sequence) {
+    // Verified SetUnitAnimationByIndex registration selects the model's exact authored gait/variation.
+    const unsigned char signature[]={0x8B,0x4C,0x24,0x04,0xE8};
+    if(!unit || sequence<0 || !nativeBase || std::memcmp(reinterpret_cast<void*>(nativeBase+0x3C61F0),signature,sizeof(signature)))return;
+    reinterpret_cast<void (__cdecl*)(Handle,int)>(nativeBase+0x3C61F0)(unit,sequence);
+}
+void AnimationRate(Handle unit,float rate) {
+    if(!unit || !nativeBase || !std::isfinite(rate))return;
+    const unsigned char native[]={0x8B,0x4C,0x24,0x04,0xE8};
+    const unsigned char sprite[]={0x8B,0x01,0xD9,0x44,0x24,0x04};
+    if(std::memcmp(reinterpret_cast<void*>(nativeBase+0x3C6300),native,sizeof(native)) ||
+        std::memcmp(reinterpret_cast<void*>(nativeBase+0x4D31B0),sprite,sizeof(sprite)))return;
+    using Native=void (__cdecl*)(Handle,float*);
+    reinterpret_cast<Native>(nativeBase+0x3C6300)(unit,&rate);
+    // A movement component defers the JASS setter; update its sprite too, without changing move speed.
+    auto object=UnitObject(unit);uintptr_t body=object ? *reinterpret_cast<uintptr_t*>(object+0x28) : 0;
+    if(body)reinterpret_cast<void (__thiscall*)(uintptr_t,float)>(nativeBase+0x4D31B0)(body,rate);
+}
 std::string DestructableModelPath(int type) {
     // Use CreateDestructable's active-definition filename builder, including directory and variation suffixes.
     // +0x268A50 is its replacement texture slot, not the model; single-variation gates use variation zero.

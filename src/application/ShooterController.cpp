@@ -104,7 +104,7 @@ void ShooterController::UpdateBuyMenu() {
 bool ShooterController::Down(int key) const {
 #ifdef WCS_GAMEPLAY_TEST
     // Background fixtures must never interpret keys typed into the user's other applications.
-    if(BackgroundGameplay::Enabled())return false;
+    if(BackgroundGameplay::Enabled())return (key==testWalkKey_ || (testWalking_ && key==settings_.shortcuts.Key(ShortcutAction::Walk))) && GetTickCount()<testWalkUntil_;
 #endif
     return key>0 && key<256 && (GetAsyncKeyState(key) & 0x8000) != 0;
 }
@@ -137,6 +137,7 @@ void ShooterController::SurfaceStep(float volume) {
 void ShooterController::InterfaceRequest(bool show) {
     cinematicRequested_ = !show;
     if (active_ && !show) {
+        unitLocomotion_.Release(); // Native cinematics own animation playback immediately.
         nativeSky_.Update(ui_,false,mapTileset_);
         // Yield before the map applies its cinematic layout/camera; keep the mission unit visible.
         spells_.Cancel();spellRequested_=-1;spellCancelRequested_=false;
@@ -145,6 +146,10 @@ void ShooterController::InterfaceRequest(bool show) {
     }
 }
 void ShooterController::Disable(bool restoreCamera) {
+    unitLocomotion_.Release();
+    heroAttack_.Cancel();viewToggleRequested_=thirdPersonRequested_=false;
+    if(thirdPerson_ && unit_ && wc3::GetUnitTypeId(unit_))wc3::Animate(unit_,"stand");
+    thirdPerson_=false;
     spells_.Cancel();spellRequested_=-1;spellCancelRequested_=false;
     healthBarToggleRequested_=false; // Do not replay a pending bar switch on the next F6.
     // Restore the current map before native RTS/menu input takes over.
@@ -172,6 +177,8 @@ void ShooterController::Disable(bool restoreCamera) {
     wc3::Log("FPS disabled");
 }
 void ShooterController::ResetMap() {
+    unitLocomotion_.Reset(); // Map handles are already unloaded: discard, do not restore stale actors.
+    heroAttack_.Reset();thirdPerson_=viewToggleRequested_=thirdPersonRequested_=false;
     spellHud_={};spellHudTick_=spellHudLog_=0; // Forget per-map art and cooldown snapshots with their ability handles.
     spells_.Reset();spellRequested_=-1;spellCancelRequested_=false; // Forget unloaded-map orders without touching stale handles.
     healthBarToggleRequested_=false;
@@ -216,6 +223,31 @@ void ShooterController::Toggle() {
     active_ = true; suspended_ = false; scopeLevel_ = 0; Play("draw");
     wc3::Log("FPS enabled: unit=%08X type=%08X", unit_, wc3::GetUnitTypeId(unit_));
 }
+void ShooterController::ToggleView() {
+    if(!Visible())return;
+    if(!thirdPerson_ && !settings_.thirdPerson.enabled) {
+        Notice("THIRD PERSON DISABLED IN CONFIG");return;
+    }
+    // Inventory and physical position stay intact; no queued gunshot or delayed swing crosses the transition.
+    unitLocomotion_.Release();unitLocomotion_.Reset();
+    spells_.Cancel();heroAttack_.Cancel();CancelPlant();meleeContact_=0;reloadEnd_=0;scopeLevel_=0;
+    buyMenu_.Close();recoil_.Reset();audio_.Stop();mouseLook_.Reset();weaponWheel_.Reset();suppressFire_=true;
+    thirdPerson_=!thirdPerson_;pitch_=thirdPerson_ ? settings_.thirdPerson.initialPitch : 0;
+    if(!thirdPerson_) {wc3::Animate(unit_,"stand");Play("draw");}
+    wc3::Log("View mode=%s unit=%08X",thirdPerson_ ? "third-person" : "first-person",unit_);
+    Notice(thirdPerson_ ? "THIRD PERSON: UNIT CONTROL" : "FIRST PERSON: CS WEAPONS");
+}
+void ShooterController::AimRay(float* origin,float* direction) {
+    float yaw=ViewYaw()*radians,pitch=ViewPitch()*radians;
+    origin[0]=wc3::Real(wc3::GetUnitX(unit_));origin[1]=wc3::Real(wc3::GetUnitY(unit_));
+    origin[2]=movement_.EyeZ()+wc3::Real(wc3::GetUnitFlyHeight(unit_));
+    for(int i=0;i<3;++i)direction[i]=i==0 ? std::cos(pitch)*std::cos(yaw) : i==1 ? std::cos(pitch)*std::sin(yaw) : std::sin(pitch);
+    // TPS spells pick through the visible reticle from the shortened camera boom, excluding the actor itself.
+    if(thirdPerson_) {
+        auto pose=thirdCamera_.Position(unit_,origin[2],ViewYaw(),ViewPitch(),settings_.thirdPerson,hitboxes_,destructableHitboxes_);
+        std::copy(pose.eye.begin(),pose.eye.end(),origin);
+    }
+}
 void ShooterController::AimAndMove(float dt) {
     // A contained unit belongs to native cargo: changing XY/stance would fake an escape without releasing it.
     if (status_.contained || status_.hidden) { mouseLook_.Reset();movement_.Stop(); stepDistance_ = 0; return; }
@@ -247,6 +279,8 @@ void ShooterController::AimAndMove(float dt) {
     float speedScale=UnitScaling::MoveScale(settings_.movement.scaleFromUnitMoveSpeed,status_.nativeSpeed,
         settings_.movement.unitMoveSpeedReference,status_.speedScale);
     speed *= speedScale;
+    // Third-person movement uses the hero's effective native speed, including Warcraft slows and haste.
+    if(thirdPerson_)speed=status_.nativeSpeed/MovementPhysics::worldScale;
     {
         float oldX = wc3::Real(wc3::GetUnitX(unit_)), oldY = wc3::Real(wc3::GetUnitY(unit_));
         bool wasGrounded = movement_.Grounded();
@@ -302,6 +336,8 @@ void ShooterController::UpdateStatus() {
         movement_.Reset(wc3::Ground(wc3::Real(wc3::GetUnitX(unit_)), wc3::Real(wc3::GetUnitY(unit_))));
     }
     if (current.contained || current.hidden) scopeLevel_ = 0;
+    // Lost attack ownership discards the pending TPS contact even on branches that return early.
+    if(current.incapacitated || current.disarmed || current.contained || current.hidden)heroAttack_.Cancel();
     status_ = current;
 }
 void ShooterController::Camera() {
@@ -311,9 +347,13 @@ void ShooterController::Camera() {
     // Map RTS camera timers must not overwrite this pass; cinematics still receive control when suspended.
     ownCameraRequest_ = true;
     // Body/attachments are hidden by the world-only render filter; preserve native portrait tint/alpha.
-    camera_.Update(wc3::Real(wc3::GetUnitX(unit_)), wc3::Real(wc3::GetUnitY(unit_)),
-        movement_.EyeZ() + wc3::Real(wc3::GetUnitFlyHeight(unit_)), yaw_ + recoil_.Yaw(), std::clamp(pitch_ + recoil_.Pitch(), -65.0f, 65.0f),
-        scopeLevel_ == 2 ? 10.0f : Scoped() ? 40.0f : 85.0f, settings_.render.drawDistance);
+    if(thirdPerson_) {
+        auto pose=thirdCamera_.Position(unit_,movement_.EyeZ()+wc3::Real(wc3::GetUnitFlyHeight(unit_)),
+            yaw_,pitch_,settings_.thirdPerson,hitboxes_,destructableHitboxes_);
+        camera_.Update(pose.eye[0],pose.eye[1],pose.eye[2],yaw_,pitch_,85,settings_.render.drawDistance);
+    } else camera_.Update(wc3::Real(wc3::GetUnitX(unit_)), wc3::Real(wc3::GetUnitY(unit_)),
+            movement_.EyeZ() + wc3::Real(wc3::GetUnitFlyHeight(unit_)), yaw_ + recoil_.Yaw(), std::clamp(pitch_ + recoil_.Pitch(), -65.0f, 65.0f),
+            scopeLevel_ == 2 ? 10.0f : Scoped() ? 40.0f : 85.0f, settings_.render.drawDistance);
     ownCameraRequest_ = false;
 }
 void ShooterController::Reload() {
@@ -371,6 +411,10 @@ void ShooterController::ReloadSettings() {
         if(key>0)keys_[key]=Down(key);
         wc3::Log("Shortcut %s=%s",ShortcutBindings::Name(action),Shortcut(action).c_str());
     }
+    if(thirdPerson_ && !settings_.thirdPerson.enabled)ToggleView();
+    wc3::Log("Third person configured enabled=%d distance=%.1f range=%.1f arc=%.1f interval=%.2f delay=%.2f multiplier=%.2f",
+        settings_.thirdPerson.enabled,settings_.thirdPerson.distance,settings_.thirdPerson.attackRange,settings_.thirdPerson.attackArc,
+        settings_.thirdPerson.attackInterval,settings_.thirdPerson.contactDelay,settings_.thirdPerson.damageMultiplier);
     wc3::Log("Spells configured enabled=%d aimDistance=%.0f",settings_.spells.enabled,settings_.spells.aimDistance);
     for(int slot=0;slot<4;++slot)wc3::Log("Spell slot=%d ability=%s order=%d target=%s",slot+1,settings_.spells.ability[slot].c_str(),settings_.spells.order[slot],settings_.spells.target[slot].c_str());
     showSpeed_=settings_.showSpeed;
@@ -574,6 +618,8 @@ void ShooterController::Tick(uintptr_t ui) {
     requireForeground=!BackgroundGameplay::Enabled();
 #endif
     if (requireForeground && foregroundPid != GetCurrentProcessId()) {
+        thirdPersonRequested_=false; // A background tap cannot acquire native control on refocus.
+        unitLocomotion_.Release();
         // Drop background packets; refocusing establishes a fresh cursor anchor without a view jump.
         mouseLook_.Reset();
         weaponWheel_.Reset();
@@ -594,7 +640,7 @@ void ShooterController::Tick(uintptr_t ui) {
         wc3::Log("FPS %s for campaign/UI", suspended ? "suspended" : "resumed");
     }
     suspended_ = suspended;
-    if (suspended_) { spells_.Cancel();spellRequested_=-1;spellCancelRequested_=false;CancelPlant(); meleeContact_ = 0;buyMenu_.Close();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1; }
+    if (suspended_) { unitLocomotion_.Release();heroAttack_.Cancel();viewToggleRequested_=false;spells_.Cancel();spellRequested_=-1;spellCancelRequested_=false;CancelPlant(); meleeContact_ = 0;buyMenu_.Close();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1; }
     // Restore Warcraft input before forwarding F10, which cinematic UI otherwise ignores.
     if (menuRequested_) {
         menuRequested_ = false; Disable(true);
@@ -611,12 +657,22 @@ void ShooterController::Tick(uintptr_t ui) {
         } else if (active_) Toggle();
     }
     toggleRequested_ = false;
+    // F7 enters directly from RTS, selects TPS from FPS, and returns TPS to RTS; F6 recovery is unchanged.
+    if(thirdPersonRequested_) {
+        thirdPersonRequested_=false;
+        if(active_ && thirdPerson_)Disable(true);
+        else if(settings_.thirdPerson.enabled && !paused_ && !*reinterpret_cast<int*>(ui+0x258) && !*reinterpret_cast<int*>(ui+0x260)) {
+            if(!active_) {cinematicRequested_=false;suspended_=false;Toggle();}
+            if(Visible() && !thirdPerson_)ToggleView();
+        }
+    }
     // Menus/cinematics return ownership to the map; live FPS may temporarily fill a missing native sky.
     nativeSky_.Update(ui_,Visible() && settings_.nativeSky && !settings_.csSky,mapTileset_);
     nativeFog_.Update(Visible() && fogOfWarDisabled_);
     // A queued display tap cannot take effect after FPS is suspended or left.
     if (!active_ || suspended_) { mouseLook_.Reset();weaponWheel_.Reset();itemRequested_=false;squadRequested_=0;speedToggleRequested_=fogToggleRequested_=minimapToggleRequested_=healthBarToggleRequested_=false;spellRequested_=-1;spellCancelRequested_=false;return; }
     if (settingsRequested_) { settingsRequested_=false;ReloadSettings(); }
+    if(viewToggleRequested_) {viewToggleRequested_=false;ToggleView();}
     if(healthBarToggleRequested_) { healthBarToggleRequested_=false;ToggleHealthBars(); }
     if (speedToggleRequested_) {
         speedToggleRequested_=false;showSpeed_=!showSpeed_;
@@ -669,7 +725,7 @@ void ShooterController::Tick(uintptr_t ui) {
                 if (input>>command>>x>>y>>z) {
                     float dx=x-wc3::Real(wc3::GetUnitX(unit_)),dy=y-wc3::Real(wc3::GetUnitY(unit_));
                     yaw_=std::atan2(dy,dx)/radians;
-                    pitch_=std::atan2(z-movement_.EyeZ()-wc3::Real(wc3::GetUnitFlyHeight(unit_)),std::hypot(dx,dy))/radians;
+                    pitch_=std::atan2(z-movement_.EyeZ()-wc3::Real(wc3::GetUnitFlyHeight(unit_))-(thirdPerson_ ? settings_.thirdPerson.height : 0),std::hypot(dx,dy))/radians;
                     recoil_.Reset();
                     wc3::Log("verification aim=%.1f,%.1f,%.1f yaw=%.2f pitch=%.2f",x,y,z,yaw_,pitch_);
                 }
@@ -734,7 +790,7 @@ void ShooterController::Tick(uintptr_t ui) {
                         distance = std::hypot(dx, dy); yaw_ = std::atan2(dy, dx) / radians;
                     }
                     float z = wc3::Ground(x, y) + wc3::Real(wc3::GetUnitFlyHeight(fixtureTarget_)) + aimHeight;
-                    pitch_ = std::atan2(z - movement_.EyeZ(), distance) / radians;
+                    pitch_ = std::atan2(z - movement_.EyeZ()-(thirdPerson_ ? settings_.thirdPerson.height : 0), distance) / radians;
                 }
                 wc3::Log("verification target=%08X type=%08X at=%.1f,%.1f fly=%.1f side=%.1f height=%.1f scale=%.1f ownerSlot=%d neutral=%d",
                     fixtureTarget_, type, x, y, wc3::Real(wc3::GetUnitFlyHeight(fixtureTarget_)), side, aimHeight, scale, fixtureOwner, wc3::IsNeutralUnit(fixtureTarget_));
@@ -761,6 +817,7 @@ void ShooterController::Tick(uintptr_t ui) {
     }
     recoil_.Step(dt, Down(VK_LBUTTON) && !status_.incapacitated && !status_.disarmed, weapon_);
     if (status_.incapacitated) {
+        unitLocomotion_.Release(); // Early disabled-state returns must not retain the running time scale.
         spells_.Cancel();spellRequested_=-1;spellCancelRequested_=false;
         buyMenu_.Close();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1;suppressFire_=true;
         // Discard scrolling during disabled states rather than replaying a switch after recovery.
@@ -780,6 +837,8 @@ void ShooterController::Tick(uintptr_t ui) {
     UpdateBuyMenu();
     if (!Down(VK_LBUTTON) && !Down(VK_RBUTTON)) suppressFire_=false;
     if (Buying()) {
+        unitLocomotion_.Release();
+        heroAttack_.Cancel();
         spells_.Cancel();spellRequested_=-1;spellCancelRequested_=false;
         itemRequested_=false;squadRequested_=0; // Menu taps cannot queue RTS interaction for after closing.
         for (int key='0';key<='9';++key) Pressed(key);
@@ -792,12 +851,12 @@ void ShooterController::Tick(uintptr_t ui) {
     int wheel=weaponWheel_.Take(weapon_);
     int steps=(wheel-weapon_+WeaponSlots::Count)%WeaponSlots::Count;
     if (steps>WeaponSlots::Count/2) steps-=WeaponSlots::Count;
-    SwitchWeapon(inventory_.Next(weapon_,steps));
-    for (int i = 0; i < WeaponSlots::Count; ++i) if (Pressed(ShortcutAction(int(ShortcutAction::Weapon1)+i))) SwitchWeapon(i);
-    if (Pressed(ShortcutAction::Reload)) Reload();
+    if(!thirdPerson_)SwitchWeapon(inventory_.Next(weapon_,steps));
+    for (int i = 0; i < WeaponSlots::Count; ++i) if (Pressed(ShortcutAction(int(ShortcutAction::Weapon1)+i)) && !thirdPerson_) SwitchWeapon(i);
+    if (Pressed(ShortcutAction::Reload) && !thirdPerson_) Reload();
     // Consume the right-click edge for every weapon so holding it across a switch never scopes or stabs.
     bool secondaryPressed = Pressed(VK_RBUTTON);
-    if (!suppressFire_ && weapon_ == 3 && secondaryPressed) {
+    if (!thirdPerson_ && !suppressFire_ && weapon_ == 3 && secondaryPressed) {
         // CS-style right-click cycle: normal view, first zoom, second zoom, normal view.
         scopeLevel_ = (scopeLevel_ + 1) % 3;
         wc3::Log("AWP scope level=%d fov=%.0f", scopeLevel_, scopeLevel_ == 2 ? 10.0f : Scoped() ? 40.0f : 85.0f);
@@ -813,12 +872,10 @@ void ShooterController::Tick(uintptr_t ui) {
     if(spellRequested_>=0) {
         int slot=spellRequested_;spellRequested_=-1;
         if(!status_.contained && !status_.hidden) {
-            float yaw=ViewYaw()*radians,pitch=ViewPitch()*radians;
-            float origin[]={wc3::Real(wc3::GetUnitX(unit_)),wc3::Real(wc3::GetUnitY(unit_)),movement_.EyeZ()+wc3::Real(wc3::GetUnitFlyHeight(unit_))};
-            float direction[]={std::cos(pitch)*std::cos(yaw),std::cos(pitch)*std::sin(yaw),std::sin(pitch)};
+            float origin[3],direction[3];AimRay(origin,direction);
             auto aim=SpellAim::Pick(unit_,origin,direction,settings_.spells.aimDistance,hitboxes_,destructableHitboxes_);
             Notice(spells_.Cast(unit_,slot,settings_.spells,aim,Down(ShortcutAction::SelfCast)));
-            if(spells_.Active()) {movement_.Stop();CancelPlant();meleeContact_=0;reloadEnd_=0;suppressFire_=true;}
+            if(spells_.Active()) {heroAttack_.Cancel();movement_.Stop();CancelPlant();meleeContact_=0;reloadEnd_=0;suppressFire_=true;}
         }
     }
     if (!spells_.Active() && !status_.incapacitated && !status_.contained && !status_.hidden) FpsCombatGuard::CancelOrders(unit_);
@@ -844,7 +901,15 @@ void ShooterController::Tick(uintptr_t ui) {
     // CS chooses recoil after the current movement command, so the first moving/ducked shot uses that stance.
     AimAndMove(dt);
     // Planting requires a held button; other weapons preserve their existing click/automatic behavior.
-    if (!spells_.Active() && !suppressFire_ && weapon_ == WeaponSlots::C4) PlantC4(dt);
+    if(thirdPerson_) {
+        // Native swings consume no CS ammo; holding LMB repeats only after native-IAS-scaled recovery.
+        if(!spells_.Active() && !suppressFire_ && Down(VK_LBUTTON))heroAttack_.Begin(unit_,now*.001,settings_,status_);
+        if(heroAttack_.Tick(unit_,now*.001,yaw_,movement_.FeetZ()+wc3::Real(wc3::GetUnitFlyHeight(unit_)),
+            spells_.Active(),settings_,status_,hitboxes_,destructableHitboxes_))hits_.Record();
+        // Native casts/stuns and the active swing keep pose ownership; physics still supplies jump height.
+        unitLocomotion_.Update(unit_,now*.001,movement_.Grounded(),movement_.Speed(),
+            spells_.Active() || status_.incapacitated || status_.contained || status_.hidden || heroAttack_.Busy(now*.001),settings_.thirdPerson,Down(ShortcutAction::Walk) || movement_.Duck()>.5f);
+    } else if (!spells_.Active() && !suppressFire_ && weapon_ == WeaponSlots::C4) PlantC4(dt);
     else if (!spells_.Active() && !suppressFire_ && !status_.disarmed && WeaponSlots::Melee(weapon_) && secondaryPressed) Fire(true);
     else if (!spells_.Active() && !suppressFire_ && !status_.disarmed && ((weapons[weapon_].automatic && Down(VK_LBUTTON)) || firePressed)) Fire();
     // Sample after any newly started animation: an older tick would wrap unsigned elapsed time.

@@ -1,5 +1,19 @@
 # Source modules
 
+The third-person prototype uses `ThirdPersonPose`/`ThirdPersonCamera` in presentation for boom geometry
+and native collision clearance. `HeroAttackTimeline` in combat owns delayed, single-contact swings and
+recovery. `HeroMeleeAttack` in platform adapts those swings to native animation, widget geometry and
+unit damage effects; it never issues pursuit orders. The controller coordinates these collaborators
+and keeps actor render visibility separate from movement/spell ownership.
+
+`HeroMotionState` in presentation tracks physical takeoff/air/landing and ground locomotion transitions.
+`ModelMotionProfile` parses owned MDX sequences and UnitUI gait speeds without native/platform dependencies.
+`UnitLocomotion` selects those per-unit sequences/rates and yields to casts/stuns/melee; model/type changes reset metadata.
+`ActorJumpView` captures the native model's skinning inputs between world passes and applies physical
+body elevation through that same skinning function for world drawing. It restores the model/cache
+at the swap boundary before the next tick. It does not write unit fly height, grant
+flying movement or change pathing. Map unload discards stale model pointers.
+
 Sources are grouped by responsibility. Includes name the owning module explicitly; each public type
 has its own header and implementation. There is no global header search path masking dependencies.
 

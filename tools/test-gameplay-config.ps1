@@ -166,6 +166,18 @@ foreach($section in @('Shortcuts','Spells')) {
 $shortcutsBefore=(Get-FileHash -LiteralPath $customShortcuts).Hash
 Update-GameplayConfig $template $customShortcuts
 if((Get-FileHash -LiteralPath $customShortcuts).Hash -ne $shortcutsBefore) {throw 'Shortcut/spell migration is not idempotent.'}
+# Third-person updates retain chosen camera/damage values and a custom view key, adding missing defaults once.
+$third=Join-Path $folder 'custom-third-person.ini'
+@('[ThirdPerson]','CameraDistance=480','DamageMultiplier=1.5','RunCycleDistance=260','MovementAnimations=false','[Shortcuts]','ToggleView=TAB') | Set-Content -LiteralPath $third -Encoding ascii
+Update-GameplayConfig $template $third
+$thirdText=Get-Content -LiteralPath $third -Raw
+foreach($setting in @('CameraDistance=480','DamageMultiplier=1.5','ToggleView=TAB','AttackRange=150','ContactDelay=0.56','RunCycleDistance=260','MovementAnimations=false','TakeoffDuration=0.10','LandingDuration=0.16','AutoAnimationSpeed=false')) {
+    if(!$thirdText.Contains($setting)){throw "Third-person migration lost preference/default: $setting"}
+}
+if([regex]::Matches($thirdText,'(?m)^\[ThirdPerson\]').Count -ne 1){throw 'Duplicate third-person section.'}
+$thirdBefore=(Get-FileHash -LiteralPath $third).Hash
+Update-GameplayConfig $template $third
+if((Get-FileHash -LiteralPath $third).Hash -ne $thirdBefore){throw 'Third-person migration is not idempotent.'}
 # Preserve custom squad preferences and insert the new rear/yield settings once in the existing section.
 $customSquad=Join-Path $folder 'custom-squad.ini'
 @('[Squad]','FollowDistance=240','RearFormation=false','PlayerClearance=160','OrderIntervalMs=250') | Set-Content -LiteralPath $customSquad -Encoding ascii
@@ -178,3 +190,14 @@ if([regex]::Matches($squadText,'(?m)^\[Squad\]').Count -ne 1){throw 'Duplicate s
 $squadBefore=(Get-FileHash -LiteralPath $customSquad).Hash
 Update-GameplayConfig $template $customSquad
 if((Get-FileHash -LiteralPath $customSquad).Hash -ne $squadBefore){throw 'Squad migration is not idempotent.'}
+# Existing defaults relocate F7 only once, retaining custom layout choices and avoiding an occupied F11.
+$legacyEntry=Join-Path $folder 'legacy-tps-entry.ini'
+@('[Shortcuts]','Refill=F7','Speed=F11','Pickup=Y') | Set-Content -LiteralPath $legacyEntry -Encoding ascii
+Update-GameplayConfig $template $legacyEntry
+$legacyText=Get-Content -LiteralPath $legacyEntry -Raw
+foreach($setting in @('Refill=F12','ToggleThirdPerson=F7','Speed=F11','Pickup=Y','AutoAnimationSpeed=true','AnimationSpeedMultiplier=1')) {
+    if(!$legacyText.Contains($setting)){throw "Legacy TPS entry migration lost preference/default: $setting"}
+}
+$legacyHash=(Get-FileHash -LiteralPath $legacyEntry).Hash
+Update-GameplayConfig $template $legacyEntry
+if((Get-FileHash -LiteralPath $legacyEntry).Hash -ne $legacyHash){throw 'TPS entry migration is not idempotent.'}
