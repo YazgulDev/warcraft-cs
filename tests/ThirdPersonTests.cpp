@@ -1,6 +1,7 @@
 #include "../src/presentation/ThirdPersonPose.hpp"
 #include "../src/combat/HeroAttackTimeline.hpp"
 #include "../src/presentation/HeroMotionState.hpp"
+#include "../src/presentation/ModelMotionProfile.hpp"
 #include "../src/config/GameplaySettings.hpp"
 #include <cassert>
 #include <cmath>
@@ -24,6 +25,7 @@ int main() {
     HeroMotionState motion;ThirdPersonSettings motionSettings;using Pose=HeroMotionState::Pose;
     assert(motion.Update(1,true,0,motionSettings)==Pose::Stand);
     assert(motion.Update(2,true,270,motionSettings)==Pose::Run);
+    assert(motion.Update(2.1,true,140,motionSettings,true)==Pose::Walk);
     assert(motion.Update(3,false,270,motionSettings)==Pose::Takeoff);
     assert(motion.Update(3.05,false,0,motionSettings)==Pose::Takeoff);
     assert(motion.Update(3.2,false,100,motionSettings)==Pose::Air);
@@ -51,5 +53,22 @@ int main() {
     assert(!reloaded.thirdPerson.enabled && reloaded.thirdPerson.distance==500 && reloaded.thirdPerson.initialPitch==-60);
     assert(reloaded.shortcuts.Key(ShortcutAction::ToggleView)==VK_TAB);
     assert(!reloaded.thirdPerson.movementAnimations && reloaded.thirdPerson.runCycleDistance==250);
+    // Exact model indices/durations win over guessed animation names; truncated/missing models remain safe.
+    std::vector<uint8_t> model(12+4*132,0);std::memcpy(model.data(),"MDLXSEQS",8);
+    uint32_t chunk=4*132;std::memcpy(model.data()+8,&chunk,4);
+    const char* names[]={"Stand","Walk","Walk Fast","Jump"};
+    for(int i=0;i<4;++i){auto at=12+i*132;std::memcpy(model.data()+at,names[i],std::strlen(names[i]));uint32_t end=1000;std::memcpy(model.data()+at+84,&end,4);}
+    ModelMotionProfile profile;
+    profile.Load(model,"C;X1;Y1;K\"unitUIID\"\nC;X2;K\"file\"\nC;X3;K\"walk\"\nC;X4;K\"run\"\nC;X1;Y2;K\"hfoo\"\nC;X2;K\"test\"\nC;X3;K100\nC;X4;K300\n","test.mdx",0x68666F6F);
+    assert(profile.walk.index==1 && profile.run.index==2 && profile.takeoff.index==3 && profile.air.index==3);
+    assert(profile.walkSpeed==100 && profile.runSpeed==300 && profile.run.seconds==1);
+    model.resize(20);profile.Load(model,"","custom",0);assert(profile.walk.index==-1 && profile.runSpeed==0);
+    // An old refill default must not reset a custom layout when the new dedicated entry key is absent.
+    {std::ofstream file(path);file<<"[Shortcuts]\nRefill=F7\nSpeed=Y\n";}
+    auto legacy=GameplaySettings::Load(path);
+    assert(legacy.shortcuts.Key(ShortcutAction::ToggleThirdPerson)==VK_F7 && legacy.shortcuts.Key(ShortcutAction::Refill)==VK_F11 && legacy.shortcuts.Key(ShortcutAction::Speed)=='Y');
+    WritePrivateProfileStringA("ThirdPerson","AutoAnimationSpeed","false",path);
+    WritePrivateProfileStringA("ThirdPerson","AnimationSpeedMultiplier","999",path);
+    auto manual=GameplaySettings::Load(path);assert(!manual.thirdPerson.autoAnimationSpeed && manual.thirdPerson.animationSpeedMultiplier==3);
     DeleteFileA(path);
 }

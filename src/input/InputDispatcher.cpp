@@ -22,7 +22,7 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM k
     bool up=message==WM_KEYUP || message==WM_SYSKEYUP;
     bool tap=down && !(data&(1L<<30));
     // Log only configured mod controls, never text entry or unrelated desktop keystrokes.
-    bool control=key==VK_F6 || match(ShortcutAction::ToggleFPS);
+    bool control=key==VK_F6 || match(ShortcutAction::ToggleFPS) || match(ShortcutAction::ToggleThirdPerson);
     if(healthy && controller_.Visible())for(size_t i=0;i<ShortcutBindings::Count;++i)control|=match(ShortcutAction(i));
     if(control && (up || tap))wc3::Trace("control key=%u event=%s fps=%d buying=%d healthy=%d",unsigned(key),up ? "up" : "down",controller_.Visible(),controller_.Buying(),healthy);
     if(healthy && controller_.Visible() && (message==WM_LBUTTONDOWN || message==WM_LBUTTONUP || message==WM_RBUTTONDOWN || message==WM_RBUTTONUP || message==WM_MOUSEWHEEL))
@@ -35,6 +35,10 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM k
     // F6 remains a recovery alias even after remapping ToggleFPS, including native campaign movie transitions.
     if((key==VK_F6 || match(ShortcutAction::ToggleFPS)) && (down || up)) {
         if(tap)controller_.RequestToggle();return 0;
+    }
+    // The dedicated third-person entry works from RTS too; only the game-thread mailbox changes modes.
+    if(healthy && match(ShortcutAction::ToggleThirdPerson) && (down || up)) {
+        if(tap)controller_.RequestThirdPersonToggle();return 0;
     }
     if(!healthy || !controller_.Visible())return std::nullopt;
     // Native pause is always available and regains ordinary RTS input before its system key is forwarded.

@@ -41,6 +41,11 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.thirdPerson.runCycleDistance=std::max(40.f,number("ThirdPerson","RunCycleDistance",210,1000));
     result.thirdPerson.takeoffDuration=std::max(.02f,number("ThirdPerson","TakeoffDuration",.10f,.3f));
     result.thirdPerson.landingDuration=number("ThirdPerson","LandingDuration",.16f,.5f);
+    // Automatic gait speed is visual only; a custom multiplier never changes native move/attack statistics.
+    // Existing manual strides retain their meaning until the player explicitly enables automatic metadata.
+    auto autoMotion=text("ThirdPerson","AutoAnimationSpeed",result.thirdPerson.runCycleDistance==210 ? "true" : "false");
+    result.thirdPerson.autoAnimationSpeed=_stricmp(autoMotion.c_str(),"false") && autoMotion!="0";
+    result.thirdPerson.animationSpeedMultiplier=std::max(.1f,number("ThirdPerson","AnimationSpeedMultiplier",1,3));
     // Unknown values retain the documented default; explicit false/0 bypasses attack-effect dispatch.
     auto attackEffects=text("Combat","EnableAttackEffects","true");
     if(!_stricmp(attackEffects.c_str(),"false") || attackEffects=="0")result.enableAttackEffects=false;
@@ -112,6 +117,15 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         auto action=ShortcutAction(i);auto fallback=ShortcutBindings::Label(result.shortcuts.Key(action));
         int key=ShortcutBindings::Parse(text("Shortcuts",ShortcutBindings::Name(action),fallback.c_str()));
         if(key<0)layoutValid=false;else result.shortcuts.Set(action,key);
+    }
+    // Legacy installs used F7 for refill. Relocate that old default without discarding unrelated custom keys.
+    if(text("Shortcuts","ToggleThirdPerson","").empty() && result.shortcuts.Key(ShortcutAction::Refill)==VK_F7) {
+        int replacement=0;
+        for(int candidate:{VK_F11,VK_F12,VK_F5,VK_F4}) {
+            bool used=false;for(size_t i=0;i<ShortcutBindings::Count;++i)used|=result.shortcuts.Key(ShortcutAction(i))==candidate;
+            if(!used){replacement=candidate;break;}
+        }
+        result.shortcuts.Set(ShortcutAction::Refill,replacement);
     }
     if(!layoutValid || !result.shortcuts.Valid()) {result.shortcuts=ShortcutBindings();wc3::Log("Invalid/conflicting Shortcuts; using default keyboard layout");}
     // Rawcodes and order IDs describe existing abilities; they never grant skills or bypass native costs.

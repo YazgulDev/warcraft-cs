@@ -40,6 +40,7 @@ std::vector<Handle> NearbyItems(float x,float y,float radius);
 float UnitAttackAverage(Handle unit);
 // Animation only: no attack target or automatic pursuit order is assigned.
 void Animate(Handle unit,const char* sequence);
+void AnimateIndex(Handle unit,int sequence);
 // Animation rate does not assign native movement/combat orders.
 float AnimationRate(Handle unit);
 void AnimationRate(Handle unit,float rate);

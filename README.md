@@ -49,7 +49,7 @@ apply to fresh configs; updates preserve your existing choices. Earlier changes 
 - Mouse-wheel weapon cycling through all seven slots, with high-resolution wheel support.
 - B opens a CS-style buy menu using Warcraft gold; configurable prices, starting kits and shop/building access.
 - No starting C4 by default; unlimited paid C4 purchases and configurable reserve ammunition caps.
-- Multiple planted C4 charges with independent fuses; F7 refills carried equipment and F9 grants every weapon for free.
+- Multiple planted C4 charges with independent fuses; F11 refills carried equipment and F9 grants every weapon for free.
 - Warcraft sky by default in FPS, optional privately converted CS skyboxes, and visible native walkable bridge decks.
 - Configurable 144 FPS pacing and 15000-unit draw distance; corrected near-ground clipping.
 - Trunk-based tree collision, cliff retreat, stable idle movement and safe transformations.
@@ -181,7 +181,8 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 | Shift / Ctrl / Space | Walk / crouch / jump (hold Space for repeated hops by default) |
 | Left mouse button | Shoot or primary melee attack |
 | Right mouse button | Knife/sword: strong attack; AWP: cycle two zoom levels and normal view |
-| R / F7 | Reload / refill all carried ammunition for free |
+| F7 | Enter third person directly; press again in third person to return to RTS |
+| R / F11 | Reload / refill all carried ammunition for free |
 | F9 | Get all weapons and full ammunition for free |
 | B | Open/close the buy menu; number keys or mouse select categories and purchases |
 | . | Buy one ammo pack for the weapon currently held |
@@ -201,8 +202,9 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 
 ## Configuration
 
-The local third-person prototype adds **T** to switch active FPS to a visible Arthas camera and native
-melee attacks. WASD, the reticle and Z/X/C/V spells remain available. F6 returns to RTS.
+The local third-person prototype adds **F7** to enter directly with a selected owned mobile unit.
+WASD runs and Shift+WASD walks using that unit's authored model animations. F7/F6 return to RTS;
+T switches FPS/third person. The reticle, native melee attacks and Z/X/C/V spells remain available.
 See [third-person controls, settings and limits](docs/THIRD-PERSON.md).
 
 EXE installation: `<installation folder>/Game/WarcraftCS/WarcraftCS.ini`.
@@ -282,7 +284,7 @@ Edit it and press F8 in FPS.
   still governs travel around obstacles.
 - `[Loadout] Mode=melee` starts each map with a loaded USP, knife and sword; `Mode=all` grants all weapons
   with their initial ammunition. `BombCount=0` excludes C4 from the default kit; a positive count opts
-  into starting bombs. Buying C4 grants ownership; F7 grants/refills C4 and F9 grants all weapons.
+  into starting bombs. Buying C4 grants ownership; F11 grants/refills C4 and F9 grants all weapons.
   Updates preserve an existing count; set it to 0 explicitly to adopt the new default on the next map.
   `MaxBombs=100` sets the starting/free-refill/rune amount (0..1000).
   `UnlimitedBombPurchases=true` allows repeated paid purchases beyond that amount; false restores
@@ -298,7 +300,7 @@ Edit it and press F8 in FPS.
   qualify when allied or neutral-passive and visible/alive.
   Add custom shop unit rawcodes with `ShopTypes=nmer,ngme`. Both B and every purchase, including `.`,
   check the zone. The menu does not pause the world; leaving a valid zone closes it.
-- F7 refills carried magazines/reserves and grants C4 up to at least `MaxBombs` for free;
+- F11 refills carried magazines/reserves and grants C4 up to at least `MaxBombs` for free;
   surplus purchased bombs are retained. F9 also unlocks all weapons.
   These shortcuts do not spend gold or bypass Warcraft incapacitation. Legacy `AllowFreeRefill` is ignored.
   Rune rewards still follow `[Runes]` settings, apply only to owned weapons and use `MaxBombs` for C4.
@@ -443,7 +445,7 @@ For the full list of references, adaptations and license terms, see [NOTICE](NOT
 ### Unit scaling and ammunition limits (test branch)
 
 - `[AK47]`, `[M4A1]`, `[USP]` and `[AWP] MaxReserve` set reserve rounds, excluding the magazine.
-  Defaults are 90, 90, 100 and 30; range 0..100000. Purchases, F7/F9 and rune rewards all use these caps.
+  Defaults are 90, 90, 100 and 30; range 0..100000. Purchases, F11/F9 and rune rewards all use these caps.
   F8 discards surplus reserve after a reduction, without granting ammo or changing loaded rounds.
 - `[Combat] ScaleFireRateFromAttackSpeed=false` is optional (`true`/`false`, also `1`/`0`).
   When enabled, firearm interval is divided by native attack-speed multiplier (0.2..5).

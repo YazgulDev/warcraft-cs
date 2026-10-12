@@ -38,7 +38,7 @@ void Buttons(uintptr_t base) {
 void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const char* root) {
     static std::vector<wc3::Handle> items;
     static std::vector<wc3::Handle> party;
-    static wc3::Handle enemy=0,blocker=0;static DWORD check=0,observeUntil=0;
+    static wc3::Handle enemy=0,blocker=0,motionActor=0;static DWORD check=0,observeUntil=0;
     if ((!controller.Visible() && !BackgroundGameplay::Enabled()) || GetTickCount()-check<250) return;
     check=GetTickCount();auto unit=controller.TestUnit();
     std::string path=std::string(root)+"\\test-gameplay.request";
@@ -48,6 +48,7 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
         // The background oracle uses the same controller mailboxes without sending desktop input.
         if(BackgroundGameplay::Enabled() && command=="toggle")controller.RequestToggle();
         else if(BackgroundGameplay::Enabled() && command=="view")controller.RequestViewToggle();
+        else if(BackgroundGameplay::Enabled() && command=="third")controller.RequestThirdPersonToggle();
         else if(BackgroundGameplay::Enabled() && command=="heroattack")controller.TestHeroAttack();
         else if(BackgroundGameplay::Enabled() && command=="targetstats")controller.TestLogTarget();
         else if(BackgroundGameplay::Enabled() && command=="pause") {int value=0;input>>value;wc3::PauseUnit(unit,value!=0);}
@@ -56,7 +57,7 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
             float x=wc3::Real(wc3::GetUnitX(unit))-220,y=wc3::Real(wc3::GetUnitY(unit)),facing=0;
             party.push_back(wc3::CreateUnit(wc3::GetLocalPlayer(),0x68746F77,&x,&y,&facing));
         }
-        else if(BackgroundGameplay::Enabled() && command=="walk") {std::string key;DWORD ms=0;input>>key>>ms;controller.TestWalk(ShortcutBindings::Parse(key),ms);}
+        else if(BackgroundGameplay::Enabled() && command=="walk") {std::string key,gait;DWORD ms=0;input>>key>>ms>>gait;controller.TestWalk(ShortcutBindings::Parse(key),ms,gait=="slow");}
         else if(BackgroundGameplay::Enabled() && command=="motionstats") {
             // This oracle observes restored simulation height/rate, outside the transient world render scope.
             wc3::Log("fixture motion fly=%.2f rate=%.2f feet=%.2f",wc3::Real(wc3::GetUnitFlyHeight(unit)),wc3::AnimationRate(unit),controller.ActorFeet());
@@ -155,11 +156,16 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
         else if(BackgroundGameplay::Enabled() && command=="mana") {
             float mana=0;input>>mana;Mana(base,unit,mana);wc3::Log("fixture mana=%.1f",wc3::Real(wc3::GetUnitState(unit,2)));
         }
-        else if (command=="hero" || command=="creep" || command=="arthas") {
+        else if (command=="hero" || command=="creep" || command=="arthas" || (BackgroundGameplay::Enabled() && command=="actor")) {
             // A native hero has an inventory, unlike an unupgraded starting worker.
             // Move the private actor away from the starting workers so squad membership has an exact oracle.
             float x=wc3::Real(wc3::GetUnitX(unit))-1000,y=wc3::Real(wc3::GetUnitY(unit)),facing=0;
-            auto hero=wc3::CreateUnit(wc3::GetLocalPlayer(),command=="arthas" ? 0x48617274 : command=="hero" ? 0x4870616C : 0x68666F6F,&x,&y,&facing);
+            std::string raw;if(command=="actor")input>>raw;
+            int type=command=="actor" ? HeroSpellSlots::Rawcode(raw) : command=="arthas" ? 0x48617274 : command=="hero" ? 0x4870616C : 0x68666F6F;
+            // Only marked disposable maps can spawn arbitrary owned actors for locomotion verification.
+            if(command=="actor" && motionActor && wc3::GetUnitTypeId(motionActor))wc3::RemoveUnit(motionActor);
+            auto hero=wc3::CreateUnit(wc3::GetLocalPlayer(),type,&x,&y,&facing);
+            if(command=="actor")motionActor=hero; // Previous test bodies must not become movement obstacles.
             if(command=="arthas") {
                 // Only the opt-in disposable oracle learns stock Arthas spells; normal maps remain untouched.
                 using Level=void (__cdecl*)(wc3::Handle,int,BOOL);using Learn=void (__cdecl*)(wc3::Handle,int);

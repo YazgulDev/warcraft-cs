@@ -220,6 +220,12 @@ float AnimationRate(Handle unit) {
     auto object=UnitObject(unit);float rate=object ? *reinterpret_cast<float*>(object+0x300) : 1;
     return std::isfinite(rate) && rate>=0 && rate<=10 ? rate : 1;
 }
+void AnimateIndex(Handle unit,int sequence) {
+    // Verified SetUnitAnimationByIndex registration selects the model's exact authored gait/variation.
+    const unsigned char signature[]={0x8B,0x4C,0x24,0x04,0xE8};
+    if(!unit || sequence<0 || !nativeBase || std::memcmp(reinterpret_cast<void*>(nativeBase+0x3C61F0),signature,sizeof(signature)))return;
+    reinterpret_cast<void (__cdecl*)(Handle,int)>(nativeBase+0x3C61F0)(unit,sequence);
+}
 void AnimationRate(Handle unit,float rate) {
     if(!unit || !nativeBase || !std::isfinite(rate))return;
     const unsigned char native[]={0x8B,0x4C,0x24,0x04,0xE8};

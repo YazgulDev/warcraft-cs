@@ -2,6 +2,12 @@
 
 ## Unreleased — Arthas third-person prototype
 
+- Add configurable F7 direct third-person entry from RTS/FPS and F7 return to RTS. Move free ammo refill to
+  F11; migrate the old F7 default without resetting custom layouts. Keep T view switching and F6 recovery.
+- Extend movement presentation to mobile units: choose authored model indices for walk/run/swim/fly and leap
+  fallback poses; Shift walks, WASD runs. Match native UnitUI gait speeds, with configurable automatic
+  playback, multiplier and manual stride fallback. Combat remains the native melee prototype.
+
 - Add speed-matched native run/idle playback and takeoff/air/landing poses for Arthas; render the visible
   body at its physical jump height and restore its model transform before the next tick. Stock Arthas has no
   authored Jump sequence, so the prototype reuses its native Hit/Ready poses. Preserve casting/stun/attack

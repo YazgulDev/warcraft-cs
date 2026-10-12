@@ -1,15 +1,18 @@
-# Arthas third-person prototype
+# Third-person unit control prototype
 
-Select your Arthas, press **F6** for direct control, then **T** to switch to third person.
+Select a living owned mobile unit and press **F7** to enter third person directly.
+Press **F7** again in third person to return to RTS; F7 in FPS switches directly to third person.
 Press **T** again to return to FPS; **F6** returns to RTS from either mode.
-The first prototype accepts native primary melee actors and is verified with campaign Arthas (`Hart`).
-Ranged heroes and their projectiles are outside this prototype.
+Locomotion accepts mobile units, including ranged units. Native primary melee attacks remain supported;
+ranged attacks/projectiles are outside this combat prototype. Buildings, hidden and loaded units cannot be selected.
 
 - Mouse aims and turns the hero; WASD moves relative to that bearing. Movement uses the hero's
   effective native speed, including slows, haste and roots. Existing jump/crouch controls remain.
-- Run/idle playback follows actual movement speed. Space lifts the visible body with the physical jump;
-  takeoff, airborne and landing phases reuse native Stand Hit/Stand Ready poses. Stock Arthas has no
-  authored Jump sequence; this is a pose-based prototype rather than an imported skeleton animation.
+- WASD runs and Shift+WASD walks. Each model supplies its actual Stand/Walk/Run indices; Swim/Fly and
+  a speed-scaled Walk cover models without a distinct Run sequence. Warcraft UnitUI walk/run animation
+  speeds drive playback; shared sequences keep the same stride between gaits. Model/type changes reset metadata.
+  Space lifts the visible body with the physical jump. Authored Jump/Land sequences win; native hit/ready/stand
+  poses cover missing leap animations. Stock Arthas has no authored Jump sequence.
   Casting, incapacitation and melee swings keep native animation ownership. F6/T restore playback rate.
 - LMB plays the hero's attack animation even with no target. Hold it to repeat after recovery.
   A delayed horizontal forward sweep damages one nearest physical contact. Enemies behind the hero,
@@ -23,6 +26,9 @@ Ranged heroes and their projectiles are outside this prototype.
   The centered camera boom shortens against terrain, destructables and buildings. Moving allies do not push it.
 - RTS menus/cinematics retain ownership. View transitions cancel pending contacts and keep inventory and position.
 
+`[Shortcuts] ToggleThirdPerson=F7` enters/exits TPS independently of F6.
+Free ammo refill now defaults to `Refill=F11`; updates relocate the legacy F7 refill binding to an unused
+F11/F12/F5/F4, preserving unrelated custom shortcuts. An explicitly configured TPS key is preserved.
 `[Shortcuts] ToggleView=T` is validated with the existing conflict rules and reloads on F8.
 An older custom shortcut occupying T needs a unique `ToggleView` binding.
 
@@ -42,7 +48,9 @@ All `[ThirdPerson]` values are editable in the existing private `WarcraftCS.ini`
 | ContactDelay | 0.56 | 0–3 seconds, capped by AttackInterval |
 | DamageMultiplier | 1 | 0–10 times current native attack |
 | MovementAnimations | true | enable run/idle/leap pose playback; visual jump height remains physical |
-| RunCycleDistance | 210 | 40–1000 world units travelled per Walk cycle; rate follows actual speed |
+| AutoAnimationSpeed | true | use the model's UnitUI gait speeds when available; false uses manual stride |
+| AnimationSpeedMultiplier | 1 | 0.1–3 times gait playback speed; visual only |
+| RunCycleDistance | 210 | 40–1000 world units travelled per cycle; used when automatic metadata is unavailable or disabled |
 | TakeoffDuration | 0.10 | 0.02–0.3 seconds for the takeoff pose |
 | LandingDuration | 0.16 | 0–0.5 seconds for the landing pose; zero skips it |
 
@@ -50,9 +58,12 @@ Camera and contact rules reload on F8; initial pitch applies on the next view tr
 Swing timing reloads for the next swing. Delay and recovery scale with native attack-speed modifiers;
 the configurable defaults are fitted to Arthas, not universal timings for every Warcraft model.
 Combat playback uses the native sequence without replacing its attack animation time scale.
+Custom imported models without native gait metadata use RunCycleDistance. The table supplies stock/custom
+UnitUI speeds; per-object map overrides not present in that table require manual stride configuration.
 Locomotion temporarily owns playback rate and restores the map's previous rate when yielding.
 Movement settings reload on F8; phase durations apply at the next physical contact.
-Updates insert missing keys and preserve existing custom values.
+Updates insert missing keys and preserve existing custom values. A legacy custom RunCycleDistance
+keeps automatic animation speed disabled until explicitly enabled, so its chosen stride still applies.
 
 Known limits: one horizontal melee contact, no cleave sweep implementation or native ranged projectile
 simulation. Arbitrary unit animation sets, extreme camera settings and every custom map are not verified.
@@ -65,3 +76,6 @@ Native checks also verify speed-matched running, all leap phases, body elevation
 fly height, rate restoration on stun/T and live F8 stride changes. A captured jump was visually checked
 through takeoff, apex and landing. Configuration migration, camera geometry, the attack timeline and
 motion phase transitions also have automated regression checks.
+The expanded native scene verified direct RTS entry/exit, FPS entry and T switching, plus run/Shift-walk
+for Arthas, footman, knight, rifleman, tauren, Maiev, a wolf and a harpy. The captured movement cycles were inspected.
+Live F8 checks confirmed both the visual multiplier and the manual stride change playback while moving.

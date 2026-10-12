@@ -7,7 +7,8 @@ unit damage effects; it never issues pursuit orders. The controller coordinates 
 and keeps actor render visibility separate from movement/spell ownership.
 
 `HeroMotionState` in presentation tracks physical takeoff/air/landing and ground locomotion transitions.
-`HeroLocomotion` adapts those poses to native sequences/rates and yields to casts/stuns/melee.
+`ModelMotionProfile` parses owned MDX sequences and UnitUI gait speeds without native/platform dependencies.
+`UnitLocomotion` selects those per-unit sequences/rates and yields to casts/stuns/melee; model/type changes reset metadata.
 `ActorJumpView` captures the native model's skinning inputs between world passes and applies physical
 body elevation through that same skinning function for world drawing. It restores the model/cache
 at the swap boundary before the next tick. It does not write unit fly height, grant

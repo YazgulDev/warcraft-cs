@@ -7,7 +7,7 @@
 #include "../presentation/FirstPersonCamera.hpp"
 #include "../presentation/ThirdPersonCamera.hpp"
 #include "../platform/HeroMeleeAttack.hpp"
-#include "../platform/HeroLocomotion.hpp"
+#include "../platform/UnitLocomotion.hpp"
 #include "../platform/NativeSky.hpp"
 #include "../platform/NativeFogOfWar.hpp"
 #include "../audio/GameAudio.hpp"
@@ -46,6 +46,7 @@ public:
     void RequestToggle() { toggleRequested_ = true; }
     // T switches presentation/combat while preserving the same controlled unit and spell system.
     void RequestViewToggle() {viewToggleRequested_=true;}
+    void RequestThirdPersonToggle() {thirdPersonRequested_=true;}
     bool ThirdPerson() const {return thirdPerson_;}
     void RequestMenu() { menuRequested_ = true; }
     void RequestRefill() { refillRequested_ = true; }
@@ -122,7 +123,7 @@ public:
     void TestHeroAttack() {if(ThirdPerson())heroAttack_.Begin(unit_,GetTickCount()*.001,settings_,status_);}
     void TestLogTarget() const {wc3::Log("fixture target hp=%.1f actorMana=%.1f",fixtureTarget_ ? wc3::Real(wc3::GetUnitState(fixtureTarget_,0)) : -1,wc3::Real(wc3::GetUnitState(unit_,2)));}
     // Match the real movement key-down path, including deliberate channel interruption.
-    void TestWalk(int key,DWORD duration) {RequestSpellCancel();testWalkKey_=key;testWalkUntil_=GetTickCount()+std::min(duration,DWORD(2000));}
+    void TestWalk(int key,DWORD duration,bool walking=false) {RequestSpellCancel();testWalkKey_=key;testWalking_=walking;testWalkUntil_=GetTickCount()+std::min(duration,DWORD(2000));}
     // Disposable scenes exercise the real weapon contact path without desktop mouse input.
     void TestStrike(int slot) {
         if(slot<0 || slot>=WeaponSlots::Count || slot==WeaponSlots::C4)return;
@@ -155,7 +156,7 @@ public:
     static const Weapon weapons[WeaponSlots::Count];
 private:
 #ifdef WCS_GAMEPLAY_TEST
-    int testWalkKey_=0;DWORD testWalkUntil_=0;
+    int testWalkKey_=0;bool testWalking_=false;DWORD testWalkUntil_=0;
 #endif
     bool Pressed(int key);
     bool Down(int key) const;
@@ -224,8 +225,8 @@ private:
     FirstPersonCamera camera_;
     ThirdPersonCamera thirdCamera_;
     HeroMeleeAttack heroAttack_;
-    HeroLocomotion heroLocomotion_;
-    bool thirdPerson_=false,viewToggleRequested_=false;
+    UnitLocomotion unitLocomotion_;
+    bool thirdPerson_=false,viewToggleRequested_=false,thirdPersonRequested_=false;
     NativeSky nativeSky_;
     NativeFogOfWar nativeFog_;
     MouseLook mouseLook_;

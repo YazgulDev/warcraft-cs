@@ -5,9 +5,9 @@
 namespace {
 const char* names[]={"ToggleFPS","Forward","Backward","Left","Right","Jump","Crouch","Walk","Reload","Buy","BuyAmmo","Pickup",
     "SquadFight","SquadFollow","SquadRelease","Speed","Fog","Minimap","HealthBars","Refill","AllWeapons","ReloadSettings",
-    "Spell1","Spell2","Spell3","Spell4","SelfCast","Weapon1","Weapon2","Weapon3","Weapon4","Weapon5","Weapon6","Weapon7","ToggleView"};
+    "Spell1","Spell2","Spell3","Spell4","SelfCast","Weapon1","Weapon2","Weapon3","Weapon4","Weapon5","Weapon6","Weapon7","ToggleView","ToggleThirdPerson"};
 const int defaults[]={VK_F6,'W','S','A','D',VK_SPACE,VK_CONTROL,VK_SHIFT,'R','B',VK_OEM_PERIOD,'E',
-    'H','O','J','P','N','M','K',VK_F7,VK_F9,VK_F8,'Z','X','C','V',VK_MENU,'1','2','3','4','5','6','7','T'};
+    'H','O','J','P','N','M','K',VK_F11,VK_F9,VK_F8,'Z','X','C','V',VK_MENU,'1','2','3','4','5','6','7','T',VK_F7};
 static_assert(sizeof(defaults)/sizeof(*defaults)==ShortcutBindings::Count);
 }
 ShortcutBindings::ShortcutBindings() {std::copy(std::begin(defaults),std::end(defaults),keys_.begin());}
