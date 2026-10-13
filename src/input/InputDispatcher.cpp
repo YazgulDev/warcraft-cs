@@ -47,7 +47,8 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM k
         RECT client={};GetClientRect(window,&client);controller_.RequestBuyClick(short(LOWORD(data)),short(HIWORD(data)),client.right,client.bottom);return 0;
     }
     if(message==WM_MOUSEWHEEL) {
-        if(GetForegroundWindow()==window) {controller_.RequestSpellCancel();controller_.RequestWeaponWheel(GET_WHEEL_DELTA_WPARAM(key));}return 0;
+        // The controller routes TPS zoom separately from FPS weapon selection on its game-thread mailbox.
+        if(GetForegroundWindow()==window)controller_.RequestMouseWheel(GET_WHEEL_DELTA_WPARAM(key));return 0;
     }
     // New deliberate movement/fire interrupts channeling; a held key cannot repeatedly cancel new casts.
     if(message==WM_LBUTTONDOWN || message==WM_RBUTTONDOWN)controller_.RequestSpellCancel();

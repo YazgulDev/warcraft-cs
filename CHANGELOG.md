@@ -2,6 +2,7 @@
 
 ## Unreleased — Third-person unit control
 
+- Add third-person mouse-wheel zoom without interrupting spells or changing CS weapons. Preserve native camera collision and shared reticle rays. `[ThirdPerson] CameraZoomStep=50` (0..500 world units per notch, 0 disables), `CameraMinDistance=80` / `CameraMaxDistance=1000` (80..1000 each) reload on F8, which restores the bounded `CameraDistance`. Preserve custom values during config updates and discard pending wheel input at focus/menu/mode boundaries.
 - Recover native sprite pose overwrites while standing/running in direct control; leave casts, stuns and manual attacks in charge of their animations.
 - Mark the reachable third-person attack contact with red enemy, green ally or gold destructable brackets and a terrain-conforming ground circle (red enemy/yellow other targets). Remove the TARGET IN RANGE caption. Preview shares melee/ranged contact, native range and occlusion rules with LMB. `[ThirdPerson] ShowTargetIndicator=true` and `TargetCircleRadius=64` (16..256 world units) support F8 reload and config-preserving updates.
 - Suppress retained-target native wind-up timers and attack poses in direct control, fixing Sniper's visible autoattack loop while preserving manual ranged missiles and RTS attacks.

@@ -50,6 +50,8 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
         if(BackgroundGameplay::Enabled() && command=="toggle")controller.RequestToggle();
         else if(BackgroundGameplay::Enabled() && command=="view")controller.RequestViewToggle();
         else if(BackgroundGameplay::Enabled() && command=="third")controller.RequestThirdPersonToggle();
+        // Exercise production wheel routing without injecting input into the user's desktop.
+        else if(BackgroundGameplay::Enabled() && command=="wheel") {int delta=0;input>>delta;controller.RequestMouseWheel(delta);}
         else if(BackgroundGameplay::Enabled() && command=="heroattack")controller.TestHeroAttack();
         else if(BackgroundGameplay::Enabled() && command=="holdattack") {DWORD duration=0;input>>duration;controller.TestHoldAttack(duration);}
         else if(BackgroundGameplay::Enabled() && command=="targetstats")controller.TestLogTarget();
@@ -61,6 +63,7 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
         }
         else if(BackgroundGameplay::Enabled() && command=="walk") {std::string key,gait;DWORD ms=0;input>>key>>ms>>gait;controller.TestWalk(ShortcutBindings::Parse(key),ms,gait=="slow");}
         else if(BackgroundGameplay::Enabled() && command=="motionstats") {
+            wc3::Log("fixture camera distance=%.1f third=%d weapon=%d",controller.ThirdPersonDistance(),controller.ThirdPerson(),controller.WeaponIndex());
             // This oracle observes restored simulation height/rate, outside the transient world render scope.
             wc3::Log("fixture motion fly=%.2f rate=%.2f feet=%.2f",wc3::Real(wc3::GetUnitFlyHeight(unit)),wc3::AnimationRate(unit),controller.ActorFeet());
             auto body=UnitCollisionProfile::Read(unit,base);

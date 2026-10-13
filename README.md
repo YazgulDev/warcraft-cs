@@ -206,6 +206,9 @@ The local third-person prototype adds **F7** to enter directly with a selected o
 WASD runs and Shift+WASD walks using that unit's authored model animations. F7/F6 return to RTS;
 T switches FPS/third person. The reticle, native melee/ranged primary attacks and Z/X/C/V spells remain available.
 See [third-person controls, settings and limits](docs/THIRD-PERSON.md).
+Mouse wheel up/down moves the third-person camera closer/farther. `[ThirdPerson] CameraZoomStep=50`
+sets the step; `CameraMinDistance=80` / `CameraMaxDistance=1000` bound the requested distance.
+F8 reloads these settings and resets zoom to `CameraDistance`; wheel choices otherwise last for the map.
 Reachable targets have brackets and a ground circle: red for enemies, yellow for other contacts.
 `[ThirdPerson] ShowTargetIndicator` hides/shows both; `TargetCircleRadius=64` sets the circle radius
 in Warcraft units (16..256). Change them in `Game/WarcraftCS/WarcraftCS.ini` and press F8 to reload.

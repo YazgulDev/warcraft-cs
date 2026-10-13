@@ -23,6 +23,7 @@
 #include "../combat/MeleeAttack.hpp"
 #include "../input/MouseLook.hpp"
 #include "../input/WeaponWheel.hpp"
+#include "../input/CameraWheel.hpp"
 #include "../config/GameplaySettings.hpp"
 #include "../inventory/AmmoRecovery.hpp"
 #include "../inventory/ItemPickup.hpp"
@@ -41,8 +42,14 @@ public:
     // Native window input feeds the dedicated relative-look collector on the same game thread.
     void AttachWindow(HWND window) { mouseLook_.Attach(window); }
     void MouseInput(LPARAM packet,bool accept) { mouseLook_.Input(packet,accept); }
-    void ResetMouse() { mouseLook_.Reset(); weaponWheel_.Reset(); }
-    void RequestWeaponWheel(int delta) { weaponWheel_.Add(delta); }
+    void ResetMouse() { mouseLook_.Reset(); weaponWheel_.Reset();cameraWheel_.Reset(); }
+    // Zoom is presentation-only: it must not cancel channeling or switch a carried CS weapon in TPS.
+    void RequestMouseWheel(int delta) {
+        if(!Visible() || Buying())return;
+        if(thirdPerson_)cameraWheel_.Add(delta);
+        else {RequestSpellCancel();weaponWheel_.Add(delta);}
+    }
+    float ThirdPersonDistance() const {return thirdPersonDistance_;}
     void RequestToggle() { toggleRequested_ = true; }
     // T switches presentation/combat while preserving the same controlled unit and spell system.
     void RequestViewToggle() {viewToggleRequested_=true;}
@@ -186,6 +193,7 @@ private:
     void Notice(const char* message);
     float Play(const char* name);
     void Camera();
+    ThirdPersonSettings CameraSettings() const;
     void Sound(const char* name);
     void SurfaceStep(float volume);
     void UpdateStatus();
@@ -235,6 +243,8 @@ private:
     NativeFogOfWar nativeFog_;
     MouseLook mouseLook_;
     WeaponWheel weaponWheel_;
+    CameraWheel cameraWheel_;
+    float thirdPersonDistance_=500;
     GameplaySettings settings_;
     BuyInventory inventory_;
     BuyMenu buyMenu_;

@@ -6,6 +6,18 @@ Press **T** again to return to FPS; **F6** returns to RTS from either mode.
 Locomotion and primary attacks accept mobile melee and ranged units, including map-defined heroes.
 Buildings, hidden and loaded units cannot be selected.
 
+Mouse wheel **up** moves the third-person camera closer; **down** moves it farther away.
+The session's chosen distance survives FPS/third-person switches within the same map. Native terrain
+and building collision still shorten the camera when necessary, then restore the requested distance
+when the view is clear. Camera rays for manual attacks and spells use the same zoomed position.
+Scrolling in third person does not switch CS weapons or interrupt a spell. Buy menus, paused/disabled
+control and lost focus discard wheel input; partial notches cannot cross view transitions.
+`[ThirdPerson] CameraZoomStep=50` sets Warcraft units per wheel notch (0..500; 0 disables zoom).
+`CameraMinDistance=80` and `CameraMaxDistance=1000` each accept 80..1000 units; a maximum below the
+minimum becomes the minimum. Missing/malformed values use these defaults. `CameraDistance=500` is
+clamped to that interval. F8 applies the settings and resets the session distance to CameraDistance;
+new maps do the same. Updates insert missing keys while retaining custom values.
+
 An in-range contact receives colored brackets (red for an enemy, green for an ally, gold for a destructable)
 and a ground circle: red for an actual enemy, yellow for allied/neutral units and destructables.
 The circle follows terrain/bridge decks and is covered by opaque scenery; no text caption is displayed.
@@ -131,3 +143,7 @@ The marker screenshots were visually inspected. Other models/maps remain unverif
 Ground-circle checks verified red/yellow pixels, world-depth occlusion and OpenGL state restoration.
 An isolated DotA scene verified enemy and own-unit circles and live F8 radius changes from 64 to 96.
 Both native circle screenshots were visually inspected.
+Wheel-zoom regressions verify fractional/signed input, bounds, opt-out and real config migration.
+An isolated DotA scene verified native camera displacement, unchanged TPS weapon, retained FPS weapon
+scrolling, discarded fractions across view changes, F8 distance/step/limits reload and collision shortening
+without losing the requested distance. The zoomed attack contact and captured native views were checked.

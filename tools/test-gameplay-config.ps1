@@ -174,9 +174,15 @@ Update-GameplayConfig $template $customShortcuts
 if((Get-FileHash -LiteralPath $customShortcuts).Hash -ne $shortcutsBefore) {throw 'Shortcut/spell migration is not idempotent.'}
 # Third-person updates retain chosen camera/damage values and a custom view key, adding missing defaults once.
 $third=Join-Path $folder 'custom-third-person.ini'
-@('[ThirdPerson]','CameraDistance=480','DamageMultiplier=1.5','RunCycleDistance=260','MovementAnimations=false','RangedAttackRange=777','NativeRangedProjectiles=false','[Shortcuts]','ToggleView=TAB') | Set-Content -LiteralPath $third -Encoding ascii
+@('[ThirdPerson]','CameraDistance=480','CameraZoomStep=75','CameraMinDistance=200','CameraMaxDistance=800','DamageMultiplier=1.5','RunCycleDistance=260','MovementAnimations=false','RangedAttackRange=777','NativeRangedProjectiles=false','[Shortcuts]','ToggleView=TAB') | Set-Content -LiteralPath $third -Encoding ascii
 Update-GameplayConfig $template $third
 $thirdText=Get-Content -LiteralPath $third -Raw
+foreach($key in @('CameraZoomStep=75','CameraMinDistance=200','CameraMaxDistance=800')) {
+    if(!$thirdText.Contains($key)){throw "Camera zoom preference was reset: $key"}
+}
+foreach($key in @('CameraZoomStep=50','CameraMinDistance=80','CameraMaxDistance=1000')) {
+    if(!$text.Contains($key)){throw "Camera zoom default missing: $key"}
+}
 foreach($setting in @('CameraDistance=480','DamageMultiplier=1.5','ToggleView=TAB','AttackRange=150','ContactDelay=0.56','RunCycleDistance=260','MovementAnimations=false','TakeoffDuration=0.10','LandingDuration=0.16','AutoAnimationSpeed=false','RangedAttackRange=777','NativeRangedProjectiles=false','UseNativeAttackRange=true','RangedRangeMultiplier=1','MeleeHeightTolerance=32')) {
     if(!$thirdText.Contains($setting)){throw "Third-person migration lost preference/default: $setting"}
 }

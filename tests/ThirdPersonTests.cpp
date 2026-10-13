@@ -4,6 +4,7 @@
 #include "../src/presentation/HeroMotionState.hpp"
 #include "../src/presentation/ModelMotionProfile.hpp"
 #include "../src/config/GameplaySettings.hpp"
+#include "../src/input/CameraWheel.hpp"
 #include <cassert>
 #include <cmath>
 #include <fstream>
@@ -102,5 +103,29 @@ int main() {
     assert(GameplaySettings::Load(path).thirdPerson.targetCircleRadius==16);
     WritePrivateProfileStringA("ThirdPerson","TargetCircleRadius","96",path);
     assert(GameplaySettings::Load(path).thirdPerson.targetCircleRadius==96);
+    // Zoom consumes real validated config, retains partial notches, clamps and never replays input.
+    CameraWheel wheel;auto zoom=GameplaySettings::Load(path).thirdPerson;
+    assert(zoom.zoomStep==50 && zoom.minimumDistance==80 && zoom.maximumDistance==1000);
+    wheel.Add(120);assert(wheel.Take(500,zoom)==450);assert(wheel.Take(450,zoom)==450);
+    wheel.Add(-360);assert(wheel.Take(450,zoom)==600);
+    wheel.Add(60);assert(wheel.Take(500,zoom)==500);wheel.Add(60);assert(wheel.Take(500,zoom)==450);
+    wheel.Add(60);wheel.Reset();wheel.Add(60);assert(wheel.Take(500,zoom)==500);wheel.Reset();
+    wheel.Add(12000);assert(wheel.Take(500,zoom)==80);wheel.Add(-12000);assert(wheel.Take(80,zoom)==1000);
+    WritePrivateProfileStringA("ThirdPerson","CameraZoomStep","nan",path);
+    assert(GameplaySettings::Load(path).thirdPerson.zoomStep==50);
+    WritePrivateProfileStringA("ThirdPerson","CameraZoomStep","99999",path);
+    assert(GameplaySettings::Load(path).thirdPerson.zoomStep==500);
+    WritePrivateProfileStringA("ThirdPerson","CameraZoomStep","0",path);
+    wheel.Add(120);assert(wheel.Take(500,GameplaySettings::Load(path).thirdPerson)==500);
+    WritePrivateProfileStringA("ThirdPerson","CameraMinDistance","nan",path);
+    WritePrivateProfileStringA("ThirdPerson","CameraMaxDistance","bad",path);
+    zoom=GameplaySettings::Load(path).thirdPerson;assert(zoom.minimumDistance==80 && zoom.maximumDistance==1000);
+    WritePrivateProfileStringA("ThirdPerson","CameraMinDistance","99999",path);
+    WritePrivateProfileStringA("ThirdPerson","CameraMaxDistance","-1",path);
+    zoom=GameplaySettings::Load(path).thirdPerson;assert(zoom.minimumDistance==1000 && zoom.maximumDistance==1000 && zoom.distance==1000);
+    WritePrivateProfileStringA("ThirdPerson","CameraMinDistance","200",path);
+    WritePrivateProfileStringA("ThirdPerson","CameraMaxDistance","800",path);
+    WritePrivateProfileStringA("ThirdPerson","CameraZoomStep","75",path);
+    zoom=GameplaySettings::Load(path).thirdPerson;wheel.Add(-120);assert(wheel.Take(500,zoom)==575);
     DeleteFileA(path);
 }

@@ -28,7 +28,7 @@ has its own header and implementation. There is no global header search path mas
 | --- | --- |
 | `src/runtime` | DLL startup, hook installation, frame composition and fault boundaries |
 | `src/platform` | Verified Warcraft/Windows adapters and native camera/AI/render/world integration |
-| `src/input` | Relative mouse input, look angles, weapon wheel and window-message dispatcher |
+| `src/input` | Relative mouse input, look angles, weapon/camera wheel accumulation and window-message dispatcher |
 | `src/application` | FPS lifecycle and coordination of gameplay systems |
 | `src/config` | Validated configuration snapshots |
 | `src/movement` | Independent movement physics and validated movement tuning contract |
@@ -56,6 +56,9 @@ folders or terminates Warcraft. Reinstall tests use synthetic resources and a ve
 they do not access an actual game installation or run its executable.
 
 `InputDispatcher` translates input into game-thread command mailboxes and returns an optional result.
+`CameraWheel` retains fractional wheel notches and clamps the third-person session boom distance.
+The controller routes TPS zoom separately from FPS weapon scrolling and supplies the same zoom snapshot
+to both camera positioning and reticle rays. Native collision remains in `ThirdPersonCamera`.
 The window procedure forwards unconsumed messages and owns render-resource focus recovery. Native
 adapters isolate engine layouts; `WorldLabelVisibility` consumes a camera snapshot without Warcraft,
 Windows or OpenGL dependencies. Weapon data lives in `combat/Weapon.hpp` independently of the controller.

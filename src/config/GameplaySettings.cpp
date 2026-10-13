@@ -22,7 +22,11 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     // Third-person camera and Arthas swing tuning reload as part of the existing validated snapshot.
     auto thirdEnabled=text("ThirdPerson","Enabled","true");
     if(!_stricmp(thirdEnabled.c_str(),"false") || thirdEnabled=="0")result.thirdPerson.enabled=false;
-    result.thirdPerson.distance=std::max(80.f,number("ThirdPerson","CameraDistance",500,1000));
+    // Bound the wheel and configured starting distance together; reversed limits collapse safely.
+    result.thirdPerson.minimumDistance=std::max(80.f,number("ThirdPerson","CameraMinDistance",80,1000));
+    result.thirdPerson.maximumDistance=std::max(result.thirdPerson.minimumDistance,number("ThirdPerson","CameraMaxDistance",1000,1000));
+    result.thirdPerson.zoomStep=number("ThirdPerson","CameraZoomStep",50,500);
+    result.thirdPerson.distance=std::clamp(number("ThirdPerson","CameraDistance",500,1000),result.thirdPerson.minimumDistance,result.thirdPerson.maximumDistance);
     result.thirdPerson.height=number("ThirdPerson","CameraHeight",35,200);
     // Pitch uses a signed range unlike ordinary nonnegative tuning.
     auto pitchText=text("ThirdPerson","InitialPitch","-12");char* pitchEnd=nullptr;
