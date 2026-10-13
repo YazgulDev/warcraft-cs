@@ -1,5 +1,6 @@
 #pragma once
 #include "WarcraftApi.hpp"
+#include "UnitAttackAnimation.hpp"
 #include "../combat/HeroAttackTimeline.hpp"
 #include "../combat/UnitStatus.hpp"
 #include "../config/GameplaySettings.hpp"
@@ -11,9 +12,10 @@
 class UnitAttack {
 public:
     static bool Supported(wc3::Handle unit);
-    void Reset() {timeline_.Reset();}
-    void Cancel() {timeline_.Cancel();}
+    void Reset() {timeline_.Reset();animation_.Reset();}
+    void Cancel() {timeline_.Cancel();animation_.Release();}
     bool Busy(double now) const {return timeline_.Busy(now);}
+    bool Animating(double now) const {return animation_.Active(now);}
     bool ContactDue(double now) const {return timeline_.ContactDue(now);}
     bool Begin(wc3::Handle unit,double now,const GameplaySettings& settings,const UnitStatus& status);
     UnitAimTarget Preview(wc3::Handle unit,float yaw,float feet,const float* origin,const float* direction,
@@ -27,4 +29,5 @@ private:
         const GameplaySettings& settings,UnitHitboxes& units,DestructableHitboxes& destructables);
     bool Damage(wc3::Handle actor,wc3::Handle target,bool destructable,float distance,bool ranged,const GameplaySettings& settings);
     HeroAttackTimeline timeline_;
+    UnitAttackAnimation animation_;
 };

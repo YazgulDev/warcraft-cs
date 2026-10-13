@@ -924,9 +924,9 @@ void ShooterController::Tick(uintptr_t ui) {
         float attackOrigin[3]={},attackDirection[3]={};if(heroAttack_.ContactDue(now*.001))AimRay(attackOrigin,attackDirection);
         if(heroAttack_.Tick(unit_,now*.001,yaw_,movement_.FeetZ()+wc3::Real(wc3::GetUnitFlyHeight(unit_)),attackOrigin,attackDirection,
             spells_.Active(),settings_,status_,hitboxes_,destructableHitboxes_))hits_.Record();
-        // Native casts/stuns and the active swing keep pose ownership; physics still supplies jump height.
+        // Native casts/stuns and the authored swing clip own the pose, while DPS recovery no longer freezes running.
         unitLocomotion_.Update(unit_,now*.001,movement_.Grounded(),movement_.Speed(),
-            spells_.Active() || status_.incapacitated || status_.contained || status_.hidden || heroAttack_.Busy(now*.001),settings_.thirdPerson,Down(ShortcutAction::Walk) || movement_.Duck()>.5f);
+            spells_.Active() || status_.incapacitated || status_.contained || status_.hidden || heroAttack_.Animating(now*.001),settings_.thirdPerson,Down(ShortcutAction::Walk) || movement_.Duck()>.5f);
         // A separate read-only snapshot advertises the same contact without starting or advancing an attack.
         if(settings_.thirdPerson.showTargetIndicator && !spells_.Active() && !status_.incapacitated && !status_.disarmed &&
             !status_.contained && !status_.hidden) {

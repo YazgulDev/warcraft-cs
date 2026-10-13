@@ -81,6 +81,14 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
         }
         else if(BackgroundGameplay::Enabled() && command=="walk") {std::string key,gait;DWORD ms=0;input>>key>>ms>>gait;controller.TestWalk(ShortcutBindings::Parse(key),ms,gait=="slow");}
         else if(BackgroundGameplay::Enabled() && command=="motionstats") {
+            controller.TestAnimationState();
+            // Read the native clip clock to distinguish progressing playback from repeated frame-zero repairs.
+            auto actor=wc3::UnitObject(unit);uintptr_t sprite=0,model=0,animation=0,frames=0,metadata=0,clips=0;
+            int sequence=wc3::AnimationSequence(unit),frame=0,begin=0;
+            if(sequence>=0 && sequence<256 && Read(actor+0x28,sprite) && Read(sprite+0x20,model) &&
+                Read(model+0x98,animation) && Read(animation+8,frames) && Read(animation+0x44,metadata) &&
+                Read(metadata+0x18,clips) && Read(frames+sequence*16,frame) && Read(clips+sequence*0x8C,begin))
+                wc3::Log("fixture clip sequence=%d elapsedMs=%d",sequence,frame-begin);
             wc3::Log("fixture camera distance=%.1f third=%d weapon=%d",controller.ThirdPersonDistance(),controller.ThirdPerson(),controller.WeaponIndex());
             // This oracle observes restored simulation height/rate, outside the transient world render scope.
             wc3::Log("fixture motion fly=%.2f rate=%.2f feet=%.2f",wc3::Real(wc3::GetUnitFlyHeight(unit)),wc3::AnimationRate(unit),controller.ActorFeet());

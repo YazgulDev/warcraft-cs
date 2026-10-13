@@ -18,6 +18,13 @@ namespace wc3 {
 float Real(Bits x){float value;std::memcpy(&value,&x,4);return value;}
 void Log(const char*,...){}
 void Animate(Handle,const char*){++animations;}
+// The real manual pose adapter can run without retail models, using the contact-duration fallback.
+std::string UnitModelPath(int){return "synthetic.mdx";}
+int AnimationSequence(Handle){return -1;}
+void AnimateIndex(Handle,int){++animations;}
+float AnimationRate(Handle){return 1;}
+void AnimationRate(Handle,float){}
+void AnimationSeek(Handle,int,float){}
 float Ground(float x,float){return wall && x>=120 ? 200.f : 0.f;}
 std::vector<Handle> NearbyDestructables(float,float,float){return {};}
 float UnitAttackAverage(Handle){return 100;}
@@ -37,6 +44,7 @@ bool UnitHitboxes::Intersect(wc3::Handle,const float* origin,const float* direct
 bool DestructableHitboxes::Intersect(wc3::Handle,const float*,const float*,float,float&){return false;}
 int main(){
     using namespace wc3;
+    GetUnitTypeId=[](Handle){return 1;};
     CreateGroup=[]()->Handle{return 1;};DestroyGroup=[](Handle){};
     GroupEnumUnitsInRange=[](Handle,float*,float*,float*,Handle){group={2};};
     FirstOfGroup=[](Handle)->Handle{return group.empty() ? 0 : group.back();};

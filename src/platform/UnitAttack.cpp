@@ -11,7 +11,7 @@ bool UnitAttack::Supported(wc3::Handle unit) {
 bool UnitAttack::Begin(wc3::Handle unit,double now,const GameplaySettings& settings,const UnitStatus& status) {
     if(status.disarmed || status.incapacitated || !Supported(unit) ||
         !timeline_.Begin(now,settings.thirdPerson.contactDelay,settings.thirdPerson.attackInterval,status.attackSpeed))return false;
-    wc3::Animate(unit,"attack");
+    animation_.Begin(unit,now,status.attackSpeed,settings.thirdPerson.contactDelay,settings.thirdPerson.attackInterval);
     wc3::Log("Third-person swing unit=%08X attack=%.1f speed=%.2f",unit,status.attackDamage,status.attackSpeed);return true;
 }
 bool UnitAttack::Tick(wc3::Handle unit,double now,float yaw,float feet,const float* aimOrigin,const float* aimDirection,bool casting,
@@ -20,6 +20,7 @@ bool UnitAttack::Tick(wc3::Handle unit,double now,float yaw,float feet,const flo
         Cancel();return false;
     }
     // Locomotion owns stand/run/jump poses separately; contact never overwrites native spell animation.
+    animation_.Update(now);
     if(!timeline_.Contact(now))return false;
     auto target=Preview(unit,yaw,feet,aimOrigin,aimDirection,settings,units,destructables);
     if(!target.handle) {
@@ -27,7 +28,9 @@ bool UnitAttack::Tick(wc3::Handle unit,double now,float yaw,float feet,const flo
         wc3::Log("Third-person %s miss unit=%08X",NativeWeaponAttack::PrimaryKind(unit)==1 ? "melee" : "ranged",unit);
         return false;
     }
-    return Damage(unit,target.handle,target.destructable,target.distance,NativeWeaponAttack::PrimaryKind(unit)!=1,settings);
+    bool hit=Damage(unit,target.handle,target.destructable,target.distance,NativeWeaponAttack::PrimaryKind(unit)!=1,settings);
+    // Native impact cleanup can reset the sprite in this same rendered frame; retain the current backswing time.
+    animation_.Update(now);return hit;
 }
 UnitAimTarget UnitAttack::Preview(wc3::Handle unit,float yaw,float feet,const float* origin,const float* direction,
     const GameplaySettings& settings,UnitHitboxes& units,DestructableHitboxes& destructables) {

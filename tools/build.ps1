@@ -60,6 +60,7 @@ $sources += '"' + (Join-Path $modRoot 'src/platform/MovementObstacles.cpp') + '"
 $sources += '"' + (Join-Path $modRoot 'src/platform/UnitCollisionProfile.cpp') + '"' # Live movement collision is independent of weapon geometry.
 # Third-person presentation and native melee coordination retain separate ownership from FPS weapons.
 $sources += @('presentation/ThirdPersonCamera.cpp','platform/UnitAttack.cpp','platform/UnitLocomotion.cpp','platform/ActorJumpView.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
+$sources += '"'+(Join-Path $modRoot 'src/platform/UnitAttackAnimation.cpp')+'"' # Manual pose lifetime is independent of DPS recovery.
 # Shop access is native-world policy; inventory prices/navigation remain independently testable.
 $sources += @('economy/BuyAccess.cpp','presentation/BuyMenuView.cpp','presentation/SkyView.cpp','platform/MapEnvironment.cpp','platform/NativeSky.cpp','platform/NativeFloatingText.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 # Install defaults only once so rebuilds preserve the player's customized settings.

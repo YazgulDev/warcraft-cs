@@ -95,7 +95,11 @@ All `[ThirdPerson]` values are editable in the existing private `WarcraftCS.ini`
 Camera and contact rules reload on F8; initial pitch applies on the next view transition.
 Swing timing reloads for the next swing. Delay and recovery scale with native attack-speed modifiers;
 the configurable defaults are fitted to Arthas, not universal timings for every Warcraft model.
-Combat playback uses the native sequence without replacing its attack animation time scale.
+Attack playback follows the authored native clip, scaled by the actor's native playback rate and
+attack-speed modifier. Its visual ownership lasts through contact but no longer than combat recovery;
+running resumes when the clip finishes, even if another attack is still on cooldown. Native pose resets
+are repaired at the elapsed clip time instead of restarting the swing. A new map-owned playback rate,
+casting, disabling effects or death takes precedence over the manual pose.
 Custom imported models without native gait metadata use RunCycleDistance. The table supplies stock/custom
 UnitUI speeds; per-object map overrides not present in that table require manual stride configuration.
 Locomotion temporarily owns playback rate and restores the map's previous rate when yielding.

@@ -245,6 +245,17 @@ void AnimationRate(Handle unit,float rate) {
     auto object=UnitObject(unit);uintptr_t body=object ? *reinterpret_cast<uintptr_t*>(object+0x28) : 0;
     if(body)reinterpret_cast<void (__thiscall*)(uintptr_t,float)>(nativeBase+0x4D31B0)(body,rate);
 }
+void AnimationSeek(Handle unit,int sequence,float seconds) {
+    // Owned CSprite::SetAnimationTime (4D3010) forwards current sequence + relative milliseconds to this model setter.
+    // Use that verified model path without its sprite fallback selecting Stand; native skinning is dirtied normally.
+    const unsigned char seek[]={0x55,0x8B,0xE9,0x8B,0x8D,0x98,0x00,0x00,0x00};
+    if(!unit || sequence<0 || !nativeBase || !std::isfinite(seconds) || seconds<0 || seconds>60 ||
+        std::memcmp(reinterpret_cast<void*>(nativeBase+0x50D560),seek,sizeof(seek)))return;
+    auto object=UnitObject(unit);uintptr_t sprite=object ? *reinterpret_cast<uintptr_t*>(object+0x28) : 0;
+    uintptr_t model=sprite ? *reinterpret_cast<uintptr_t*>(sprite+0x20) : 0;
+    // A queued index/morph may not yet be applied. Only seek a sequence the live sprite already accepted.
+    if(model && sequence==AnimationSequence(unit))reinterpret_cast<void (__fastcall*)(uintptr_t,int,int)>(nativeBase+0x50D560)(model,sequence,int(seconds*1000));
+}
 std::string DestructableModelPath(int type) {
     // Use CreateDestructable's active-definition filename builder, including directory and variation suffixes.
     // +0x268A50 is its replacement texture slot, not the model; single-variation gates use variation zero.

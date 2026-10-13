@@ -41,6 +41,7 @@ float UnitAttackAverage(Handle unit);
 // Animation only: no attack target or automatic pursuit order is assigned.
 void Animate(Handle unit,const char* sequence);
 void AnimateIndex(Handle unit,int sequence);
+void AnimationSeek(Handle unit,int sequence,float seconds);
 // Observe the sprite's current sequence so direct control can recover a native AI pose overwrite.
 int AnimationSequence(Handle unit);
 // Animation rate does not assign native movement/combat orders.

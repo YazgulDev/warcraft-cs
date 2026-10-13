@@ -20,6 +20,8 @@ void UnitLocomotion::Release() {
 }
 void UnitLocomotion::Update(wc3::Handle unit,double now,bool grounded,float speed,bool blocked,const ThirdPersonSettings& settings,bool walking) {
     int type=wc3::GetUnitTypeId(unit);
+    // An impact callback can kill the actor before the next status snapshot; never replace its death pose with a gait.
+    if(!type || wc3::Real(wc3::GetUnitState(unit,0))<=.405f) {Release();return;}
     auto path=unit_==unit && type_==type ? modelPath_ : wc3::UnitModelPath(type);
     if(unit_!=unit || type_!=type || modelPath_!=path) {
         // Morphs/map models invalidate cached gait metadata even when the native unit handle is unchanged.

@@ -2,6 +2,7 @@
 #include "../src/combat/HeroAttackTimeline.hpp"
 #include "../src/combat/NativeOrderCancellation.hpp"
 #include "../src/presentation/HeroMotionState.hpp"
+#include "../src/presentation/HeroAttackPose.hpp"
 #include "../src/presentation/ModelMotionProfile.hpp"
 #include "../src/config/GameplaySettings.hpp"
 #include "../src/input/CameraWheel.hpp"
@@ -29,6 +30,14 @@ int main() {
     assert(!swing.Begin(10.9,.56f,2.2f,2));assert(swing.Begin(11.2,.56f,2.2f,2));
     swing.Cancel();assert(!swing.Contact(20));assert(!swing.Begin(11.3,.56f,2.2f,2));
     swing.Reset();assert(swing.Begin(0,5,1,1));assert(!swing.Contact(.9));assert(swing.Contact(1));
+    // An authored clip ends before DPS recovery. Playback advances instead of restarting after pose overwrites.
+    HeroAttackPose visual;visual.Begin(10,.8f,2,.28f,1.1f);
+    assert(visual.Active(10.3) && std::abs(visual.Elapsed(10.3)-.6f)<.001f);
+    assert(!visual.Active(10.5));assert(visual.Elapsed(11)<.8f);
+    visual.Begin(20,.1f,1,.56f,2.2f);assert(visual.Active(20.5) && !visual.Active(20.6));
+    visual.Begin(30,10,1,.56f,2.2f);assert(!visual.Active(32.3));
+    visual.Begin(40,.8f,0,.56f,2.2f);assert(visual.Elapsed(41)==0 && visual.Active(41));
+    visual.Reset();assert(!visual.Active(0));
     // Jump contact transitions persist through air steering; landing recovers to run or idle without replay.
     HeroMotionState motion;ThirdPersonSettings motionSettings;using Pose=HeroMotionState::Pose;
     assert(motion.Update(1,true,0,motionSettings)==Pose::Stand);
@@ -62,14 +71,15 @@ int main() {
     assert(reloaded.shortcuts.Key(ShortcutAction::ToggleView)==VK_TAB);
     assert(!reloaded.thirdPerson.movementAnimations && reloaded.thirdPerson.runCycleDistance==250);
     // Exact model indices/durations win over guessed animation names; truncated/missing models remain safe.
-    std::vector<uint8_t> model(12+4*132,0);std::memcpy(model.data(),"MDLXSEQS",8);
-    uint32_t chunk=4*132;std::memcpy(model.data()+8,&chunk,4);
-    const char* names[]={"Stand","Walk","Walk Fast","Jump"};
-    for(int i=0;i<4;++i){auto at=12+i*132;std::memcpy(model.data()+at,names[i],std::strlen(names[i]));uint32_t end=1000;std::memcpy(model.data()+at+84,&end,4);}
+    std::vector<uint8_t> model(12+6*132,0);std::memcpy(model.data(),"MDLXSEQS",8);
+    uint32_t chunk=6*132;std::memcpy(model.data()+8,&chunk,4);
+    const char* names[]={"Stand","Walk","Walk Fast","Jump","Attack","Attack Alternate"};
+    for(int i=0;i<6;++i){auto at=12+i*132;std::memcpy(model.data()+at,names[i],std::strlen(names[i]));uint32_t end=i==5 ? 750 : 1000;std::memcpy(model.data()+at+84,&end,4);}
     ModelMotionProfile profile;
     profile.Load(model,"C;X1;Y1;K\"unitUIID\"\nC;X2;K\"file\"\nC;X3;K\"walk\"\nC;X4;K\"run\"\nC;X1;Y2;K\"hfoo\"\nC;X2;K\"test\"\nC;X3;K100\nC;X4;K300\n","test.mdx",0x68666F6F);
     assert(profile.walk.index==1 && profile.run.index==2 && profile.takeoff.index==3 && profile.air.index==3);
     assert(profile.walkSpeed==100 && profile.runSpeed==300 && profile.run.seconds==1);
+    assert(profile.attack.index==4 && std::abs(profile.SequenceAt(5).seconds-.75f)<.001f && profile.SequenceAt(999).index==-1);
     model.resize(20);profile.Load(model,"","custom",0);assert(profile.walk.index==-1 && profile.runSpeed==0);
     // An old refill default must not reset a custom layout when the new dedicated entry key is absent.
     {std::ofstream file(path);file<<"[Shortcuts]\nRefill=F7\nSpeed=Y\n";}

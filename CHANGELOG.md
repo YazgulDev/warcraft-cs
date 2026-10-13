@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — Third-person attack animation recovery
+
+- Separate manual attack playback from combat cooldown. Resume locomotion when the authored attack
+  clip ends, while retaining the existing contact delay and repeat-attack interval.
+- Preserve native alternate attack clips and advance their playback time after movement or impact
+  cleanup resets the pose. Respect native attack-speed modifiers and map-owned time-scale changes.
+- Yield to casts, disabling effects and death. Add portable timing regressions and opt-in native
+  clip-clock telemetry; verify moving attacks and recovery on Arthas, Archmage and Footman.
+
 ## Unreleased — Campaign HUD recovery
 
 - Compose the HUD after Warcraft's verified native frame-batch completion, before presentation,

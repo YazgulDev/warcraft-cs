@@ -14,7 +14,8 @@
 class ModelMotionProfile {
 public:
     struct Sequence {int index=-1;float seconds=1;std::string name;};
-    Sequence stand,walk,run,takeoff,air,land;
+    Sequence stand,walk,run,takeoff,air,land,attack;
+    Sequence SequenceAt(int index) const {for(const auto& clip:sequences_)if(clip.index==index)return clip;return {};}
     float walkSpeed=0,runSpeed=0;
     void Load(const std::vector<uint8_t>& bytes,const std::string& slk,const std::string& path,int type) {
         *this={};std::vector<Sequence> sequences;
@@ -42,6 +43,8 @@ public:
             }
             return selected;
         };
+        // Exact native attack variation durations share the bounded authored sequence decoder.
+        sequences_=sequences;attack=pick("attack");
         stand=pick("stand");walk=pick("walk");run=pick("run",true);
         if(walk.index<0)walk=pick("swim");if(walk.index<0)walk=pick("fly");
         if(run.index<0)run=walk;if(walk.index<0)walk=run;
@@ -57,6 +60,7 @@ public:
         for(auto& c:value){if(c=='/')c='\\';c=char(std::tolower(static_cast<unsigned char>(c)));}return value;
     }
 private:
+    std::vector<Sequence> sequences_;
     static std::string ModelKey(std::string path) {
         path=Lower(path);path.resize(path.find(',')==std::string::npos ? path.size() : path.find(','));
         if(path.size()>4 && (path.substr(path.size()-4)==".mdx" || path.substr(path.size()-4)==".mdl"))path.resize(path.size()-4);

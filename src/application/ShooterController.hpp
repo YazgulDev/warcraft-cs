@@ -127,6 +127,8 @@ public:
     wc3::Handle TestUnit() const { return Visible() ? unit_ : 0; }
 #endif
 #ifdef WCS_GAMEPLAY_TEST
+    // Native pose/cooldown samples are confined to a disposable animation regression build.
+    void TestAnimationState() const {wc3::Log("fixture pose busy=%d animating=%d sequence=%d rate=%.3f speed=%.1f",heroAttack_.Busy(GetTickCount()*.001),heroAttack_.Animating(GetTickCount()*.001),wc3::AnimationSequence(unit_),wc3::AnimationRate(unit_),movement_.Speed());}
     // Opt-in native oracle uses the production windup/contact, without injecting desktop mouse input.
     void TestHeroAttack() {if(ThirdPerson()){unitLocomotion_.Release();heroAttack_.Begin(unit_,GetTickCount()*.001,settings_,status_);}}
     // Held attack exercises the normal production branch and autoattack guard, rather than starting the timeline directly.

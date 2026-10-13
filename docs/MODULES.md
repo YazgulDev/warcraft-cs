@@ -10,7 +10,10 @@ even if the HUD target changes. Unknown native signatures retain the previous AP
 The third-person prototype uses `ThirdPersonPose`/`ThirdPersonCamera` in presentation for boom geometry
 and native collision clearance. `HeroAttackTimeline` in combat owns delayed, single-contact swings and
 recovery. `UnitAttack` in platform adapts those swings and aimed ranged launches to native animation, widget geometry and
-unit damage effects; it never issues pursuit orders. `NativeOrderCancellation` tracks retained targets per actor
+unit damage effects; it never issues pursuit orders. `HeroAttackPose` owns the independent visual clock;
+`UnitAttackAnimation` selects authored attack variations, repairs native pose resets at their elapsed
+clip time and restores the native playback rate. Locomotion resumes after that visual clock ends,
+while `HeroAttackTimeline` continues to enforce contact and cooldown. `NativeOrderCancellation` tracks retained targets per actor
 without native dependencies. The native weapon adapter distinguishes scoped manual dispatch from automatic
 preparation/impact, sharing passive squad predicates with the order guard. The controller coordinates these collaborators
 and keeps actor render visibility separate from movement/spell ownership.
