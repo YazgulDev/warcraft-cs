@@ -3,12 +3,13 @@
 #include <vector>
 namespace wc3 {void Log(const char*,...) {}}
 static int draws=0;
+static GLenum targetBuffer=GL_BACK;
 static void APIENTRY DrawMap(GLenum mode,GLsizei count,GLenum type,const void* indices) {
     // Synthetic native batch obeys the same scissor contract as Warcraft's terrain/marker batches.
     ++draws;glColor3f(1,0,0);glDrawElements(mode,count,type,indices);
 }
 static std::vector<unsigned char> Pixels() {
-    std::vector<unsigned char> pixels(320*240*3);glReadBuffer(GL_BACK);
+    std::vector<unsigned char> pixels(320*240*3);glReadBuffer(targetBuffer);
     glReadPixels(0,0,320,240,GL_RGB,GL_UNSIGNED_BYTE,pixels.data());return pixels;
 }
 int main() {
@@ -18,6 +19,9 @@ int main() {
     assert(window);HDC dc=GetDC(window);PIXELFORMATDESCRIPTOR format={};format.nSize=sizeof(format);format.nVersion=1;
     format.dwFlags=PFD_DRAW_TO_WINDOW|PFD_SUPPORT_OPENGL|PFD_DOUBLEBUFFER;format.iPixelType=PFD_TYPE_RGBA;format.cColorBits=24;format.cDepthBits=24;
     assert(SetPixelFormat(dc,ChoosePixelFormat(dc,&format),&format));HGLRC context=wglCreateContext(dc);assert(wglMakeCurrent(dc,context));
+    // Exercise restored front-buffer frames as well as ordinary back-buffer frames with real pixels.
+    for(GLenum buffer : {GL_BACK,GL_FRONT}) {
+    targetBuffer=buffer;glDrawBuffer(buffer);draws=0;
     glViewport(0,0,320,240);glMatrixMode(GL_PROJECTION);glLoadIdentity();glOrtho(0,320,0,240,-1,1);glMatrixMode(GL_MODELVIEW);glLoadIdentity();
     glDisable(GL_DITHER);glClearColor(.1f,.2f,.3f,1);glClear(GL_COLOR_BUFFER_BIT);
     // Distinct pixel stripes detect interpolation, pixel shifts and restoration outside the native map.
@@ -38,7 +42,10 @@ int main() {
     GLfloat vertices[]={5,20,127,20,127,110,5,110};glVertexPointer(2,GL_FLOAT,0,vertices);
     map.Submit(GL_TRIANGLES,6,GL_UNSIGNED_SHORT,indices,DrawMap);assert(Pixels()!=before);
     assert(draws==1);
+    // Completion can select a different HUD target; restoration still belongs to the captured UI buffer.
+    GLenum hudBuffer=buffer==GL_FRONT ? GL_BACK : GL_FRONT;glDrawBuffer(hudBuffer);
     map.FinishFrame();assert(Pixels()==before);
+    GLint restored=0;glGetIntegerv(GL_DRAW_BUFFER,&restored);assert(restored==hudBuffer);glDrawBuffer(buffer);
     glReadPixels(0,0,320,240,GL_DEPTH_COMPONENT,GL_FLOAT,depthAfter.data());assert(depthBefore==depthAfter);
     GLboolean depthMask=GL_FALSE;glGetBooleanv(GL_DEPTH_WRITEMASK,&depthMask);assert(depthMask==GL_TRUE);
     glDisable(GL_DEPTH_TEST); // Background must be restored pixel for pixel.
@@ -50,6 +57,8 @@ int main() {
     assert(displayed[letterbox]==0 && displayed[letterbox+1]==0 && displayed[letterbox+2]==0);
     map.BeginFrame(reinterpret_cast<uintptr_t>(ui),320,240,false);
     auto hidden=Pixels();map.Submit(GL_TRIANGLES,6,GL_UNSIGNED_SHORT,indices,DrawMap);map.FinishFrame();map.Draw(layout);assert(Pixels()==hidden);
-    assert(glGetError()==GL_NO_ERROR);map.ContextDeleted(context);wglMakeCurrent(nullptr,nullptr);wglDeleteContext(context);
+    assert(glGetError()==GL_NO_ERROR);map.ContextDeleted(context);
+    }
+    wglMakeCurrent(nullptr,nullptr);wglDeleteContext(context);
     ReleaseDC(window,dc);DestroyWindow(window);UnregisterClassA(cls.lpszClassName,cls.hInstance);
 }

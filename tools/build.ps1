@@ -44,6 +44,8 @@ $sources += '"' + (Join-Path $modRoot 'src/platform/NativeFogOfWar.cpp') + '"'
 $sources += '"' + (Join-Path $modRoot 'src/platform/GameWindowInput.cpp') + '"'
 # Presentation pacing and the guarded 1.26a demand operand belong to the native adapter.
 $sources += '"' + (Join-Path $modRoot 'src/platform/NativeFrameRate.cpp') + '"'
+$sources += '"' + (Join-Path $modRoot 'src/platform/NativeFramePresentation.cpp') + '"' # Native pre-presentation boundary.
+if($TestGameplay) { $sources += '"'+(Join-Path $modRoot 'tests/FramePresentationScene.cpp')+'"' } # Swap oracle stays private.
 # The FPS camera limit is restored through native generation keys when its map/camera disappears.
 $sources += '"' + (Join-Path $modRoot 'src/platform/NativeCameraFarClip.cpp') + '"'
 # Keep native health sampling separate from depth-tested presentation.

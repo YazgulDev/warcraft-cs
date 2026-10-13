@@ -1,5 +1,12 @@
 # Source modules
 
+`NativeFramePresentation` observes 1.26a's verified frame-batch completion inside the native present
+method. The HUD no longer depends on which Windows/OpenGL swap entry point presents the frame.
+Upload/readback flushes outside that method and nested callbacks do not compose a second HUD.
+The runtime consumes a completed world once per presentation, independent of frame duration,
+and resets that pending submission at map boundaries. `NativeMinimap` restores the buffer it captured
+even if the HUD target changes. Unknown native signatures retain the previous API swap hook.
+
 The third-person prototype uses `ThirdPersonPose`/`ThirdPersonCamera` in presentation for boom geometry
 and native collision clearance. `HeroAttackTimeline` in combat owns delayed, single-contact swings and
 recovery. `UnitAttack` in platform adapts those swings and aimed ranged launches to native animation, widget geometry and
@@ -18,7 +25,7 @@ The snapshot supplies terrain-conforming circle vertices and enemy classificatio
 world depth for the ring and screen-space brackets, without altering native unit selection.
 `ActorJumpView` captures the native model's skinning inputs between world passes and applies physical
 body elevation through that same skinning function for world drawing. It restores the model/cache
-at the swap boundary before the next tick. It does not write unit fly height, grant
+at the presentation boundary before the next tick. It does not write unit fly height, grant
 flying movement or change pathing. Map unload discards stale model pointers.
 
 Sources are grouped by responsibility. Includes name the owning module explicitly; each public type

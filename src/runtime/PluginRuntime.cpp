@@ -6,6 +6,7 @@
 #include "../platform/DiagnosticLog.hpp"
 #include "../platform/GameWindowInput.hpp"
 #include "../platform/NativeFrameRate.hpp"
+#include "../platform/NativeFramePresentation.hpp"
 #include "../platform/NativeCameraFarClip.hpp"
 #include "../platform/UnitHealthBars.hpp"
 #include "../application/ShooterController.hpp"
@@ -30,6 +31,7 @@
 #endif
 #ifdef WCS_GAMEPLAY_TEST
 #include "../../tests/RuneCombatScene.hpp"
+#include "../../tests/FramePresentationScene.hpp"
 #endif
 #ifdef WCS_TREE_WHEEL_TEST
 #include "../../tests/TreeAndWheelScene.hpp"
@@ -54,15 +56,14 @@ static float healthVerticalFov=85,healthAspect=1;
 static NativeMinimap minimap;
 static bool healthy = true;
 static DWORD lastWorld = 0;
+static bool worldPending=false;
 static char root[MAX_PATH];
 static uintptr_t gameBase = 0;
 using RenderWorld = int (__fastcall*)(uintptr_t, uintptr_t);
-using Swap = BOOL (WINAPI*)(HDC, UINT);
 using Pause = void (__cdecl*)(BOOL);
 using Perspective = void (__fastcall*)(uintptr_t, uintptr_t, float, float, float, float);
 using RenderUI = void (__fastcall*)(uintptr_t, uintptr_t);
 static RenderWorld originalWorld = nullptr;
-static Swap originalSwap = nullptr;
 static Pause originalPause = nullptr;
 static Perspective originalPerspective = nullptr;
 static RenderUI originalUI = nullptr;
@@ -117,7 +118,7 @@ static uintptr_t CurrentUI() {
 static void ObserveMap(uintptr_t ui) {
     if (mapUI == ui) return;
     // A real UI unload/replacement marks map boundaries; a rendering pause is only a focus pause.
-    actorJumpView.Reset();controller.ResetMap();overlay.MapChanged(); mapUI = ui;
+    actorJumpView.Reset();controller.ResetMap();overlay.MapChanged(); mapUI = ui;worldPending=false;
     healthBars.Reset();healthBarView.active=false; // Native models/snapshots belong to the current map.
     if (ui) healthy = true;
     wc3::Log("Map lifecycle: %s ui=%08X", ui ? "loaded" : "unloaded", ui);
@@ -197,6 +198,8 @@ static int __fastcall WorldHook(uintptr_t ui, uintptr_t unused) {
     // World submission queues model batches; keep the raised transform until their actual draw completes.
     actorJumpView.Begin(healthy ? controller.JumpViewActor() : 0,controller.ActorFeet());
     int result = originalWorld(ui, unused);
+    // A completed world belongs to this presentation even if native UI/driver work takes over 500 ms.
+    worldPending=true;
     ActorRenderFilter::End();
     // Crop the native map after the world pass without altering Warcraft's UI layout.
     RECT client={};if (windowInput.Window()) GetClientRect(windowInput.Window(),&client);
@@ -250,7 +253,7 @@ static void __fastcall PerspectiveHook(uintptr_t output, uintptr_t unused, float
         }
     }
 }
-static BOOL WINAPI SwapHook(HDC dc, UINT planes) {
+static void FinishFrame(HDC dc,const char* route) {
     // F8's validated snapshot drives the client cap; gameplay continues to use elapsed real time.
     frameRate.Configure(controller.Settings().render.maxFPS);
     frameRate.Pace();
@@ -258,7 +261,7 @@ static BOOL WINAPI SwapHook(HDC dc, UINT planes) {
     static unsigned frames = 0;
     ++frames;
     ObserveMap(CurrentUI());
-    actorJumpView.End(); // Queued world geometry has drawn before swap; restore before the next native tick.
+    actorJumpView.End(); // Native world geometry has drawn; restore before the next simulation tick.
     // Menus, cinematics, faults and F6 release the camera limit even without another world batch.
     cameraFarClip.Update(healthy && controller.Visible());
     HWND window = WindowFromDC(dc);
@@ -270,21 +273,19 @@ static BOOL WINAPI SwapHook(HDC dc, UINT planes) {
     overlayPass = true;
     // Restore captured minimap pixels before the overlay reads world depth for health bars.
     minimap.FinishFrame();
-    if (healthy && GetTickCount() - lastWorld < 500) overlay.Draw(dc,controller,minimap,healthBars.Items(),healthBarView,healthNear,healthFar);
-    // The reticle cannot reach its draw entry while native recovery or stale world frames suppress the overlay.
-    else ReticleDiagnostics::Skip(healthy ? "world-frame-stale" : "controller-fault", 0, 0, GetTickCount() - lastWorld);
+    // Consume a real world submission, rather than rejecting a valid slow campaign frame by elapsed time.
+    bool worldReady=worldPending;worldPending=false;
+    if (healthy && worldReady) overlay.Draw(dc,controller,minimap,healthBars.Items(),healthBarView,healthNear,healthFar);
+    else ReticleDiagnostics::Skip(healthy ? "world-frame-absent" : "controller-fault", 0, 0, GetTickCount() - lastWorld);
     overlayPass = false; nativeUIPhase = false;
     // Observe skipped frames too: a valid context alone does not establish an active FPS overlay.
     if (DiagnosticLog::Due(previous)) {
         RECT client = {}; if (window) GetClientRect(window, &client);
-        wc3::Trace("render frames=%u healthy=%d fps=%d worldAgeMs=%lu context=%p focus=%d window=%ldx%ld buying=%d scope=%d",
+        wc3::Trace("render frames=%u healthy=%d fps=%d worldAgeMs=%lu context=%p focus=%d window=%ldx%ld buying=%d scope=%d route=%s",
             frames, healthy, controller.Visible(), GetTickCount() - lastWorld, wglGetCurrentContext(),
-            window == GetForegroundWindow(), client.right, client.bottom, controller.Buying(), controller.Scoped());
+            window == GetForegroundWindow(), client.right, client.bottom, controller.Buying(), controller.Scoped(),route);
         frames = 0;
     }
-    BOOL result = originalSwap(dc, planes);
-    if (!result) wc3::LogError("SwapLayerBuffers failed win32=%lu", GetLastError());
-    return result;
 }
 static bool Hook(void* target, void* callback, void** original) {
     MH_STATUS create = MH_CreateHook(target, callback, original);
@@ -321,6 +322,9 @@ static DWORD WINAPI Initialize(void*) {
     controller.Configure(root, base); overlay.Configure(root);
     frameRate.Install(base);
     if (MH_Initialize() != MH_OK) { wc3::Log("MinHook initialization failed"); return 0; }
+#ifdef WCS_GAMEPLAY_TEST
+    FramePresentationScene::Install(base,Hook); // Disposable swap oracle; absent from ordinary builds.
+#endif
     // Map timers may request RTS camera presets repeatedly; live FPS owns those native camera writes.
     MapCameraGuard::Install(base, []() { return healthy && controller.BlocksMapCamera(); }, Hook);
     ActorRenderFilter::Install(base, Hook);
@@ -353,7 +357,8 @@ static DWORD WINAPI Initialize(void*) {
     Hook(reinterpret_cast<void*>(GetProcAddress(gl, "glScissor")), reinterpret_cast<void*>(ScissorHook), reinterpret_cast<void**>(&originalScissor));
     Hook(reinterpret_cast<void*>(GetProcAddress(gl, "wglDeleteContext")), reinterpret_cast<void*>(DeleteContextHook), reinterpret_cast<void**>(&originalDeleteContext));
     Hook(reinterpret_cast<void*>(GetProcAddress(gl, "glDrawElements")), reinterpret_cast<void*>(DrawElementsHook), reinterpret_cast<void**>(&originalDrawElements));
-    Hook(reinterpret_cast<void*>(GetProcAddress(gl, "wglSwapLayerBuffers")), reinterpret_cast<void*>(SwapHook), reinterpret_cast<void**>(&originalSwap));
+    // Bind to Warcraft's completed batches independently of the Windows/OpenGL presentation entry point.
+    NativeFramePresentation::Install(base,Hook,FinishFrame);
     wc3::Log("WarcraftCS initialized. Offline only. Select an owned unit and press F6.");
     return 0;
 }

@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — Campaign HUD recovery
+
+- Compose the HUD after Warcraft's verified native frame-batch completion, before presentation,
+  independently of the Windows/OpenGL swap entry point. Exclude uploads, readbacks and nested
+  callbacks. Keep the previous swap hook as a fallback for unrecognized renderer signatures.
+- Consume completed world submissions instead of dropping valid campaign frames older than 500 ms.
+  Reset the pending frame on map unload/replacement so menus cannot inherit a previous map's HUD.
+- Capture/restore the minimap from its own draw buffer. Add real WGL front/back-buffer regressions
+  and opt-in campaign save/load and native presentation fixtures, excluded from ordinary client modules.
+
 ## Unreleased — Third-person unit control
 
 - Add third-person mouse-wheel zoom without interrupting spells or changing CS weapons. Preserve native camera collision and shared reticle rays. `[ThirdPerson] CameraZoomStep=50` (0..500 world units per notch, 0 disables), `CameraMinDistance=80` / `CameraMaxDistance=1000` (80..1000 each) reload on F8, which restores the bounded `CameraDistance`. Preserve custom values during config updates and discard pending wheel input at focus/menu/mode boundaries.

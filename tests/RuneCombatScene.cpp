@@ -1,5 +1,6 @@
 #include "RuneCombatScene.hpp"
 #include "BackgroundGameplay.hpp"
+#include "FramePresentationScene.hpp"
 #include "../src/platform/NativeSpellSlots.hpp"
 #include "../src/platform/WeaponTargetFilter.hpp"
 #include "../src/platform/UnitCollisionProfile.hpp"
@@ -48,6 +49,23 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
         std::istringstream input(line);std::string command;input>>command;
         // The background oracle uses the same controller mailboxes without sending desktop input.
         if(BackgroundGameplay::Enabled() && command=="toggle")controller.RequestToggle();
+        else if(BackgroundGameplay::Enabled() && command=="swapbackend") {
+            // Reproduce frame completion without the old swap hook after a restored campaign.
+            int value=0;input>>value;FramePresentationScene::Alternate(value!=0);
+        }
+        else if(BackgroundGameplay::Enabled() && (command=="savehud" || command=="loadhud")) {
+            // Save/load the disposable campaign without F10, which would disable FPS first.
+            const char* name="HudCampaignTest.w3z";
+            uintptr_t node[8]={},wrapper[3]={};node[7]=reinterpret_cast<uintptr_t>(name);wrapper[2]=reinterpret_cast<uintptr_t>(node);
+            if(command=="savehud") {
+                using Save=void (__cdecl*)(wc3::Handle);
+                reinterpret_cast<Save>(base+0x3BBEE0)(reinterpret_cast<wc3::Handle>(wrapper));
+            } else {
+                using Load=void (__cdecl*)(wc3::Handle,BOOL);
+                reinterpret_cast<Load>(base+0x3BBE60)(reinterpret_cast<wc3::Handle>(wrapper),FALSE);
+            }
+            wc3::Log("fixture campaign %s requested fps=%d",command.c_str(),controller.Visible());
+        }
         else if(BackgroundGameplay::Enabled() && command=="view")controller.RequestViewToggle();
         else if(BackgroundGameplay::Enabled() && command=="third")controller.RequestThirdPersonToggle();
         // Exercise production wheel routing without injecting input into the user's desktop.
