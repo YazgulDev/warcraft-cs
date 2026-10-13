@@ -70,6 +70,8 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM k
             else if(match(ShortcutAction::Speed))controller_.RequestSpeedToggle();
             else if(match(ShortcutAction::Fog))controller_.RequestFogToggle();
             else if(match(ShortcutAction::HealthBars))controller_.RequestHealthBarToggle();
+            // One edge queues the shared FPS/TPS allied-contact preference.
+            else if(match(ShortcutAction::ToggleAllyTargeting))controller_.RequestAllyTargetToggle();
             else if(match(ShortcutAction::Refill))controller_.RequestRefill();
             else if(match(ShortcutAction::AllWeapons))controller_.RequestAllWeapons();
             else if(match(ShortcutAction::ReloadSettings))controller_.RequestSettingsReload();

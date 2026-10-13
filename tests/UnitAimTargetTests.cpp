@@ -25,6 +25,9 @@ void AnimateIndex(Handle,int){++animations;}
 float AnimationRate(Handle){return 1;}
 void AnimationRate(Handle,float){}
 void AnimationSeek(Handle,int,float){}
+bool blending=true;
+bool AnimationBlending(Handle){return blending;}
+void AnimationBlending(Handle,bool enabled){blending=enabled;}
 float Ground(float x,float){return wall && x>=120 ? 200.f : 0.f;}
 std::vector<Handle> NearbyDestructables(float,float,float){return {};}
 float UnitAttackAverage(Handle){return 100;}
@@ -73,13 +76,23 @@ int main(){
     visible=false;assert(!preview().handle);visible=true;
     transparent=true;assert(!preview().handle);transparent=false;
     health=0;assert(!preview().handle);health=420;
-    ally=true;assert(preview().allied && !preview().enemy);ally=false;
+    // Allied contacts are opt-in; the exact same prediction/contact policy is used for melee and ranged attacks.
+    ally=true;assert(!preview().handle);settings.targetAllies=true;assert(preview().allied && !preview().enemy);
+    settings.targetAllies=false;ally=false;
     settings.thirdPerson.useNativeAttackRange=false;settings.thirdPerson.rangedAttackRange=100;assert(!preview().handle);
     settings.thirdPerson.rangedAttackRange=600;
     // A delayed manual contact selects the same body the idle preview marked, preserving zero idle damage.
     UnitStatus status;assert(attack.Begin(1,0,settings,status));
+    assert(!blending); // Pose repairs must not restart native interpolation every movement frame.
     assert(attack.Tick(1,1,0,0,origin,direction,false,settings,status,units,objects));
-    assert(damageEvents==1 && health==320);
+    assert(damageEvents==1 && health==320 && blending); // Completion restores the exact native policy.
+    // Contacts at impact respect a toggle changed during wind-up, rather than a cached friendly prediction.
+    attack.Reset();health=420;ally=true;assert(attack.Begin(1,2,settings,status));
+    assert(!attack.Tick(1,3,0,0,origin,direction,false,settings,status,units,objects));assert(damageEvents==1 && health==420);
+    attack.Reset();settings.targetAllies=true;assert(attack.Begin(1,4,settings,status));
+    assert(attack.Tick(1,5,0,0,origin,direction,false,settings,status,units,objects));assert(damageEvents==2 && health==370);
+    settings.targetAllies=false;ally=false;
     kind=1;targetX=100;assert(preview().handle==2);targetX=250;assert(!preview().handle);
+    targetX=100;ally=true;assert(!preview().handle);settings.targetAllies=true;assert(preview().allied);
     kind=0;assert(!preview().handle);
 }

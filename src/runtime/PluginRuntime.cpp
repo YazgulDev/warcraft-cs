@@ -196,7 +196,7 @@ static int __fastcall WorldHook(uintptr_t ui, uintptr_t unused) {
     // Both modes own movement/input, but only FPS filters out the controlled body.
     ActorRenderFilter::Begin(healthy ? controller.HiddenActor() : 0);
     // World submission queues model batches; keep the raised transform until their actual draw completes.
-    actorJumpView.Begin(healthy ? controller.JumpViewActor() : 0,controller.ActorFeet());
+    actorJumpView.Begin(healthy ? controller.JumpViewActor() : 0,controller.ActorFeet(),healthy && controller.ManualAttackAnimating());
     int result = originalWorld(ui, unused);
     // A completed world belongs to this presentation even if native UI/driver work takes over 500 ms.
     worldPending=true;

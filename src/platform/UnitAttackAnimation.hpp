@@ -15,6 +15,7 @@ private:
     wc3::Handle unit_=0;
     int type_=0,sequence_=-1;
     bool owned_=false;
+    bool baselineBlending_=false;
     float baseline_=1;
     std::string path_;
     ModelMotionProfile profile_;

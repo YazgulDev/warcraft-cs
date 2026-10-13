@@ -256,6 +256,21 @@ void AnimationSeek(Handle unit,int sequence,float seconds) {
     // A queued index/morph may not yet be applied. Only seek a sequence the live sprite already accepted.
     if(model && sequence==AnimationSequence(unit))reinterpret_cast<void (__fastcall*)(uintptr_t,int,int)>(nativeBase+0x50D560)(model,sequence,int(seconds*1000));
 }
+bool AnimationBlending(Handle unit) {
+    // Verified model getter forwards to 513970's native blending-enabled flag; no blend duration is changed.
+    const unsigned char getter[]={0x8B,0x89,0x98,0x00,0x00,0x00};
+    auto object=UnitObject(unit);auto sprite=object ? *reinterpret_cast<uintptr_t*>(object+0x28) : 0;
+    auto model=sprite ? *reinterpret_cast<uintptr_t*>(sprite+0x20) : 0;
+    return model && nativeBase && !std::memcmp(reinterpret_cast<void*>(nativeBase+0x501D80),getter,sizeof(getter)) &&
+        reinterpret_cast<int (__thiscall*)(uintptr_t)>(nativeBase+0x501D80)(model)!=0;
+}
+void AnimationBlending(Handle unit,bool enabled) {
+    // SetUnitBlendTime's verified sprite enable/disable path (2AB790 -> 4D30B0), without altering stored duration.
+    const unsigned char setter[]={0x8B,0x49,0x20,0x85,0xC9};
+    if(!unit || !nativeBase || std::memcmp(reinterpret_cast<void*>(nativeBase+0x4D30B0),setter,sizeof(setter)))return;
+    auto object=UnitObject(unit);auto sprite=object ? *reinterpret_cast<uintptr_t*>(object+0x28) : 0;
+    if(sprite)reinterpret_cast<void (__fastcall*)(uintptr_t,int)>(nativeBase+0x4D30B0)(sprite,enabled);
+}
 std::string DestructableModelPath(int type) {
     // Use CreateDestructable's active-definition filename builder, including directory and variation suffixes.
     // +0x268A50 is its replacement texture slot, not the model; single-variation gates use variation zero.

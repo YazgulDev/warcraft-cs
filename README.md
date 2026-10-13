@@ -279,6 +279,13 @@ Edit it and press F8 in FPS.
   and native armor; `Mode=weapon` instead uses `[AWP] Damage` (115). Set `true` to enable instant enemy kills in `weapon` mode; F8 applies changes.
   Missing/empty/invalid values use `false`; `true`/`false` and `1`/`0` are accepted.
   Updates preserve existing values, so older configs with `AWPOneShot=true` need an explicit edit to disable it.
+- **Q** toggles direct allied targeting in FPS and third person. The HUD shows `ALLIES ON/OFF`.
+  `[Combat] TargetAllies=false` protects allied units/buildings from direct attacks and suppresses
+  their target markers by default. `true`/`1` enable contacts; `false`/`0` disable them; malformed
+  values use false. Startup/F8 restores this saved preference. `[Shortcuts] ToggleAllyTargeting=Q`
+  is remappable; `NONE` disables the shortcut. Updates preserve custom choices, and an older custom
+  action bound to Q keeps Q while this new action is added as NONE. Protected allies still block
+  shots rather than allowing attacks through them. C4 splash and native spells retain their policies.
 - `[Damage] FriendlyFirePercent=50` sets damage to owned/allied units and buildings, including
   firearms, both melee attacks and C4 (including its planter). Range: 0вЂ“100; 0 disables allied damage,
   100 applies full damage. Press F8 to reload; C4 retains the settings from when it was planted.

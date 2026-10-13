@@ -10,7 +10,7 @@ void ActorJumpView::Install(uintptr_t base,Hook hook) {
     if(installed)context_=this;
     wc3::Log("Actor jump skinning adapter verified=%d installed=%d",valid,installed);
 }
-void ActorJumpView::Begin(wc3::Handle unit,float feet) {
+void ActorJumpView::Begin(wc3::Handle unit,float feet,bool refreshPose) {
     End();if(!unit || !original_){Reset();return;}
     float x=wc3::Real(wc3::GetUnitX(unit)),y=wc3::Real(wc3::GetUnitY(unit));
     float lift=feet-wc3::Ground(x,y);auto object=wc3::UnitObject(unit);
@@ -20,7 +20,9 @@ void ActorJumpView::Begin(wc3::Handle unit,float feet) {
     if(unit!=unit_ || model!=model_)Reset();
     unit_=unit;sprite_=sprite;model_=model;lift_=lift;thread_=GetCurrentThreadId();
     // Main-body skinning happens before RenderWorld. Reuse its latest native inputs, not a stale root matrix.
-    drawing_=true;if(inputs_ && std::abs(lift_)>=.01f)Lift();
+    // The controller repairs attack time after native skinning has already run. Re-skin at that
+    // corrected time even on the ground, otherwise rendered bones retain the reset first frames.
+    drawing_=true;if(inputs_ && (refreshPose || std::abs(lift_)>=.01f))Lift();
 }
 void __fastcall ActorJumpView::Apply(uintptr_t model,float* matrix,float alpha,float* first,float* second) {
     auto view=context_;

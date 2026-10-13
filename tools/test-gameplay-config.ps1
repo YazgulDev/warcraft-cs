@@ -4,6 +4,17 @@ $root=Split-Path -Parent $PSScriptRoot
 $folder=Join-Path $root ('.local/config-merge-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $folder -Force | Out-Null
 $template=Join-Path $root 'config/WarcraftCS.ini'
+# Newly added allied targeting preserves a chosen default and an older custom Q binding.
+$allyConfig=Join-Path $folder 'allied-targeting.ini'
+@('[Combat]','TargetAllies=true','[Shortcuts]','Reload=Q') | Set-Content -LiteralPath $allyConfig -Encoding ascii
+Update-GameplayConfig $template $allyConfig
+$allyText=Get-Content -LiteralPath $allyConfig -Raw
+foreach($required in @('TargetAllies=true','Reload=Q','ToggleAllyTargeting=NONE')) {
+    if(!$allyText.Contains($required)){throw "Allied targeting migration lost preference: $required"}
+}
+$allyHash=(Get-FileHash -LiteralPath $allyConfig).Hash
+Update-GameplayConfig $template $allyConfig
+if((Get-FileHash -LiteralPath $allyConfig).Hash -ne $allyHash){throw 'Allied targeting migration is not idempotent.'}
 $config=Join-Path $folder 'legacy.ini'
 @('[Runes]','AmmoPercent=37','[AK47]','Price=0','Damage=81','[Damage]','FriendlyFirePercent=25') | Set-Content -LiteralPath $config -Encoding ascii
 # Updates append missing keys inside existing sections while retaining all custom values.

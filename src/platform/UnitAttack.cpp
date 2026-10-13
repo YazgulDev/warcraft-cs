@@ -39,6 +39,8 @@ UnitAimTarget UnitAttack::Preview(wc3::Handle unit,float yaw,float feet,const fl
     auto target=kind==1 ? PickMelee(unit,yaw,feet,settings,units,destructables) :
         PickRanged(unit,feet,origin,direction,settings,units,destructables);
     target.allied=target.handle && !target.destructable && wc3::IsUnitAlly(target.handle,wc3::GetOwningPlayer(unit));
+    // Protected allies still occlude the trace but never become a marked or damageable direct contact.
+    if(target.allied && !settings.targetAllies)return {};
     if(target.handle) {
         // Only actual enemies get red. Neutral/passive, allied and destructable contacts use yellow.
         target.enemy=!target.destructable && wc3::IsUnitEnemy(target.handle,wc3::GetOwningPlayer(unit));
@@ -97,6 +99,7 @@ bool UnitAttack::Damage(wc3::Handle actor,wc3::Handle target,bool destructable,f
     auto life=[&] {return wc3::Real(destructable ? wc3::GetDestructableLife(target) : wc3::GetUnitState(target,0));};
     float before=life(),base=wc3::UnitAttackAverage(actor)*tuning.damageMultiplier;
     bool allied=!destructable && wc3::IsUnitAlly(target,wc3::GetOwningPlayer(actor));
+    if(allied && !settings.targetAllies)return false; // Recheck at dispatch, preserving alliance changes.
     float damage=CombatDamage::Amount(base,allied,false,before,settings.friendlyFirePercent);
     bool projectile=ranged && tuning.nativeRangedProjectiles;
     // Warcraft rolls native attack effects and creates its missile; non-native contacts have an explicit instant fallback.

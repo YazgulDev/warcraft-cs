@@ -118,6 +118,11 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         awpOneShot!="0" && awpOneShot!="1") wc3::Log("Invalid Damage.AWPOneShot; using false");
     // Old configs retain 50%; zero disables allied damage and full damage is capped at 100%.
     result.friendlyFirePercent=number("Damage","FriendlyFirePercent",50,100);
+    // Protection is the safe startup default; malformed values cannot silently enable allied contacts.
+    auto allies=text("Combat","TargetAllies","false");
+    result.targetAllies=!_stricmp(allies.c_str(),"true") || allies=="1";
+    if(_stricmp(allies.c_str(),"true") && _stricmp(allies.c_str(),"false") && allies!="0" && allies!="1")
+        wc3::Log("Invalid Combat.TargetAllies; using false");
     result.floatingTextDistance=number("Interface","FloatingTextDistance",1200,5000);
     // Team bars require an explicit opt-in; invalid/legacy preferences keep the FPS view clear.
     auto healthSwitch=[&](const char* key) {
@@ -145,6 +150,9 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         }
         result.shortcuts.Set(ShortcutAction::Refill,replacement);
     }
+    // An older custom Q binding wins; adding a new action must not reset the player's existing layout.
+    if(text("Shortcuts","ToggleAllyTargeting","").empty())for(size_t i=0;i<size_t(ShortcutAction::ToggleAllyTargeting);++i)
+        if(result.shortcuts.Key(ShortcutAction(i))=='Q')result.shortcuts.Set(ShortcutAction::ToggleAllyTargeting,0);
     if(!layoutValid || !result.shortcuts.Valid()) {result.shortcuts=ShortcutBindings();wc3::Log("Invalid/conflicting Shortcuts; using default keyboard layout");}
     // Rawcodes and order IDs describe existing abilities; they never grant skills or bypass native costs.
     auto spellsEnabled=text("Spells","Enabled","true");

@@ -6,7 +6,7 @@ class ActorJumpView {
 public:
     using Hook=bool (*)(void*,void*,void**);
     void Install(uintptr_t base,Hook hook);
-    void Begin(wc3::Handle unit,float feet);
+    void Begin(wc3::Handle unit,float feet,bool refreshPose=false);
     void End();
     void Reset() {unit_=0;model_=0;restore_=false;inputs_=false;drawing_=false;} // Discard invalid model pointers on map unload.
 private:

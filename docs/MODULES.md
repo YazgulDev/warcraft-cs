@@ -12,7 +12,9 @@ and native collision clearance. `HeroAttackTimeline` in combat owns delayed, sin
 recovery. `UnitAttack` in platform adapts those swings and aimed ranged launches to native animation, widget geometry and
 unit damage effects; it never issues pursuit orders. `HeroAttackPose` owns the independent visual clock;
 `UnitAttackAnimation` selects authored attack variations, repairs native pose resets at their elapsed
-clip time and restores the native playback rate. Locomotion resumes after that visual clock ends,
+clip time and restores the native playback rate. It temporarily disables native pose blending during
+the swing, restoring the previous mode on release without changing the map's blend duration.
+Locomotion resumes after that visual clock ends,
 while `HeroAttackTimeline` continues to enforce contact and cooldown. `NativeOrderCancellation` tracks retained targets per actor
 without native dependencies. The native weapon adapter distinguishes scoped manual dispatch from automatic
 preparation/impact, sharing passive squad predicates with the order guard. The controller coordinates these collaborators
@@ -26,10 +28,15 @@ It compares the live native sequence before reusing a cached pose, repairing AI 
 `TargetMarkerView` projects that snapshot without native handle reads or gameplay writes.
 The snapshot supplies terrain-conforming circle vertices and enemy classification; the renderer keeps
 world depth for the ring and screen-space brackets, without altering native unit selection.
+`Combat.TargetAllies` is shared by direct-contact prediction and damage. The Q mailbox toggles it
+on the game thread; protected allies remain physical occluders. Area bombs and native spells keep
+their own policies. Startup/F8 reloads the saved default and config upgrades preserve custom shortcuts.
 `ActorJumpView` captures the native model's skinning inputs between world passes and applies physical
 body elevation through that same skinning function for world drawing. It restores the model/cache
 at the presentation boundary before the next tick. It does not write unit fly height, grant
 flying movement or change pathing. Map unload discards stale model pointers.
+For manual attacks it also refreshes the grounded body's native skinning after the controller
+repairs elapsed clip time; advancing an animation clock alone cannot update already cached bones.
 
 Sources are grouped by responsibility. Includes name the owning module explicitly; each public type
 has its own header and implementation. There is no global header search path masking dependencies.

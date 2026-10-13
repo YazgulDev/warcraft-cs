@@ -55,6 +55,8 @@ public:
     void RequestViewToggle() {viewToggleRequested_=true;}
     void RequestThirdPersonToggle() {thirdPersonRequested_=true;}
     bool ThirdPerson() const {return thirdPerson_;}
+    // Rendering must consume the repaired attack pose after the game-thread visual clock advances.
+    bool ManualAttackAnimating() const {return Visible() && ThirdPerson() && heroAttack_.Animating(GetTickCount()*.001);}
     const UnitAimTarget& AimTarget() const {return aimTarget_;}
     void RequestMenu() { menuRequested_ = true; }
     void RequestRefill() { refillRequested_ = true; }
@@ -77,6 +79,8 @@ public:
     void RequestFogToggle() { fogToggleRequested_=true; }
     // Queue one switch for both teams; save preferences only on the game thread.
     void RequestHealthBarToggle() { healthBarToggleRequested_=true; }
+    // Queue allied targeting changes; Windows key repeat must not flip the mode every frame.
+    void RequestAllyTargetToggle() {allyTargetToggleRequested_=true;}
     // Spell and interruption taps are executed on the game thread, never inside WindowProc.
     void RequestSpell(int slot) { spellRequested_=slot; }
     void RequestSpellCancel() { spellCancelRequested_=true; }
@@ -217,6 +221,7 @@ private:
     bool minimapToggleRequested_=false,showMinimap_=true;
     bool fogToggleRequested_=false,fogOfWarDisabled_=false;
     bool healthBarToggleRequested_=false;
+    bool allyTargetToggleRequested_=false;
     int spellRequested_=-1;
     bool spellCancelRequested_=false;
     SpellCaster spells_;

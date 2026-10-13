@@ -35,9 +35,10 @@ int main() {
     assert(visual.Active(10.3) && std::abs(visual.Elapsed(10.3)-.6f)<.001f);
     assert(!visual.Active(10.5));assert(visual.Elapsed(11)<.8f);
     visual.Begin(20,.1f,1,.56f,2.2f);assert(visual.Active(20.5) && !visual.Active(20.6));
-    visual.Begin(30,10,1,.56f,2.2f);assert(!visual.Active(32.3));
+    visual.Begin(30,10,1,.56f,2.2f);assert(visual.Active(32.3) && !visual.Active(40));
     visual.Begin(40,.8f,0,.56f,2.2f);assert(visual.Elapsed(41)==0 && visual.Active(41));
     visual.Reset();assert(!visual.Active(0));
+    assert(!GameplaySettings{}.targetAllies && ShortcutBindings{}.Key(ShortcutAction::ToggleAllyTargeting)=='Q');
     // Jump contact transitions persist through air steering; landing recovers to run or idle without replay.
     HeroMotionState motion;ThirdPersonSettings motionSettings;using Pose=HeroMotionState::Pose;
     assert(motion.Update(1,true,0,motionSettings)==Pose::Stand);
@@ -70,6 +71,14 @@ int main() {
     assert(!reloaded.thirdPerson.enabled && reloaded.thirdPerson.distance==500 && reloaded.thirdPerson.initialPitch==-60);
     assert(reloaded.shortcuts.Key(ShortcutAction::ToggleView)==VK_TAB);
     assert(!reloaded.thirdPerson.movementAnimations && reloaded.thirdPerson.runCycleDistance==250);
+    // Startup, invalid values, F8 parsing and custom shortcut upgrades share the production INI path.
+    WritePrivateProfileStringA("Combat","TargetAllies","bad",path);assert(!GameplaySettings::Load(path).targetAllies);
+    WritePrivateProfileStringA("Combat","TargetAllies","true",path);assert(GameplaySettings::Load(path).targetAllies);
+    WritePrivateProfileStringA("Combat","TargetAllies","0",path);assert(!GameplaySettings::Load(path).targetAllies);
+    WritePrivateProfileStringA("Shortcuts","ToggleAllyTargeting","F5",path);
+    assert(GameplaySettings::Load(path).shortcuts.Key(ShortcutAction::ToggleAllyTargeting)==VK_F5);
+    WritePrivateProfileStringA("Shortcuts","ToggleAllyTargeting",nullptr,path);WritePrivateProfileStringA("Shortcuts","Reload","Q",path);
+    auto legacyQ=GameplaySettings::Load(path);assert(legacyQ.shortcuts.Key(ShortcutAction::Reload)=='Q' && !legacyQ.shortcuts.Key(ShortcutAction::ToggleAllyTargeting));
     // Exact model indices/durations win over guessed animation names; truncated/missing models remain safe.
     std::vector<uint8_t> model(12+6*132,0);std::memcpy(model.data(),"MDLXSEQS",8);
     uint32_t chunk=6*132;std::memcpy(model.data()+8,&chunk,4);

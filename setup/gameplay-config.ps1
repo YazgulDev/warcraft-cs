@@ -60,6 +60,8 @@ function Update-GameplayConfig([string]$Template,[string]$Destination) {
                 if ($keys.Add($Matches[1].Trim())) {
                     # Preserve an existing chosen manual stride rather than hiding it behind the new automatic default.
                     if($entry.name -eq 'ThirdPerson' -and $Matches[1].Trim() -eq 'AutoAnimationSpeed' -and $customStride){$line='AutoAnimationSpeed=false'}
+                    # Adding Q must not conflict with a custom action that already uses it.
+                    if($entry.name -eq 'Shortcuts' -and $Matches[1].Trim() -eq 'ToggleAllyTargeting' -and $usedShortcuts.Contains('Q')){$line='ToggleAllyTargeting=NONE'}
                     foreach ($comment in $comments) { $lines.Insert($end,$comment);$end++ }
                     $lines.Insert($end,$line);$end++;$changed=$true
                 }

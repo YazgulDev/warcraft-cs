@@ -67,6 +67,12 @@ An older custom shortcut occupying T needs a unique `ToggleView` binding.
 
 All `[ThirdPerson]` values are editable in the existing private `WarcraftCS.ini`:
 
+Q toggles allied targeting and direct damage together. `[Combat] TargetAllies=false` is the
+protected startup/F8 default; enable it to start with allied contacts. With it enabled, allied
+targets use yellow circles and the configured `[Damage] FriendlyFirePercent`. With it disabled,
+allies block traces but receive no direct damage or target marker. C4 and native spells retain
+their separate policies. `[Shortcuts] ToggleAllyTargeting=Q` is remappable (NONE disables).
+
 | Key | Default | Range / meaning |
 | --- | --- | --- |
 | Enabled | true | false disables entry; F8 returns an active third-person view to FPS |
@@ -96,9 +102,14 @@ Camera and contact rules reload on F8; initial pitch applies on the next view tr
 Swing timing reloads for the next swing. Delay and recovery scale with native attack-speed modifiers;
 the configurable defaults are fitted to Arthas, not universal timings for every Warcraft model.
 Attack playback follows the authored native clip, scaled by the actor's native playback rate and
-attack-speed modifier. Its visual ownership lasts through contact but no longer than combat recovery;
+attack-speed modifier. Its visual ownership lasts through contact and the complete authored clip;
 running resumes when the clip finishes, even if another attack is still on cooldown. Native pose resets
-are repaired at the elapsed clip time instead of restarting the swing. A new map-owned playback rate,
+are repaired at the elapsed clip time instead of restarting the swing, then native bones are refreshed
+before world drawing. Held attacks wait for both clip completion and minimum combat recovery.
+Manual swings temporarily disable native pose blending so repeated movement resets do not restart
+the transition to Attack every frame. The prior blending mode is restored on completion/interruption;
+the map's configured blend duration is unchanged.
+A new map-owned playback rate,
 casting, disabling effects or death takes precedence over the manual pose.
 Custom imported models without native gait metadata use RunCycleDistance. The table supplies stock/custom
 UnitUI speeds; per-object map overrides not present in that table require manual stride configuration.

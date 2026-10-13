@@ -35,6 +35,8 @@ struct GameplaySettings {
     bool awpOneShot = false;
     // One percentage covers owned/allied units and buildings across firearms, melee and C4.
     float friendlyFirePercent = 50;
+    // Q temporarily permits direct allied contacts/markers; F8 restores this saved startup preference.
+    bool targetAllies=false;
     // Limit world labels to nearby FPS activity without altering native resource production.
     float floatingTextDistance=1200;
     // Startup/F8 preference; the Speed shortcut may change visibility for the current session.

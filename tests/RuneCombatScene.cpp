@@ -68,6 +68,8 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
         }
         else if(BackgroundGameplay::Enabled() && command=="view")controller.RequestViewToggle();
         else if(BackgroundGameplay::Enabled() && command=="third")controller.RequestThirdPersonToggle();
+        // Exercise Q's game-thread path without a desktop key or a fixture-only targeting policy.
+        else if(BackgroundGameplay::Enabled() && command=="allytoggle")controller.RequestAllyTargetToggle();
         // Exercise production wheel routing without injecting input into the user's desktop.
         else if(BackgroundGameplay::Enabled() && command=="wheel") {int delta=0;input>>delta;controller.RequestMouseWheel(delta);}
         else if(BackgroundGameplay::Enabled() && command=="heroattack")controller.TestHeroAttack();

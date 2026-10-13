@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased — Full attack playback and allied targeting
+
+- Refresh native skinning after repairing the manual attack clock, including while grounded, so
+  rendered bones follow the complete swing. Finish authored clips even when configured recovery
+  is shorter; held attacks wait for both the minimum recovery and the visual backswing.
+- Suspend native pose blending during manual swings so repeated movement pose resets cannot keep
+  the visible attack near its first frame. Restore the previous blending policy when ownership ends.
+- Add Q (`[Shortcuts] ToggleAllyTargeting`) to toggle direct allied contacts and target markers
+  in FPS/TPS. `[Combat] TargetAllies=false` protects allies by default; startup/F8 restores that
+  saved choice. Allies still block traces. C4 splash and native spells retain their policies.
+- Show the current mode in HUD hints. Preserve custom Q bindings and targeting preferences on updates.
+
 ## Unreleased — Third-person attack animation recovery
 
 - Separate manual attack playback from combat cooldown. Resume locomotion when the authored attack

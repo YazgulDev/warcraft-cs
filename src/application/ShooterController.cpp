@@ -153,6 +153,7 @@ void ShooterController::Disable(bool restoreCamera) {
     thirdPerson_=false;
     spells_.Cancel();spellRequested_=-1;spellCancelRequested_=false;
     healthBarToggleRequested_=false; // Do not replay a pending bar switch on the next F6.
+    allyTargetToggleRequested_=false;
     // Restore the current map before native RTS/menu input takes over.
     nativeFog_.Update(false);fogToggleRequested_=false;
     buyMenu_.Close();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1;suppressFire_=true;
@@ -184,6 +185,7 @@ void ShooterController::ResetMap() {
     spellHud_={};spellHudTick_=spellHudLog_=0; // Forget per-map art and cooldown snapshots with their ability handles.
     spells_.Reset();spellRequested_=-1;spellCancelRequested_=false; // Forget unloaded-map orders without touching stale handles.
     healthBarToggleRequested_=false;
+    allyTargetToggleRequested_=false;
     nativeFog_.Reset();fogToggleRequested_=false; // An unloaded map's fog snapshot must be forgotten.
     collision_.Reset(); // Custom-map model bounds must never leak into the next world's collision.
     nativeSky_.Reset();
@@ -528,7 +530,7 @@ void ShooterController::Strike() {
     float radius = attackRange + 512; wc3::GroupEnumUnitsInRange(group, &x, &y, &radius, 0);
     while ((candidate = wc3::FirstOfGroup(group)) != 0) {
         wc3::GroupRemoveUnit(group, candidate);
-        // Friendly fire applies to every other visible living unit/building, regardless of ownership.
+        // Protected allies remain solid contacts: never shoot through them to hit a unit behind them.
         if (candidate == unit_ || wc3::Real(wc3::GetUnitState(candidate, 0)) <= 0.405f ||
             !wc3::IsUnitVisible(candidate, local)) continue;
         // Intersect the rendered model's oriented 3D volume instead of one fixed ground cylinder.
@@ -555,6 +557,7 @@ void ShooterController::Strike() {
         }
     }
     if (target) {
+        if(!destructable && !settings_.targetAllies && wc3::IsUnitAlly(target,wc3::GetOwningPlayer(unit_)))return;
         // The existing hero is the attacker, preserving mission kill/XP trigger ownership.
         auto life = [&]() { return wc3::Real(destructable ? wc3::GetDestructableLife(target) : wc3::GetUnitState(target,0)); };
         float before = life();
@@ -679,10 +682,16 @@ void ShooterController::Tick(uintptr_t ui) {
     nativeSky_.Update(ui_,Visible() && settings_.nativeSky && !settings_.csSky,mapTileset_);
     nativeFog_.Update(Visible() && fogOfWarDisabled_);
     // A queued display tap cannot take effect after FPS is suspended or left.
-    if (!active_ || suspended_) { mouseLook_.Reset();weaponWheel_.Reset();cameraWheel_.Reset();itemRequested_=false;squadRequested_=0;speedToggleRequested_=fogToggleRequested_=minimapToggleRequested_=healthBarToggleRequested_=false;spellRequested_=-1;spellCancelRequested_=false;return; }
+    if (!active_ || suspended_) { mouseLook_.Reset();weaponWheel_.Reset();cameraWheel_.Reset();itemRequested_=false;squadRequested_=0;speedToggleRequested_=fogToggleRequested_=minimapToggleRequested_=healthBarToggleRequested_=allyTargetToggleRequested_=false;spellRequested_=-1;spellCancelRequested_=false;return; }
     if (settingsRequested_) { settingsRequested_=false;ReloadSettings(); }
     if(viewToggleRequested_) {viewToggleRequested_=false;ToggleView();}
     if(healthBarToggleRequested_) { healthBarToggleRequested_=false;ToggleHealthBars(); }
+    if(allyTargetToggleRequested_) {
+        // Apply before both prediction and contact so Q changes the marker and damage policy together.
+        allyTargetToggleRequested_=false;settings_.targetAllies=!settings_.targetAllies;aimTarget_={};
+        ammoMessage_=settings_.targetAllies ? "ALLY TARGETING ON" : "ALLY TARGETING OFF";refillTick_=now;
+        wc3::Log("Ally targeting enabled=%d",settings_.targetAllies);
+    }
     if (speedToggleRequested_) {
         speedToggleRequested_=false;showSpeed_=!showSpeed_;
         wc3::Log("Speed display toggled visible=%d units=CS",showSpeed_);
@@ -917,7 +926,7 @@ void ShooterController::Tick(uintptr_t ui) {
     // Planting requires a held button; other weapons preserve their existing click/automatic behavior.
     if(thirdPerson_) {
         // Restore locomotion's temporary rate before playing a native attack. Held LMB respects IAS-scaled recovery.
-        if(!spells_.Active() && !suppressFire_ && Down(VK_LBUTTON) && !heroAttack_.Busy(now*.001)) {
+        if(!spells_.Active() && !suppressFire_ && Down(VK_LBUTTON) && !heroAttack_.Busy(now*.001) && !heroAttack_.Animating(now*.001)) {
             unitLocomotion_.Release();heroAttack_.Begin(unit_,now*.001,settings_,status_);
         }
         // Reuse the real reticle only at contact; idle/recovery frames need no extra camera collision enumeration.

@@ -8,6 +8,7 @@ void UnitAttackAnimation::Release() {
         float current=wc3::AnimationRate(unit_);
         if(std::abs(current-pose_.Rate())>.01f)baseline_=current;
         wc3::AnimationRate(unit_,baseline_);
+        wc3::AnimationBlending(unit_,baselineBlending_);
     }
     owned_=false;pose_.Reset();
 }
@@ -18,7 +19,10 @@ void UnitAttackAnimation::Begin(wc3::Handle unit,double now,float speed,float co
         auto model=path;auto extension=model.find_last_of('.');if(extension!=std::string::npos)model.resize(extension);
         profile_.Load(NativeArchive::Read(model+".mdx"),"",path,type);
     }
-    baseline_=wc3::AnimationRate(unit);wc3::Animate(unit,"attack");
+    // Movement can replace Attack each frame: repeatedly blending from Stand hides the later swing frames.
+    // Temporarily use the authored pose directly; restore the model's exact prior blending policy on release.
+    baseline_=wc3::AnimationRate(unit);baselineBlending_=wc3::AnimationBlending(unit);
+    wc3::AnimationBlending(unit,false);wc3::Animate(unit,"attack");
     auto clip=profile_.SequenceAt(wc3::AnimationSequence(unit));
     auto name=ModelMotionProfile::Lower(clip.name);
     // Retain the native random/alternate attack variation, using a real authored fallback if it was reset immediately.
