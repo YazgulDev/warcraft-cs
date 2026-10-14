@@ -227,6 +227,19 @@ float AnimationRate(Handle unit) {
     auto object=UnitObject(unit);float rate=object ? *reinterpret_cast<float*>(object+0x300) : 1;
     return std::isfinite(rate) && rate>=0 && rate<=10 ? rate : 1;
 }
+int ActiveAnimationSequence(Handle unit) {
+    // Verified 511F10 selects the model controller's active byte at +58, bounded by its sequence count at +0C.
+    // A sprite request of -2 is pending, not proof that the model switched to Stand.
+    const unsigned char select[]={0x83,0xEC,0x0C,0x8B,0xC2,0x8A,0x54,0x24,0x10};
+    if(!unit || !nativeBase || std::memcmp(reinterpret_cast<void*>(nativeBase+0x511F10),select,sizeof(select)))return -1;
+    auto object=UnitObject(unit);auto sprite=object ? *reinterpret_cast<uintptr_t*>(object+0x28) : 0;
+    auto model=sprite ? *reinterpret_cast<uintptr_t*>(sprite+0x20) : 0;
+    auto animation=model ? *reinterpret_cast<uintptr_t*>(model+0x98) : 0;
+    if(!animation)return -1;
+    unsigned count=*reinterpret_cast<unsigned*>(animation+0x0C);
+    unsigned active=*reinterpret_cast<unsigned char*>(animation+0x58);
+    return count>0 && count<=256 && active<count ? int(active) : -1;
+}
 void AnimateIndex(Handle unit,int sequence) {
     // Verified SetUnitAnimationByIndex registration selects the model's exact authored gait/variation.
     const unsigned char signature[]={0x8B,0x4C,0x24,0x04,0xE8};
@@ -253,8 +266,20 @@ void AnimationSeek(Handle unit,int sequence,float seconds) {
         std::memcmp(reinterpret_cast<void*>(nativeBase+0x50D560),seek,sizeof(seek)))return;
     auto object=UnitObject(unit);uintptr_t sprite=object ? *reinterpret_cast<uintptr_t*>(object+0x28) : 0;
     uintptr_t model=sprite ? *reinterpret_cast<uintptr_t*>(sprite+0x20) : 0;
-    // A queued index/morph may not yet be applied. Only seek a sequence the live sprite already accepted.
-    if(model && sequence==AnimationSequence(unit))reinterpret_cast<void (__fastcall*)(uintptr_t,int,int)>(nativeBase+0x50D560)(model,sequence,int(seconds*1000));
+    if(!model)return;
+    int active=ActiveAnimationSequence(unit);if(active<0)return;
+    // Verified CSprite's 4D4093 / 4D9B46 paths select this exact model index before seeking its time.
+    // Crowd hit reactions can starve the sprite queue, so select the rendered clip synchronously.
+    if(active!=sequence) {
+        const unsigned char select[]={0x8B,0x89,0x98,0x00,0x00,0x00,0x85,0xC9};
+        if(std::memcmp(reinterpret_cast<void*>(nativeBase+0x50C2E0),select,sizeof(select)))return;
+        auto animation=*reinterpret_cast<uintptr_t*>(model+0x98);
+        if(!animation || unsigned(sequence)>=*reinterpret_cast<unsigned*>(animation+0x0C))return;
+        using Select=BOOL (__fastcall*)(uintptr_t,int,int);
+        if(!reinterpret_cast<Select>(nativeBase+0x50C2E0)(model,sequence,8))return;
+    }
+    // This native setter dirties skinning; it does not enqueue a combat/movement order or write animation memory.
+    reinterpret_cast<void (__fastcall*)(uintptr_t,int,int)>(nativeBase+0x50D560)(model,sequence,int(seconds*1000));
 }
 bool AnimationBlending(Handle unit) {
     // Verified model getter forwards to 513970's native blending-enabled flag; no blend duration is changed.

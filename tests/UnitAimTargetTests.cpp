@@ -21,6 +21,7 @@ void Animate(Handle,const char*){++animations;}
 // The real manual pose adapter can run without retail models, using the contact-duration fallback.
 std::string UnitModelPath(int){return "synthetic.mdx";}
 int AnimationSequence(Handle){return -1;}
+int ActiveAnimationSequence(Handle){return -1;}
 void AnimateIndex(Handle,int){++animations;}
 float AnimationRate(Handle){return 1;}
 void AnimationRate(Handle,float){}

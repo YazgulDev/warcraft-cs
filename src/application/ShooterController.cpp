@@ -901,7 +901,10 @@ void ShooterController::Tick(uintptr_t ui) {
             if(spells_.Active()) {heroAttack_.Cancel();movement_.Stop();CancelPlant();meleeContact_=0;reloadEnd_=0;suppressFire_=true;}
         }
     }
-    if (!spells_.Active() && !status_.incapacitated && !status_.contained && !status_.hidden) FpsCombatGuard::CancelOrders(unit_);
+    // Native combat/movement guards still block AI while a manual clip owns the pose. Defer Stop:
+    // repeated crowd acquisitions otherwise enqueue Stand and interrupt the player's backswing.
+    if (!spells_.Active() && !status_.incapacitated && !status_.contained && !status_.hidden &&
+        !heroAttack_.Animating(now*.001)) FpsCombatGuard::CancelOrders(unit_);
     if (itemRequested_) { itemRequested_=false;PickupItem(); }
     if (squadRequested_) {
         // Both keys recruit nearby owned units and change the existing squad's strategy as one operation.

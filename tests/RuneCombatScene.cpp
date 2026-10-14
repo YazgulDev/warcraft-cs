@@ -86,11 +86,15 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
             controller.TestAnimationState();
             // Read the native clip clock to distinguish progressing playback from repeated frame-zero repairs.
             auto actor=wc3::UnitObject(unit);uintptr_t sprite=0,model=0,animation=0,frames=0,metadata=0,clips=0;
-            int sequence=wc3::AnimationSequence(unit),frame=0,begin=0;
+            int sequence=wc3::ActiveAnimationSequence(unit),frame=0,begin=0;
             if(sequence>=0 && sequence<256 && Read(actor+0x28,sprite) && Read(sprite+0x20,model) &&
                 Read(model+0x98,animation) && Read(animation+8,frames) && Read(animation+0x44,metadata) &&
                 Read(metadata+0x18,clips) && Read(frames+sequence*16,frame) && Read(clips+sequence*0x8C,begin))
                 wc3::Log("fixture clip sequence=%d elapsedMs=%d",sequence,frame-begin);
+            // The sprite's requested index can differ from the model's active blend/clip during crowd contact.
+            unsigned char active=255;short queued=-1;
+            if(Read(sprite+0x2C,queued) && Read(animation+0x58,active))
+                wc3::Log("fixture clip active=%u queued=%d blending=%d",unsigned(active),queued,wc3::AnimationBlending(unit));
             wc3::Log("fixture camera distance=%.1f third=%d weapon=%d",controller.ThirdPersonDistance(),controller.ThirdPerson(),controller.WeaponIndex());
             // This oracle observes restored simulation height/rate, outside the transient world render scope.
             wc3::Log("fixture motion fly=%.2f rate=%.2f feet=%.2f",wc3::Real(wc3::GetUnitFlyHeight(unit)),wc3::AnimationRate(unit),controller.ActorFeet());
@@ -213,6 +217,16 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
             float x=wc3::Real(wc3::GetUnitX(unit))+130,y=wc3::Real(wc3::GetUnitY(unit))+20,facing=180;
             party.push_back(wc3::CreateUnit(wc3::GetLocalPlayer(),0x68666F6F,&x,&y,&facing));
             y-=40;party.push_back(wc3::CreateUnit(wc3::GetLocalPlayer(),0x68666F6F,&x,&y,&facing));
+        }
+        else if(BackgroundGameplay::Enabled() && command=="crowd") {
+            // Deliberate close overlaps reproduce moving combat neighbours without using a user's campaign.
+            float x=wc3::Real(wc3::GetUnitX(unit)),y=wc3::Real(wc3::GetUnitY(unit)),facing=180;
+            for(int i=0;i<6;++i) {
+                float cx=x+35+(i%2)*15,cy=y+(i/2-1)*28;
+                auto neighbour=wc3::CreateUnit(i<4 ? wc3::Player(12) : wc3::GetLocalPlayer(),0x68666F6F,&cx,&cy,&facing);
+                wc3::SetUnitX(neighbour,&cx);wc3::SetUnitY(neighbour,&cy);party.push_back(neighbour);
+                if(i<4)wc3::IssueTargetOrderById(neighbour,851983,unit);
+            }
         }
         else if(BackgroundGameplay::Enabled() && command=="mana") {
             float mana=0;input>>mana;Mana(base,unit,mana);wc3::Log("fixture mana=%.1f",wc3::Real(wc3::GetUnitState(unit,2)));

@@ -14,6 +14,11 @@ unit damage effects; it never issues pursuit orders. `HeroAttackPose` owns the i
 `UnitAttackAnimation` selects authored attack variations, repairs native pose resets at their elapsed
 clip time and restores the native playback rate. It temporarily disables native pose blending during
 the swing, restoring the previous mode on release without changing the map's blend duration.
+Playback reads the model's active clip rather than treating a pending sprite request as Stand.
+The native model selector restores the exact authored index synchronously before elapsed-time seeking,
+without adding sprite-queue requests or issuing gameplay orders during pose repair.
+The controller defers native Stop cleanup while that manual pose is active; autonomous combat
+and movement remain suppressed by the existing native guards.
 Locomotion resumes after that visual clock ends,
 while `HeroAttackTimeline` continues to enforce contact and cooldown. `NativeOrderCancellation` tracks retained targets per actor
 without native dependencies. The native weapon adapter distinguishes scoped manual dispatch from automatic

@@ -38,11 +38,16 @@ void UnitAttackAnimation::Update(double now) {
     if(!owned_)return;
     if(!pose_.Active(now) || !unit_ || wc3::GetUnitTypeId(unit_)!=type_ || wc3::Real(wc3::GetUnitState(unit_,0))<=.405f) {Release();return;}
     // Do not overwrite a new map-owned time scale while a swing is in progress.
-    if(std::abs(wc3::AnimationRate(unit_)-pose_.Rate())>.01f) {Release();return;}
+    if(std::abs(wc3::AnimationRate(unit_)-pose_.Rate())>.01f) {
+        // Distinguish a genuine map-owned time-scale handoff from native close-contact pose overwrites.
+        wc3::Log("Manual attack pose rate handoff unit=%08X expected=%.3f observed=%.3f",unit_,pose_.Rate(),wc3::AnimationRate(unit_));
+        Release();return;
+    }
     // Relocation/native impact cleanup may reset Stand or even restart the same Attack sequence.
     // Restore authored clip time, not frame zero, so running attacks keep advancing smoothly.
     if(sequence_>=0) {
-        if(wc3::AnimationSequence(unit_)!=sequence_)wc3::AnimateIndex(unit_,sequence_);
+        // Keep the initial sprite request, but restore the active model directly at elapsed time.
+        // Re-enqueuing after every crowd reaction can prevent that request from ever being accepted.
         wc3::AnimationSeek(unit_,sequence_,pose_.Elapsed(now));
     }
     wc3::AnimationRate(unit_,pose_.Rate());

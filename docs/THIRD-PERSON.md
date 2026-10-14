@@ -109,6 +109,11 @@ before world drawing. Held attacks wait for both clip completion and minimum com
 Manual swings temporarily disable native pose blending so repeated movement resets do not restart
 the transition to Attack every frame. The prior blending mode is restored on completion/interruption;
 the map's configured blend duration is unchanged.
+In dense crowds, a pending sprite animation request does not necessarily mean that the model's
+Attack clip changed. Playback follows the actual model clip and defers native Stop cleanup until
+the manual pose ends. Native AI combat/movement guards remain active throughout the swing.
+When close hit reactions block the sprite queue, the verified native model selector restores the
+authored clip directly at its elapsed time before skinning; no extra attack order is issued.
 A new map-owned playback rate,
 casting, disabling effects or death takes precedence over the manual pose.
 Custom imported models without native gait metadata use RunCycleDistance. The table supplies stock/custom

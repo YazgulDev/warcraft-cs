@@ -47,6 +47,8 @@ bool AnimationBlending(Handle unit);
 void AnimationBlending(Handle unit,bool enabled);
 // Observe the sprite's current sequence so direct control can recover a native AI pose overwrite.
 int AnimationSequence(Handle unit);
+// Rendered clip identity is separate from the sprite's queued/pending animation request.
+int ActiveAnimationSequence(Handle unit);
 // Animation rate does not assign native movement/combat orders.
 float AnimationRate(Handle unit);
 void AnimationRate(Handle unit,float rate);

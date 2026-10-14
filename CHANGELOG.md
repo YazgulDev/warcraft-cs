@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — Close-contact attack playback
+
+- Follow the model's active clip independently of the sprite's pending request. Dense crowds
+  could keep the request pending and prevent manual attack playback from advancing.
+- Restore the authored model clip and its elapsed time synchronously through the verified native
+  selector before skinning, so close hit reactions cannot starve the queued request.
+- Defer native Stop cleanup while a manual attack owns its pose; native movement, acquisition
+  and damage guards continue to block autonomous combat. Keep contact, cooldown and status rules.
+- Add an isolated six-unit crowd scene and read-only active/pending clip telemetry for regression checks.
+
 ## Unreleased — Full attack playback and allied targeting
 
 - Refresh native skinning after repairing the manual attack clock, including while grounded, so
