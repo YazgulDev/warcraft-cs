@@ -10,11 +10,16 @@ $unitConfig=Join-Path $folder 'unit-view.ini'
     Set-Content -LiteralPath $unitConfig -Encoding ascii
 Update-GameplayConfig $template $unitConfig
 $unitText=Get-Content -LiteralPath $unitConfig -Raw
-foreach($required in @('AllWeapons=F12','ToggleUnitView=F9','Reload=Y','AutomaticSpells=false','SpellSearchRadius=420','Enabled=false')) {
+foreach($required in @('AllWeapons=F12','ToggleUnitView=F9','Reload=Y','AutomaticSpells=false','SpellSearchRadius=420','Enabled=false','PreventEnemyAttacks=true')) {
     if(!$unitText.Contains($required)){throw "Unit view/AI migration lost preference: $required"}
 }
 $unitHash=(Get-FileHash -LiteralPath $unitConfig).Hash;Update-GameplayConfig $template $unitConfig
 if((Get-FileHash -LiteralPath $unitConfig).Hash -ne $unitHash){throw 'Unit view migration is not idempotent.'}
+# Explicit vulnerability preferences survive updates rather than being replaced by the protected default.
+$unprotected=Join-Path $folder 'unit-view-unprotected.ini'
+@('[UnitView]','PreventEnemyAttacks=false') | Set-Content -LiteralPath $unprotected -Encoding ascii
+Update-GameplayConfig $template $unprotected
+if(!(Get-Content -LiteralPath $unprotected -Raw).Contains('PreventEnemyAttacks=false')){throw 'Unit-view enemy-attack preference overwritten.'}
 # Newly added allied targeting preserves a chosen default and an older custom Q binding.
 $allyConfig=Join-Path $folder 'allied-targeting.ini'
 @('[Combat]','TargetAllies=true','[Shortcuts]','Reload=Q') | Set-Content -LiteralPath $allyConfig -Encoding ascii

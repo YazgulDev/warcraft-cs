@@ -508,7 +508,7 @@ the key to old configurations and preserve explicit custom values, including C4 
 Select your unit and press **F9** to see the world from its first-person camera. WASD and mouse
 look remain available, with the unit's native movement speed and disabling effects. Weapons,
 hands, crosshair, HUD, minimap, native panels and floating labels are hidden. Your unit cannot
-attack or cast player-requested spells in this mode, and enemies can still attack and damage it.
+attack or cast player-requested spells in this mode. By default enemies cannot select it for basic attacks.
 Inventory purchases and free weapon/ammo requests are also blocked while the mode is active.
 Warcraft ambience remains audible; CS footsteps are omitted.
 
@@ -520,6 +520,13 @@ to an unused F12/F5/F4 and preserve custom bindings. If another custom action al
 
 Set `[UnitView] Enabled=false` and press **F8** to disable this mode. If already active, F8 returns
 you to RTS. Missing or invalid values use `true`; `true`/`false` and `1`/`0` are accepted.
+
+`[UnitView] PreventEnemyAttacks=true` rejects hostile basic-attack acquisition, wind-up and
+map-issued attack orders only during live F9. Set it to `false` and press **F8** to allow enemies
+to attack again while staying in unit view. Leaving F9 also restores normal targeting. Missing,
+empty or malformed values use `true`; `true`/`false` and `1`/`0` are accepted, and updates preserve
+your choice. This changes attack targeting rather than invulnerability: already airborne missiles,
+spells, area damage and direct map-script damage can still affect the unit.
 
 ### Automatic squad spells (test branch)
 

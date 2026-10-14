@@ -20,6 +20,7 @@ struct GameplaySettings {
     SpellSettings spells;
     ThirdPersonSettings thirdPerson;
     bool unitViewEnabled=true;
+    bool unitViewPreventEnemyAttacks=true; // F9 alone can opt out of hostile basic-attack targeting.
 
     MovementSettings movement;
     float runeAmmoPercent = 40;

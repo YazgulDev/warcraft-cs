@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased — Configurable enemy targeting in unit view
+
+- Default `[UnitView] PreventEnemyAttacks=true` prevents hostile basic-attack acquisition,
+  retained wind-up/contacts and map-issued attack orders against the controlled F9 unit.
+  Other units, allies and other view modes retain their native targeting behavior.
+- Set `false`/`0` and press F8 to restore enemy attacks immediately; `true`/`1` enables protection.
+  Missing/empty/malformed values default to true. Updates add the setting and preserve custom choices.
+- No saved vulnerability, visibility, ownership or alliance flags are changed. Already airborne
+  missiles, spells, area damage and direct scripted damage remain native.
+- Verify default protection, live F8 off/on, another unit remaining attackable and normal attacks
+  after F9 exit in a disposable native map, alongside config validation and update preservation.
+
 ## Unreleased — Unarmed unit view and squad spellcasting
 
 - Add F9 to enter a separate first-person unit view from RTS, FPS or third person. Hide weapons,

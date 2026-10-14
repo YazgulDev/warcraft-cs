@@ -63,7 +63,7 @@ int main() {
     char path[MAX_PATH];GetFullPathNameA("third-person-settings-test.ini",MAX_PATH,path,nullptr);
     {std::ofstream file(path);file<<"[ThirdPerson]\nCameraDistance=nan\nInitialPitch=bad\nAttackInterval=.4\nContactDelay=2\nAttackRange=-10\nAttackArc=500\nRunCycleDistance=0\nTakeoffDuration=nan\nLandingDuration=5\nMovementAnimations=bad\n";}
     auto settings=GameplaySettings::Load(path);
-    assert(settings.unitViewEnabled && settings.squadAutomaticSpells);
+    assert(settings.unitViewEnabled && settings.unitViewPreventEnemyAttacks && settings.squadAutomaticSpells);
     assert(settings.shortcuts.Key(ShortcutAction::ToggleUnitView)==VK_F9 && settings.shortcuts.Key(ShortcutAction::AllWeapons)==VK_F12);
     assert(settings.thirdPerson.enabled && settings.thirdPerson.distance==500 && settings.thirdPerson.initialPitch==-12);
     assert(settings.thirdPerson.attackRange==30 && settings.thirdPerson.attackArc==120);
@@ -79,11 +79,17 @@ int main() {
     auto reloaded=GameplaySettings::Load(path);
     // F8 re-parses AI/view preferences and migrates the legacy F9 binding independently of the keyboard layout.
     WritePrivateProfileStringA("UnitView","Enabled","false",path);
+    WritePrivateProfileStringA("UnitView","PreventEnemyAttacks","0",path);
     WritePrivateProfileStringA("Squad","AutomaticSpells","false",path);
     WritePrivateProfileStringA("Squad","SpellSearchRadius","nan",path);
     WritePrivateProfileStringA("Squad","HealBelowPercent","500",path);
     auto aiReload=GameplaySettings::Load(path);
-    assert(!aiReload.unitViewEnabled && !aiReload.squadAutomaticSpells && aiReload.squadSpellRadius==700 && aiReload.squadHealBelowPercent==100);
+    assert(!aiReload.unitViewEnabled && !aiReload.unitViewPreventEnemyAttacks && !aiReload.squadAutomaticSpells && aiReload.squadSpellRadius==700 && aiReload.squadHealBelowPercent==100);
+    // Malformed protection values retain the requested default, and F8 can explicitly re-enable it.
+    WritePrivateProfileStringA("UnitView","PreventEnemyAttacks","bad",path);
+    assert(GameplaySettings::Load(path).unitViewPreventEnemyAttacks);
+    WritePrivateProfileStringA("UnitView","PreventEnemyAttacks","1",path);
+    assert(GameplaySettings::Load(path).unitViewPreventEnemyAttacks);
     WritePrivateProfileStringA("Shortcuts","AllWeapons","F9",path);
     auto oldF9=GameplaySettings::Load(path);assert(oldF9.shortcuts.Key(ShortcutAction::ToggleUnitView)==VK_F9 && oldF9.shortcuts.Key(ShortcutAction::AllWeapons)==VK_F12);
     // Introducing the new default cannot reset a partial layout with a custom F12 refill.

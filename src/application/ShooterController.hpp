@@ -57,6 +57,8 @@ public:
     void RequestThirdPersonToggle() {thirdPersonRequested_=true;}
     bool ThirdPerson() const {return view_==ControlView::ThirdPerson;}
     bool UnitFirstPerson() const {return view_==ControlView::UnitFirstPerson;}
+    // The native guard queries live mode/config instead of modifying saved vulnerability or alliance flags.
+    wc3::Handle EnemyProtectedActor() const {return Visible() && UnitFirstPerson() && settings_.unitViewPreventEnemyAttacks ? unit_ : 0;}
     void RequestUnitViewToggle() {unitViewRequested_=true;}
     // Rendering must consume the repaired attack pose after the game-thread visual clock advances.
     bool ManualAttackAnimating() const {return Visible() && ThirdPerson() && heroAttack_.Animating(GetTickCount()*.001);}

@@ -215,6 +215,10 @@ Unknown collision facts remain opaque; heroes, structures and physical immune un
 `ShooterController.SelectView` cancels owned input/combat state before switching, while the input,
 movement and presentation adapters apply that mode's policies. Unit view shares native attack
 suppression with controlled modes, retains incoming damage and omits both overlay and native UI.
+`FpsCombatGuard` also owns the verified native attack-target eligibility adapter for F9's configurable
+enemy policy. A live controller predicate scopes it to the protected mode; ordinary actor flags and
+native target-reference getters remain intact. `NativeWeaponAttack` shares the contact guard so a
+previous wind-up cannot bypass a newly enabled policy. Spell/area damage remains native.
 
 `SquadSpellPolicy` owns portable readiness/healing decisions. `SquadSpellcasting` adapts live
 ability slots and native orders to a bounded stock-order catalog, using shared native ability,

@@ -76,6 +76,18 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
         else if(BackgroundGameplay::Enabled() && command=="heroattack")controller.TestHeroAttack();
         else if(BackgroundGameplay::Enabled() && command=="holdattack") {DWORD duration=0;input>>duration;controller.TestHoldAttack(duration);}
         else if(BackgroundGameplay::Enabled() && command=="targetstats")controller.TestLogTarget();
+        else if(BackgroundGameplay::Enabled() && command=="enemyattack") {
+            // The normal script-order hook must reject F9 targets and accept them after F8/exit.
+            wc3::Log("fixture enemy attack accepted=%d",enemy && unit ? wc3::IssueTargetOrderById(enemy,851983,unit) : -1);
+        }
+        else if(BackgroundGameplay::Enabled() && command=="enemyattackother") {
+            // Protection is actor-specific: an enemy must still be able to fight another owned unit.
+            float x=wc3::Real(wc3::GetUnitX(unit))+150,y=wc3::Real(wc3::GetUnitY(unit))+120,angle=0;
+            auto other=wc3::CreateUnit(wc3::GetLocalPlayer(),0x68666F6F,&x,&y,&angle);party.push_back(other);
+            wc3::Log("fixture other attack accepted=%d",wc3::IssueTargetOrderById(enemy,851983,other));
+        }
+        else if(BackgroundGameplay::Enabled() && command=="otherstats" && !party.empty())
+            wc3::Log("fixture other hp=%.1f",wc3::Real(wc3::GetUnitState(party.back(),0)));
         else if(BackgroundGameplay::Enabled() && command=="pause") {int value=0;input>>value;wc3::PauseUnit(unit,value!=0);}
         else if(BackgroundGameplay::Enabled() && command=="camerawall") {
             // A tall, solid native building behind the actor probes boom collision without altering terrain.

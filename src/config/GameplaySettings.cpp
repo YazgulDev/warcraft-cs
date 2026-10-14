@@ -22,6 +22,11 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     // The unarmed camera is independently configurable; malformed values preserve enabled entry.
     auto unitView=text("UnitView","Enabled","true");
     result.unitViewEnabled=_stricmp(unitView.c_str(),"false") && unitView!="0";
+    // The requested safe unit-view default reloads with F8; explicit false restores native targeting.
+    auto preventAttacks=text("UnitView","PreventEnemyAttacks","true");
+    result.unitViewPreventEnemyAttacks=_stricmp(preventAttacks.c_str(),"false") && preventAttacks!="0";
+    if(_stricmp(preventAttacks.c_str(),"true") && _stricmp(preventAttacks.c_str(),"false") && preventAttacks!="1" && preventAttacks!="0")
+        wc3::Log("Invalid UnitView.PreventEnemyAttacks; using true");
     // Third-person camera and Arthas swing tuning reload as part of the existing validated snapshot.
     auto thirdEnabled=text("ThirdPerson","Enabled","true");
     if(!_stricmp(thirdEnabled.c_str(),"false") || thirdEnabled=="0")result.thirdPerson.enabled=false;

@@ -1,4 +1,5 @@
 #include "NativeWeaponAttack.hpp"
+#include "FpsCombatGuard.hpp"
 #include <cmath>
 #include <cstring>
 
@@ -41,8 +42,8 @@ void __fastcall GuardAttackPose(uintptr_t attack,uintptr_t,uintptr_t actor) {
     }
 }
 void __fastcall GuardImpact(uintptr_t attack,uintptr_t,uintptr_t target,int a,int b,int c,int d,int e) {
-    // A retained native AI target can still reach impact without a new order. Only our scoped manual contact may fire.
-    if(SuppressAutonomous(attack)) {
+    // A retained AI target can reach impact without a new order; F9 protection also covers a prior hostile wind-up.
+    if(SuppressAutonomous(attack) || FpsCombatGuard::BlocksIncomingAttack(attack,target)) {
         static DWORD last=0;DWORD now=GetTickCount();
         if(now-last>=1000){last=now;wc3::Trace("FPS blocked autonomous impact component=%08X",attack);}return;
     }
@@ -53,6 +54,8 @@ void __fastcall GuardPrepare(uintptr_t actor,uintptr_t,uintptr_t target,float* a
     // Follow-only squad members keep the same passive policy as the basic-order guard.
     bool controlled=actor==ControlledObject() || (passiveUnit && passiveUnit(actor));
     if(controlled && !(contact && contact->attack==*reinterpret_cast<uintptr_t*>(actor+0x1E8)))return;
+    // An already-started hostile contact must respect a newly enabled F9 policy before native attack callbacks.
+    if(FpsCombatGuard::BlocksIncomingAttack(*reinterpret_cast<uintptr_t*>(actor+0x1E8),target))return;
     originalPrepare(actor,target,a,b);
 }
 float* __fastcall ContactRange(uintptr_t attack,uintptr_t,float* result,int index) {
