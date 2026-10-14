@@ -12,7 +12,9 @@ bool SquadController::Valid(const Member& member,wc3::Handle owner) const {
 }
 void SquadController::Capture(wc3::Handle leader,bool passive,const GameplaySettings& settings) {
     passive_=passive;wc3::Handle owner=wc3::GetLocalPlayer();
-    members_.erase(std::remove_if(members_.begin(),members_.end(),[&](const Member& m) { return !Valid(m,owner) || m.unit==leader; }),members_.end());
+    members_.erase(std::remove_if(members_.begin(),members_.end(),[&](const Member& m) {
+        if(!Valid(m,owner) || m.unit==leader){spells_.Forget(m.unit);return true;}return false;
+    }),members_.end());
     float x=wc3::Real(wc3::GetUnitX(leader)),y=wc3::Real(wc3::GetUnitY(leader)),radius=settings.squadRadius;
     auto group=wc3::CreateGroup();wc3::GroupEnumUnitsInRange(group,&x,&y,&radius,0);
     wc3::Handle unit=0;
@@ -29,12 +31,14 @@ void SquadController::Capture(wc3::Handle leader,bool passive,const GameplaySett
     }
     wc3::DestroyGroup(group);
     // Mode changes replace current harvest/attack orders; subsequent travel uses native move/attack-move.
-    for (auto& m:members_) { wc3::IssueImmediateOrderById(m.unit,Stop);m.orderTick=0; }
+    for (auto& m:members_) {spells_.Cancel(m.unit);wc3::IssueImmediateOrderById(m.unit,Stop);m.orderTick=0; }
     wc3::Log("squad capture mode=%s count=%u radius=%.1f",passive_ ? "follow" : "combat",unsigned(members_.size()),radius);
 }
 void SquadController::Tick(wc3::Handle leader,const GameplaySettings& settings,DWORD now,bool travel,float yaw,float vx,float vy) {
     wc3::Handle owner=wc3::GetLocalPlayer();
-    members_.erase(std::remove_if(members_.begin(),members_.end(),[&](const Member& m) { return !Valid(m,owner) || m.unit==leader; }),members_.end());
+    members_.erase(std::remove_if(members_.begin(),members_.end(),[&](const Member& m) {
+        if(!Valid(m,owner) || m.unit==leader){spells_.Forget(m.unit);return true;}return false;
+    }),members_.end());
     float x=wc3::Real(wc3::GetUnitX(leader)),y=wc3::Real(wc3::GetUnitY(leader));
     for (size_t i=0;i<members_.size();++i) {
         auto& m=members_[i];m.attack=*reinterpret_cast<uintptr_t*>(m.object+0x1E8);
@@ -46,6 +50,9 @@ void SquadController::Tick(wc3::Handle leader,const GameplaySettings& settings,D
         if (now-m.orderTick<settings.squadOrderIntervalMs) continue;
         float ux=wc3::Real(wc3::GetUnitX(m.unit)),uy=wc3::Real(wc3::GetUnitY(m.unit));
         float distance=std::hypot(ux-x,uy-y);
+        // Native cast ownership wins over formation refresh; leaving the leash or switching O/config cancels ours only.
+        if(passive_ || !settings.squadAutomaticSpells || distance>settings.squadLeash)spells_.Cancel(m.unit);
+        else if(spells_.Tick(m.unit,settings,now))continue;
         auto destination=SquadFormation::Destination(i,x,y,ux,uy,yaw,vx,vy,settings.squadFollowDistance,
             settings.squadClearance,settings.squadYieldAhead,settings.squadRearFormation,settings.squadYield);
         float tx=destination.x,ty=destination.y;
@@ -66,10 +73,10 @@ void SquadController::Tick(wc3::Handle leader,const GameplaySettings& settings,D
 void SquadController::Release() {
     // J/F6/F10 hand followers back to Warcraft without serializing a disabled-attack state into saves.
     passive_=false;
-    for (const auto& m:members_) if (Valid(m,wc3::GetLocalPlayer())) wc3::IssueImmediateOrderById(m.unit,Stop);
+    for (const auto& m:members_) if (Valid(m,wc3::GetLocalPlayer())) {spells_.Cancel(m.unit);wc3::IssueImmediateOrderById(m.unit,Stop);}
     Reset();
 }
-void SquadController::Reset() { members_.clear();passive_=false; }
+void SquadController::Reset() { members_.clear();passive_=false;spells_.Reset(); }
 bool SquadController::BlocksUnit(uintptr_t object) const {
     return passive_ && std::any_of(members_.begin(),members_.end(),[&](const Member& m) { return m.object==object; });
 }
@@ -79,8 +86,8 @@ bool SquadController::BlocksAttack(uintptr_t attack) const {
 #ifdef WCS_GAMEPLAY_TEST
 void SquadController::TestLog() const {
     // Read-only telemetry verifies ownership filtering and native motion without altering normal gameplay.
-    for (const auto& m:members_) wc3::Log("fixture squad unit=%08X owner=%08X x=%.1f y=%.1f hp=%.1f order=%d passive=%d",m.unit,
+    for (const auto& m:members_) wc3::Log("fixture squad unit=%08X owner=%08X x=%.1f y=%.1f hp=%.1f order=%d passive=%d mana=%.1f",m.unit,
         wc3::GetOwningPlayer(m.unit),wc3::Real(wc3::GetUnitX(m.unit)),wc3::Real(wc3::GetUnitY(m.unit)),
-        wc3::Real(wc3::GetUnitState(m.unit,0)),wc3::GetUnitCurrentOrder(m.unit),passive_);
+        wc3::Real(wc3::GetUnitState(m.unit,0)),wc3::GetUnitCurrentOrder(m.unit),passive_,wc3::Real(wc3::GetUnitState(m.unit,2)));
 }
 #endif

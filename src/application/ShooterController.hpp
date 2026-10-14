@@ -29,6 +29,7 @@
 #include "../inventory/ItemPickup.hpp"
 #include "../squad/SquadController.hpp"
 #include "../platform/SpellCaster.hpp"
+#include "../presentation/ControlView.hpp"
 #include <string>
 #include <vector>
 #include <chrono>
@@ -45,8 +46,8 @@ public:
     void ResetMouse() { mouseLook_.Reset(); weaponWheel_.Reset();cameraWheel_.Reset(); }
     // Zoom is presentation-only: it must not cancel channeling or switch a carried CS weapon in TPS.
     void RequestMouseWheel(int delta) {
-        if(!Visible() || Buying())return;
-        if(thirdPerson_)cameraWheel_.Add(delta);
+        if(!Visible() || Buying() || UnitFirstPerson())return;
+        if(ThirdPerson())cameraWheel_.Add(delta);
         else {RequestSpellCancel();weaponWheel_.Add(delta);}
     }
     float ThirdPersonDistance() const {return thirdPersonDistance_;}
@@ -54,13 +55,15 @@ public:
     // T switches presentation/combat while preserving the same controlled unit and spell system.
     void RequestViewToggle() {viewToggleRequested_=true;}
     void RequestThirdPersonToggle() {thirdPersonRequested_=true;}
-    bool ThirdPerson() const {return thirdPerson_;}
+    bool ThirdPerson() const {return view_==ControlView::ThirdPerson;}
+    bool UnitFirstPerson() const {return view_==ControlView::UnitFirstPerson;}
+    void RequestUnitViewToggle() {unitViewRequested_=true;}
     // Rendering must consume the repaired attack pose after the game-thread visual clock advances.
     bool ManualAttackAnimating() const {return Visible() && ThirdPerson() && heroAttack_.Animating(GetTickCount()*.001);}
     const UnitAimTarget& AimTarget() const {return aimTarget_;}
     void RequestMenu() { menuRequested_ = true; }
     void RequestRefill() { refillRequested_ = true; }
-    // F9 grants all slots through the same game-thread mailbox as F7.
+    // All-weapons now uses F12; F9 owns the independent unarmed unit view.
     void RequestAllWeapons() { allWeaponsRequested_=true; }
     void RequestItemPickup() { itemRequested_=true; }
     void RequestSquad(bool passive) { squadRequested_=passive ? 2 : 1; }
@@ -88,7 +91,7 @@ public:
     bool SpeedVisible() const { return showSpeed_; }
     // Input queues the toggle; only the simulation tick changes the HUD preference.
     void RequestMinimapToggle() { minimapToggleRequested_=true; }
-    bool MinimapVisible() const { return showMinimap_; }
+    bool MinimapVisible() const { return !UnitFirstPerson() && showMinimap_; }
     const SpellHudSlots& SpellHud() const {return spellHud_;}
     float DisplaySpeed() const { return movement_.Speed()/MovementPhysics::worldScale; }
     // Buy-menu events are consumed on Warcraft's simulation thread, never inside WindowProc.
@@ -101,8 +104,8 @@ public:
     const GameplaySettings& Settings() const { return settings_; }
     bool OwnsWeapon(int slot) const { return slot>=0 && slot<WeaponSlots::Count && inventory_.owned[slot]; }
     int Gold() const { return gold_; }
-    float ViewYaw() const { return yaw_+(thirdPerson_ ? 0 : recoil_.Yaw()); }
-    float ViewPitch() const { return pitch_+(thirdPerson_ ? 0 : recoil_.Pitch()); }
+    float ViewYaw() const { return yaw_+(ThirdPerson() ? 0 : recoil_.Yaw()); }
+    float ViewPitch() const { return pitch_+(ThirdPerson() ? 0 : recoil_.Pitch()); }
     float ViewFov() const { return scopeLevel_==2 ? 10.0f : Scoped() ? 40.0f : 85.0f; }
     const std::string& SkyName() const {
         const auto& choice=settings_.tilesetSky[static_cast<unsigned char>(mapTileset_)];
@@ -180,6 +183,8 @@ private:
     bool Pressed(ShortcutAction action) {return Pressed(settings_.shortcuts.Key(action));}
     void Toggle();
     void ToggleView();
+    void SelectView(ControlView next);
+    void UpdateSquad(DWORD now);
     void AimRay(float* origin,float* direction);
     void Disable(bool restoreCamera);
     void AimAndMove(float dt);
@@ -245,7 +250,8 @@ private:
     UnitAttack heroAttack_;
     UnitLocomotion unitLocomotion_;
     UnitAimTarget aimTarget_;
-    bool thirdPerson_=false,viewToggleRequested_=false,thirdPersonRequested_=false;
+    ControlView view_=ControlView::WeaponsFirstPerson;
+    bool viewToggleRequested_=false,thirdPersonRequested_=false,unitViewRequested_=false;
     NativeSky nativeSky_;
     NativeFogOfWar nativeFog_;
     MouseLook mouseLook_;

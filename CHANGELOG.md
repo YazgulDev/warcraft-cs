@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased — Unarmed unit view and squad spellcasting
+
+- Add F9 to enter a separate first-person unit view from RTS, FPS or third person. Hide weapons,
+  crosshair, HUD, native panels and floating labels. Retain WASD/mouse movement and native unit
+  movement speed. Block player attacks, spell requests and purchases while retaining incoming damage.
+  Press F9 again to return to RTS; F6 and F7 retain their existing mode controls.
+- Move the default free all-weapons shortcut from F9 to F12. Migrate the previous F9 binding to
+  an unused F12/F5/F4 while preserving custom layouts. Conflicting custom F9 actions leave the
+  new binding unassigned until the user selects a free key. Add `[UnitView] Enabled=true` with F8 reload.
+- Let H combat followers use supported native attack, healing, buff and summon spells. Preserve
+  mana, cooldowns, recognized map charges and ongoing casts instead of interrupting them with
+  formation orders. O follow mode stops this module's casts; J releases the squad.
+- Add `[Squad] AutomaticSpells`, `SpellSearchRadius`, `AreaSpellRadius`, `HealBelowPercent`,
+  `BuffRefreshSeconds` and `SpellIntervalMs`. F8 reloads settings; updates preserve user values.
+  Native/map autocast switches remain under Warcraft's control. Arbitrary custom orders, items,
+  passives and toggles are not automated.
+- Add config migration/policy regressions and opt-in native spell fixtures. Verify bare unit-view
+  rendering, blocked player combat, incoming damage, native Storm Bolt and Priest healing with
+  stock autocast disabled, and the O/F8 spellcasting opt-outs in a disposable test map.
+
 ## Unreleased — Close-contact attack playback
 
 - Follow the model's active clip independently of the sprite's pending request. Dense crowds

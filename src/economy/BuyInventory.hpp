@@ -17,7 +17,7 @@ public:
             reserve[i]=owned[i] ? reserves[i] : 0;
         }
     }
-    // F7 grants/refills C4; F9 also unlocks other weapons. Neither changes gold or planted timers.
+    // Free refill grants/refills C4; all-weapons also unlocks other weapons. Neither changes gold or planted timers.
     void Refill(const GameplaySettings& settings,int* ammo,int* reserve,const int* magazines,const int* reserves,bool grantAll=false) {
         for (int i=0;i<WeaponSlots::Count;++i) {
             if (grantAll || i==WeaponSlots::C4) owned[i]=true;

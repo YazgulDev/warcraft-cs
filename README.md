@@ -49,7 +49,7 @@ apply to fresh configs; updates preserve your existing choices. Earlier changes 
 - Mouse-wheel weapon cycling through all seven slots, with high-resolution wheel support.
 - B opens a CS-style buy menu using Warcraft gold; configurable prices, starting kits and shop/building access.
 - No starting C4 by default; unlimited paid C4 purchases and configurable reserve ammunition caps.
-- Multiple planted C4 charges with independent fuses; F11 refills carried equipment and F9 grants every weapon for free.
+- Multiple planted C4 charges with independent fuses; F11 refills carried equipment and F12 grants every weapon for free.
 - Warcraft sky by default in FPS, optional privately converted CS skyboxes, and visible native walkable bridge decks.
 - Configurable 144 FPS pacing and 15000-unit draw distance; corrected near-ground clipping.
 - Trunk-based tree collision, cliff retreat, stable idle movement and safe transformations.
@@ -183,7 +183,8 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 | Right mouse button | Knife/sword: strong attack; AWP: cycle two zoom levels and normal view |
 | F7 | Enter third person directly; press again in third person to return to RTS |
 | R / F11 | Reload / refill all carried ammunition for free |
-| F9 | Get all weapons and full ammunition for free |
+| F9 | Enter unarmed first-person unit view; press again to return to RTS |
+| F12 | Get all weapons and full ammunition for free |
 | B | Open/close the buy menu; number keys or mouse select categories and purchases |
 | . | Buy one ammo pack for the weapon currently held |
 | Esc / 0 in buy menu | Close / back to previous menu (0 closes the main menu) |
@@ -297,7 +298,7 @@ Edit it and press F8 in FPS.
   still governs travel around obstacles.
 - `[Loadout] Mode=melee` starts each map with a loaded USP, knife and sword; `Mode=all` grants all weapons
   with their initial ammunition. `BombCount=0` excludes C4 from the default kit; a positive count opts
-  into starting bombs. Buying C4 grants ownership; F11 grants/refills C4 and F9 grants all weapons.
+  into starting bombs. Buying C4 grants ownership; F11 grants/refills C4 and F12 grants all weapons.
   Updates preserve an existing count; set it to 0 explicitly to adopt the new default on the next map.
   `MaxBombs=100` sets the starting/free-refill/rune amount (0..1000).
   `UnlimitedBombPurchases=true` allows repeated paid purchases beyond that amount; false restores
@@ -314,7 +315,7 @@ Edit it and press F8 in FPS.
   Add custom shop unit rawcodes with `ShopTypes=nmer,ngme`. Both B and every purchase, including `.`,
   check the zone. The menu does not pause the world; leaving a valid zone closes it.
 - F11 refills carried magazines/reserves and grants C4 up to at least `MaxBombs` for free;
-  surplus purchased bombs are retained. F9 also unlocks all weapons.
+  surplus purchased bombs are retained. F12 also unlocks all weapons.
   These shortcuts do not spend gold or bypass Warcraft incapacitation. Legacy `AllowFreeRefill` is ignored.
   Rune rewards still follow `[Runes]` settings, apply only to owned weapons and use `MaxBombs` for C4.
 - `[Sky] Enabled=false` keeps Warcraft's native sky by default; `true` enables a private CS sky in FPS. `Default=Des` is the unknown-tileset fallback;
@@ -458,7 +459,7 @@ For the full list of references, adaptations and license terms, see [NOTICE](NOT
 ### Unit scaling and ammunition limits (test branch)
 
 - `[AK47]`, `[M4A1]`, `[USP]` and `[AWP] MaxReserve` set reserve rounds, excluding the magazine.
-  Defaults are 90, 90, 100 and 30; range 0..100000. Purchases, F11/F9 and rune rewards all use these caps.
+  Defaults are 90, 90, 100 and 30; range 0..100000. Purchases, F11/F12 and rune rewards all use these caps.
   F8 discards surplus reserve after a reduction, without granting ammo or changing loaded rounds.
 - `[Combat] ScaleFireRateFromAttackSpeed=false` is optional (`true`/`false`, also `1`/`0`).
   When enabled, firearm interval is divided by native attack-speed multiplier (0.2..5).
@@ -501,3 +502,50 @@ Missing/empty/invalid values enable the feature; `true`/`false` and `1`/`0` are 
 the key to old configurations and preserve explicit custom values, including C4 prices and
 `AWPOneShot`. To adopt these defaults in an existing installation, set `[C4] Price=3000`,
 `AmmoPrice=3000` and `[Damage] AWPOneShot=false` explicitly.
+
+### Unarmed first-person unit view (test branch)
+
+Select your unit and press **F9** to see the world from its first-person camera. WASD and mouse
+look remain available, with the unit's native movement speed and disabling effects. Weapons,
+hands, crosshair, HUD, minimap, native panels and floating labels are hidden. Your unit cannot
+attack or cast player-requested spells in this mode, and enemies can still attack and damage it.
+Inventory purchases and free weapon/ammo requests are also blocked while the mode is active.
+Warcraft ambience remains audible; CS footsteps are omitted.
+
+Press **F9 again** or **F6** to return to RTS. **F7** selects third person; **T** switches the
+controlled camera to third person. The free all-weapons shortcut is now **F12**. These keys are
+editable under `[Shortcuts]`, including `ToggleUnitView`. Updates migrate the old `AllWeapons=F9`
+to an unused F12/F5/F4 and preserve custom bindings. If another custom action already uses F9,
+`ToggleUnitView` remains `NONE`: assign an unused key yourself.
+
+Set `[UnitView] Enabled=false` and press **F8** to disable this mode. If already active, F8 returns
+you to RTS. Missing or invalid values use `true`; `true`/`false` and `1`/`0` are accepted.
+
+### Automatic squad spells (test branch)
+
+**H** recruits only your nearby units to follow and fight. They can now cast supported native
+combat spells, heal injured allies and use buffs/summons when enemies are nearby. Warcraft
+validates each order and owns its mana cost, cooldown and target restrictions; active casts
+are preserved until completion. **O** selects following without this module's combat casts,
+and **J** releases the squad. These commands also work in unarmed unit view.
+
+Edit `[Squad]` in `Game/WarcraftCS/WarcraftCS.ini`, then press **F8**:
+
+| Key | Default | Meaning and accepted range |
+| --- | --- | --- |
+| `AutomaticSpells` | `true` | Enable this module's squad spell AI; `true`/`false`, `1`/`0`. |
+| `SpellSearchRadius` | `700` | Look for enemies and injured allies within 50..2000 world units. |
+| `AreaSpellRadius` | `250` | Require an enemy within 16..1000 units for untargeted area spells. |
+| `HealBelowPercent` | `85` | Heal allies below this health percentage, 1..100. |
+| `BuffRefreshSeconds` | `20` | Minimum retry interval for buffs/summons and cooldown-free area spells, 1..600 seconds. |
+| `SpellIntervalMs` | `1000` | Minimum interval between spell decisions per follower, 100..10000 milliseconds. |
+
+Numeric values are clamped to their ranges; missing/nonfinite/malformed values use defaults.
+Updates preserve existing settings. Set `AutomaticSpells=false` to cancel this module's current
+casts and stop new ones while retaining ordinary squad attacks. Existing Warcraft/map autocast
+switches are preserved and may still cast independently.
+
+The initial catalog covers recognized stock orders and map abilities based on those orders,
+including Storm Bolt, Chain Lightning, Slow, Priest Heal, Healing Wave, Bloodlust and summons.
+Arbitrary custom spell orders, item abilities, passives and toggle modes are not automated.
+Native target validation still applies; not every customized map ability is supported.

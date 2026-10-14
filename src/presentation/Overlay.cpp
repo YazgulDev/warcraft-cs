@@ -58,6 +58,8 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     const WorldLabelView& barView,float nearPlane,float farPlane) {
     // Explain early returns as well as submitted geometry when investigating a missing aiming mark.
     if (!controller.Visible()) { ReticleDiagnostics::Skip("fps-inactive"); return; }
+    // Unit view contains no mod HUD, arms, reticle, menu or hit feedback; the native sky remains in the world.
+    if(controller.UnitFirstPerson())return;
     if (!wglGetCurrentContext()) { ReticleDiagnostics::Skip("no-gl-context"); return; }
     HGLRC current = wglGetCurrentContext();
     if (context_ != current) {
@@ -188,6 +190,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     // The dedicated key exposes direct entry/RTS exit independently of the active view switch.
     controls+=" | "+key(ShortcutAction::ToggleThirdPerson)+(controller.ThirdPerson() ? ": RTS" : ": THIRD PERSON");
     controls+=" | "+key(ShortcutAction::ToggleView)+(controller.ThirdPerson() ? ": FPS" : ": THIRD PERSON");
+    controls+=" | "+key(ShortcutAction::ToggleUnitView)+": UNIT VIEW";
     std::string equipment="WHEEL: WEAPONS | "+key(ShortcutAction::Weapon6)+": C4 | "+key(ShortcutAction::Pickup)+": ITEM | "+key(ShortcutAction::Buy)+": BUY | "+key(ShortcutAction::BuyAmmo)+": AMMO";
     // The same control now dispatches the unit's primary melee or ranged attack.
     if(controller.ThirdPerson())equipment="LMB: UNIT ATTACK | WASD: MOVE | "+key(ShortcutAction::Pickup)+": ITEM | "+key(ShortcutAction::Buy)+": BUY";

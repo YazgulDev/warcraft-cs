@@ -189,7 +189,7 @@ static int __fastcall WorldHook(uintptr_t ui, uintptr_t unused) {
         RECT rect={};if (windowInput.Window() && GetClientRect(windowInput.Window(),&rect) && rect.bottom>0) labelView.aspect=float(rect.right)/rect.bottom;
         labelView.maximumDistance=controller.Settings().floatingTextDistance;
     }
-    NativeFloatingText::SetView(labelView);
+    NativeFloatingText::SetView(labelView,controller.UnitFirstPerson());
     healthBarView=labelView;healthBarView.maximumDistance=controller.Settings().healthBars.distance;
     healthBarView.verticalFov=healthVerticalFov;healthBarView.aspect=healthAspect;
     // Suppress only the controlled actor during world drawing; menus, portraits and RTS still render it.
@@ -223,7 +223,9 @@ static void __fastcall UIHook(uintptr_t frame, uintptr_t unused) {
 }
 static void APIENTRY DrawElementsHook(GLenum mode, GLsizei count, GLenum type, const void* indices) {
     // Warcraft batches the console after world rendering, including cinematic backing textures.
-    if (healthy && nativeUIPhase && !overlayPass && controller.Visible() && GetTickCount() - lastWorld < 500) {
+    if (healthy && nativeUIPhase && !overlayPass && controller.Visible() &&
+        (controller.UnitFirstPerson() || GetTickCount() - lastWorld < 500)) {
+        if(controller.UnitFirstPerson())return; // Suppress every native UI batch, including minimap and portrait.
         minimap.Submit(mode,count,type,indices,originalDrawElements);return;
     }
     originalDrawElements(mode, count, type, indices);

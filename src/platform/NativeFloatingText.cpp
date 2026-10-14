@@ -5,9 +5,12 @@
 
 namespace {
 WorldLabelView view;
+bool hideAll=false;
 using Draw=void (__thiscall*)(uintptr_t, uintptr_t);
 Draw originalDraw=nullptr;
 void __fastcall DrawHook(uintptr_t manager, uintptr_t, uintptr_t tag) {
+    // Unarmed unit view suppresses screen-space map labels too, without touching tag lifetime or game state.
+    if(hideAll)return;
     // Bit 0 marks world coordinates; screen-space map/HUD labels keep their native path.
     if (view.active && tag && (*reinterpret_cast<unsigned char*>(tag+0x30)&1)) {
         float position[3];std::memcpy(position,reinterpret_cast<void*>(tag),sizeof(position));
@@ -35,4 +38,4 @@ bool NativeFloatingText::Install(uintptr_t base, HookInstaller hook) {
     }
     return hook(target,reinterpret_cast<void*>(DrawHook),reinterpret_cast<void**>(&originalDraw));
 }
-void NativeFloatingText::SetView(const WorldLabelView& snapshot) { view=snapshot; }
+void NativeFloatingText::SetView(const WorldLabelView& snapshot,bool hide) { view=snapshot;hideAll=snapshot.active && hide; }

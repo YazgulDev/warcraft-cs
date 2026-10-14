@@ -76,8 +76,9 @@ Maps do not need editing. Enable FPS again after changing maps.
 
 - WASD/mouse: move and aim; Space: jump; Ctrl: crouch; Shift: walk.
 - Left mouse: shoot or melee; right mouse: strong melee attack or AWP zoom.
-- 1–7: choose weapons; mouse wheel: previous/next weapon; R: reload; F7: refill carried ammunition for free; F9: get all weapons and ammunition for free.
-- E: pick up items/runes; H/O: recruit your units; J: release them.
+- 1–7: choose weapons; mouse wheel: previous/next weapon; R: reload; F11: refill carried ammunition for free; F12: get all weapons and ammunition for free.
+- F7: third-person unit control; F9: unarmed first-person unit view with no UI, player attacks or casts. Press the same key again to return to RTS. Enemies can still damage the unit.
+- E: pick up items/runes; H: recruit your units to follow, fight and cast supported spells; O: follow without this module's combat casts; J: release them. Set `[Squad] AutomaticSpells=false` and press F8 to disable the added spell AI.
 - F6: return to RTS; F10: pause menu; F8: reload configuration.
 
 See [README controls and settings](README.md#controls) for details.

@@ -68,6 +68,7 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
         }
         else if(BackgroundGameplay::Enabled() && command=="view")controller.RequestViewToggle();
         else if(BackgroundGameplay::Enabled() && command=="third")controller.RequestThirdPersonToggle();
+        else if(BackgroundGameplay::Enabled() && command=="unitview")controller.RequestUnitViewToggle();
         // Exercise Q's game-thread path without a desktop key or a fixture-only targeting policy.
         else if(BackgroundGameplay::Enabled() && command=="allytoggle")controller.RequestAllyTargetToggle();
         // Exercise production wheel routing without injecting input into the user's desktop.
@@ -142,6 +143,8 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
             wc3::Log("fixture haste added=%d",wc3::UnitAddItem(unit,item));
         }
         else if(BackgroundGameplay::Enabled() && command=="follow")controller.RequestSquad(true);
+        else if(BackgroundGameplay::Enabled() && command=="fight")controller.RequestSquad(false);
+        else if(BackgroundGameplay::Enabled() && command=="release")controller.RequestSquadRelease();
         else if(BackgroundGameplay::Enabled() && command=="strike") {
             // Aim/target creation uses the existing private request; this exercises production contact damage.
             int slot=2;input>>slot;controller.TestStrike(slot);
@@ -227,6 +230,20 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
                 wc3::SetUnitX(neighbour,&cx);wc3::SetUnitY(neighbour,&cy);party.push_back(neighbour);
                 if(i<4)wc3::IssueTargetOrderById(neighbour,851983,unit);
             }
+        }
+        else if(BackgroundGameplay::Enabled() && command=="spellparty") {
+            // Disposable allied casters exercise real mana/cooldown/channel ownership; normal maps gain no abilities.
+            float x=wc3::Real(wc3::GetUnitX(unit))-220,y=wc3::Real(wc3::GetUnitY(unit))+120,facing=0;
+            auto mage=wc3::CreateUnit(wc3::GetLocalPlayer(),0x486D6B67,&x,&y,&facing);party.push_back(mage);
+            using Level=void (__cdecl*)(wc3::Handle,int,BOOL);using Learn=void (__cdecl*)(wc3::Handle,int);
+            reinterpret_cast<Level>(base+0x3C6D70)(mage,10,FALSE);reinterpret_cast<Learn>(base+0x3C7050)(mage,0x41487462);
+            Mana(base,mage,1000);
+            using Add=BOOL (__cdecl*)(wc3::Handle,int);
+            reinterpret_cast<Add>(base+0x3C82A0)(mage,0x41487462);
+            x-=100;auto priest=wc3::CreateUnit(wc3::GetLocalPlayer(),0x686D7072,&x,&y,&facing);party.push_back(priest);Mana(base,priest,300);
+            // Turn off the fixture priest's stock autocast so healing proves the new squad decision path.
+            if(int off=wc3::OrderId("healoff"))wc3::IssueImmediateOrderById(priest,off);
+            wc3::Log("fixture spellparty mage=%08X priest=%08X boltLevel=%d healLevel=%d",mage,priest,wc3::GetUnitAbilityLevel(mage,0x41487462),wc3::GetUnitAbilityLevel(priest,0x41686561));
         }
         else if(BackgroundGameplay::Enabled() && command=="mana") {
             float mana=0;input>>mana;Mana(base,unit,mana);wc3::Log("fixture mana=%.1f",wc3::Real(wc3::GetUnitState(unit,2)));

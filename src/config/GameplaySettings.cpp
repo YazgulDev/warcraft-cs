@@ -19,6 +19,9 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         if (end==value.c_str() || *end || !std::isfinite(parsed)) { wc3::Log("Invalid config %s.%s; using default",section,key);return fallback; }
         return std::clamp(parsed,0.0f,maximum);
     };
+    // The unarmed camera is independently configurable; malformed values preserve enabled entry.
+    auto unitView=text("UnitView","Enabled","true");
+    result.unitViewEnabled=_stricmp(unitView.c_str(),"false") && unitView!="0";
     // Third-person camera and Arthas swing tuning reload as part of the existing validated snapshot.
     auto thirdEnabled=text("ThirdPerson","Enabled","true");
     if(!_stricmp(thirdEnabled.c_str(),"false") || thirdEnabled=="0")result.thirdPerson.enabled=false;
@@ -153,6 +156,28 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     // An older custom Q binding wins; adding a new action must not reset the player's existing layout.
     if(text("Shortcuts","ToggleAllyTargeting","").empty())for(size_t i=0;i<size_t(ShortcutAction::ToggleAllyTargeting);++i)
         if(result.shortcuts.Key(ShortcutAction(i))=='Q')result.shortcuts.Set(ShortcutAction::ToggleAllyTargeting,0);
+    // Free F9's former all-weapons default without resetting unrelated custom layouts.
+    if(text("Shortcuts","ToggleUnitView","").empty()) {
+        if(result.shortcuts.Key(ShortcutAction::AllWeapons)==VK_F9) {
+            int replacement=0;
+            for(int candidate:{VK_F12,VK_F5,VK_F4}) {
+                bool used=false;for(size_t i=0;i<size_t(ShortcutAction::ToggleUnitView);++i)
+                    if(i!=size_t(ShortcutAction::AllWeapons))used|=result.shortcuts.Key(ShortcutAction(i))==candidate;
+                if(!used){replacement=candidate;break;}
+            }
+            result.shortcuts.Set(ShortcutAction::AllWeapons,replacement);
+        }
+        for(size_t i=0;i<size_t(ShortcutAction::ToggleUnitView);++i)
+            if(result.shortcuts.Key(ShortcutAction(i))==VK_F9)result.shortcuts.Set(ShortcutAction::ToggleUnitView,0);
+    }
+    // Partial legacy layouts may explicitly reserve F12 for refill while omitting AllWeapons.
+    if(text("Shortcuts","AllWeapons","").empty()) {
+        for(int candidate:{VK_F12,VK_F5,VK_F4,0}) {
+            bool used=false;for(size_t i=0;i<ShortcutBindings::Count;++i)
+                if(i!=size_t(ShortcutAction::AllWeapons) && candidate)used|=result.shortcuts.Key(ShortcutAction(i))==candidate;
+            if(!used){result.shortcuts.Set(ShortcutAction::AllWeapons,candidate);break;}
+        }
+    }
     if(!layoutValid || !result.shortcuts.Valid()) {result.shortcuts=ShortcutBindings();wc3::Log("Invalid/conflicting Shortcuts; using default keyboard layout");}
     // Rawcodes and order IDs describe existing abilities; they never grant skills or bypass native costs.
     auto spellsEnabled=text("Spells","Enabled","true");
@@ -217,6 +242,12 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     };
     result.squadRearFormation=squadSwitch("RearFormation");
     result.squadYield=squadSwitch("YieldToPlayer");
+    result.squadAutomaticSpells=squadSwitch("AutomaticSpells");
+    result.squadSpellRadius=std::max(50.f,number("Squad","SpellSearchRadius",700,2000));
+    result.squadAreaSpellRadius=std::max(16.f,number("Squad","AreaSpellRadius",250,1000));
+    result.squadHealBelowPercent=std::max(1.f,number("Squad","HealBelowPercent",85,100));
+    result.squadBuffRefreshSeconds=std::max(1.f,number("Squad","BuffRefreshSeconds",20,600));
+    result.squadSpellIntervalMs=unsigned(std::max(100.f,number("Squad","SpellIntervalMs",1000,10000)));
     result.squadClearance=std::max(60.f,number("Squad","PlayerClearance",100,300));
     result.squadYieldAhead=std::max(result.squadClearance,number("Squad","YieldAheadDistance",350,1000));
     result.squadOrderIntervalMs=unsigned(std::max(50.f,number("Squad","OrderIntervalMs",150,1000)));

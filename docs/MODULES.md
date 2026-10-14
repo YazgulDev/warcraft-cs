@@ -210,3 +210,14 @@ destructables, explicit legacy AWP finishing and disabled/unavailable effects us
 candidates. The controller applies its configurable policy before selecting the nearest unit;
 skipped effects never shorten the ray. Unit type IDs and model filenames are not special-cased.
 Unknown collision facts remain opaque; heroes, structures and physical immune units retain collision.
+
+`ControlView` is the single source of truth for weapon FPS, third person and unarmed unit FPS.
+`ShooterController.SelectView` cancels owned input/combat state before switching, while the input,
+movement and presentation adapters apply that mode's policies. Unit view shares native attack
+suppression with controlled modes, retains incoming damage and omits both overlay and native UI.
+
+`SquadSpellPolicy` owns portable readiness/healing decisions. `SquadSpellcasting` adapts live
+ability slots and native orders to a bounded stock-order catalog, using shared native ability,
+cooldown and map-charge readers. Its order ownership protects wind-up/channeling from formation
+refresh. `SquadController` selects combat/passive behavior, validates player ownership and cancels
+only adapter-owned casts on opt-out. No map ability, mana or autocast switch is rewritten.

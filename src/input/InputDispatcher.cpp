@@ -22,7 +22,7 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM k
     bool up=message==WM_KEYUP || message==WM_SYSKEYUP;
     bool tap=down && !(data&(1L<<30));
     // Log only configured mod controls, never text entry or unrelated desktop keystrokes.
-    bool control=key==VK_F6 || match(ShortcutAction::ToggleFPS) || match(ShortcutAction::ToggleThirdPerson);
+    bool control=key==VK_F6 || match(ShortcutAction::ToggleFPS) || match(ShortcutAction::ToggleThirdPerson) || match(ShortcutAction::ToggleUnitView);
     if(healthy && controller_.Visible())for(size_t i=0;i<ShortcutBindings::Count;++i)control|=match(ShortcutAction(i));
     if(control && (up || tap))wc3::Trace("control key=%u event=%s fps=%d buying=%d healthy=%d",unsigned(key),up ? "up" : "down",controller_.Visible(),controller_.Buying(),healthy);
     if(healthy && controller_.Visible() && (message==WM_LBUTTONDOWN || message==WM_LBUTTONUP || message==WM_RBUTTONDOWN || message==WM_RBUTTONUP || message==WM_MOUSEWHEEL))
@@ -40,9 +40,24 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM k
     if(healthy && match(ShortcutAction::ToggleThirdPerson) && (down || up)) {
         if(tap)controller_.RequestThirdPersonToggle();return 0;
     }
+    // F9 works directly from RTS and restores RTS on its second press, independently of F6/F7.
+    if(healthy && match(ShortcutAction::ToggleUnitView) && (down || up)) {
+        if(tap)controller_.RequestUnitViewToggle();return 0;
+    }
     if(!healthy || !controller_.Visible())return std::nullopt;
     // Native pause is always available and regains ordinary RTS input before its system key is forwarded.
     if(key==VK_F10 && (down || up)) {if(tap)controller_.RequestMenu();return 0;}
+    if(controller_.UnitFirstPerson()) {
+        // Only view recovery, settings and squad control are actions here; held WASD/jump are sampled by physics.
+        if(tap) {
+            if(match(ShortcutAction::ReloadSettings))controller_.RequestSettingsReload();
+            else if(match(ShortcutAction::ToggleView))controller_.RequestViewToggle();
+            else if(match(ShortcutAction::SquadFight))controller_.RequestSquad(false);
+            else if(match(ShortcutAction::SquadFollow))controller_.RequestSquad(true);
+            else if(match(ShortcutAction::SquadRelease))controller_.RequestSquadRelease();
+        }
+        if(down || up || message==WM_CHAR || message==WM_SYSCHAR || (message>=WM_MOUSEFIRST && message<=WM_MOUSELAST))return 0;
+    }
     if(controller_.Buying() && message==WM_LBUTTONDOWN) {
         RECT client={};GetClientRect(window,&client);controller_.RequestBuyClick(short(LOWORD(data)),short(HIWORD(data)),client.right,client.bottom);return 0;
     }

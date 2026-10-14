@@ -13,6 +13,18 @@ uintptr_t Next(uintptr_t base,uintptr_t link) {
     return reinterpret_cast<Resolve>(base+0x4786B0)(link);
 }
 }
+std::vector<int> NativeAbilitySlots::All(uintptr_t base,uintptr_t unit) {
+    std::vector<int> result;if(!base || !unit)return result;
+    uintptr_t ability=Next(base,unit+0x1DC);std::unordered_set<uintptr_t> seen;
+    for(int i=0;ability && i<128 && seen.insert(ability).second;++i) {
+        uintptr_t table=0;int id=0;
+        // Keep only live native ability instances; casting separately rejects passives/unlearned helpers.
+        if(Load(ability,table) && table>=base+0x880000 && table<base+0xA80000 && Load(ability+0x34,id) && id)
+            result.push_back(id);
+        ability=Next(base,ability+0x24);
+    }
+    return result;
+}
 std::array<int,4> NativeAbilitySlots::Read(uintptr_t base,uintptr_t unit) {
     std::array<int,4> result={};if(!base || !unit)return result;
     uintptr_t ability=Next(base,unit+0x1DC);std::unordered_set<uintptr_t> seen;

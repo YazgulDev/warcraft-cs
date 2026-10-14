@@ -11,6 +11,13 @@ namespace wc3 {
 #include "NativeOffsets.inc"
 #undef NATIVE
 static uintptr_t nativeBase = 0;
+int OrderId(const char* name) {
+    const unsigned char signature[]={0x56,0x8B,0x35};
+    if(!name || !nativeBase || std::memcmp(reinterpret_cast<void*>(nativeBase+0x3BAD70),signature,sizeof(signature)))return 0;
+    // Use the same bounded native string wrapper as Animate/Effect, without interning game-owned strings.
+    uintptr_t node[8]={},wrapper[3]={};node[7]=reinterpret_cast<uintptr_t>(name);wrapper[2]=reinterpret_cast<uintptr_t>(node);
+    return reinterpret_cast<int (__fastcall*)(uintptr_t,uintptr_t)>(nativeBase+0x3BAD70)(reinterpret_cast<uintptr_t>(wrapper),0);
+}
 static bool cameraLimitsVerified=false;
 using SurfaceHeight = float (__fastcall*)(int, BOOL*, float, float, BOOL);
 static SurfaceHeight surfaceHeight = nullptr;

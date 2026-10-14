@@ -5,12 +5,19 @@
 #include "../src/presentation/HeroAttackPose.hpp"
 #include "../src/presentation/ModelMotionProfile.hpp"
 #include "../src/config/GameplaySettings.hpp"
+#include "../src/squad/SquadSpellPolicy.hpp"
 #include "../src/input/CameraWheel.hpp"
 #include <cassert>
 #include <cmath>
 #include <fstream>
 namespace wc3 {void Log(const char*,...) {}}
 int main() {
+    // Eligibility and healing thresholds never grant mana, bypass cooldowns or revive a dead target.
+    assert(SquadSpellPolicy::Ready(1,false,false,0) && !SquadSpellPolicy::Ready(0,false,false,0));
+    assert(!SquadSpellPolicy::Ready(1,true,false,0) && !SquadSpellPolicy::Ready(1,false,true,0));
+    assert(!SquadSpellPolicy::Ready(1,false,false,1));
+    assert(SquadSpellPolicy::NeedsHealing(200,500,85) && !SquadSpellPolicy::NeedsHealing(0,500,85));
+    assert(!SquadSpellPolicy::NeedsHealing(500,500,85) && !SquadSpellPolicy::NeedsHealing(200,0,85));
     // Stop may leave a sticky target in Dota. Repeated idle observations must not interrupt manual attack playback.
     NativeOrderCancellation orders;
     assert(orders.Observe(1,100,0));assert(!orders.Observe(1,100,851972));assert(!orders.Observe(1,100,0));
@@ -56,6 +63,8 @@ int main() {
     char path[MAX_PATH];GetFullPathNameA("third-person-settings-test.ini",MAX_PATH,path,nullptr);
     {std::ofstream file(path);file<<"[ThirdPerson]\nCameraDistance=nan\nInitialPitch=bad\nAttackInterval=.4\nContactDelay=2\nAttackRange=-10\nAttackArc=500\nRunCycleDistance=0\nTakeoffDuration=nan\nLandingDuration=5\nMovementAnimations=bad\n";}
     auto settings=GameplaySettings::Load(path);
+    assert(settings.unitViewEnabled && settings.squadAutomaticSpells);
+    assert(settings.shortcuts.Key(ShortcutAction::ToggleUnitView)==VK_F9 && settings.shortcuts.Key(ShortcutAction::AllWeapons)==VK_F12);
     assert(settings.thirdPerson.enabled && settings.thirdPerson.distance==500 && settings.thirdPerson.initialPitch==-12);
     assert(settings.thirdPerson.attackRange==30 && settings.thirdPerson.attackArc==120);
     assert(settings.thirdPerson.contactDelay==settings.thirdPerson.attackInterval);
@@ -68,6 +77,20 @@ int main() {
     WritePrivateProfileStringA("ThirdPerson","RunCycleDistance","250",path);
     WritePrivateProfileStringA("Shortcuts","ToggleView","TAB",path);
     auto reloaded=GameplaySettings::Load(path);
+    // F8 re-parses AI/view preferences and migrates the legacy F9 binding independently of the keyboard layout.
+    WritePrivateProfileStringA("UnitView","Enabled","false",path);
+    WritePrivateProfileStringA("Squad","AutomaticSpells","false",path);
+    WritePrivateProfileStringA("Squad","SpellSearchRadius","nan",path);
+    WritePrivateProfileStringA("Squad","HealBelowPercent","500",path);
+    auto aiReload=GameplaySettings::Load(path);
+    assert(!aiReload.unitViewEnabled && !aiReload.squadAutomaticSpells && aiReload.squadSpellRadius==700 && aiReload.squadHealBelowPercent==100);
+    WritePrivateProfileStringA("Shortcuts","AllWeapons","F9",path);
+    auto oldF9=GameplaySettings::Load(path);assert(oldF9.shortcuts.Key(ShortcutAction::ToggleUnitView)==VK_F9 && oldF9.shortcuts.Key(ShortcutAction::AllWeapons)==VK_F12);
+    // Introducing the new default cannot reset a partial layout with a custom F12 refill.
+    WritePrivateProfileStringA("Shortcuts","AllWeapons",nullptr,path);
+    WritePrivateProfileStringA("Shortcuts","Refill","F12",path);
+    auto partial=GameplaySettings::Load(path);
+    assert(partial.shortcuts.Key(ShortcutAction::Refill)==VK_F12 && partial.shortcuts.Key(ShortcutAction::AllWeapons)==VK_F5);
     assert(!reloaded.thirdPerson.enabled && reloaded.thirdPerson.distance==500 && reloaded.thirdPerson.initialPitch==-60);
     assert(reloaded.shortcuts.Key(ShortcutAction::ToggleView)==VK_TAB);
     assert(!reloaded.thirdPerson.movementAnimations && reloaded.thirdPerson.runCycleDistance==250);

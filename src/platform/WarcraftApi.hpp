@@ -6,6 +6,8 @@
 #include "CameraClipChannel.hpp"
 
 namespace wc3 {
+// Convert built-in order names through the owned game's normal string/order registry.
+int OrderId(const char* name);
 // Independent native visibility switches, used only by the offline FPS override adapter.
 extern void (__cdecl* FogEnable)(BOOL);
 extern void (__cdecl* FogMaskEnable)(BOOL);

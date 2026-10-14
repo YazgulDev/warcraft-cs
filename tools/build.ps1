@@ -61,6 +61,7 @@ $sources += '"' + (Join-Path $modRoot 'src/platform/UnitCollisionProfile.cpp') +
 # Third-person presentation and native melee coordination retain separate ownership from FPS weapons.
 $sources += @('presentation/ThirdPersonCamera.cpp','platform/UnitAttack.cpp','platform/UnitLocomotion.cpp','platform/ActorJumpView.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 $sources += '"'+(Join-Path $modRoot 'src/platform/UnitAttackAnimation.cpp')+'"' # Manual pose lifetime is independent of DPS recovery.
+$sources += '"'+(Join-Path $modRoot 'src/platform/SquadSpellcasting.cpp')+'"' # NPC spell ownership cannot be cancelled by formation refresh.
 # Shop access is native-world policy; inventory prices/navigation remain independently testable.
 $sources += @('economy/BuyAccess.cpp','presentation/BuyMenuView.cpp','presentation/SkyView.cpp','platform/MapEnvironment.cpp','platform/NativeSky.cpp','platform/NativeFloatingText.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 # Install defaults only once so rebuilds preserve the player's customized settings.
