@@ -1,8 +1,11 @@
-param([Parameter(Mandatory=$true)][string]$Directory)
+param([Parameter(Mandatory=$true)][string]$Directory,[string]$ReleaseBodyFile='')
 $ErrorActionPreference='Stop'
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $directoryPath=[IO.Path]::GetFullPath($Directory)
 $manifest=Get-Content -LiteralPath (Join-Path $directoryPath 'WarcraftCS-update.json') -Raw | ConvertFrom-Json
+if(!$ReleaseBodyFile){$ReleaseBodyFile=Join-Path (Split-Path -Parent $PSScriptRoot) ('docs/RELEASE-'+$manifest.Version+'.md')}
+# Reflection needs a CLR string rather than Get-Content's decorated PowerShell object.
+$fullReleaseBody=[IO.File]::ReadAllText([IO.Path]::GetFullPath($ReleaseBodyFile),[Text.Encoding]::UTF8)
 $standard=Join-Path $directoryPath 'WarcraftCSLauncher.exe'
 $included=Join-Path $directoryPath 'WarcraftCSLauncher_DLL_Included.exe'
 function Require([bool]$Condition,[string]$Message) { if (!$Condition) { throw $Message } }
@@ -26,6 +29,12 @@ foreach ($assembly in @($standardAssembly,$includedAssembly)) {
     $notesType=$assembly.GetType('WarcraftCSLauncher.ReleaseNotesText')
     $normalized=$notesType.GetMethod('Format').Invoke($null,@($changes))
     Require ($normalized -eq (($changes -replace '\r?\n',"`r`n"))) 'Packaged change list is not accepted as plain English changes.'
+    # The full API body and the rate-limit manifest fallback must resolve to the same list in each real EXE.
+    $resolutionManifest=[Activator]::CreateInstance($assembly.GetType('WarcraftCSLauncher.ReleaseManifest'))
+    $resolutionManifest.Version=$manifest.Version
+    Require ($notesType.GetMethod('Resolve').Invoke($null,@($resolutionManifest,$fullReleaseBody)) -eq $normalized) 'Full release body resolves to a different launcher summary.'
+    $resolutionManifest.ReleaseNotes=$changes
+    Require ($notesType.GetMethod('Resolve').Invoke($null,@($resolutionManifest,'')) -eq $normalized) 'Manifest-only fallback resolves to a different launcher summary.'
     $stream=$assembly.GetManifestResourceStream('WarcraftCS.Source.zip');$memory=[IO.MemoryStream]::new()
     try {
         $stream.CopyTo($memory);$sha=[Security.Cryptography.SHA256]::Create()
