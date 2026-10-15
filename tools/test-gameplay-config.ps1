@@ -4,6 +4,18 @@ $root=Split-Path -Parent $PSScriptRoot
 $folder=Join-Path $root ('.local/config-merge-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $folder -Force | Out-Null
 $template=Join-Path $root 'config/WarcraftCS.ini'
+. (Join-Path $root 'setup/installation-profile.ps1')
+# Only an explicit setup choice replaces the profile; ordinary F8/default migrations preserve it.
+$profile=Join-Path $folder 'profile.ini'
+@('[Installation]','; private comment','[Combat]','FriendlyFirePercent=17') | Set-Content -LiteralPath $profile -Encoding utf8
+Set-InstallationProfile $profile $true
+Update-GameplayConfig $template $profile
+$text=Get-Content -LiteralPath $profile -Raw
+if(!$text.Contains('WarcraftOnly=true') -or !$text.Contains('FriendlyFirePercent=17') -or ([regex]::Matches($text,'\[Installation\]')).Count -ne 1){throw 'Profile policy lost customization or duplicated its section.'}
+$hash=(Get-FileHash -LiteralPath $profile).Hash;Set-InstallationProfile $profile $true
+if((Get-FileHash -LiteralPath $profile).Hash -ne $hash){throw 'Profile update is not idempotent.'}
+Set-InstallationProfile $profile $false
+if(!(Get-Content -LiteralPath $profile -Raw).Contains('WarcraftOnly=false')){throw 'Full install cannot restore weapons.'}
 # Water occlusion defaults off; explicit legacy opt-ins survive repeated upgrades.
 foreach($choice in @('false','true')) {
     $water=Join-Path $folder ('water-'+$choice+'.ini')

@@ -39,7 +39,9 @@ void ShooterController::Configure(const char* root, uintptr_t gameBase) {
     destructableHitboxes_.Configure(gameBase);
     collision_.Configure(gameBase);
     spells_.Configure(gameBase);
-    audio_.Configure(root_);
+    // Native-only clients do not need a CS mixer or any converted cache to initialize.
+    settings_=GameplaySettings::Load(root_+"\\WarcraftCS.ini");
+    if(!settings_.warcraftOnly)audio_.Configure(root_);
     if (!nativeSky_.Configure(gameBase)) wc3::Log("Native sky signature mismatch; preview disabled");
     ReloadSettings();
     ResetLoadout();
@@ -57,6 +59,7 @@ void ShooterController::RequestBuyClick(int x,int y,int width,int height) {
     if (Buying()) buyKeyRequested_=BuyMenuLayout::Key(x,y,width,height,buyMenu_.Current());
 }
 void ShooterController::Buy(int slot,bool ammunition) {
+    if(settings_.warcraftOnly)return; // All purchase entry points honor the installed mode set.
     if (status_.incapacitated || status_.contained || status_.hidden) { Notice("CANNOT BUY WHILE DISABLED");return; }
     if (!BuyAccess::Allowed(unit_,settings_)) { Notice("OUTSIDE BUY ZONE");return; }
     if (slot<0 || slot>=WeaponSlots::Count) return;
@@ -122,16 +125,18 @@ const char* ShooterController::Sequence(const char* name) const {
     return name;
 }
 float ShooterController::Play(const char* name) {
+    if(settings_.warcraftOnly)return 0;
     animation_ = Sequence(name); animationTick_ = GetTickCount();
     // The supplied sword keeps its authored frame rate; only the retail knife is fitted to its cadence.
     animationRate_ = WeaponSlots::Melee(weapon_) && animation_.find("midslash") == 0 ? (weapon_ == WeaponSlots::Sword ? 1.0f : 2.5f) : 1.0f;
     return audio_.BeginAnimation(weapon_, animation_.c_str(), animationTick_);
 }
 void ShooterController::Sound(const char* name) {
+    if(settings_.warcraftOnly)return;
     audio_.Play(name);
 }
 void ShooterController::SurfaceStep(float volume) {
-    if(UnitFirstPerson())return; // Pure unit view retains Warcraft ambience without CS movement samples.
+    if(UnitFirstPerson() || settings_.warcraftOnly)return; // Native-only views retain Warcraft's own audio.
     // Use CS's default concrete samples for steps, jump push-off and normal ground contact.
     static const char* steps[] = {"pl_step1.wav", "pl_step3.wav", "pl_step2.wav", "pl_step4.wav"};
     audio_.Play(steps[stepIndex_++ % 4], volume);
@@ -208,8 +213,11 @@ void ShooterController::ResetMap() {
     hits_.Clear(); refillRequested_ = false; allWeaponsRequested_=false; refillTick_ = 0; fixtureTarget_ = 0; blastFixtures_.clear();
     ResetLoadout();
 }
-void ShooterController::Toggle() {
+void ShooterController::Toggle(ControlView initial) {
     if (active_) { Disable(true); return; }
+    if(settings_.warcraftOnly && initial==ControlView::WeaponsFirstPerson) {
+        wc3::Log("Weapon FPS disabled by installation profile; use F7 or F9");return;
+    }
     if (!wc3::SinglePlayer()) { wc3::Log("FPS refused: requires one human player"); return; }
     unit_ = wc3::PickOwnedUnit();
     if (!unit_) { wc3::Log("FPS needs a living owned unit or hero"); return; }
@@ -225,12 +233,20 @@ void ShooterController::Toggle() {
     wc3::IssueImmediateOrderById(unit_, 851972);  // stop autonomous attack/movement orders
     float zero = 0; wc3::SetCameraTargetController(0, &zero, &zero, FALSE);
     // Keep native UI/portrait anchors intact; FPS suppresses HUD graphics at GL submission.
-    active_ = true; suspended_ = false; scopeLevel_ = 0; Play("draw");
+    view_=initial;
+    if(ThirdPerson())pitch_=settings_.thirdPerson.initialPitch;
+    active_ = true; suspended_ = false; scopeLevel_ = 0;
+    if(initial==ControlView::WeaponsFirstPerson)Play("draw");
     wc3::Log("FPS enabled: unit=%08X type=%08X", unit_, wc3::GetUnitTypeId(unit_));
 }
-void ShooterController::ToggleView() { SelectView(ThirdPerson() ? ControlView::WeaponsFirstPerson : ControlView::ThirdPerson); }
+void ShooterController::ToggleView() {
+    // T cycles only installed views; the reduced client can never enter an empty weapon view.
+    SelectView(ThirdPerson() ? (settings_.warcraftOnly ? ControlView::UnitFirstPerson : ControlView::WeaponsFirstPerson) : ControlView::ThirdPerson);
+}
 void ShooterController::SelectView(ControlView next) {
     if(!Visible())return;
+    if(next==ControlView::WeaponsFirstPerson && settings_.warcraftOnly)return;
+    if(next==ControlView::UnitFirstPerson && !settings_.unitViewEnabled)return;
     if(next==ControlView::ThirdPerson && !settings_.thirdPerson.enabled) {
         Notice("THIRD PERSON DISABLED IN CONFIG");return;
     }
@@ -378,6 +394,7 @@ void ShooterController::Reload() {
     reloadEnd_ = animationTick_ + DWORD((duration > 0 ? duration : w.reload) * 1000);
 }
 void ShooterController::RefillAmmo(bool grantAll) {
+    if(settings_.warcraftOnly)return;
     // F11 restores carried ammo and grants C4; F12 additionally unlocks every weapon without spending gold.
     int magazines[WeaponSlots::Count],reserves[WeaponSlots::Count];
     for (int i=0;i<WeaponSlots::Count;++i) { magazines[i]=weapons[i].magazine;reserves[i]=settings_.maxReserve[i]; }
@@ -426,8 +443,20 @@ void ShooterController::ReloadSettings() {
         if(key>0)keys_[key]=Down(key);
         wc3::Log("Shortcut %s=%s",ShortcutBindings::Name(action),Shortcut(action).c_str());
     }
-    if(ThirdPerson() && !settings_.thirdPerson.enabled)ToggleView();
+    if(ThirdPerson() && !settings_.thirdPerson.enabled) {
+        if(settings_.warcraftOnly && !settings_.unitViewEnabled)Disable(true);
+        else ToggleView();
+    }
     if(UnitFirstPerson() && !settings_.unitViewEnabled)Disable(true);
+    // F8 may tighten the installation profile, releasing weapon/UI work through the normal transition.
+    if(settings_.warcraftOnly) {
+        settings_.csSky=false;audio_.Stop();
+        if(Visible() && view_==ControlView::WeaponsFirstPerson) {
+            if(settings_.thirdPerson.enabled)SelectView(ControlView::ThirdPerson);
+            else Disable(true);
+        }
+        buyMenu_.Close();
+    }
     wc3::Log("Third person configured enabled=%d distance=%.1f range=%.1f arc=%.1f interval=%.2f delay=%.2f multiplier=%.2f",
         settings_.thirdPerson.enabled,settings_.thirdPerson.distance,settings_.thirdPerson.attackRange,settings_.thirdPerson.attackArc,
         settings_.thirdPerson.attackInterval,settings_.thirdPerson.contactDelay,settings_.thirdPerson.damageMultiplier);
@@ -474,7 +503,7 @@ void ShooterController::PickupItem() {
     ItemPickupResult result=itemPickup_.Take(unit_,settings_.runePickupRadius);
     if (!result.found) return;
     // Equipment uses native inventory slots; only successful powerups award the configured rune ammo.
-    if (!result.accepted || !result.powerup) {
+    if (!result.accepted || !result.powerup || settings_.warcraftOnly) {
         ammoMessage_=result.accepted ? "ITEM PICKED UP" : "CANNOT PICK UP ITEM";
         refillTick_=GetTickCount();return;
     }
@@ -491,6 +520,7 @@ void ShooterController::PickupItem() {
     wc3::Log("rune ammo reward added=%d",added);
 }
 void ShooterController::Fire(bool secondary) {
+    if(settings_.warcraftOnly)return;
     const Weapon& w = weapons[weapon_]; DWORD now = GetTickCount();
     // Keep CS's fractional firing interval: truncating 87.5ms would permit an early M4 shot.
     // IAS changes firearm cadence only; planting and authored melee recovery keep their existing timing.
@@ -518,7 +548,7 @@ void ShooterController::Fire(bool secondary) {
         recoil_.Pitch(), recoil_.Yaw(), recoil_.Shots(),movement_.Speed(),movement_.Grounded(),movement_.Duck());
 }
 void ShooterController::Strike() {
-    if(UnitFirstPerson())return; // Defense in depth: fixtures/queued contacts cannot bypass the no-attack mode.
+    if(UnitFirstPerson() || settings_.warcraftOnly)return; // Queued contacts cannot bypass the installation profile.
     const Weapon& w = weapons[weapon_];
 
     float x = wc3::Real(wc3::GetUnitX(unit_)), y = wc3::Real(wc3::GetUnitY(unit_));
@@ -694,7 +724,7 @@ void ShooterController::Tick(uintptr_t ui) {
         thirdPersonRequested_=false;
         if(active_ && ThirdPerson())Disable(true);
         else if(settings_.thirdPerson.enabled && !paused_ && !*reinterpret_cast<int*>(ui+0x258) && !*reinterpret_cast<int*>(ui+0x260)) {
-            if(!active_) {cinematicRequested_=false;suspended_=false;Toggle();}
+            if(!active_) {cinematicRequested_=false;suspended_=false;Toggle(ControlView::ThirdPerson);}
             if(Visible() && !ThirdPerson())ToggleView();
         }
     }
@@ -702,7 +732,7 @@ void ShooterController::Tick(uintptr_t ui) {
         unitViewRequested_=false;
         if(active_ && UnitFirstPerson())Disable(true);
         else if(settings_.unitViewEnabled && !paused_ && !*reinterpret_cast<int*>(ui+0x258) && !*reinterpret_cast<int*>(ui+0x260)) {
-            if(!active_){cinematicRequested_=false;suspended_=false;Toggle();}
+            if(!active_){cinematicRequested_=false;suspended_=false;Toggle(ControlView::UnitFirstPerson);}
             if(Visible())SelectView(ControlView::UnitFirstPerson);
         }
     }
@@ -885,6 +915,11 @@ void ShooterController::Tick(uintptr_t ui) {
         buyKeyRequested_=spellRequested_=-1;spellCancelRequested_=false;buyMenu_.Close();
         FpsCombatGuard::CancelOrders(unit_);UpdateSquad(now);
         AimAndMove(dt);Camera();audio_.Tick(now);return;
+    }
+    // Drop CS input mailboxes before the shared TPS attack/spell path in reduced installations.
+    if(settings_.warcraftOnly) {
+        refillRequested_=allWeaponsRequested_=buyToggleRequested_=buyAmmoRequested_=false;
+        buyKeyRequested_=-1;buyMenu_.Close();
     }
     if (allWeaponsRequested_) { allWeaponsRequested_=false;refillRequested_=false;RefillAmmo(true); }
     if (refillRequested_) { refillRequested_ = false; RefillAmmo(); }

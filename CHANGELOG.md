@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — Warcraft-only launcher profile
+
+- Add a remembered checkbox in both launcher variants to install F7 third person and F9 unarmed,
+  UI-free first person without a Counter-Strike folder, model/sound conversion or NumPy.
+  Bundled Player setup also skips Python; source builds retain Python/MinHook/C++ requirements.
+- Persist `[Installation] WarcraftOnly` (default false), preserve other settings/saves, and reject
+  older release updates that cannot honor the selected profile. Uncheck and Install with CS to restore weapons.
+- Restrict F6/T and CS supply/buy inputs to installed modes; keep native TPS combat, spells, items,
+  squads and Warcraft audio. Hide unavailable CS hints. Add profile/consent/config/backend regressions.
+
 ## Unreleased — Attacks through water
 
 - Separate combat surface sampling from liquid-aware movement height. Water alone no longer

@@ -7,7 +7,7 @@ namespace WarcraftCSLauncher {
     public sealed class UpdateAvailableForm : Form {
         private readonly bool preview;
         protected override bool ShowWithoutActivation { get { return preview; } }
-        public UpdateAvailableForm(ReleaseUpdate release,string mode,bool preview=false) {
+        public UpdateAvailableForm(ReleaseUpdate release,string mode,bool preview=false,bool warcraftOnly=false) {
             this.preview=preview;
             Text="Warcraft CS update available";ClientSize=new Size(680,470);Font=new Font("Segoe UI",10);
             StartPosition=FormStartPosition.CenterParent;FormBorderStyle=FormBorderStyle.FixedDialog;
@@ -26,7 +26,8 @@ namespace WarcraftCSLauncher {
                 "Player: installs bundled DLLs. No Build Tools or Windows SDK are downloaded.";
             // Update is an explicit consent action; declining this dialog performs no installation.
             // Confirmation covers full runtime repair as well as the selected mode's dependencies.
-            Controls.Add(new Label {Name="ModeDetails",Text=details+"\r\nReinstalls the private game; keeps saves and settings. Close Warcraft first.\r\nPython / NumPy may be prepared. Update accepts the launcher download/dependency terms.",
+            string dependencies=warcraftOnly ? (mode=="Player" ? "Warcraft-only: no CS assets, Python or NumPy." : "Warcraft-only: Python for building; no CS assets or NumPy.") : "Python / NumPy may be prepared.";
+            Controls.Add(new Label {Name="ModeDetails",Text=details+"\r\nReinstalls the private game; keeps saves and settings. Close Warcraft first.\r\n"+dependencies+" Update accepts the download terms.",
                 Left=20,Top=326,Width=640,Height=78});
             var update=new Button {Name="ConfirmUpdate",Text="Update",Left=412,Top=418,Width=118,Height=34,DialogResult=DialogResult.OK};
             var decline=new Button {Name="DeclineUpdate",Text="Not now",Left=542,Top=418,Width=118,Height=34,DialogResult=DialogResult.Cancel};

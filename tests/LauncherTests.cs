@@ -42,6 +42,13 @@ public static class LauncherTests {
             form.Controls["InstallDirectory"].Text=destination;
             Require(!install.Enabled && !update.Enabled && (developer==null || !developer.Enabled),"Folders alone enable install");
             agreement.Checked=true; Require(install.Enabled && update.Enabled && (developer==null || developer.Enabled),"Valid agreement/folders do not enable actions");
+            // Real controls must allow a Warcraft-only install with an empty CS folder, in either EXE.
+            var unitOnly=(CheckBox)form.Controls["WarcraftOnly"];
+            Require(unitOnly!=null && !unitOnly.Checked,"Warcraft-only profile missing or changes legacy default");
+            form.Controls["CounterStrikeDirectory"].Text="";Require(!install.Enabled,"Full installation accepts missing CS");
+            unitOnly.Checked=true;
+            Require(install.Enabled && update.Enabled && !form.Controls["CounterStrikeDirectory"].Enabled,"Unit-only still requires CS");
+            unitOnly.Checked=false;Require(!install.Enabled && form.Controls["CounterStrikeDirectory"].Enabled,"Full profile did not restore CS requirement");
             agreement.Checked=false; Require(!install.Enabled && !update.Enabled && (developer==null || !developer.Enabled),"Revoked agreement did not disable actions");
         }
         Require(LauncherVariant.InstallationMode(false,"Player")=="Developer","Source-only updater selects Player");
@@ -55,6 +62,11 @@ public static class LauncherTests {
         request.InstallDirectory=cs;Reject(request.ValidateDestination,"Original CS folder allowed");
         request.InstallDirectory=Path.GetPathRoot(root);Reject(request.ValidateDestination,"Drive root allowed");
         request.InstallDirectory=destination;request.ValidateDestination();
+        request.WarcraftOnly=true;request.CounterStrikeDirectory="";request.ValidateDestination();
+        request.Save(Path.Combine(root,"warcraft-only.json"));
+        Require(new System.Web.Script.Serialization.JavaScriptSerializer().Deserialize<ClientRequest>(File.ReadAllText(Path.Combine(root,"warcraft-only.json"))).WarcraftOnly,
+            "Reduced profile lost on preferences/update serialization");
+        request.WarcraftOnly=false;request.CounterStrikeDirectory=cs;
         // Legacy JSON keeps TFT; serialization round-trips RoC without treating data as shell arguments.
         var serializer=new System.Web.Script.Serialization.JavaScriptSerializer();
         Require(serializer.Deserialize<ClientRequest>("{}").GameEdition==GameEdition.FrozenThrone,"Legacy preferences change edition");

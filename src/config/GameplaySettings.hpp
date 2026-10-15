@@ -13,6 +13,7 @@
 
 // Editable combat defaults and live settings are replaced as one complete snapshot on F8.
 struct GameplaySettings {
+    bool warcraftOnly=false; // Installation profile excludes CS weapons, assets, economy and samples.
     LoggingSettings logging;
     RenderSettings render;
     HealthBarSettings healthBars;

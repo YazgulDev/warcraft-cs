@@ -6,6 +6,8 @@ namespace WarcraftCSLauncher {
     public sealed class ClientRequest {
         public string WarcraftDirectory { get; set; }
         public string CounterStrikeDirectory { get; set; }
+        // A Warcraft-only client does not convert or require any Counter-Strike assets.
+        public bool WarcraftOnly { get; set; }
         public string InstallDirectory { get; set; }
         public string PythonExecutable { get; set; }
         // Retain the old JSON field for client compatibility; it no longer authorizes automatic installation.
@@ -20,7 +22,7 @@ namespace WarcraftCSLauncher {
             GameEdition=WarcraftCSLauncher.GameEdition.Normalize(GameEdition);
             // Missing legacy mode selects bundled Player modules; only an explicit Developer choice builds locally.
             if (InstallMode!="Player" && InstallMode!="Developer") throw new InvalidOperationException("Choose Player or Developer mode.");
-            if (!Directory.Exists(WarcraftDirectory) || !Directory.Exists(CounterStrikeDirectory))
+            if (!Directory.Exists(WarcraftDirectory) || (!WarcraftOnly && !Directory.Exists(CounterStrikeDirectory)))
                 throw new InvalidOperationException("Select your installed Warcraft III and Counter-Strike folders.");
             var target = Path.GetFullPath(InstallDirectory).TrimEnd(Path.DirectorySeparatorChar);
             // Junctions must not redirect a selected update destination into the original games.
@@ -31,7 +33,8 @@ namespace WarcraftCSLauncher {
             if (target == Path.GetPathRoot(target).TrimEnd(Path.DirectorySeparatorChar))
                 throw new InvalidOperationException("Select a dedicated client folder, not a drive root.");
             // Extracting source must not modify an original game before the PowerShell validator can run.
-            foreach (var game in new[] {WarcraftDirectory, CounterStrikeDirectory}) {
+            foreach (var game in WarcraftOnly ? new[] {WarcraftDirectory} : new[] {WarcraftDirectory, CounterStrikeDirectory}) {
+                if (String.IsNullOrWhiteSpace(game)) continue;
                 var original = Path.GetFullPath(game).TrimEnd(Path.DirectorySeparatorChar);
                 if (target.Equals(original, StringComparison.OrdinalIgnoreCase) ||
                     target.StartsWith(original + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))

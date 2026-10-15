@@ -19,6 +19,9 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         if (end==value.c_str() || *end || !std::isfinite(parsed)) { wc3::Log("Invalid config %s.%s; using default",section,key);return fallback; }
         return std::clamp(parsed,0.0f,maximum);
     };
+    // Missing/malformed profile values preserve the full mod's backwards-compatible default.
+    auto profile=text("Installation","WarcraftOnly","false");
+    result.warcraftOnly=!_stricmp(profile.c_str(),"true") || profile=="1";
     // The unarmed camera is independently configurable; malformed values preserve enabled entry.
     auto unitView=text("UnitView","Enabled","true");
     result.unitViewEnabled=_stricmp(unitView.c_str(),"false") && unitView!="0";

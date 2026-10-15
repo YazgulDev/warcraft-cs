@@ -8,7 +8,7 @@ An unofficial single-player fan project, unaffiliated with Blizzard Entertainmen
 **This Git repository contains source code. The standard launcher and release ZIPs contain
 project source without prebuilt DLLs. A separate DLL-included EXE supplies ready-to-use project modules.
 Neither variant includes game files, models, sounds, maps or saves.
-You need your own installed copies of both games.**
+You need your own Warcraft III installation. CS 1.6 is required only for the full weapon mode.**
 This is an early prototype with known limitations.
 
 **[Download 0.8.0](https://github.com/YazgulDev/warcraft-cs/releases/tag/v0.8.0)** В·
@@ -23,6 +23,9 @@ apply to fresh configs; updates preserve your existing choices. Earlier changes 
 
 ## Features
 
+- Both launchers offer **Only Warcraft modes**: F7 third person with native attacks/spells,
+  F9 first person without weapons/UI. No CS folder or conversion; Player also skips Python/NumPy.
+  T switches between these two views and F6 returns to RTS. Uncheck and Install with CS to restore weapons.
 - Windows EXE launcher with game-folder selection, consent before dependency setup, live logs and Play.
 - Remembered Reign of Chaos / The Frozen Throne selection; `play-roc.bat` starts RoC from a source installation.
 - F6 switches between FPS and RTS; fullscreen launch, relative mouse look and hidden player-unit model.

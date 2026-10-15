@@ -70,6 +70,10 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
         else if(BackgroundGameplay::Enabled() && command=="view")controller.RequestViewToggle();
         else if(BackgroundGameplay::Enabled() && command=="third")controller.RequestThirdPersonToggle();
         else if(BackgroundGameplay::Enabled() && command=="unitview")controller.RequestUnitViewToggle();
+        // Observe production profile gates after queued inputs settle, without touching desktop input.
+        else if(BackgroundGameplay::Enabled() && command=="profile")
+            wc3::Log("fixture profile only=%d active=%d third=%d unitview=%d buying=%d",
+                controller.Settings().warcraftOnly,controller.Visible(),controller.ThirdPerson(),controller.UnitFirstPerson(),controller.Buying());
         // Exercise Q's game-thread path without a desktop key or a fixture-only targeting policy.
         else if(BackgroundGameplay::Enabled() && command=="allytoggle")controller.RequestAllyTargetToggle();
         // Exercise production wheel routing without injecting input into the user's desktop.

@@ -179,5 +179,13 @@ int main() {
     WritePrivateProfileStringA("ThirdPerson","CameraMaxDistance","800",path);
     WritePrivateProfileStringA("ThirdPerson","CameraZoomStep","75",path);
     zoom=GameplaySettings::Load(path).thirdPerson;wheel.Add(-120);assert(wheel.Take(500,zoom)==575);
+    // Installation policy loads independently of camera tuning and rejects malformed opt-ins.
+    assert(!GameplaySettings::Load(path).warcraftOnly);
+    WritePrivateProfileStringA("Installation","WarcraftOnly","true",path);
+    assert(GameplaySettings::Load(path).warcraftOnly);
+    WritePrivateProfileStringA("Installation","WarcraftOnly","1",path);
+    assert(GameplaySettings::Load(path).warcraftOnly);
+    WritePrivateProfileStringA("Installation","WarcraftOnly","broken",path);
+    assert(!GameplaySettings::Load(path).warcraftOnly);
     DeleteFileA(path);
 }

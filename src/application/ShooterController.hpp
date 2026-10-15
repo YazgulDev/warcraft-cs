@@ -192,7 +192,7 @@ private:
     bool Down(int key) const;
     bool Down(ShortcutAction action) const {return Down(settings_.shortcuts.Key(action));}
     bool Pressed(ShortcutAction action) {return Pressed(settings_.shortcuts.Key(action));}
-    void Toggle();
+    void Toggle(ControlView initial=ControlView::WeaponsFirstPerson);
     void ToggleView();
     void SelectView(ControlView next);
     void UpdateSquad(DWORD now);
