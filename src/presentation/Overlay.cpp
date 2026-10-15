@@ -1,6 +1,7 @@
 #include "Overlay.hpp"
 #include "ScopeView.hpp"
 #include "ReticleView.hpp"
+#include "TargetMarkerView.hpp"
 #include "ReticleDiagnostics.hpp"
 #include "BuyMenuView.hpp"
 #include "HudHints.hpp"
@@ -57,6 +58,8 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     const WorldLabelView& barView,float nearPlane,float farPlane) {
     // Explain early returns as well as submitted geometry when investigating a missing aiming mark.
     if (!controller.Visible()) { ReticleDiagnostics::Skip("fps-inactive"); return; }
+    // Unit view contains no mod HUD, arms, reticle, menu or hit feedback; the native sky remains in the world.
+    if(controller.UnitFirstPerson())return;
     if (!wglGetCurrentContext()) { ReticleDiagnostics::Skip("no-gl-context"); return; }
     HGLRC current = wglGetCurrentContext();
     if (context_ != current) {
@@ -126,12 +129,13 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     float top = std::tan(45.0f * 0.01745329252f) * projectionScale; float side = top * width / height;
     glFrustum(-side, side, -top, top, 1, 200);
     glMatrixMode(GL_MODELVIEW); glPushMatrix(); glLoadIdentity();
-    if (!attempted_[index]) {
+    // Unit-only installations never open even a retained cache from an earlier full install.
+    if (!controller.Settings().warcraftOnly && !attempted_[index]) {
         attempted_[index] = true;
         static const char* names[] = {"ak47", "m4a1", "usp", "awp", "knife", "c4", "sword"};
         loaded_[index] = guns_[index].Load(root_ + "\\assets\\" + names[index] + ".wcg");
     }
-    if (loaded_[index] && !controller.Status().contained && !controller.Status().hidden && !controller.Scoped() && (index != WeaponSlots::C4 || controller.Ammo() > 0)) {
+    if (!controller.ThirdPerson() && loaded_[index] && !controller.Status().contained && !controller.Status().hidden && !controller.Scoped() && (index != WeaponSlots::C4 || controller.Ammo() > 0)) {
         // Give the weapon its own depth pass: back faces must not paint over the skin.
         glDepthMask(GL_TRUE); glClearDepth(1); glClear(GL_DEPTH_BUFFER_BIT);
         glEnable(GL_DEPTH_TEST); glDepthFunc(GL_LEQUAL); glDepthRange(0, 1);
@@ -154,6 +158,9 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     }
     else if (controller.Scoped()) ScopeView::Draw(float(width), float(height));
     else ReticleView::DrawHipFire(float(width), float(height), controller.Recoil());
+    // The circle and brackets identify the next reachable contact without a text caption.
+    if(!unavailableView && !controller.Buying() && controller.ThirdPerson() && controller.Settings().thirdPerson.showTargetIndicator)
+        TargetMarkerView::Draw(controller.AimTarget(),barView,width,height,nearPlane,farPlane);
     // Scale the bottom HUD from a readable 42-pixel font at 1080p, with safe edge padding.
     int statusSize = std::clamp(int(std::lround(height * (42.0f / 1080.0f))), 26, 84);
     Font(dc, statusSize);
@@ -162,6 +169,9 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         ShooterController::weapons[index].name, controller.Ammo(), controller.Reserve(),controller.Gold());
     // Melee equipment has no magazine; show only its name instead of a misleading empty-ammo counter.
     if (WeaponSlots::Melee(index)) sprintf_s(status, "HP %.0f   %s   GOLD %d", controller.Health(), ShooterController::weapons[index].name,controller.Gold());
+    // Hero combat has no magazine or CS weapon label; expose the mode and live native attack instead.
+    if(controller.ThirdPerson())sprintf_s(status,"HP %.0f   UNIT ATTACK %.0f   GOLD %d",controller.Health(),
+        controller.Status().attackDamage*controller.Settings().thirdPerson.damageMultiplier,controller.Gold());
     float statusPad = statusSize * 0.75f, statusY = height - statusPad;
     glColor4f(1.0f, 0.85f, 0.3f, 1); Text(statusPad, statusY, status, statusFont_);
     // Installation progress and fuse are independent of which weapon is currently equipped.
@@ -178,10 +188,25 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     auto mapLayout=MinimapLayout::Calculate(width,height,controller.Settings().minimapSizePercent);
     if(controller.MinimapVisible())minimap.Draw(mapLayout);
     std::string controls="Warcraft CS by Yazgul | "+key(ShortcutAction::ToggleFPS)+": RTS | "+key(ShortcutAction::ReloadSettings)+": CONFIG | "+key(ShortcutAction::Minimap)+": MINIMAP | "+key(ShortcutAction::Speed)+": SPEED | "+key(ShortcutAction::Fog)+": FOG";
+    // The dedicated key exposes direct entry/RTS exit independently of the active view switch.
+    controls+=" | "+key(ShortcutAction::ToggleThirdPerson)+(controller.ThirdPerson() ? ": RTS" : ": THIRD PERSON");
+    controls+=" | "+key(ShortcutAction::ToggleView)+(controller.ThirdPerson() ? (controller.Settings().warcraftOnly ? ": UNIT VIEW" : ": FPS") : ": THIRD PERSON");
+    controls+=" | "+key(ShortcutAction::ToggleUnitView)+": UNIT VIEW";
     std::string equipment="WHEEL: WEAPONS | "+key(ShortcutAction::Weapon6)+": C4 | "+key(ShortcutAction::Pickup)+": ITEM | "+key(ShortcutAction::Buy)+": BUY | "+key(ShortcutAction::BuyAmmo)+": AMMO";
+    // The same control now dispatches the unit's primary melee or ranged attack.
+    if(controller.ThirdPerson())equipment="LMB: UNIT ATTACK | WASD: MOVE | "+key(ShortcutAction::Pickup)+": ITEM | "+key(ShortcutAction::Buy)+": BUY";
+    if(controller.Settings().warcraftOnly)equipment="LMB: UNIT ATTACK | WASD: MOVE | WHEEL: CAMERA | "+key(ShortcutAction::Pickup)+": ITEM";
+    // Show the shared direct-contact mode continuously, including after the transient Q notice disappears.
+    equipment+=" | "+key(ShortcutAction::ToggleAllyTargeting)+": ALLIES "+(controller.Settings().targetAllies ? "ON" : "OFF");
     std::string abilities=key(ShortcutAction::HealthBars)+": HEALTH BARS | "+key(ShortcutAction::Spell1)+"/"+key(ShortcutAction::Spell2)+"/"+key(ShortcutAction::Spell3)+"/"+key(ShortcutAction::Spell4)+": SPELLS | "+key(ShortcutAction::SelfCast)+": SELF";
     char squad[256];sprintf_s(squad,"%s: FIGHT | %s: FOLLOW | %s: RELEASE | SQUAD %u %s | %s: FREE AMMO | %s: ALL WEAPONS",
         key(ShortcutAction::SquadFight).c_str(),key(ShortcutAction::SquadFollow).c_str(),key(ShortcutAction::SquadRelease).c_str(),unsigned(controller.SquadCount()),controller.SquadCount() ? (controller.SquadPassive() ? "FOLLOW" : "COMBAT") : "",key(ShortcutAction::Refill).c_str(),key(ShortcutAction::AllWeapons).c_str());
+    // Reduced clients advertise only available actions; native spells and squad controls remain visible.
+    if(controller.Settings().warcraftOnly) {
+        sprintf_s(squad,"%s: FIGHT | %s: FOLLOW | %s: RELEASE | SQUAD %u %s",
+            key(ShortcutAction::SquadFight).c_str(),key(ShortcutAction::SquadFollow).c_str(),key(ShortcutAction::SquadRelease).c_str(),
+            unsigned(controller.SquadCount()),controller.SquadCount() ? (controller.SquadPassive() ? "FOLLOW" : "COMBAT") : "");
+    }
     int hintRight=controller.MinimapVisible() ? mapLayout.x-mapLayout.padding : width-25;
     int columns=std::max(1,(hintRight-25)/hintGlyphWidth_);float hintY=27;
     for(const auto& group : {controls,equipment,abilities,std::string(squad)}) {

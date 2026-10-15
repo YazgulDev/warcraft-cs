@@ -1,6 +1,6 @@
 # Warcraft CS requirements
 
-Applies to **0.7.0**. See [Release Notes](docs/RELEASE-0.7.0.md) for changes and
+Applies to **0.8.0**. See [Release Notes](docs/RELEASE-0.8.0.md) for changes and
 [antivirus troubleshooting](TROUBLESHOOTING.md#antivirus) for unsigned-module detections.
 
 ## Playing through the Windows launcher
@@ -32,6 +32,10 @@ Select the game root containing:
 The original folder is read locally. Setup creates a separate marked Warcraft copy, including its audio providers.
 
 ## Required Counter-Strike files
+
+These files are optional when **Only Warcraft modes** is checked in either launcher.
+That profile skips CS conversion; bundled Player setup also skips Python/NumPy.
+Source builds still require Python and the C++ toolchain. See [installation profiles](INSTALL.md#2-agree-and-install).
 
 Inside `cstrike`, retain:
 

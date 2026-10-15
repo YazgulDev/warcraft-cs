@@ -22,7 +22,7 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM k
     bool up=message==WM_KEYUP || message==WM_SYSKEYUP;
     bool tap=down && !(data&(1L<<30));
     // Log only configured mod controls, never text entry or unrelated desktop keystrokes.
-    bool control=key==VK_F6 || match(ShortcutAction::ToggleFPS);
+    bool control=key==VK_F6 || match(ShortcutAction::ToggleFPS) || match(ShortcutAction::ToggleThirdPerson) || match(ShortcutAction::ToggleUnitView);
     if(healthy && controller_.Visible())for(size_t i=0;i<ShortcutBindings::Count;++i)control|=match(ShortcutAction(i));
     if(control && (up || tap))wc3::Trace("control key=%u event=%s fps=%d buying=%d healthy=%d",unsigned(key),up ? "up" : "down",controller_.Visible(),controller_.Buying(),healthy);
     if(healthy && controller_.Visible() && (message==WM_LBUTTONDOWN || message==WM_LBUTTONUP || message==WM_RBUTTONDOWN || message==WM_RBUTTONUP || message==WM_MOUSEWHEEL))
@@ -36,14 +36,34 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM k
     if((key==VK_F6 || match(ShortcutAction::ToggleFPS)) && (down || up)) {
         if(tap)controller_.RequestToggle();return 0;
     }
+    // The dedicated third-person entry works from RTS too; only the game-thread mailbox changes modes.
+    if(healthy && match(ShortcutAction::ToggleThirdPerson) && (down || up)) {
+        if(tap)controller_.RequestThirdPersonToggle();return 0;
+    }
+    // F9 works directly from RTS and restores RTS on its second press, independently of F6/F7.
+    if(healthy && match(ShortcutAction::ToggleUnitView) && (down || up)) {
+        if(tap)controller_.RequestUnitViewToggle();return 0;
+    }
     if(!healthy || !controller_.Visible())return std::nullopt;
     // Native pause is always available and regains ordinary RTS input before its system key is forwarded.
     if(key==VK_F10 && (down || up)) {if(tap)controller_.RequestMenu();return 0;}
+    if(controller_.UnitFirstPerson()) {
+        // Only view recovery, settings and squad control are actions here; held WASD/jump are sampled by physics.
+        if(tap) {
+            if(match(ShortcutAction::ReloadSettings))controller_.RequestSettingsReload();
+            else if(match(ShortcutAction::ToggleView))controller_.RequestViewToggle();
+            else if(match(ShortcutAction::SquadFight))controller_.RequestSquad(false);
+            else if(match(ShortcutAction::SquadFollow))controller_.RequestSquad(true);
+            else if(match(ShortcutAction::SquadRelease))controller_.RequestSquadRelease();
+        }
+        if(down || up || message==WM_CHAR || message==WM_SYSCHAR || (message>=WM_MOUSEFIRST && message<=WM_MOUSELAST))return 0;
+    }
     if(controller_.Buying() && message==WM_LBUTTONDOWN) {
         RECT client={};GetClientRect(window,&client);controller_.RequestBuyClick(short(LOWORD(data)),short(HIWORD(data)),client.right,client.bottom);return 0;
     }
     if(message==WM_MOUSEWHEEL) {
-        if(GetForegroundWindow()==window) {controller_.RequestSpellCancel();controller_.RequestWeaponWheel(GET_WHEEL_DELTA_WPARAM(key));}return 0;
+        // The controller routes TPS zoom separately from FPS weapon selection on its game-thread mailbox.
+        if(GetForegroundWindow()==window)controller_.RequestMouseWheel(GET_WHEEL_DELTA_WPARAM(key));return 0;
     }
     // New deliberate movement/fire interrupts channeling; a held key cannot repeatedly cancel new casts.
     if(message==WM_LBUTTONDOWN || message==WM_RBUTTONDOWN)controller_.RequestSpellCancel();
@@ -56,13 +76,17 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM k
         // Buy row numbers belong to the open catalog even when weapon shortcuts were remapped.
         if(controller_.Buying() && key>='0' && key<='9') {if(tap)controller_.RequestBuyKey(int(key-'0'));return 0;}
         if(tap) {
-            if(match(ShortcutAction::Buy))controller_.RequestBuyToggle();
+            // A queued view switch cannot alter native rendering/input from inside WindowProc.
+            if(match(ShortcutAction::ToggleView))controller_.RequestViewToggle();
+            else if(match(ShortcutAction::Buy))controller_.RequestBuyToggle();
             else if(match(ShortcutAction::BuyAmmo))controller_.RequestBuyAmmo();
             // Minimap follows the same configurable, one-tap input routing as other HUD switches.
             else if(match(ShortcutAction::Minimap))controller_.RequestMinimapToggle();
             else if(match(ShortcutAction::Speed))controller_.RequestSpeedToggle();
             else if(match(ShortcutAction::Fog))controller_.RequestFogToggle();
             else if(match(ShortcutAction::HealthBars))controller_.RequestHealthBarToggle();
+            // One edge queues the shared FPS/TPS allied-contact preference.
+            else if(match(ShortcutAction::ToggleAllyTargeting))controller_.RequestAllyTargetToggle();
             else if(match(ShortcutAction::Refill))controller_.RequestRefill();
             else if(match(ShortcutAction::AllWeapons))controller_.RequestAllWeapons();
             else if(match(ShortcutAction::ReloadSettings))controller_.RequestSettingsReload();

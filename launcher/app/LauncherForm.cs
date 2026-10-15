@@ -11,6 +11,7 @@ namespace WarcraftCSLauncher {
     public sealed class LauncherForm : Form {
         private readonly TextBox warcraft = new TextBox(), cs = new TextBox(), destination = new TextBox();
         private readonly CheckBox consent = new CheckBox();
+        private readonly CheckBox warcraftOnly = new CheckBox();
         private readonly Button install = new Button(), developer = new Button(), update = new Button(), play = new Button(), check = new Button();
         private readonly TextBox log = new TextBox();
         private readonly Label status = new Label();
@@ -28,7 +29,7 @@ namespace WarcraftCSLauncher {
             this.preview=preview;
             includesRuntime=runtimeIncluded ?? LauncherVariant.IncludesRuntime;
             Text = "Warcraft CS by Yazgul - Launcher";
-            ClientSize = new Size(780, 907); MinimumSize = Size; MaximizeBox = false;
+            ClientSize = new Size(780, 965); MinimumSize = Size; MaximizeBox = false;
             Font = new Font("Segoe UI", 10); AutoScaleMode = AutoScaleMode.Dpi;
             StartPosition = FormStartPosition.CenterScreen;
             // Keep the agreement/actions reachable on small displays and Windows display scaling.
@@ -57,7 +58,8 @@ namespace WarcraftCSLauncher {
                      "Python (~26 MB if missing) and NumPy convert your local CS assets.\r\n"+
                      "Source builds also obtain MinHook. Existing compatible tools are reused.\r\n"+
                      "Microsoft tools may request administrator approval or a restart.\r\n"+
-                     "You supply both games. Downloads and installation require your agreement."};
+                     "Warcraft-only skips CS conversion; Player also skips Python / NumPy.\r\n"+
+                     "You supply Warcraft (and CS for weapons). Installation requires your agreement."};
             Controls.Add(explanation);
             AddLink("Python terms", "https://docs.python.org/3/license.html", 24, 489);
             AddLink("Microsoft terms", "https://visualstudio.microsoft.com/license-terms/", 157, 489);
@@ -93,6 +95,12 @@ namespace WarcraftCSLauncher {
             status.SetBounds(24,771,732,38); status.Text="Choose folders, agree to downloads, then click Install."; Controls.Add(status);
             log.SetBounds(24,813,732,80); log.Multiline=true; log.ReadOnly=true; log.ScrollBars=ScrollBars.Vertical;
             log.Font=new Font("Consolas", 9); Controls.Add(log);
+            // Insert the profile above consent, keeping the complete small-screen scroll layout together.
+            foreach(Control control in Controls)if(control.Top>=323)control.Top+=58;
+            warcraftOnly.Name="WarcraftOnly";warcraftOnly.Text="Only Warcraft modes: third person (F7) and first person without UI (F9)";
+            warcraftOnly.SetBounds(24,320,732,28);Controls.Add(warcraftOnly);
+            AddLabel("No Counter-Strike folder/assets required. CS weapons and buy menu are disabled.",24,349,732,26,Font);
+            warcraftOnly.CheckedChanged += (s,e) => RefreshActions();
             foreach (var box in new[] {warcraft,cs,destination}) box.TextChanged += (s,e) => RefreshActions();
             FormClosing += (s,e) => { if (busy) { e.Cancel=true; MessageBox.Show(this,"Wait for installation to finish. Vendor installers must not be interrupted."); } };
             if (!preview) LoadPrevious();
@@ -105,14 +113,15 @@ namespace WarcraftCSLauncher {
             try {
                 if (!File.Exists(Preferences)) return;
                 var saved=new JavaScriptSerializer().Deserialize<ClientRequest>(File.ReadAllText(Preferences));
-                // Restore folders and the edition only; saved preferences never grant download permission.
+                // Restore folders, edition and profile; saved preferences never grant download permission.
                 warcraft.Text=saved.WarcraftDirectory; cs.Text=saved.CounterStrikeDirectory; destination.Text=saved.InstallDirectory;
+                warcraftOnly.Checked=saved.WarcraftOnly;
                 edition.SelectedIndex=GameEdition.Normalize(saved.GameEdition)==GameEdition.ReignOfChaos ? 1 : 0;
             } catch (Exception error) { Report("Preferences load failed: "+error);status.Text="Previous folder settings could not be loaded. Select folders again."; }
         }
         private void FolderRow(string title, TextBox box, int y) {
             AddLabel(title,24,y,730,24,Font); box.SetBounds(24,y+27,619,30); Controls.Add(box);
-            var browse=new Button {Text="Browse...", Left=656, Top=y+26, Width=100, Height=31};
+            var browse=new Button {Text="Browse...", Left=656, Top=y+26, Width=100, Height=31,Tag=box};
             browse.Click += (s,e) => { if (busy) return; using (var dialog=new FolderBrowserDialog {Description=title, SelectedPath=box.Text})
                 if (dialog.ShowDialog(this)==DialogResult.OK) box.Text=dialog.SelectedPath; };
             Controls.Add(browse);
@@ -125,7 +134,9 @@ namespace WarcraftCSLauncher {
             link.LinkClicked += (s,e) => Process.Start(new ProcessStartInfo(url) {UseShellExecute=true}); Controls.Add(link);
         }
         private void RefreshActions() {
-            install.Enabled=!busy && consent.Checked && Directory.Exists(warcraft.Text) && Directory.Exists(cs.Text) && !String.IsNullOrWhiteSpace(destination.Text);
+            cs.Enabled=!busy && !warcraftOnly.Checked;warcraftOnly.Enabled=!busy;
+            foreach(Control control in Controls)if(control.Tag==cs)control.Enabled=cs.Enabled;
+            install.Enabled=!busy && consent.Checked && Directory.Exists(warcraft.Text) && (warcraftOnly.Checked || Directory.Exists(cs.Text)) && !String.IsNullOrWhiteSpace(destination.Text);
             developer.Enabled=includesRuntime && install.Enabled;
             update.Enabled=install.Enabled && !checking;
             play.Enabled=!busy && File.Exists(Path.Combine(destination.Text,"client-installed.json"));
@@ -161,14 +172,14 @@ namespace WarcraftCSLauncher {
             try {
                 await SetupRunner.Install(request, consent.Checked, Report);
                 Directory.CreateDirectory(Path.GetDirectoryName(Preferences)); request.Save(Preferences);
-                status.Text="Ready. Press Play, select a living owned unit and press F6.";
+                status.Text=request.WarcraftOnly ? "Ready. Press Play, select your unit, then F7 (third person) or F9 (unit view)." : "Ready. Press Play, select a living owned unit and press F6.";
                 Report("Install completed mode="+mode);
             } catch (Exception error) { Report(error.ToString()); status.Text="Installation incomplete. Check the log and try again."; }
             finally { SetBusy(false); }
         }
         private ClientRequest CurrentRequest(string mode) {
             return new ClientRequest {WarcraftDirectory=warcraft.Text,CounterStrikeDirectory=cs.Text,
-                InstallDirectory=destination.Text,InstallMode=mode,
+                InstallDirectory=destination.Text,InstallMode=mode,WarcraftOnly=warcraftOnly.Checked,
                 GameEdition=edition.SelectedIndex==1 ? GameEdition.ReignOfChaos : GameEdition.FrozenThrone};
         }
         private string InstalledMode() {
@@ -215,7 +226,7 @@ namespace WarcraftCSLauncher {
         private async Task ConfirmUpdate() {
             if (latest==null || busy || IsDisposed) return;
             var mode=InstalledMode();
-            using (var dialog=new UpdateAvailableForm(latest,mode)) {
+            using (var dialog=new UpdateAvailableForm(latest,mode,false,warcraftOnly.Checked)) {
                 if (dialog.ShowDialog(this)!=DialogResult.OK) { Report("Update postponed. Use Update when ready.");return; }
             }
             consent.Checked=true;await ApplyUpdate(mode);
@@ -250,7 +261,8 @@ namespace WarcraftCSLauncher {
                 await Task.Run(() => GameLaunch.Start(request.InstallDirectory,request.GameEdition));
                 // Remember the chosen campaign after a successful launch without granting download consent.
                 Directory.CreateDirectory(Path.GetDirectoryName(Preferences)); request.Save(Preferences);
-                status.Text="Warcraft started. Select your unit and press F6.";
+                status.Text=saved.ContainsKey("warcraft_only") && saved["warcraft_only"]=="True" ?
+                    "Warcraft started. Select your unit: F7 third person, F9 first person without UI." : "Warcraft started. Select your unit and press F6.";
                 Report("Play completed edition="+request.GameEdition);
             } catch (Exception error) { Report(error.ToString()); status.Text="Could not start Warcraft. Read the log."; }
             finally { SetBusy(false); }

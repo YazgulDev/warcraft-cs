@@ -1,5 +1,6 @@
 #include "../src/platform/WarcraftCollision.hpp"
 #include "../src/platform/DiagnosticLog.hpp"
+#include "../src/platform/UnitCollisionProfile.hpp"
 #include "MovementStrafeInput.hpp"
 #include <cmath>
 #include <cstdio>
@@ -13,6 +14,8 @@ bool bridgeAlive=true,edge=false,nativeBlocked=false,cliff=false,invalidDeck=fal
 bool drop=false, prop=false, wall=false, slope=false, water=false;
 bool tree=false,canopyBounds=false;
 bool wideCliff=false;
+float slopeGradient=.3f;
+bool narrowPassage=false;
 wc3::Bits Bits(float value) { wc3::Bits bits;std::memcpy(&bits,&value,4);return bits; }
 wc3::Bits __cdecl X(wc3::Handle) {return Bits(unitX);}
 wc3::Bits __cdecl Y(wc3::Handle) {return Bits(unitY);}
@@ -20,6 +23,7 @@ BOOL __cdecl Blocked(float* x,float* y,int) {
     // Stock tree pathing retains its trunk footprint while the canopy above remains empty space.
     if(tree) return *x>=88 && *x<=152 && std::abs(*y)<=32;
     if(slope) return FALSE;
+    if(narrowPassage)return std::abs(*y)>20;
     if (drop) return *x >= 8 && *x <= (wideCliff ? 144 : 56);
     if (prop || wall) return *x >= 60 && *x <= 80;
     return *x>=32;
@@ -60,7 +64,7 @@ Bits (__cdecl* GetRectMaxX)(Handle)=Maximum;
 Bits (__cdecl* GetRectMaxY)(Handle)=Maximum;
 void (__cdecl* RemoveRect)(Handle)=Remove;
 float Real(Bits bits){float f;std::memcpy(&f,&bits,4);return f;}
-float TerrainGround(float x,float){return slope ? 100.f+x*.3f : drop && x>=32 ? 0.f : cliff && x>=32 ? 180.f : 100.f;}
+float TerrainGround(float x,float){return slope ? 100.f+x*slopeGradient : drop && x>=32 ? 0.f : cliff && x>=32 ? 180.f : 100.f;}
 float Ground(float x,float y){return TerrainGround(x,y)+(water ? 22.f : 0.f);}
 bool WalkableSurface(float,float y,float& height){
     if(!bridgeAlive || (edge && std::abs(y)>16))return false;
@@ -69,11 +73,14 @@ bool WalkableSurface(float,float y,float& height){
 }
 bool DiagnosticLog::Due(DWORD&,bool) { return false; }
 // The synthetic world replaces only native discovery; actual swept collision/physics runs unchanged.
-std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float) {
+std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,bool) {
     if (tree) return canopyBounds ? std::vector<Bounds3>{{{-93,-231,100},{334,193,413}}} :
         std::vector<Bounds3>{{{101,-21,100},{138,22,384}}};
     if (prop || wall) return {{{60,-50,100},{80,50,wall ? 300.f : 140.f}}};
     return {};
+}
+UnitCollisionProfile UnitCollisionProfile::Read(wc3::Handle,uintptr_t) {
+    return narrowPassage ? UnitCollisionProfile{true,true,16} : UnitCollisionProfile{};
 }
 int main(){
     Require(Walk(true)>300,"living deck crosses blocked terrain beneath the bridge");
@@ -148,5 +155,19 @@ int main(){
     for(int frame=0;frame<20;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
     Require(unitX==90,"existing overlap must not permit entering deeper into a trunk");
     tree=false;
+    // Warcraft's 16-unit actor fits a narrow walkable corridor that the legacy 24-unit footprint blocks.
+    narrowPassage=true;unitX=unitY=0;jumper.Reset(100);jumper.Configure(MovementSettings{});
+    for(int frame=0;frame<60;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(unitX>300,"live native actor footprint fits the narrow native passage");
+    auto legacy=MovementSettings{};legacy.useNativeUnitCollision=false;jumper.Configure(legacy);unitX=unitY=0;jumper.Reset(100);
+    for(int frame=0;frame<60;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(unitX==0,"legacy opt-out retains the larger visual footprint");narrowPassage=false;
+    // At 20 FPS a frame contains multiple sweep steps. Resolve support between them on uphill/downhill travel.
+    slope=true;slopeGradient=.8f;jumper.Configure(MovementSettings{});unitX=unitY=0;jumper.Reset(100);
+    for(int frame=0;frame<20;++frame){jumper.Step(forward,.05f,250);collision.Move(1,jumper,.05f);}
+    Require(unitX>300 && jumper.Grounded(),"fast grounded sweeps traverse a steep native ramp uphill");
+    retreat=forward;retreat.forward=-1;
+    for(int frame=0;frame<40;++frame){jumper.Step(retreat,.05f,250);collision.Move(1,jumper,.05f);}
+    Require(unitX<0 && jumper.Grounded(),"fast grounded sweeps traverse the ramp downhill");
     std::puts("Warcraft bridge/collision regressions passed.");
 }

@@ -22,4 +22,5 @@ private:
     bool enabled_=false,capturing_=false,ready_=false;
     HGLRC context_=nullptr;
     GLuint background_=0,map_=0;
+    GLenum captureBuffer_=GL_BACK;
 };

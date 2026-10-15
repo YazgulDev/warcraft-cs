@@ -42,7 +42,9 @@ bool NativeMinimap::Prepare() {
     GLint maximum=0;glGetIntegerv(GL_MAX_TEXTURE_SIZE,&maximum);
     int side=1;while (side<std::max(cropWidth_,cropHeight_)) side*=2;
     if (side>maximum) return false;
-    glPushAttrib(GL_TEXTURE_BIT|GL_COLOR_BUFFER_BIT|GL_PIXEL_MODE_BIT);glReadBuffer(GL_BACK);
+    glPushAttrib(GL_TEXTURE_BIT|GL_COLOR_BUFFER_BIT|GL_PIXEL_MODE_BIT);
+    // Campaign restoration can draw directly to the front buffer; capture the same target as the world.
+    GLint buffer=GL_BACK;glGetIntegerv(GL_DRAW_BUFFER,&buffer);captureBuffer_=GLenum(buffer);glReadBuffer(captureBuffer_);
     if (!background_) glGenTextures(1,&background_);
     if (!map_) glGenTextures(1,&map_);
     if (textureSide_!=side) {
@@ -123,7 +125,8 @@ void NativeMinimap::Quad(GLuint texture,float left,float bottom,float right,floa
 void NativeMinimap::FinishFrame() {
     if (!capturing_ || context_!=wglGetCurrentContext()) return;
     glPushAttrib(GL_ALL_ATTRIB_BITS);
-    glReadBuffer(GL_BACK);
+    // Native UI may have targeted a different buffer from the final HUD; restore its own captured pixels.
+    glReadBuffer(captureBuffer_);glDrawBuffer(captureBuffer_);
     glBindTexture(GL_TEXTURE_2D,map_);glCopyTexSubImage2D(GL_TEXTURE_2D,0,0,0,x_,y_,cropWidth_,cropHeight_);
     // Restore the world before sky/scope/weapons; the FPS HUD composites the map last.
     GLint mode=0,active=0x84C0;glGetIntegerv(GL_MATRIX_MODE,&mode);

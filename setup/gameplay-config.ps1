@@ -13,6 +13,41 @@ function Update-GameplayConfig([string]$Template,[string]$Destination) {
     $lines=[Collections.Generic.List[string]]::new()
     $lines.AddRange([string[]]@(Get-Content -LiteralPath $Destination))
     $changed=$false
+    $oldSection='';$customStride=$false
+    foreach($existing in $lines) {
+        if($existing -match '^\s*\[([^\]]+)\]\s*$'){$oldSection=$Matches[1];continue}
+        if($oldSection -eq 'ThirdPerson' -and $existing -match '^\s*RunCycleDistance\s*=\s*(\d+(?:\.\d+)?)\s*$') {
+            $stride=[double]::Parse($Matches[1],[Globalization.CultureInfo]::InvariantCulture)
+            if($stride -ge 40 -and $stride -le 1000 -and $stride -ne 210){$customStride=$true}
+        }
+    }
+    # Only the old default changes: F7 is now TPS entry. Preserve custom refill keys and the rest of the layout.
+    $shortcutSection=$false;$refillIndex=-1;$thirdBinding=$false;$unitViewBinding=$false;$allWeaponsIndex=-1
+    $usedShortcuts=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    for($i=0;$i -lt $lines.Count;$i++) {
+        if($lines[$i] -match '^\s*\[([^\]]+)\]\s*$'){$shortcutSection=$Matches[1] -eq 'Shortcuts';continue}
+        if($shortcutSection -and $lines[$i] -match '^\s*([^;#=]+?)\s*=\s*(.*?)\s*$') {
+            $name=$Matches[1].Trim();$value=$Matches[2].Trim();[void]$usedShortcuts.Add($value)
+            if($name -eq 'ToggleThirdPerson'){$thirdBinding=$true}
+            if($name -eq 'ToggleUnitView'){$unitViewBinding=$true}
+            if($name -eq 'AllWeapons' -and $value -eq 'F9'){$allWeaponsIndex=$i}
+            if($name -eq 'Refill' -and $value -eq 'F7'){$refillIndex=$i}
+        }
+    }
+    if(!$thirdBinding -and $refillIndex -ge 0) {
+        $replacement='NONE'
+        foreach($candidate in @('F11','F12','F5','F4')) {if(!$usedShortcuts.Contains($candidate)){$replacement=$candidate;break}}
+        $lines[$refillIndex]='Refill='+$replacement;$changed=$true
+        # A later F9 migration must see the newly reserved refill key, rather than assign it twice.
+        [void]$usedShortcuts.Remove('F7');[void]$usedShortcuts.Add($replacement)
+    }
+    # F9 is the requested independent unit camera. Only its old all-weapons default is relocated.
+    if(!$unitViewBinding -and $allWeaponsIndex -ge 0) {
+        $replacement='NONE'
+        foreach($candidate in @('F12','F5','F4')){if(!$usedShortcuts.Contains($candidate)){$replacement=$candidate;break}}
+        $lines[$allWeaponsIndex]='AllWeapons='+$replacement;$changed=$true
+        [void]$usedShortcuts.Remove('F9');[void]$usedShortcuts.Add($replacement)
+    }
     foreach ($entry in $defaults) {
         $start=-1;$end=$lines.Count
         for ($i=0;$i -lt $lines.Count;$i++) {
@@ -34,6 +69,17 @@ function Update-GameplayConfig([string]$Template,[string]$Destination) {
             if ($line -match '^\s*([^;#=]+?)\s*=') {
                 # Insert into the original section, never append a duplicate INI section ignored by Win32.
                 if ($keys.Add($Matches[1].Trim())) {
+                    # Preserve an existing chosen manual stride rather than hiding it behind the new automatic default.
+                    if($entry.name -eq 'ThirdPerson' -and $Matches[1].Trim() -eq 'AutoAnimationSpeed' -and $customStride){$line='AutoAnimationSpeed=false'}
+                    # Adding Q must not conflict with a custom action that already uses it.
+                    if($entry.name -eq 'Shortcuts' -and $Matches[1].Trim() -eq 'ToggleAllyTargeting' -and $usedShortcuts.Contains('Q')){$line='ToggleAllyTargeting=NONE'}
+                    if($entry.name -eq 'Shortcuts' -and $Matches[1].Trim() -eq 'ToggleUnitView' -and $usedShortcuts.Contains('F9')){$line='ToggleUnitView=NONE'}
+                    # A migrated/custom refill may already own the new F12 default in a partial old layout.
+                    if($entry.name -eq 'Shortcuts' -and $Matches[1].Trim() -eq 'AllWeapons' -and $usedShortcuts.Contains('F12')) {
+                        $replacement='NONE'
+                        foreach($candidate in @('F5','F4')){if(!$usedShortcuts.Contains($candidate)){$replacement=$candidate;break}}
+                        $line='AllWeapons='+$replacement
+                    }
                     foreach ($comment in $comments) { $lines.Insert($end,$comment);$end++ }
                     $lines.Insert($end,$line);$end++;$changed=$true
                 }

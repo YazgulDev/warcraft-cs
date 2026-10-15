@@ -40,6 +40,8 @@ namespace WarcraftCSLauncher {
             SourcePayload.RequireOrdinaryPath(Path.Combine(cache,"WarcraftCSLauncher.exe"));
             // Validate required source contracts before writing either the new sources or the executable.
             using (var zip=new ZipArchive(new MemoryStream(source),ZipArchiveMode.Read)) {
+                if (request.WarcraftOnly && zip.GetEntry("setup/installation-profile.ps1")==null)
+                    throw new InvalidDataException("This release predates Warcraft-only installation. Use Install with the current launcher.");
                 foreach (string name in new[] {"VERSION","launcher/install-client.ps1","launcher/replace-launcher.ps1","src/Plugin.cpp"})
                     if (zip.GetEntry(name)==null) throw new InvalidDataException("Release source payload is incomplete.");
                 if (request.InstallMode=="Player" && zip.GetEntry("setup/prebuilt-runtime.ps1")==null)

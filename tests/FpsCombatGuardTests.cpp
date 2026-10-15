@@ -10,7 +10,7 @@ uintptr_t base=0,actorAttack=11,passiveAttack=12;
 wc3::Handle actor=1;
 alignas(uintptr_t) std::array<unsigned char,0x200> actorObject={};
 alignas(uintptr_t) std::array<unsigned char,0x200> otherObject={};
-int checks=0,starts=0;
+int checks=0,starts=0,stops=0;
 std::array<uintptr_t,10> arguments={};
 using Check=int (__fastcall*)(uintptr_t,uintptr_t,uintptr_t,uintptr_t,uintptr_t,uintptr_t);
 using Start=void (__fastcall*)(uintptr_t,uintptr_t,uintptr_t,uintptr_t,uintptr_t,uintptr_t,uintptr_t,uintptr_t,uintptr_t,uintptr_t,uintptr_t,uintptr_t);
@@ -46,9 +46,13 @@ void Log(const char*,...) {}
 void Trace(const char*,...) {}
 uintptr_t UnitObject(Handle unit) {return unit==1 ? uintptr_t(actorObject.data()) : unit==2 ? uintptr_t(otherObject.data()) : 0;}
 int (__cdecl* GetUnitCurrentOrder)(Handle)=[](Handle){return 0;};
-BOOL (__cdecl* IssueImmediateOrderById)(Handle,int)=[](Handle,int)->BOOL{return TRUE;};
+BOOL (__cdecl* IssueImmediateOrderById)(Handle,int)=[](Handle,int)->BOOL{++stops;return TRUE;};
 BOOL (__cdecl* IssueTargetOrderById)(Handle,int,Handle)=NativeTarget;
 BOOL (__cdecl* IssuePointOrderById)(Handle,int,float*,float*)=NativePoint;
+// Synthetic ownership keeps the incoming-attack policy independent of Warcraft's player table.
+Handle (__cdecl* Player)(int)=[](int index)->Handle{return Handle(index+10);};
+Handle (__cdecl* GetOwningPlayer)(Handle)=[](Handle unit)->Handle{return unit==1 ? 10 : 11;};
+BOOL (__cdecl* IsUnitEnemy)(Handle,Handle)=[](Handle unit,Handle owner)->BOOL{return unit==1 && owner==11;};
 }
 int main() {
     std::vector<unsigned char> image(0x3D0000);base=uintptr_t(image.data());
@@ -69,6 +73,10 @@ int main() {
     // Native morph/combat callbacks require a non-null retained target; pursuit is blocked at dispatch/motor.
     assert(targetGetter && targetGetter(actorAttack,0)==123 && targetGetter(passiveAttack,0)==123);
     assert(targetGetter(13,0)==123 && FpsCombatGuard::HasAttackTarget(1));
+    // One Stop per acquired target; squad observations do not restart the controlled hero's manual animation.
+    *reinterpret_cast<uintptr_t*>(otherObject.data()+0x1E8)=13;
+    FpsCombatGuard::CancelOrders(1);FpsCombatGuard::CancelOrders(2);FpsCombatGuard::CancelOrders(1);FpsCombatGuard::CancelOrders(2);
+    assert(stops==2);
     // Neither validation nor direct retaliation dispatch can start the actor's basic attack.
     assert(checked(actorAttack,0,1,2,3,4)==0xDD);started(actorAttack,0,1,2,3,4,5,6,7,8,9,10);
     assert(!checks && !starts);

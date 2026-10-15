@@ -23,6 +23,9 @@ namespace WarcraftCSLauncher {
             // Both embedded setup and release updates share the same permission, idle-game and path checks.
             if (!consent) throw new InvalidOperationException("Download/install consent is required.");
             request.ValidateDestination(); ReleaseUpdater.RequireIdle(request.InstallDirectory);
+            // Older releases do not understand this profile and would demand CS or enable weapon mode.
+            if (request.WarcraftOnly && !File.Exists(Path.Combine(source,"setup","installation-profile.ps1")))
+                throw new InvalidOperationException("This release does not support Warcraft-only installation. Install this launcher's embedded version instead.");
             string allowed=Path.GetFullPath(Path.Combine(request.InstallDirectory,"sources"))+Path.DirectorySeparatorChar;
             if (!Path.GetFullPath(source).StartsWith(allowed,StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("Invalid update source path.");
             // The Player installer reads embedded module data from this EXE or the verified update-cache EXE.

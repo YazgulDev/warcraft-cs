@@ -43,6 +43,8 @@ $versionFixture=Join-Path $build 'VersionFixture.cs'
 $versionDll=Join-Path $build 'VersionFixture.dll'
 & $compiler /nologo /target:library /platform:x86 "/out:$versionDll" $versionFixture
 if ($LASTEXITCODE) { throw 'Version fixture compilation failed.' }
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root 'tools/test-installation-profile.ps1') -VersionDll $versionDll
+if ($LASTEXITCODE) { throw 'Warcraft-only setup integration failed.' }
 $reinstallTests=Join-Path $build 'LauncherReinstallTests.exe'
 & $compiler /nologo /target:exe /platform:x64 "/out:$reinstallTests" "/resource:$payload,WarcraftCS.Source.zip" $notesResources /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll /r:System.Web.Extensions.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll (Join-Path $root 'tests/LauncherReinstallTests.cs') $sources
 if ($LASTEXITCODE) { throw 'Reinstall integration compilation failed.' }

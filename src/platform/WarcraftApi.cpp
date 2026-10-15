@@ -11,6 +11,13 @@ namespace wc3 {
 #include "NativeOffsets.inc"
 #undef NATIVE
 static uintptr_t nativeBase = 0;
+int OrderId(const char* name) {
+    const unsigned char signature[]={0x56,0x8B,0x35};
+    if(!name || !nativeBase || std::memcmp(reinterpret_cast<void*>(nativeBase+0x3BAD70),signature,sizeof(signature)))return 0;
+    // Use the same bounded native string wrapper as Animate/Effect, without interning game-owned strings.
+    uintptr_t node[8]={},wrapper[3]={};node[7]=reinterpret_cast<uintptr_t>(name);wrapper[2]=reinterpret_cast<uintptr_t>(node);
+    return reinterpret_cast<int (__fastcall*)(uintptr_t,uintptr_t)>(nativeBase+0x3BAD70)(reinterpret_cast<uintptr_t>(wrapper),0);
+}
 static bool cameraLimitsVerified=false;
 using SurfaceHeight = float (__fastcall*)(int, BOOL*, float, float, BOOL);
 static SurfaceHeight surfaceHeight = nullptr;
@@ -46,7 +53,7 @@ bool Bind(HMODULE game) {
     delete[] bytes;
     if (!correct) { Log("Unsupported Game.dll: expected 1.26.0.6401"); return false; }
     auto base = reinterpret_cast<uintptr_t>(game);
-    // Verified 1.26a GetLocationZ helper: ECX=terrain mode, EDX=raised-surface output,
+    // Verified 1.26a terrain/walkable-surface helper: ECX=terrain mode, EDX=raised-surface output,
     // stack=x/y/include-walkables, ST0=height. Refuse a patched helper instead of guessing its ABI.
     const unsigned char surfaceSignature[] = {0x83,0xEC,0x0C,0xD9,0x44,0x24,0x10,0x53,0xD9,0x5C,0x24,0x04};
     if (memcmp(reinterpret_cast<void*>(base+0x126F0),surfaceSignature,sizeof(surfaceSignature)) != 0) {
@@ -105,6 +112,12 @@ float Ground(float x, float y) {
     float z = Real(GetLocationZ(location));
     RemoveLocation(location);
     return z;
+}
+float AttackSurface(float x,float y,bool waterBlocks) {
+    // GetLocationZ includes water; native mode -1 retains the actual bed/cliffs and raised walkable geometry.
+    // Keep Ground unchanged: movement, camera placement and visible water-level decals have separate contracts.
+    if(waterBlocks || !surfaceHeight)return Ground(x,y);
+    return surfaceHeight(-1,nullptr,x,y,TRUE);
 }
 bool WalkableSurface(float x, float y, float& height) {
     if (!surfaceHeight || !std::isfinite(x) || !std::isfinite(y)) return false;
@@ -205,6 +218,96 @@ float UnitAttackAverage(Handle unit) {
     int low=reinterpret_cast<Damage>(nativeBase+0xC6CB0)(attack,0);
     int high=reinterpret_cast<Damage>(nativeBase+0xC6CD0)(attack,0);
     return (float(low)+float(high))*.5f;
+}
+void Animate(Handle unit,const char* sequence) {
+    // Owned 1.26a registration at 3D619B maps SetUnitAnimation (Hunit;S)V to 3C61A0.
+    // Its string conversion is synchronous, using the same bounded wrapper as AddSpecialEffect.
+    using Animation=void (__cdecl*)(Handle,Handle);
+    const unsigned char signature[]={0x8B,0x44,0x24,0x08,0x8B,0x4C,0x24,0x04};
+    if(!unit || !nativeBase || std::memcmp(reinterpret_cast<void*>(nativeBase+0x3C61A0),signature,sizeof(signature)))return;
+    uintptr_t node[8]={},wrapper[3]={};node[7]=reinterpret_cast<uintptr_t>(sequence);wrapper[2]=reinterpret_cast<uintptr_t>(node);
+    reinterpret_cast<Animation>(nativeBase+0x3C61A0)(unit,reinterpret_cast<Handle>(wrapper));
+}
+int AnimationSequence(Handle unit) {
+    // Owned 1.26a sprite getter reads the signed sequence at +2C; its -2 pending sentinel maps to Stand.
+    const unsigned char getter[]={0x0F,0xB7,0x41,0x2C,0x66,0x3D,0xFE,0xFF};
+    auto object=UnitObject(unit);uintptr_t body=object ? *reinterpret_cast<uintptr_t*>(object+0x28) : 0;
+    if(!body || !nativeBase || std::memcmp(reinterpret_cast<void*>(nativeBase+0x4D2FD0),getter,sizeof(getter)))return -1;
+    return reinterpret_cast<int (__thiscall*)(uintptr_t)>(nativeBase+0x4D2FD0)(body);
+}
+float AnimationRate(Handle unit) {
+    // Verified SetUnitTimeScale stores the native baseline on CUnit+300 (26DD00).
+    auto object=UnitObject(unit);float rate=object ? *reinterpret_cast<float*>(object+0x300) : 1;
+    return std::isfinite(rate) && rate>=0 && rate<=10 ? rate : 1;
+}
+int ActiveAnimationSequence(Handle unit) {
+    // Verified 511F10 selects the model controller's active byte at +58, bounded by its sequence count at +0C.
+    // A sprite request of -2 is pending, not proof that the model switched to Stand.
+    const unsigned char select[]={0x83,0xEC,0x0C,0x8B,0xC2,0x8A,0x54,0x24,0x10};
+    if(!unit || !nativeBase || std::memcmp(reinterpret_cast<void*>(nativeBase+0x511F10),select,sizeof(select)))return -1;
+    auto object=UnitObject(unit);auto sprite=object ? *reinterpret_cast<uintptr_t*>(object+0x28) : 0;
+    auto model=sprite ? *reinterpret_cast<uintptr_t*>(sprite+0x20) : 0;
+    auto animation=model ? *reinterpret_cast<uintptr_t*>(model+0x98) : 0;
+    if(!animation)return -1;
+    unsigned count=*reinterpret_cast<unsigned*>(animation+0x0C);
+    unsigned active=*reinterpret_cast<unsigned char*>(animation+0x58);
+    return count>0 && count<=256 && active<count ? int(active) : -1;
+}
+void AnimateIndex(Handle unit,int sequence) {
+    // Verified SetUnitAnimationByIndex registration selects the model's exact authored gait/variation.
+    const unsigned char signature[]={0x8B,0x4C,0x24,0x04,0xE8};
+    if(!unit || sequence<0 || !nativeBase || std::memcmp(reinterpret_cast<void*>(nativeBase+0x3C61F0),signature,sizeof(signature)))return;
+    reinterpret_cast<void (__cdecl*)(Handle,int)>(nativeBase+0x3C61F0)(unit,sequence);
+}
+void AnimationRate(Handle unit,float rate) {
+    if(!unit || !nativeBase || !std::isfinite(rate))return;
+    const unsigned char native[]={0x8B,0x4C,0x24,0x04,0xE8};
+    const unsigned char sprite[]={0x8B,0x01,0xD9,0x44,0x24,0x04};
+    if(std::memcmp(reinterpret_cast<void*>(nativeBase+0x3C6300),native,sizeof(native)) ||
+        std::memcmp(reinterpret_cast<void*>(nativeBase+0x4D31B0),sprite,sizeof(sprite)))return;
+    using Native=void (__cdecl*)(Handle,float*);
+    reinterpret_cast<Native>(nativeBase+0x3C6300)(unit,&rate);
+    // A movement component defers the JASS setter; update its sprite too, without changing move speed.
+    auto object=UnitObject(unit);uintptr_t body=object ? *reinterpret_cast<uintptr_t*>(object+0x28) : 0;
+    if(body)reinterpret_cast<void (__thiscall*)(uintptr_t,float)>(nativeBase+0x4D31B0)(body,rate);
+}
+void AnimationSeek(Handle unit,int sequence,float seconds) {
+    // Owned CSprite::SetAnimationTime (4D3010) forwards current sequence + relative milliseconds to this model setter.
+    // Use that verified model path without its sprite fallback selecting Stand; native skinning is dirtied normally.
+    const unsigned char seek[]={0x55,0x8B,0xE9,0x8B,0x8D,0x98,0x00,0x00,0x00};
+    if(!unit || sequence<0 || !nativeBase || !std::isfinite(seconds) || seconds<0 || seconds>60 ||
+        std::memcmp(reinterpret_cast<void*>(nativeBase+0x50D560),seek,sizeof(seek)))return;
+    auto object=UnitObject(unit);uintptr_t sprite=object ? *reinterpret_cast<uintptr_t*>(object+0x28) : 0;
+    uintptr_t model=sprite ? *reinterpret_cast<uintptr_t*>(sprite+0x20) : 0;
+    if(!model)return;
+    int active=ActiveAnimationSequence(unit);if(active<0)return;
+    // Verified CSprite's 4D4093 / 4D9B46 paths select this exact model index before seeking its time.
+    // Crowd hit reactions can starve the sprite queue, so select the rendered clip synchronously.
+    if(active!=sequence) {
+        const unsigned char select[]={0x8B,0x89,0x98,0x00,0x00,0x00,0x85,0xC9};
+        if(std::memcmp(reinterpret_cast<void*>(nativeBase+0x50C2E0),select,sizeof(select)))return;
+        auto animation=*reinterpret_cast<uintptr_t*>(model+0x98);
+        if(!animation || unsigned(sequence)>=*reinterpret_cast<unsigned*>(animation+0x0C))return;
+        using Select=BOOL (__fastcall*)(uintptr_t,int,int);
+        if(!reinterpret_cast<Select>(nativeBase+0x50C2E0)(model,sequence,8))return;
+    }
+    // This native setter dirties skinning; it does not enqueue a combat/movement order or write animation memory.
+    reinterpret_cast<void (__fastcall*)(uintptr_t,int,int)>(nativeBase+0x50D560)(model,sequence,int(seconds*1000));
+}
+bool AnimationBlending(Handle unit) {
+    // Verified model getter forwards to 513970's native blending-enabled flag; no blend duration is changed.
+    const unsigned char getter[]={0x8B,0x89,0x98,0x00,0x00,0x00};
+    auto object=UnitObject(unit);auto sprite=object ? *reinterpret_cast<uintptr_t*>(object+0x28) : 0;
+    auto model=sprite ? *reinterpret_cast<uintptr_t*>(sprite+0x20) : 0;
+    return model && nativeBase && !std::memcmp(reinterpret_cast<void*>(nativeBase+0x501D80),getter,sizeof(getter)) &&
+        reinterpret_cast<int (__thiscall*)(uintptr_t)>(nativeBase+0x501D80)(model)!=0;
+}
+void AnimationBlending(Handle unit,bool enabled) {
+    // SetUnitBlendTime's verified sprite enable/disable path (2AB790 -> 4D30B0), without altering stored duration.
+    const unsigned char setter[]={0x8B,0x49,0x20,0x85,0xC9};
+    if(!unit || !nativeBase || std::memcmp(reinterpret_cast<void*>(nativeBase+0x4D30B0),setter,sizeof(setter)))return;
+    auto object=UnitObject(unit);auto sprite=object ? *reinterpret_cast<uintptr_t*>(object+0x28) : 0;
+    if(sprite)reinterpret_cast<void (__fastcall*)(uintptr_t,int)>(nativeBase+0x4D30B0)(sprite,enabled);
 }
 std::string DestructableModelPath(int type) {
     // Use CreateDestructable's active-definition filename builder, including directory and variation suffixes.

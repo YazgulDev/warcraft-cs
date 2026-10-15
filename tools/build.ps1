@@ -29,6 +29,7 @@ $sources += '"' + (Join-Path $modRoot 'src/platform/WeaponTargetFilter.cpp') + '
 $sources += '"' + (Join-Path $modRoot 'src/geometry/TreeTrunkMesh.cpp') + '"'
 # Shared filled aiming geometry is compiled into both ordinary Player builds and scope rendering.
 $sources += '"' + (Join-Path $modRoot 'src/presentation/ReticleView.cpp') + '"'
+$sources += '"' + (Join-Path $modRoot 'src/presentation/TargetMarkerView.cpp') + '"' # Read-only TPS contact presentation.
 # Draw diagnostics are shared by the real reticle and frame/overlay skip paths.
 $sources += '"' + (Join-Path $modRoot 'src/presentation/ReticleDiagnostics.cpp') + '"'
 # Thread-safe bounded diagnostics are a native platform adapter, not controller/file ownership.
@@ -43,8 +44,12 @@ $sources += '"' + (Join-Path $modRoot 'src/platform/NativeFogOfWar.cpp') + '"'
 $sources += '"' + (Join-Path $modRoot 'src/platform/GameWindowInput.cpp') + '"'
 # Presentation pacing and the guarded 1.26a demand operand belong to the native adapter.
 $sources += '"' + (Join-Path $modRoot 'src/platform/NativeFrameRate.cpp') + '"'
+$sources += '"' + (Join-Path $modRoot 'src/platform/NativeFramePresentation.cpp') + '"' # Native pre-presentation boundary.
+if($TestGameplay) { $sources += '"'+(Join-Path $modRoot 'tests/FramePresentationScene.cpp')+'"' } # Swap oracle stays private.
 # The FPS camera limit is restored through native generation keys when its map/camera disappears.
 $sources += '"' + (Join-Path $modRoot 'src/platform/NativeCameraFarClip.cpp') + '"'
+# Native preselection borrowing is separate from GL HUD drawing and camera state.
+$sources += '"' + (Join-Path $modRoot 'src/platform/NativeHoverView.cpp') + '"'
 # Keep native health sampling separate from depth-tested presentation.
 $sources += @('platform/UnitHealthBars.cpp','presentation/HealthBarRenderer.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 # Spell state comes from native timers; owned archive icons are decoded/uploaded by separate presentation adapters.
@@ -54,6 +59,11 @@ $sources += '"' + (Join-Path $modRoot 'src/platform/NativeCommandCard.cpp') + '"
 # Keyboard metadata and native spell targeting/order ownership are separate from the application coordinator.
 $sources += @('input/ShortcutBindings.cpp','config/HeroSpellSlots.cpp','platform/NativeSpellSlots.cpp','platform/SpellAim.cpp','platform/SpellCaster.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 $sources += '"' + (Join-Path $modRoot 'src/platform/MovementObstacles.cpp') + '"'
+$sources += '"' + (Join-Path $modRoot 'src/platform/UnitCollisionProfile.cpp') + '"' # Live movement collision is independent of weapon geometry.
+# Third-person presentation and native melee coordination retain separate ownership from FPS weapons.
+$sources += @('presentation/ThirdPersonCamera.cpp','platform/UnitAttack.cpp','platform/UnitLocomotion.cpp','platform/ActorJumpView.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
+$sources += '"'+(Join-Path $modRoot 'src/platform/UnitAttackAnimation.cpp')+'"' # Manual pose lifetime is independent of DPS recovery.
+$sources += '"'+(Join-Path $modRoot 'src/platform/SquadSpellcasting.cpp')+'"' # NPC spell ownership cannot be cancelled by formation refresh.
 # Shop access is native-world policy; inventory prices/navigation remain independently testable.
 $sources += @('economy/BuyAccess.cpp','presentation/BuyMenuView.cpp','presentation/SkyView.cpp','platform/MapEnvironment.cpp','platform/NativeSky.cpp','platform/NativeFloatingText.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 # Install defaults only once so rebuilds preserve the player's customized settings.

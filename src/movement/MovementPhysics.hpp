@@ -30,6 +30,7 @@ public:
     float PreviousFeetZ() const { return previousFeetZ_; }
     float VerticalVelocity() const { return vz_; }
     float StepHeight() const { return settings_.stepHeight; }
+    bool NativeUnitCollision() const { return settings_.useNativeUnitCollision; }
     float EyeZ() const { return feetZ_ + (64 - 28 * duck_) * worldScale; }
     float Duck() const { return duck_; }
     bool Grounded() const { return grounded_; }

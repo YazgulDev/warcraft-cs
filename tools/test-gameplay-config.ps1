@@ -4,17 +4,78 @@ $root=Split-Path -Parent $PSScriptRoot
 $folder=Join-Path $root ('.local/config-merge-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $folder -Force | Out-Null
 $template=Join-Path $root 'config/WarcraftCS.ini'
+# Fresh defaults use 5000, while explicit saved distances and hover opt-outs survive repeated upgrades.
+$distance=Join-Path $folder 'distance-hover.ini'
+@('[Rendering]','DrawDistance=7000','[UnitView]','HideHoverCircles=false') | Set-Content -LiteralPath $distance -Encoding ascii
+Update-GameplayConfig $template $distance
+$distanceText=Get-Content -LiteralPath $distance -Raw
+if(!$distanceText.Contains('DrawDistance=7000') -or !$distanceText.Contains('HideHoverCircles=false')){throw 'Saved visibility preferences overwritten.'}
+if(!(Get-Content -LiteralPath $template -Raw).Contains('DrawDistance=5000')){throw 'Fresh distance default is not 5000.'}
+. (Join-Path $root 'setup/installation-profile.ps1')
+# Only an explicit setup choice replaces the profile; ordinary F8/default migrations preserve it.
+$profile=Join-Path $folder 'profile.ini'
+@('[Installation]','; private comment','[Combat]','FriendlyFirePercent=17') | Set-Content -LiteralPath $profile -Encoding utf8
+Set-InstallationProfile $profile $true
+Update-GameplayConfig $template $profile
+$text=Get-Content -LiteralPath $profile -Raw
+if(!$text.Contains('WarcraftOnly=true') -or !$text.Contains('FriendlyFirePercent=17') -or ([regex]::Matches($text,'\[Installation\]')).Count -ne 1){throw 'Profile policy lost customization or duplicated its section.'}
+$hash=(Get-FileHash -LiteralPath $profile).Hash;Set-InstallationProfile $profile $true
+if((Get-FileHash -LiteralPath $profile).Hash -ne $hash){throw 'Profile update is not idempotent.'}
+Set-InstallationProfile $profile $false
+if(!(Get-Content -LiteralPath $profile -Raw).Contains('WarcraftOnly=false')){throw 'Full install cannot restore weapons.'}
+# Water occlusion defaults off; explicit legacy opt-ins survive repeated upgrades.
+foreach($choice in @('false','true')) {
+    $water=Join-Path $folder ('water-'+$choice+'.ini')
+    @('[Combat]',('WaterBlocksAttacks='+$choice)) | Set-Content -LiteralPath $water -Encoding ascii
+    Update-GameplayConfig $template $water
+    if(!(Get-Content -LiteralPath $water -Raw).Contains('WaterBlocksAttacks='+$choice)){throw 'Water occlusion preference reset.'}
+    $before=(Get-FileHash -LiteralPath $water).Hash;Update-GameplayConfig $template $water
+    if((Get-FileHash -LiteralPath $water).Hash -ne $before){throw 'Water occlusion update is not idempotent.'}
+}
+# Relocate only legacy AllWeapons=F9, while preserving custom AI preferences and the remainder of the layout.
+$unitConfig=Join-Path $folder 'unit-view.ini'
+@('[Shortcuts]','AllWeapons=F9','Reload=Y','[Squad]','AutomaticSpells=false','SpellSearchRadius=420','[UnitView]','Enabled=false') |
+    Set-Content -LiteralPath $unitConfig -Encoding ascii
+Update-GameplayConfig $template $unitConfig
+$unitText=Get-Content -LiteralPath $unitConfig -Raw
+foreach($required in @('AllWeapons=F12','ToggleUnitView=F9','Reload=Y','AutomaticSpells=false','SpellSearchRadius=420','Enabled=false','PreventEnemyAttacks=true')) {
+    if(!$unitText.Contains($required)){throw "Unit view/AI migration lost preference: $required"}
+}
+$unitHash=(Get-FileHash -LiteralPath $unitConfig).Hash;Update-GameplayConfig $template $unitConfig
+if((Get-FileHash -LiteralPath $unitConfig).Hash -ne $unitHash){throw 'Unit view migration is not idempotent.'}
+# Explicit vulnerability preferences survive updates rather than being replaced by the protected default.
+$unprotected=Join-Path $folder 'unit-view-unprotected.ini'
+@('[UnitView]','PreventEnemyAttacks=false') | Set-Content -LiteralPath $unprotected -Encoding ascii
+Update-GameplayConfig $template $unprotected
+if(!(Get-Content -LiteralPath $unprotected -Raw).Contains('PreventEnemyAttacks=false')){throw 'Unit-view enemy-attack preference overwritten.'}
+# Newly added allied targeting preserves a chosen default and an older custom Q binding.
+$allyConfig=Join-Path $folder 'allied-targeting.ini'
+@('[Combat]','TargetAllies=true','[Shortcuts]','Reload=Q') | Set-Content -LiteralPath $allyConfig -Encoding ascii
+Update-GameplayConfig $template $allyConfig
+$allyText=Get-Content -LiteralPath $allyConfig -Raw
+foreach($required in @('TargetAllies=true','Reload=Q','ToggleAllyTargeting=NONE')) {
+    if(!$allyText.Contains($required)){throw "Allied targeting migration lost preference: $required"}
+}
+$allyHash=(Get-FileHash -LiteralPath $allyConfig).Hash
+Update-GameplayConfig $template $allyConfig
+if((Get-FileHash -LiteralPath $allyConfig).Hash -ne $allyHash){throw 'Allied targeting migration is not idempotent.'}
 $config=Join-Path $folder 'legacy.ini'
 @('[Runes]','AmmoPercent=37','[AK47]','Price=0','Damage=81','[Damage]','FriendlyFirePercent=25') | Set-Content -LiteralPath $config -Encoding ascii
 # Updates append missing keys inside existing sections while retaining all custom values.
 Update-GameplayConfig $template $config
 $text=Get-Content -LiteralPath $config -Raw
-foreach ($required in @('AmmoPercent=37','Price=0','Damage=81','FriendlyFirePercent=25','AWPOneShot=false','BombCount=0','Access=anywhere','AmmoPrice=80','CSVolumePercent=100','Detailed=true','IntervalMs=1000','MaxFileMB=8','ArchiveCount=3','JumpBoostPercent=0','AutoJump=true','MaxFPS=144','DrawDistance=15000')) {
+foreach ($required in @('AmmoPercent=37','Price=0','Damage=81','FriendlyFirePercent=25','AWPOneShot=false','BombCount=0','Access=anywhere','AmmoPrice=80','CSVolumePercent=100','Detailed=true','IntervalMs=1000','MaxFileMB=8','ArchiveCount=3','JumpBoostPercent=0','AutoJump=true','MaxFPS=144','DrawDistance=5000','HideHoverCircles=true')) {
     if (!$text.Contains($required)) { throw "Missing/patched preference: $required" }
 }
 if ([regex]::Matches($text,'(?m)^\[AK47\]').Count -ne 1) { throw 'Duplicate section can hide new INI keys.' }
 if ([regex]::Matches($text,'(?m)^\[Audio\]').Count -ne 1) { throw 'Audio migration duplicated or omitted its section.' }
 $before=(Get-FileHash -LiteralPath $config).Hash
+if(!$text.Contains('ShowTargetIndicator=true')) { throw 'Target indicator default missing from migration.' }
+$customMarker=Join-Path $folder 'custom-target-marker.ini'
+@('[ThirdPerson]','ShowTargetIndicator=false','TargetCircleRadius=96') | Set-Content -LiteralPath $customMarker -Encoding ascii
+Update-GameplayConfig $template $customMarker
+if(!(Get-Content -LiteralPath $customMarker -Raw).Contains('ShowTargetIndicator=false')) { throw 'Migration reset the hidden target marker preference.' }
+if(!(Get-Content -LiteralPath $customMarker -Raw).Contains('TargetCircleRadius=96') -or !$text.Contains('TargetCircleRadius=64')) { throw 'Circle radius migration/default failed.' }
 Update-GameplayConfig $template $config
 if ((Get-FileHash -LiteralPath $config).Hash -ne $before) { throw 'Repeated config update changed an already merged file.' }
 # Reserve/scaling upgrades preserve existing values and do not silently replace a player's damage/economy mode.
@@ -99,10 +160,10 @@ if ((Get-FileHash -LiteralPath $mapConfig).Hash -ne $mapHash) {throw 'Minimap mi
 if (!$text.Contains('DisableFogOfWar=false')) { throw 'Legacy config lacks the default fog override key.' }
 # Movement upgrades retain personal jump tuning and add missing siblings exactly once.
 $customMovement=Join-Path $folder 'custom-movement.ini'
-@('[Movement]','JumpBoostPercent=15','AutoJump=false','[Damage]','FriendlyFirePercent=0') | Set-Content -LiteralPath $customMovement -Encoding ascii
+@('[Movement]','JumpBoostPercent=15','AutoJump=false','UseNativeUnitCollision=false','[Damage]','FriendlyFirePercent=0') | Set-Content -LiteralPath $customMovement -Encoding ascii
 Update-GameplayConfig $template $customMovement
 $movementText=Get-Content -LiteralPath $customMovement -Raw
-foreach ($required in @('JumpBoostPercent=15','AutoJump=false','FriendlyFirePercent=0','MaxBunnySpeed=1000','Gravity=800','BunnyHop=true')) {
+foreach ($required in @('JumpBoostPercent=15','AutoJump=false','UseNativeUnitCollision=false','FriendlyFirePercent=0','MaxBunnySpeed=1000','Gravity=800','BunnyHop=true')) {
     if (!$movementText.Contains($required)) { throw "Movement migration replaced or omitted: $required" }
 }
 if ([regex]::Matches($movementText,'(?m)^\[Movement\]').Count -ne 1) { throw 'Movement section was duplicated.' }
@@ -166,6 +227,24 @@ foreach($section in @('Shortcuts','Spells')) {
 $shortcutsBefore=(Get-FileHash -LiteralPath $customShortcuts).Hash
 Update-GameplayConfig $template $customShortcuts
 if((Get-FileHash -LiteralPath $customShortcuts).Hash -ne $shortcutsBefore) {throw 'Shortcut/spell migration is not idempotent.'}
+# Third-person updates retain chosen camera/damage values and a custom view key, adding missing defaults once.
+$third=Join-Path $folder 'custom-third-person.ini'
+@('[ThirdPerson]','CameraDistance=480','CameraZoomStep=75','CameraMinDistance=200','CameraMaxDistance=800','DamageMultiplier=1.5','RunCycleDistance=260','MovementAnimations=false','RangedAttackRange=777','NativeRangedProjectiles=false','[Shortcuts]','ToggleView=TAB') | Set-Content -LiteralPath $third -Encoding ascii
+Update-GameplayConfig $template $third
+$thirdText=Get-Content -LiteralPath $third -Raw
+foreach($key in @('CameraZoomStep=75','CameraMinDistance=200','CameraMaxDistance=800')) {
+    if(!$thirdText.Contains($key)){throw "Camera zoom preference was reset: $key"}
+}
+foreach($key in @('CameraZoomStep=50','CameraMinDistance=80','CameraMaxDistance=1000')) {
+    if(!$text.Contains($key)){throw "Camera zoom default missing: $key"}
+}
+foreach($setting in @('CameraDistance=480','DamageMultiplier=1.5','ToggleView=TAB','AttackRange=150','ContactDelay=0.56','RunCycleDistance=260','MovementAnimations=false','TakeoffDuration=0.10','LandingDuration=0.16','AutoAnimationSpeed=false','RangedAttackRange=777','NativeRangedProjectiles=false','UseNativeAttackRange=true','RangedRangeMultiplier=1','MeleeHeightTolerance=32')) {
+    if(!$thirdText.Contains($setting)){throw "Third-person migration lost preference/default: $setting"}
+}
+if([regex]::Matches($thirdText,'(?m)^\[ThirdPerson\]').Count -ne 1){throw 'Duplicate third-person section.'}
+$thirdBefore=(Get-FileHash -LiteralPath $third).Hash
+Update-GameplayConfig $template $third
+if((Get-FileHash -LiteralPath $third).Hash -ne $thirdBefore){throw 'Third-person migration is not idempotent.'}
 # Preserve custom squad preferences and insert the new rear/yield settings once in the existing section.
 $customSquad=Join-Path $folder 'custom-squad.ini'
 @('[Squad]','FollowDistance=240','RearFormation=false','PlayerClearance=160','OrderIntervalMs=250') | Set-Content -LiteralPath $customSquad -Encoding ascii
@@ -178,3 +257,22 @@ if([regex]::Matches($squadText,'(?m)^\[Squad\]').Count -ne 1){throw 'Duplicate s
 $squadBefore=(Get-FileHash -LiteralPath $customSquad).Hash
 Update-GameplayConfig $template $customSquad
 if((Get-FileHash -LiteralPath $customSquad).Hash -ne $squadBefore){throw 'Squad migration is not idempotent.'}
+# Existing defaults relocate F7 only once, retaining custom layout choices and avoiding an occupied F11.
+$legacyEntry=Join-Path $folder 'legacy-tps-entry.ini'
+@('[Shortcuts]','Refill=F7','Speed=F11','Pickup=Y') | Set-Content -LiteralPath $legacyEntry -Encoding ascii
+Update-GameplayConfig $template $legacyEntry
+$legacyText=Get-Content -LiteralPath $legacyEntry -Raw
+foreach($setting in @('Refill=F12','AllWeapons=F5','ToggleUnitView=F9','ToggleThirdPerson=F7','Speed=F11','Pickup=Y','AutoAnimationSpeed=true','AnimationSpeedMultiplier=1')) {
+    if(!$legacyText.Contains($setting)){throw "Legacy TPS entry migration lost preference/default: $setting"}
+}
+$legacyHash=(Get-FileHash -LiteralPath $legacyEntry).Hash
+Update-GameplayConfig $template $legacyEntry
+if((Get-FileHash -LiteralPath $legacyEntry).Hash -ne $legacyHash){throw 'TPS entry migration is not idempotent.'}
+# Both old defaults must migrate together without reserving F12 twice.
+$legacyBoth=Join-Path $folder 'legacy-both-views.ini'
+@('[Shortcuts]','Refill=F7','Speed=F11','AllWeapons=F9') | Set-Content -LiteralPath $legacyBoth -Encoding ascii
+Update-GameplayConfig $template $legacyBoth
+$bothText=Get-Content -LiteralPath $legacyBoth -Raw
+foreach($setting in @('Refill=F12','AllWeapons=F5','ToggleThirdPerson=F7','ToggleUnitView=F9','Speed=F11')) {
+    if(!$bothText.Contains($setting)){throw "Combined shortcut migration lost preference/default: $setting"}
+}

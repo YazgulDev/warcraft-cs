@@ -2,10 +2,15 @@
 . (Join-Path (Split-Path -Parent $PSScriptRoot) 'setup/audio-runtime.ps1')
 function Get-ClientPaths($Request) {
     $warcraft=(Resolve-Path -LiteralPath $Request.WarcraftDirectory).Path.TrimEnd('\')
-    $cstrike=(Resolve-Path -LiteralPath $Request.CounterStrikeDirectory).Path.TrimEnd('\')
-    if (Test-Path -LiteralPath (Join-Path $cstrike 'cstrike/models/v_knife.mdl')) { $cstrike=Join-Path $cstrike 'cstrike' }
+    # An unchecked CS requirement must not resolve a missing/previously removed game folder.
+    $cstrike=''
+    if (!$Request.WarcraftOnly) {
+        $cstrike=(Resolve-Path -LiteralPath $Request.CounterStrikeDirectory).Path.TrimEnd('\')
+        if (Test-Path -LiteralPath (Join-Path $cstrike 'cstrike/models/v_knife.mdl')) { $cstrike=Join-Path $cstrike 'cstrike' }
+    }
     $install=[IO.Path]::GetFullPath($Request.InstallDirectory).TrimEnd('\')
     foreach ($game in @($warcraft,$cstrike)) {
+        if (!$game) { continue }
         if ($install -eq $game -or $install.StartsWith($game+'\',[StringComparison]::OrdinalIgnoreCase)) {
             throw 'Choose a client installation folder outside the original Warcraft and CS folders.'
         }
@@ -13,7 +18,7 @@ function Get-ClientPaths($Request) {
     if ($install -eq [IO.Path]::GetPathRoot($install).TrimEnd('\')) { throw 'Do not install into a drive root.' }
     return @{warcraft=$warcraft;cstrike=$cstrike;install=$install}
 }
-function Assert-ClientGames([string]$Warcraft,[string]$CounterStrike) {
+function Assert-ClientGames([string]$Warcraft,[string]$CounterStrike,[bool]$WarcraftOnly=$false) {
     foreach ($name in @('war3.exe','Game.dll','Mss32.dll','Storm.dll','War3.mpq','War3x.mpq','War3Patch.mpq','War3xlocal.mpq')) {
         if (!(Test-Path -LiteralPath (Join-Path $Warcraft $name) -PathType Leaf)) { throw "Missing Warcraft file: $name" }
     }
@@ -21,6 +26,7 @@ function Assert-ClientGames([string]$Warcraft,[string]$CounterStrike) {
     if ($version.FileMajorPart -ne 1 -or $version.FileMinorPart -ne 26 -or $version.FileBuildPart -ne 0 -or $version.FilePrivatePart -ne 6401) { throw 'Only Warcraft III 1.26a (Game.dll 1.26.0.6401) is supported.' }
     # Reject missing Miles codecs/providers before the launcher downloads or installs dependencies.
     Assert-WarcraftAudioRuntime $Warcraft
+    if ($WarcraftOnly) { return } # Native unit modes use the installed Warcraft audio and art.
     foreach ($weapon in @('ak47','m4a1','usp','awp','knife','c4')) {
         if (!(Test-Path -LiteralPath (Join-Path $CounterStrike "models/v_$weapon.mdl") -PathType Leaf)) { throw "CS folder is required; missing models/v_$weapon.mdl." }
     }

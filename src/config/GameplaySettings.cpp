@@ -19,6 +19,65 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         if (end==value.c_str() || *end || !std::isfinite(parsed)) { wc3::Log("Invalid config %s.%s; using default",section,key);return fallback; }
         return std::clamp(parsed,0.0f,maximum);
     };
+    // Missing/malformed profile values preserve the full mod's backwards-compatible default.
+    auto profile=text("Installation","WarcraftOnly","false");
+    result.warcraftOnly=!_stricmp(profile.c_str(),"true") || profile=="1";
+    // The unarmed camera is independently configurable; malformed values preserve enabled entry.
+    auto unitView=text("UnitView","Enabled","true");
+    result.unitViewEnabled=_stricmp(unitView.c_str(),"false") && unitView!="0";
+    // Malformed/missing opt-outs keep the requested clean F9 view; F8 restores immediately when disabled.
+    auto hover=text("UnitView","HideHoverCircles","true");
+    result.unitViewHideHoverCircles=_stricmp(hover.c_str(),"false") && hover!="0";
+    if(_stricmp(hover.c_str(),"true") && _stricmp(hover.c_str(),"false") && hover!="1" && hover!="0")
+        wc3::Log("Invalid UnitView.HideHoverCircles; using true");
+    // The requested safe unit-view default reloads with F8; explicit false restores native targeting.
+    auto preventAttacks=text("UnitView","PreventEnemyAttacks","true");
+    result.unitViewPreventEnemyAttacks=_stricmp(preventAttacks.c_str(),"false") && preventAttacks!="0";
+    if(_stricmp(preventAttacks.c_str(),"true") && _stricmp(preventAttacks.c_str(),"false") && preventAttacks!="1" && preventAttacks!="0")
+        wc3::Log("Invalid UnitView.PreventEnemyAttacks; using true");
+    // Third-person camera and Arthas swing tuning reload as part of the existing validated snapshot.
+    auto thirdEnabled=text("ThirdPerson","Enabled","true");
+    if(!_stricmp(thirdEnabled.c_str(),"false") || thirdEnabled=="0")result.thirdPerson.enabled=false;
+    // Bound the wheel and configured starting distance together; reversed limits collapse safely.
+    result.thirdPerson.minimumDistance=std::max(80.f,number("ThirdPerson","CameraMinDistance",80,1000));
+    result.thirdPerson.maximumDistance=std::max(result.thirdPerson.minimumDistance,number("ThirdPerson","CameraMaxDistance",1000,1000));
+    result.thirdPerson.zoomStep=number("ThirdPerson","CameraZoomStep",50,500);
+    result.thirdPerson.distance=std::clamp(number("ThirdPerson","CameraDistance",500,1000),result.thirdPerson.minimumDistance,result.thirdPerson.maximumDistance);
+    result.thirdPerson.height=number("ThirdPerson","CameraHeight",35,200);
+    // Pitch uses a signed range unlike ordinary nonnegative tuning.
+    auto pitchText=text("ThirdPerson","InitialPitch","-12");char* pitchEnd=nullptr;
+    float pitch=std::strtof(pitchText.c_str(),&pitchEnd);
+    if(pitchEnd!=pitchText.c_str() && !*pitchEnd && std::isfinite(pitch))result.thirdPerson.initialPitch=std::clamp(pitch,-60.f,30.f);
+    result.thirdPerson.clearance=number("ThirdPerson","CameraClearance",16,64);
+    result.thirdPerson.attackRange=std::max(30.f,number("ThirdPerson","AttackRange",150,400));
+    result.thirdPerson.attackArc=std::max(1.f,number("ThirdPerson","AttackArc",50,120));
+    result.thirdPerson.attackHeight=number("ThirdPerson","AttackHeight",64,200);
+    // Ranged targeting remains bounded even with malformed map stats/config; melee sweeps include short creep bodies.
+    auto nativeRange=text("ThirdPerson","UseNativeAttackRange","true"),projectiles=text("ThirdPerson","NativeRangedProjectiles","true");
+    result.thirdPerson.useNativeAttackRange=_stricmp(nativeRange.c_str(),"false") && nativeRange!="0";
+    result.thirdPerson.nativeRangedProjectiles=_stricmp(projectiles.c_str(),"false") && projectiles!="0";
+    result.thirdPerson.rangedAttackRange=std::max(30.f,number("ThirdPerson","RangedAttackRange",600,5000));
+    result.thirdPerson.rangedRangeMultiplier=std::max(.1f,number("ThirdPerson","RangedRangeMultiplier",1,5));
+    result.thirdPerson.meleeHeightTolerance=number("ThirdPerson","MeleeHeightTolerance",32,100);
+    result.thirdPerson.attackInterval=std::max(.2f,number("ThirdPerson","AttackInterval",2.2f,5));
+    result.thirdPerson.contactDelay=std::min(result.thirdPerson.attackInterval,number("ThirdPerson","ContactDelay",.56f,3));
+    result.thirdPerson.damageMultiplier=number("ThirdPerson","DamageMultiplier",1,10);
+    // The marker can be hidden without changing contact range, attack targeting or map state.
+    auto indicator=text("ThirdPerson","ShowTargetIndicator","true");
+    result.thirdPerson.showTargetIndicator=_stricmp(indicator.c_str(),"false") && indicator!="0";
+    // Radius uses Warcraft world units and reloads with the other third-person settings.
+    result.thirdPerson.targetCircleRadius=std::max(16.f,number("ThirdPerson","TargetCircleRadius",64,256));
+    // Native pose playback follows physical motion; unknown toggles keep the requested animation defaults.
+    auto motion=text("ThirdPerson","MovementAnimations","true");
+    if(!_stricmp(motion.c_str(),"false") || motion=="0")result.thirdPerson.movementAnimations=false;
+    result.thirdPerson.runCycleDistance=std::max(40.f,number("ThirdPerson","RunCycleDistance",210,1000));
+    result.thirdPerson.takeoffDuration=std::max(.02f,number("ThirdPerson","TakeoffDuration",.10f,.3f));
+    result.thirdPerson.landingDuration=number("ThirdPerson","LandingDuration",.16f,.5f);
+    // Automatic gait speed is visual only; a custom multiplier never changes native move/attack statistics.
+    // Existing manual strides retain their meaning until the player explicitly enables automatic metadata.
+    auto autoMotion=text("ThirdPerson","AutoAnimationSpeed",result.thirdPerson.runCycleDistance==210 ? "true" : "false");
+    result.thirdPerson.autoAnimationSpeed=_stricmp(autoMotion.c_str(),"false") && autoMotion!="0";
+    result.thirdPerson.animationSpeedMultiplier=std::max(.1f,number("ThirdPerson","AnimationSpeedMultiplier",1,3));
     // Unknown values retain the documented default; explicit false/0 bypasses attack-effect dispatch.
     auto attackEffects=text("Combat","EnableAttackEffects","true");
     if(!_stricmp(attackEffects.c_str(),"false") || attackEffects=="0")result.enableAttackEffects=false;
@@ -27,6 +86,11 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     auto transparent=text("Combat","IgnorePassableInvulnerableObjects","true");
     if(!_stricmp(transparent.c_str(),"false") || transparent=="0")result.ignorePassableInvulnerableObjects=false;
     else if(_stricmp(transparent.c_str(),"true") && transparent!="1")wc3::Log("Invalid Combat.IgnorePassableInvulnerableObjects; using true");
+    // Only explicit true/1 restores the old water-surface blocker; bad/legacy values keep submerged targets hittable.
+    auto waterBlocks=text("Combat","WaterBlocksAttacks","false");
+    result.waterBlocksAttacks=!_stricmp(waterBlocks.c_str(),"true") || waterBlocks=="1";
+    if(_stricmp(waterBlocks.c_str(),"true") && _stricmp(waterBlocks.c_str(),"false") && waterBlocks!="1" && waterBlocks!="0")
+        wc3::Log("Invalid Combat.WaterBlocksAttacks; using false");
     // Bound diagnostic frequency/storage at the existing INI boundary, including malformed legacy values.
     auto detailed = text("Logging", "Detailed", "true");
     if (!_stricmp(detailed.c_str(), "false") || detailed == "0") result.logging.detailed = false;
@@ -60,6 +124,8 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.movement.jumpSpeed = std::max(1.0f, number("Movement", "JumpSpeed", 268.328f, 800));
     result.movement.gravity = std::max(100.0f, number("Movement", "Gravity", 800, 3000));
     result.movement.stepHeight = number("Movement", "StepHeight", 27, 64);
+    // Live collision may be opted out independently of visual weapon hitboxes and terrain/wall collision.
+    result.movement.useNativeUnitCollision = boolean("UseNativeUnitCollision", true);
     result.runePickupRadius=number("Runes","PickupRadius",160,400);
     result.runeAmmoAllWeapons=_stricmp(text("Runes","AmmoWeapons","all").c_str(),"current")!=0;
     auto damageMode=text("Damage","Mode","unit");
@@ -73,6 +139,11 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         awpOneShot!="0" && awpOneShot!="1") wc3::Log("Invalid Damage.AWPOneShot; using false");
     // Old configs retain 50%; zero disables allied damage and full damage is capped at 100%.
     result.friendlyFirePercent=number("Damage","FriendlyFirePercent",50,100);
+    // Protection is the safe startup default; malformed values cannot silently enable allied contacts.
+    auto allies=text("Combat","TargetAllies","false");
+    result.targetAllies=!_stricmp(allies.c_str(),"true") || allies=="1";
+    if(_stricmp(allies.c_str(),"true") && _stricmp(allies.c_str(),"false") && allies!="0" && allies!="1")
+        wc3::Log("Invalid Combat.TargetAllies; using false");
     result.floatingTextDistance=number("Interface","FloatingTextDistance",1200,5000);
     // Team bars require an explicit opt-in; invalid/legacy preferences keep the FPS view clear.
     auto healthSwitch=[&](const char* key) {
@@ -90,6 +161,40 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         auto action=ShortcutAction(i);auto fallback=ShortcutBindings::Label(result.shortcuts.Key(action));
         int key=ShortcutBindings::Parse(text("Shortcuts",ShortcutBindings::Name(action),fallback.c_str()));
         if(key<0)layoutValid=false;else result.shortcuts.Set(action,key);
+    }
+    // Legacy installs used F7 for refill. Relocate that old default without discarding unrelated custom keys.
+    if(text("Shortcuts","ToggleThirdPerson","").empty() && result.shortcuts.Key(ShortcutAction::Refill)==VK_F7) {
+        int replacement=0;
+        for(int candidate:{VK_F11,VK_F12,VK_F5,VK_F4}) {
+            bool used=false;for(size_t i=0;i<ShortcutBindings::Count;++i)used|=result.shortcuts.Key(ShortcutAction(i))==candidate;
+            if(!used){replacement=candidate;break;}
+        }
+        result.shortcuts.Set(ShortcutAction::Refill,replacement);
+    }
+    // An older custom Q binding wins; adding a new action must not reset the player's existing layout.
+    if(text("Shortcuts","ToggleAllyTargeting","").empty())for(size_t i=0;i<size_t(ShortcutAction::ToggleAllyTargeting);++i)
+        if(result.shortcuts.Key(ShortcutAction(i))=='Q')result.shortcuts.Set(ShortcutAction::ToggleAllyTargeting,0);
+    // Free F9's former all-weapons default without resetting unrelated custom layouts.
+    if(text("Shortcuts","ToggleUnitView","").empty()) {
+        if(result.shortcuts.Key(ShortcutAction::AllWeapons)==VK_F9) {
+            int replacement=0;
+            for(int candidate:{VK_F12,VK_F5,VK_F4}) {
+                bool used=false;for(size_t i=0;i<size_t(ShortcutAction::ToggleUnitView);++i)
+                    if(i!=size_t(ShortcutAction::AllWeapons))used|=result.shortcuts.Key(ShortcutAction(i))==candidate;
+                if(!used){replacement=candidate;break;}
+            }
+            result.shortcuts.Set(ShortcutAction::AllWeapons,replacement);
+        }
+        for(size_t i=0;i<size_t(ShortcutAction::ToggleUnitView);++i)
+            if(result.shortcuts.Key(ShortcutAction(i))==VK_F9)result.shortcuts.Set(ShortcutAction::ToggleUnitView,0);
+    }
+    // Partial legacy layouts may explicitly reserve F12 for refill while omitting AllWeapons.
+    if(text("Shortcuts","AllWeapons","").empty()) {
+        for(int candidate:{VK_F12,VK_F5,VK_F4,0}) {
+            bool used=false;for(size_t i=0;i<ShortcutBindings::Count;++i)
+                if(i!=size_t(ShortcutAction::AllWeapons) && candidate)used|=result.shortcuts.Key(ShortcutAction(i))==candidate;
+            if(!used){result.shortcuts.Set(ShortcutAction::AllWeapons,candidate);break;}
+        }
     }
     if(!layoutValid || !result.shortcuts.Valid()) {result.shortcuts=ShortcutBindings();wc3::Log("Invalid/conflicting Shortcuts; using default keyboard layout");}
     // Rawcodes and order IDs describe existing abilities; they never grant skills or bypass native costs.
@@ -155,6 +260,12 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     };
     result.squadRearFormation=squadSwitch("RearFormation");
     result.squadYield=squadSwitch("YieldToPlayer");
+    result.squadAutomaticSpells=squadSwitch("AutomaticSpells");
+    result.squadSpellRadius=std::max(50.f,number("Squad","SpellSearchRadius",700,2000));
+    result.squadAreaSpellRadius=std::max(16.f,number("Squad","AreaSpellRadius",250,1000));
+    result.squadHealBelowPercent=std::max(1.f,number("Squad","HealBelowPercent",85,100));
+    result.squadBuffRefreshSeconds=std::max(1.f,number("Squad","BuffRefreshSeconds",20,600));
+    result.squadSpellIntervalMs=unsigned(std::max(100.f,number("Squad","SpellIntervalMs",1000,10000)));
     result.squadClearance=std::max(60.f,number("Squad","PlayerClearance",100,300));
     result.squadYieldAhead=std::max(result.squadClearance,number("Squad","YieldAheadDistance",350,1000));
     result.squadOrderIntervalMs=unsigned(std::max(50.f,number("Squad","OrderIntervalMs",150,1000)));

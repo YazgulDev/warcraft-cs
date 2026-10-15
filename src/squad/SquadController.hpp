@@ -1,6 +1,7 @@
 #pragma once
 #include "../platform/WarcraftApi.hpp"
 #include "../config/GameplaySettings.hpp"
+#include "../platform/SquadSpellcasting.hpp"
 #include <vector>
 
 // Owns the temporary FPS squad; native orders preserve pathfinding, statuses and ordinary unit attacks.
@@ -22,4 +23,5 @@ private:
     bool Valid(const Member& member,wc3::Handle owner) const;
     std::vector<Member> members_;
     bool passive_=false;
+    SquadSpellcasting spells_;
 };

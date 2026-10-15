@@ -1,11 +1,11 @@
 # Install and play Warcraft CS
 
 You need your own installed Warcraft III **1.26a x86** (Game.dll **1.26.0.6401**)
-and Counter-Strike 1.6. Reforged and other Warcraft patches are unsupported.
+and, for CS weapons, Counter-Strike 1.6. Reforged and other Warcraft patches are unsupported.
 This offline, single-player prototype does not download games or redistribute their content.
 Full campaign/custom-map compatibility has not been verified.
 See [REQUIREMENTS.md](REQUIREMENTS.md) for the complete system, owned-file and dependency checklist.
-Current release: **0.7.0**; [all changes and download variants](docs/RELEASE-0.7.0.md).
+Current release: **0.8.0**; [all changes and download variants](docs/RELEASE-0.8.0.md).
 Antivirus can block the unsigned hook module; see the [short explanation and checks](TROUBLESHOOTING.md#antivirus).
 
 ## Windows EXE: recommended for clients
@@ -42,6 +42,26 @@ plus `sound/weapons` and `sound/player`. CS is required for your local hands, an
 
 ### 2. Agree and install
 
+To install just the Warcraft controls, tick **Only Warcraft modes: third person (F7) and first person
+without UI (F9)**. Leave the disabled CS field empty. Third person keeps native unit attacks,
+spells, items and squads; F9 is an unarmed camera without UI. T switches between these views;
+F6 or the active view's key returns to RTS. CS weapons, buying, ammo rewards/refills and CS sounds
+are disabled. Warcraft sound remains available.
+
+The DLL-included **Player** action needs neither Python/NumPy nor Build Tools in this profile.
+Source/Developer installations still need Python's standard library, MinHook and C++ Build Tools/SDK,
+but skip NumPy and asset conversion. Both variants still install the project's native mod modules.
+
+The checkbox is remembered for Update. `[Installation] WarcraftOnly=true` in the private game's
+`WarcraftCS/WarcraftCS.ini` records it (default `false`). F8 can disable weapon mode immediately;
+switching back to full mode requires unchecking the box and running Install with a valid CS folder,
+then restarting Warcraft. Existing saves and other INI settings are preserved; older private CS
+caches can remain on disk but are inactive. Updates to releases predating this option are refused
+for this profile; **Install** uses the new launcher's embedded version.
+
+From a source checkout, the equivalent is `setup.cmd -WarcraftDirectory "E:\Warcraft III" -WarcraftOnly`
+(Developer build); omit `-WarcraftOnly` and provide `-CounterStrikeDirectory` for the full mod.
+
 Read the download summary and linked terms. Tick **I agree to download and install...**
 (the checkbox starts unchecked), then choose the action available in your launcher:
 
@@ -56,7 +76,7 @@ project release after confirmation and fully reinstalls it, including when that 
 
 No download or installation starts before agreement.
 
-Setup reuses compatible installed dependencies. Both modes prepare missing Python privately;
+Setup reuses compatible installed dependencies. With CS weapons enabled, both modes prepare missing Python privately;
 Developer mode alone prepares Microsoft C++ Build Tools/Windows SDK and checksum-verified MinHook source;
 Microsoft setup may require several GB, administrator approval and a restart. Both modes prepare NumPy
 for local asset conversion. The original games remain unchanged.
@@ -76,8 +96,9 @@ Maps do not need editing. Enable FPS again after changing maps.
 
 - WASD/mouse: move and aim; Space: jump; Ctrl: crouch; Shift: walk.
 - Left mouse: shoot or melee; right mouse: strong melee attack or AWP zoom.
-- 1–7: choose weapons; mouse wheel: previous/next weapon; R: reload; F7: refill carried ammunition for free; F9: get all weapons and ammunition for free.
-- E: pick up items/runes; H/O: recruit your units; J: release them.
+- 1–7: choose weapons; mouse wheel: previous/next weapon; R: reload; F11: refill carried ammunition for free; F12: get all weapons and ammunition for free.
+- F7: third-person unit control; F9: unarmed first-person unit view with no UI, player attacks or casts. Press the same key again to return to RTS. Enemies cannot target you for basic attacks by default; set `[UnitView] PreventEnemyAttacks=false` and press F8 to allow them.
+- E: pick up items/runes; H: recruit your units to follow, fight and cast supported spells; O: follow without this module's combat casts; J: release them. Set `[Squad] AutomaticSpells=false` and press F8 to disable the added spell AI.
 - F6: return to RTS; F10: pause menu; F8: reload configuration.
 
 See [README controls and settings](README.md#controls) for details.
@@ -155,7 +176,7 @@ The manual script requires `cstrike` itself rather than its Half-Life parent.
 ```powershell
 git clone https://github.com/YazgulDev/warcraft-cs.git
 cd warcraft-cs
-git switch release/0.7.0
+git switch release/0.8.0
 .\setup.cmd -WarcraftDirectory "E:\Warcraft III" -CounterStrikeDirectory "C:\SteamGames\steamapps\common\Half-Life\cstrike"
 .\play.cmd
 ```

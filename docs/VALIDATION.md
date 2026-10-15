@@ -681,3 +681,16 @@ Fresh Locust units are absent from native range enumeration; the fixture uses th
 hide/show lifecycle to reproduce the user's enumerable web. An initial nearby-knife assertion
 incorrectly required a skip log for a web outside that ray, although target HP/mana already decreased.
 The corrected oracle checks the actual nearby contact outcome. Private DLL/config files are restored.
+
+### Release 0.8.0 verification (2026-10-12)
+
+Native-independent suites pass for window recovery, fog, logs, pacing, camera clipping,
+movement/collision/trunks, minimap pixels and restoration, projection, world labels, mouse,
+hitboxes, melee/damage/recoil, native attack effects, transparent obstacles, health bars,
+shortcuts/spells/pursuit/walking, squad formation, spell HUD and buying. Sky conversion initially
+fails because the sandbox temporary directory denies cleanup; rerunning the buy/sky/config
+checks with a workspace temporary directory passes. No production code change is required.
+Real XAudio2 gain and reticle WGL suites also pass. INI migration passes under PowerShell 7
+and Windows PowerShell 5.1, preserving custom prices, damage, loadout and display preferences.
+Earlier disposable native gameplay evidence remains documented above; this release preparation
+reruns the automated checks rather than claiming a new full campaign or custom-map playthrough.

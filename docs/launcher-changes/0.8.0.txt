@@ -1,0 +1,12 @@
+- Added an FPS minimap and ally/enemy health bars.
+- Added first-person spells, live spell icons and cooldowns.
+- Added configurable keyboard shortcuts.
+- Improved FPS pacing and extended the default draw distance.
+- Fixed ground clipping, tree collision and getting stuck near cliffs.
+- Fixed unwanted pursuit, idle walking and transformation crashes.
+- Improved squad formations and avoidance around the player.
+- Added unit-scaled damage, optional firing speed and reserve ammo limits.
+- Added native weapon passives and fixed distant passive hits.
+- Fixed webs and nonphysical effects blocking weapon hits.
+- Changed weapon prices, rune rewards and C4 starting inventory.
+- Added unlimited C4 purchases and compact HUD hints.

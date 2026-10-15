@@ -6,5 +6,5 @@
 namespace NativeFloatingText {
 using HookInstaller=bool (*)(void*,void*,void**);
 bool Install(uintptr_t base, HookInstaller hook);
-void SetView(const WorldLabelView& view);
+void SetView(const WorldLabelView& view,bool hideAll=false);
 }

@@ -1,4 +1,4 @@
-# Warcraft CS вЂ” 0.7.0
+# Warcraft CS 0.8.0
 
 Counter-Strike 1.6 inside Warcraft III: control your own hero or unit in first person,
 shoot, and play regular maps, campaigns and compatible custom maps.
@@ -8,21 +8,24 @@ An unofficial single-player fan project, unaffiliated with Blizzard Entertainmen
 **This Git repository contains source code. The standard launcher and release ZIPs contain
 project source without prebuilt DLLs. A separate DLL-included EXE supplies ready-to-use project modules.
 Neither variant includes game files, models, sounds, maps or saves.
-You need your own installed copies of both games.**
+You need your own Warcraft III installation. CS 1.6 is required only for the full weapon mode.**
 This is an early prototype with known limitations.
 
-**[Download 0.7.0](https://github.com/YazgulDev/warcraft-cs/releases/tag/v0.7.0)** В·
-[Release Notes](docs/RELEASE-0.7.0.md) В· [Installation](INSTALL.md) В· [Requirements](REQUIREMENTS.md)
+**[Download 0.8.0](https://github.com/YazgulDev/warcraft-cs/releases/tag/v0.8.0)** В·
+[Release Notes](docs/RELEASE-0.8.0.md) В· [Installation](INSTALL.md) В· [Requirements](REQUIREMENTS.md)
 В· [Troubleshooting](TROUBLESHOOTING.md) В· [Discussions](https://github.com/YazgulDev/warcraft-cs/discussions)
 
-0.7.0 adds accelerating bunnyhops, airborne traversal, optional speed and fog controls, detailed logs,
-crosshair and campaign-movie input fixes, compact English update notes and full game reinstalls.
-The project also includes the CS-style gold buy menu, configurable
-starting equipment, multiple C4, RoC/TFT selection and `play-roc.bat`, fullscreen/Alt-Tab recovery,
-native/optional CS skies, bridge movement and corrected FPS rendering. Earlier changes are in the [changelog](CHANGELOG.md).
+0.8.0 adds an FPS minimap, ally/enemy health bars, native hero spells with live icons and cooldowns,
+configurable shortcuts, 144 FPS pacing and a 15000-unit draw distance. It fixes ground clipping,
+stuck movement, unwanted pursuit and transformation crashes, improves squad avoidance, and adds
+unit-scaled weapon damage, native passives and reserve ammunition limits. New economy/C4 defaults
+apply to fresh configs; updates preserve your existing choices. Earlier changes are in the [changelog](CHANGELOG.md).
 
 ## Features
 
+- Both launchers offer **Only Warcraft modes**: F7 third person with native attacks/spells,
+  F9 first person without weapons/UI. No CS folder or conversion; Player also skips Python/NumPy.
+  T switches between these two views and F6 returns to RTS. Uncheck and Install with CS to restore weapons.
 - Windows EXE launcher with game-folder selection, consent before dependency setup, live logs and Play.
 - Remembered Reign of Chaos / The Frozen Throne selection; `play-roc.bat` starts RoC from a source installation.
 - F6 switches between FPS and RTS; fullscreen launch, relative mouse look and hidden player-unit model.
@@ -39,16 +42,22 @@ native/optional CS skies, bridge movement and corrected FPS rendering. Earlier c
 - Primary and secondary melee attacks, locally imported CS sounds and a blood-free hit indicator.
 - CS-only volume in INI, including shots, reloads, footsteps and C4; F8 applies it to ongoing and future sounds.
 - Damage to units, buildings and gates; configurable allied damage (50% by default). C4 deals 2500 base area damage.
+- Weapons scale damage from the controlled unit attack by default; fixed weapon damage remains configurable.
+- Native weapon passives and item orbs apply to confirmed contacts, including distant firearm hits.
 - AWP uses ordinary configured damage by default; instant enemy kills remain an explicit INI option.
 - Warcraft stuns, roots, slows and attack restrictions also limit FPS actions.
-- E picks up items/runes through the real inventory; a successful rune restores 20% ammunition by default.
+- E picks up items/runes through the real inventory; a successful rune restores 40% ammunition by default.
 - H recruits your own units to follow and fight, O makes them follow without attacking, J releases them.
 - INI settings for ammunition recovery, damage and squad behavior, reloaded with F8.
 - Mouse-wheel weapon cycling through all seven slots, with high-resolution wheel support.
 - B opens a CS-style buy menu using Warcraft gold; configurable prices, starting kits and shop/building access.
-- Multiple planted C4 charges with independent fuses; F7 refills carried equipment and F9 grants every weapon for free.
+- No starting C4 by default; unlimited paid C4 purchases and configurable reserve ammunition caps.
+- Multiple planted C4 charges with independent fuses; F11 refills carried equipment and F12 grants every weapon for free.
 - Warcraft sky by default in FPS, optional privately converted CS skyboxes, and visible native walkable bridge decks.
-- Corrected near-ground clipping and camera/distance filtering for floating world labels.
+- Configurable 144 FPS pacing and 5000-unit default draw distance; corrected near-ground clipping.
+- Trunk-based tree collision, cliff retreat, stable idle movement and safe transformations.
+- Rear squad formations and sideways yielding around the player.
+- Camera/distance filtering for floating world labels.
 
 ## Requirements
 
@@ -139,7 +148,7 @@ Run in PowerShell, replacing the game paths with your own:
 ```powershell
 git clone https://github.com/YazgulDev/warcraft-cs.git
 cd warcraft-cs
-git switch release/0.7.0
+git switch release/0.8.0
 .\setup.cmd -WarcraftDirectory "E:\Warcraft III" -CounterStrikeDirectory "C:\SteamGames\steamapps\common\Half-Life\cstrike"
 .\play.cmd
 ```
@@ -175,8 +184,10 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 | Shift / Ctrl / Space | Walk / crouch / jump (hold Space for repeated hops by default) |
 | Left mouse button | Shoot or primary melee attack |
 | Right mouse button | Knife/sword: strong attack; AWP: cycle two zoom levels and normal view |
-| R / F7 | Reload / refill all carried ammunition for free |
-| F9 | Get all weapons and full ammunition for free |
+| F7 | Enter third person directly; press again in third person to return to RTS |
+| R / F11 | Reload / refill all carried ammunition for free |
+| F9 | Enter unarmed first-person unit view; press again to return to RTS |
+| F12 | Get all weapons and full ammunition for free |
 | B | Open/close the buy menu; number keys or mouse select categories and purchases |
 | . | Buy one ammo pack for the weapon currently held |
 | Esc / 0 in buy menu | Close / back to previous menu (0 closes the main menu) |
@@ -194,6 +205,17 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 | Alt + spell key | Target yourself when the spell allows it |
 
 ## Configuration
+
+The local third-person prototype adds **F7** to enter directly with a selected owned mobile unit.
+WASD runs and Shift+WASD walks using that unit's authored model animations. F7/F6 return to RTS;
+T switches FPS/third person. The reticle, native melee/ranged primary attacks and Z/X/C/V spells remain available.
+See [third-person controls, settings and limits](docs/THIRD-PERSON.md).
+Mouse wheel up/down moves the third-person camera closer/farther. `[ThirdPerson] CameraZoomStep=50`
+sets the step; `CameraMinDistance=80` / `CameraMaxDistance=1000` bound the requested distance.
+F8 reloads these settings and resets zoom to `CameraDistance`; wheel choices otherwise last for the map.
+Reachable targets have brackets and a ground circle: red for enemies, yellow for other contacts.
+`[ThirdPerson] ShowTargetIndicator` hides/shows both; `TargetCircleRadius=64` sets the circle radius
+in Warcraft units (16..256). Change them in `Game/WarcraftCS/WarcraftCS.ini` and press F8 to reload.
 
 EXE installation: `<installation folder>/Game/WarcraftCS/WarcraftCS.ini`.
 Default source installation: `.local/warcraft-cs/WarcraftCS/WarcraftCS.ini`.
@@ -231,8 +253,8 @@ Edit it and press F8 in FPS.
 
 - `[Rendering] MaxFPS=144` raises the client frame cap above Warcraft's original ~64 FPS.
   Positive targets are clamped to 30вЂ“360; `0` restores the native limiter. Actual FPS depends on
-  hardware, scene load and graphics-driver limits. `DrawDistance=15000` triples the FPS world-camera
-  far clip from 5000 Warcraft units; valid distances are 3000вЂ“20000. Both apply at startup/on F8.
+  hardware, scene load and graphics-driver limits. `DrawDistance=5000` sets the controlled-view camera's
+  far clip in Warcraft units; valid distances are 3000вЂ“20000. Both apply at startup/on F8.
   Updates preserve existing values. Draw distance does not reveal unexplored units or remove the
   map's atmospheric fog; N controls fog of war separately. Greater distances increase render work.
 
@@ -261,6 +283,15 @@ Edit it and press F8 in FPS.
   and native armor; `Mode=weapon` instead uses `[AWP] Damage` (115). Set `true` to enable instant enemy kills in `weapon` mode; F8 applies changes.
   Missing/empty/invalid values use `false`; `true`/`false` and `1`/`0` are accepted.
   Updates preserve existing values, so older configs with `AWPOneShot=true` need an explicit edit to disable it.
+- **Q** toggles direct allied targeting in FPS and third person. The HUD shows `ALLIES ON/OFF`.
+  `[Combat] TargetAllies=false` protects allied units/buildings from direct attacks and suppresses
+  their target markers by default. `true`/`1` enable contacts; `false`/`0` disable them; malformed
+  values use false. Startup/F8 restores this saved preference. `[Shortcuts] ToggleAllyTargeting=Q`
+  is remappable; `NONE` disables the shortcut. Updates preserve custom choices, and an older custom
+  action bound to Q keeps Q while this new action is added as NONE. With allied targeting disabled,
+  allied units/buildings are skipped by FPS/TPS attacks so enemies behind them remain reachable.
+  Enabling it makes allies direct contacts again. Terrain, gates and other hostile bodies still block;
+  C4 splash and native spells retain their policies.
 - `[Damage] FriendlyFirePercent=50` sets damage to owned/allied units and buildings, including
   firearms, both melee attacks and C4 (including its planter). Range: 0вЂ“100; 0 disables allied damage,
   100 applies full damage. Press F8 to reload; C4 retains the settings from when it was planted.
@@ -272,7 +303,7 @@ Edit it and press F8 in FPS.
   still governs travel around obstacles.
 - `[Loadout] Mode=melee` starts each map with a loaded USP, knife and sword; `Mode=all` grants all weapons
   with their initial ammunition. `BombCount=0` excludes C4 from the default kit; a positive count opts
-  into starting bombs. Buying C4 grants ownership; F7 grants/refills C4 and F9 grants all weapons.
+  into starting bombs. Buying C4 grants ownership; F11 grants/refills C4 and F12 grants all weapons.
   Updates preserve an existing count; set it to 0 explicitly to adopt the new default on the next map.
   `MaxBombs=100` sets the starting/free-refill/rune amount (0..1000).
   `UnlimitedBombPurchases=true` allows repeated paid purchases beyond that amount; false restores
@@ -288,8 +319,8 @@ Edit it and press F8 in FPS.
   qualify when allied or neutral-passive and visible/alive.
   Add custom shop unit rawcodes with `ShopTypes=nmer,ngme`. Both B and every purchase, including `.`,
   check the zone. The menu does not pause the world; leaving a valid zone closes it.
-- F7 refills carried magazines/reserves and grants C4 up to at least `MaxBombs` for free;
-  surplus purchased bombs are retained. F9 also unlocks all weapons.
+- F11 refills carried magazines/reserves and grants C4 up to at least `MaxBombs` for free;
+  surplus purchased bombs are retained. F12 also unlocks all weapons.
   These shortcuts do not spend gold or bypass Warcraft incapacitation. Legacy `AllowFreeRefill` is ignored.
   Rune rewards still follow `[Runes]` settings, apply only to owned weapons and use `MaxBombs` for C4.
 - `[Sky] Enabled=false` keeps Warcraft's native sky by default; `true` enables a private CS sky in FPS. `Default=Des` is the unknown-tileset fallback;
@@ -433,7 +464,7 @@ For the full list of references, adaptations and license terms, see [NOTICE](NOT
 ### Unit scaling and ammunition limits (test branch)
 
 - `[AK47]`, `[M4A1]`, `[USP]` and `[AWP] MaxReserve` set reserve rounds, excluding the magazine.
-  Defaults are 90, 90, 100 and 30; range 0..100000. Purchases, F7/F9 and rune rewards all use these caps.
+  Defaults are 90, 90, 100 and 30; range 0..100000. Purchases, F11/F12 and rune rewards all use these caps.
   F8 discards surplus reserve after a reduction, without granting ammo or changing loaded rounds.
 - `[Combat] ScaleFireRateFromAttackSpeed=false` is optional (`true`/`false`, also `1`/`0`).
   When enabled, firearm interval is divided by native attack-speed multiplier (0.2..5).
@@ -452,6 +483,13 @@ count, and an empty marker blocks requests. The mod does not invent a cooldown o
 unknown charged spells retain their map's native validation.
 
 ### Weapon attack effects (test branch)
+
+`[Combat] WaterBlocksAttacks=false` lets firearm and melee traces in FPS and third person cross
+the water surface to reach submerged unit hitboxes. The solid bed, cliffs, walkable bridge decks,
+gates and other bodies still obstruct attacks. This does not change movement or water rendering.
+Set `true` and press **F8** to restore the old liquid-surface blocker; `false` disables it.
+`true`/`false` and `1`/`0` are accepted. Missing/empty/malformed values default to `false`, and
+updates preserve existing choices. The same setting applies to third-person target prediction and contact.
 
 `[Combat] EnableAttackEffects=true` routes firearm and melee contacts through the controlled unit's
 native attack preparation and impact. Learned passives and carried items can apply Mana Burn,
@@ -476,3 +514,62 @@ Missing/empty/invalid values enable the feature; `true`/`false` and `1`/`0` are 
 the key to old configurations and preserve explicit custom values, including C4 prices and
 `AWPOneShot`. To adopt these defaults in an existing installation, set `[C4] Price=3000`,
 `AmmoPrice=3000` and `[Damage] AWPOneShot=false` explicitly.
+
+### Unarmed first-person unit view (test branch)
+
+Select your unit and press **F9** to see the world from its first-person camera. WASD and mouse
+look remain available, with the unit's native movement speed and disabling effects. Weapons,
+hands, crosshair, HUD, minimap, native panels and floating labels are hidden. Your unit cannot
+attack or cast player-requested spells in this mode. By default enemies cannot select it for basic attacks.
+Inventory purchases and free weapon/ammo requests are also blocked while the mode is active.
+Warcraft ambience remains audible; CS footsteps are omitted.
+
+`[UnitView] HideHoverCircles=true` also hides native hover circles on units, buildings and
+destructables in F9. Set `false` and press F8 to retain them; missing/malformed values use `true`.
+Both boolean words and 1/0 work. Leaving F9 restores the map's latest preselection preferences;
+RTS/FPS/TPS selection and target markers keep their own behavior. Updates preserve your choice.
+
+Press **F9 again** or **F6** to return to RTS. **F7** selects third person; **T** switches the
+controlled camera to third person. The free all-weapons shortcut is now **F12**. These keys are
+editable under `[Shortcuts]`, including `ToggleUnitView`. Updates migrate the old `AllWeapons=F9`
+to an unused F12/F5/F4 and preserve custom bindings. If another custom action already uses F9,
+`ToggleUnitView` remains `NONE`: assign an unused key yourself.
+
+Set `[UnitView] Enabled=false` and press **F8** to disable this mode. If already active, F8 returns
+you to RTS. Missing or invalid values use `true`; `true`/`false` and `1`/`0` are accepted.
+
+`[UnitView] PreventEnemyAttacks=true` rejects hostile basic-attack acquisition, wind-up and
+map-issued attack orders only during live F9. Set it to `false` and press **F8** to allow enemies
+to attack again while staying in unit view. Leaving F9 also restores normal targeting. Missing,
+empty or malformed values use `true`; `true`/`false` and `1`/`0` are accepted, and updates preserve
+your choice. This changes attack targeting rather than invulnerability: already airborne missiles,
+spells, area damage and direct map-script damage can still affect the unit.
+
+### Automatic squad spells (test branch)
+
+**H** recruits only your nearby units to follow and fight. They can now cast supported native
+combat spells, heal injured allies and use buffs/summons when enemies are nearby. Warcraft
+validates each order and owns its mana cost, cooldown and target restrictions; active casts
+are preserved until completion. **O** selects following without this module's combat casts,
+and **J** releases the squad. These commands also work in unarmed unit view.
+
+Edit `[Squad]` in `Game/WarcraftCS/WarcraftCS.ini`, then press **F8**:
+
+| Key | Default | Meaning and accepted range |
+| --- | --- | --- |
+| `AutomaticSpells` | `true` | Enable this module's squad spell AI; `true`/`false`, `1`/`0`. |
+| `SpellSearchRadius` | `700` | Look for enemies and injured allies within 50..2000 world units. |
+| `AreaSpellRadius` | `250` | Require an enemy within 16..1000 units for untargeted area spells. |
+| `HealBelowPercent` | `85` | Heal allies below this health percentage, 1..100. |
+| `BuffRefreshSeconds` | `20` | Minimum retry interval for buffs/summons and cooldown-free area spells, 1..600 seconds. |
+| `SpellIntervalMs` | `1000` | Minimum interval between spell decisions per follower, 100..10000 milliseconds. |
+
+Numeric values are clamped to their ranges; missing/nonfinite/malformed values use defaults.
+Updates preserve existing settings. Set `AutomaticSpells=false` to cancel this module's current
+casts and stop new ones while retaining ordinary squad attacks. Existing Warcraft/map autocast
+switches are preserved and may still cast independently.
+
+The initial catalog covers recognized stock orders and map abilities based on those orders,
+including Storm Bolt, Chain Lightning, Slow, Priest Heal, Healing Wave, Bloodlust and summons.
+Arbitrary custom spell orders, item abilities, passives and toggle modes are not automated.
+Native target validation still applies; not every customized map ability is supported.

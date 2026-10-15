@@ -2,6 +2,7 @@
 #include "../geometry/ModelBounds.hpp"
 #include "../geometry/TreeTrunkMesh.hpp"
 #include "SpriteTransform.hpp"
+#include "UnitCollisionProfile.hpp"
 #include <algorithm>
 #include <limits>
 
@@ -53,7 +54,7 @@ bool MovementObstacles::Bounds(const std::string& path, bool destructable, uintp
     }
     return true;
 }
-std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle actor, float x, float y, float radius) {
+std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle actor, float x, float y, float radius,bool nativeUnitCollision) {
     std::vector<Bounds3> result;
     if (!base_) return result;
     // Native definition lookup is relatively expensive: cache model names by type only until map unload.
@@ -67,9 +68,19 @@ std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle actor, float x, flo
     wc3::GroupEnumUnitsInRange(group, &x, &y, &radius, 0);
     for (auto unit = wc3::FirstOfGroup(group); unit; unit = wc3::FirstOfGroup(group)) {
         wc3::GroupRemoveUnit(group, unit);
-        if (unit == actor || wc3::IsUnitHidden(unit) || wc3::Real(wc3::GetUnitState(unit, 0)) <= 0) continue;
+        if (unit == actor || wc3::IsUnitHidden(unit) || wc3::IsUnitLoaded(unit) || wc3::Real(wc3::GetUnitState(unit, 0)) <= 0) continue;
+        auto collision=nativeUnitCollision ? UnitCollisionProfile::Read(unit,base_) : UnitCollisionProfile{};
+        if(collision.known && !collision.colliding)continue;
         Bounds3 bounds;
-        if (Bounds(path(wc3::GetUnitTypeId(unit), false), false, wc3::UnitObject(unit), bounds)) result.push_back(bounds);
+        if (Bounds(path(wc3::GetUnitTypeId(unit), false), false, wc3::UnitObject(unit), bounds)) {
+            // Weapons/capes do not make a narrow native ramp impassable. Buildings retain their solid model volume.
+            if(collision.known && collision.colliding && !wc3::IsUnitType(unit,2)) {
+                float cx=wc3::Real(wc3::GetUnitX(unit)),cy=wc3::Real(wc3::GetUnitY(unit));
+                bounds.minimum[0]=cx-collision.radius;bounds.maximum[0]=cx+collision.radius;
+                bounds.minimum[1]=cy-collision.radius;bounds.maximum[1]=cy+collision.radius;
+            }
+            result.push_back(bounds);
+        }
     }
     wc3::DestroyGroup(group);
     for (auto object : wc3::NearbyDestructables(x, y, radius)) {
