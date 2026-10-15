@@ -1,4 +1,5 @@
 #include "../src/platform/NativeWeaponAttack.hpp"
+#include "../src/platform/FpsCombatGuard.hpp"
 #include <array>
 #include <cassert>
 #include <cstring>
@@ -7,6 +8,7 @@
 namespace {
 std::array<unsigned char,0x300> actor{},victim{},attack{};
 bool alive=true,removeDuringPrepare=false,removeDuringFinish=false,evade=false;
+bool incomingProtected=false;
 int prepared=0,finished=0,impacts=0;
 int windups=0,poses=0;
 float expectedRange=600;
@@ -72,6 +74,9 @@ uintptr_t UnitObject(Handle handle) {return handle==1 && alive ? Actor() : handl
 void Log(const char*,...) {}
 void Trace(const char*,...) {}
 }
+namespace FpsCombatGuard {
+bool BlocksIncomingAttack(uintptr_t,uintptr_t) {return incomingProtected;}
+}
 int main() {
     auto memory=static_cast<unsigned char*>(VirtualAlloc(nullptr,0x282000,MEM_RESERVE|MEM_COMMIT,PAGE_EXECUTE_READWRITE));assert(memory);
     uintptr_t base=reinterpret_cast<uintptr_t>(memory);
@@ -126,7 +131,12 @@ int main() {
     // Ranged launch snapshots the scoped damage while retaining missile kind and restoring ordinary stats afterwards.
     expectedKind=2;assert(NativeWeaponAttack::Launch(1,2,123,60) && impacts==5 && finished==5);
     assert(*reinterpret_cast<int*>(attack.data()+0xDC)==2);
-    int previousPrepared=prepared;controlled=0;prepareHook(Actor(),0,Victim(),&zero,&zero);
+    int previousPrepared=prepared;controlled=0;
+    // Passive-view protection must reject both preparation and impact before native callbacks run.
+    incomingProtected=true;
+    prepareHook(Actor(),0,Victim(),&zero,&zero);impactHook(Attack(),0,Victim(),0,0,1,0,1);
+    assert(prepared==previousPrepared && impacts==5);
+    incomingProtected=false;prepareHook(Actor(),0,Victim(),&zero,&zero);
     assert(prepared==previousPrepared+1); // Returning to RTS restores autonomous wind-up callbacks.
     windupHook(Attack(),0,0);poseHook(Attack(),0,Actor());assert(windups==2 && poses==2);
     VirtualFree(memory,0,MEM_RELEASE);

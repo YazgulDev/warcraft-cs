@@ -49,6 +49,10 @@ int (__cdecl* GetUnitCurrentOrder)(Handle)=[](Handle){return 0;};
 BOOL (__cdecl* IssueImmediateOrderById)(Handle,int)=[](Handle,int)->BOOL{++stops;return TRUE;};
 BOOL (__cdecl* IssueTargetOrderById)(Handle,int,Handle)=NativeTarget;
 BOOL (__cdecl* IssuePointOrderById)(Handle,int,float*,float*)=NativePoint;
+// Synthetic ownership keeps the incoming-attack policy independent of Warcraft's player table.
+Handle (__cdecl* Player)(int)=[](int index)->Handle{return Handle(index+10);};
+Handle (__cdecl* GetOwningPlayer)(Handle)=[](Handle unit)->Handle{return unit==1 ? 10 : 11;};
+BOOL (__cdecl* IsUnitEnemy)(Handle,Handle)=[](Handle unit,Handle owner)->BOOL{return unit==1 && owner==11;};
 }
 int main() {
     std::vector<unsigned char> image(0x3D0000);base=uintptr_t(image.data());
