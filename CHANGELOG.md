@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — Attacks past protected allies
+
+- With `[Combat] TargetAllies=false` / Q `ALLIES OFF`, skip allied units and buildings before
+  choosing the nearest FPS weapon hit, third-person melee contact or ranged reticle/muzzle target.
+  The enemy behind a protected ally can now be marked and hit; the ally receives no direct damage.
+- Q `ALLIES ON` restores ordinary allied interception and configured friendly damage. Keep
+  terrain/gates/other enemy interception, weapon reach, movement collision, C4 and spell policies.
+  The existing startup/F8 setting and its update-preservation rules still apply.
+
 ## Unreleased — Warcraft-only launcher profile
 
 - Add a remembered checkbox in both launcher variants to install F7 third person and F9 unarmed,

@@ -7,6 +7,8 @@
 namespace {
 float targetX=250,reach=600,health=420;
 bool hidden=false,loaded=false,visible=true,transparent=false,wall=false,ally=false,water=false;
+bool screen=false,reverse=false,screenAllied=true,gate=false;
+float screenX=60,screenHealth=500;
 int animations=0,damageEvents=0,kind=2;
 std::vector<wc3::Handle> group;
 wc3::Bits Pack(float x){wc3::Bits value;std::memcpy(&value,&x,4);return value;}
@@ -32,7 +34,7 @@ void AnimationBlending(Handle,bool enabled){blending=enabled;}
 float Ground(float x,float){return wall && x>=120 ? 200.f : 0.f;}
 // A synthetic high liquid plane reproduces the old false wall while physical terrain/decks remain solid.
 float AttackSurface(float x,float y,bool blocksWater){return water && blocksWater && x>=40 ? 160.f : Ground(x,y);}
-std::vector<Handle> NearbyDestructables(float,float,float){return {};}
+std::vector<Handle> NearbyDestructables(float,float,float){return gate ? std::vector<Handle>{4} : std::vector<Handle>{};}
 float UnitAttackAverage(Handle){return 100;}
 }
 namespace NativeWeaponAttack {
@@ -43,25 +45,30 @@ bool Apply(wc3::Handle,wc3::Handle,float,float){return false;}
 bool Launch(wc3::Handle,wc3::Handle,float,float){return false;}
 }
 bool WeaponTargetFilter::PassThrough(wc3::Handle,uintptr_t){return transparent;}
-bool UnitHitboxes::Intersect(wc3::Handle,const float* origin,const float* direction,float limit,float& entry,float) {
-    Bounds3 box={{targetX-20,-20,0},{targetX+20,20,128}};
+bool UnitHitboxes::Intersect(wc3::Handle unit,const float* origin,const float* direction,float limit,float& entry,float) {
+    float x=unit==3 ? screenX : targetX;
+    Bounds3 box={{x-20,-20,0},{x+20,20,128}};
     return IntersectBounds(box,origin,direction,limit,entry);
 }
-bool DestructableHitboxes::Intersect(wc3::Handle,const float*,const float*,float,float&){return false;}
+bool DestructableHitboxes::Intersect(wc3::Handle,const float* origin,const float* direction,float limit,float& entry){
+    return gate && IntersectBounds({{70,-100,0},{75,100,200}},origin,direction,limit,entry);
+}
 int main(){
     using namespace wc3;
     GetUnitTypeId=[](Handle){return 1;};
     CreateGroup=[]()->Handle{return 1;};DestroyGroup=[](Handle){};
-    GroupEnumUnitsInRange=[](Handle,float*,float*,float*,Handle){group={2};};
+    GroupEnumUnitsInRange=[](Handle,float*,float*,float*,Handle){group=screen ? (reverse ? std::vector<Handle>{2,3} : std::vector<Handle>{3,2}) : std::vector<Handle>{2};};
     FirstOfGroup=[](Handle)->Handle{return group.empty() ? 0 : group.back();};
     GroupRemoveUnit=[](Handle,Handle){group.pop_back();};
-    GetUnitX=[](Handle unit){return Pack(unit==1 ? 0 : targetX);};GetUnitY=[](Handle){return Pack(0);};
-    GetUnitState=[](Handle,int){return Pack(health);};
+    GetUnitX=[](Handle unit){return Pack(unit==1 ? 0 : unit==3 ? screenX : targetX);};GetUnitY=[](Handle){return Pack(0);};
+    GetUnitState=[](Handle unit,int){return Pack(unit==3 ? screenHealth : health);};
+    GetDestructableLife=[](Handle){return Pack(500);};
+    GetDestructableX=[](Handle){return Pack(72.5f);};GetDestructableY=[](Handle){return Pack(0);};
     IsUnitHidden=[](Handle)->BOOL{return hidden;};IsUnitLoaded=[](Handle)->BOOL{return loaded;};
     IsUnitVisible=[](Handle,Handle)->BOOL{return visible;};GetLocalPlayer=[]()->Handle{return 1;};
-    GetOwningPlayer=[](Handle)->Handle{return 1;};IsUnitAlly=[](Handle,Handle)->BOOL{return ally;};
-    IsUnitEnemy=[](Handle,Handle)->BOOL{return !ally;};
-    UnitDamageTarget=[](Handle,Handle,float* amount,BOOL,BOOL,int,int,int)->BOOL{++damageEvents;health-=*amount;return TRUE;};
+    GetOwningPlayer=[](Handle)->Handle{return 1;};IsUnitAlly=[](Handle unit,Handle)->BOOL{return unit==3 ? screenAllied : ally;};
+    IsUnitEnemy=[](Handle unit,Handle)->BOOL{return !(unit==3 ? screenAllied : ally);};
+    UnitDamageTarget=[](Handle,Handle target,float* amount,BOOL,BOOL,int,int,int)->BOOL{++damageEvents;(target==3 ? screenHealth : health)-=*amount;return TRUE;};
     UnitAttack attack;GameplaySettings settings;UnitHitboxes units;DestructableHitboxes objects;
     float origin[]={-500,0,64},direction[]={1,0,0};
     auto preview=[&]{return attack.Preview(1,0,0,origin,direction,settings,units,objects);};
@@ -103,5 +110,26 @@ int main(){
     targetX=100;water=true;assert(preview().handle==2);settings.waterBlocksAttacks=true;assert(!preview().handle);
     settings.waterBlocksAttacks=false;assert(preview().handle==2);water=false;targetX=250;
     targetX=100;ally=true;assert(!preview().handle);settings.targetAllies=true;assert(preview().allied);
+    // Protected front allies must not absorb selection. Check both enumeration orders and both attack kinds,
+    // including actual delayed damage, Q-style toggles, reach and gates/terrain that remain solid.
+    screen=true;ally=false;settings.targetAllies=false;
+    double now=10;
+    for(int weaponKind:{1,2})for(bool order:{false,true}) {
+        kind=weaponKind;reverse=order;targetX=kind==1 ? 100.f : 250.f;health=420;screenHealth=500;
+        assert(preview().handle==2 && preview().enemy);
+        attack.Reset();assert(attack.Begin(1,now,settings,status));
+        assert(attack.Tick(1,now+1,0,0,origin,direction,false,settings,status,units,objects));now+=2;
+        assert(health==320 && screenHealth==500);
+        settings.targetAllies=true;assert(preview().handle==3 && preview().allied);
+        attack.Reset();assert(attack.Begin(1,now,settings,status));
+        assert(attack.Tick(1,now+1,0,0,origin,direction,false,settings,status,units,objects));now+=2;
+        assert(health==320 && screenHealth==450);
+        settings.targetAllies=false;assert(preview().handle==2);
+        gate=true;assert(preview().handle==4 && preview().destructable);gate=false;
+        if(kind==2){wall=true;assert(!preview().handle);wall=false;reach=100;settings.thirdPerson.useNativeAttackRange=true;assert(!preview().handle);reach=600;}
+        screenAllied=false;assert(preview().handle==3 && preview().enemy);screenAllied=true;
+    }
+    // No enemy in reach means a miss rather than an accidental allied contact.
+    targetX=1500;assert(!preview().handle);settings.targetAllies=true;assert(preview().handle==3);
     kind=0;assert(!preview().handle);
 }

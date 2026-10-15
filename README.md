@@ -288,8 +288,10 @@ Edit it and press F8 in FPS.
   their target markers by default. `true`/`1` enable contacts; `false`/`0` disable them; malformed
   values use false. Startup/F8 restores this saved preference. `[Shortcuts] ToggleAllyTargeting=Q`
   is remappable; `NONE` disables the shortcut. Updates preserve custom choices, and an older custom
-  action bound to Q keeps Q while this new action is added as NONE. Protected allies still block
-  shots rather than allowing attacks through them. C4 splash and native spells retain their policies.
+  action bound to Q keeps Q while this new action is added as NONE. With allied targeting disabled,
+  allied units/buildings are skipped by FPS/TPS attacks so enemies behind them remain reachable.
+  Enabling it makes allies direct contacts again. Terrain, gates and other hostile bodies still block;
+  C4 splash and native spells retain their policies.
 - `[Damage] FriendlyFirePercent=50` sets damage to owned/allied units and buildings, including
   firearms, both melee attacks and C4 (including its planter). Range: 0вЂ“100; 0 disables allied damage,
   100 applies full damage. Press F8 to reload; C4 retains the settings from when it was planted.

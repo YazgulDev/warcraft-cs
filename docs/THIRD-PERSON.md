@@ -70,7 +70,9 @@ All `[ThirdPerson]` values are editable in the existing private `WarcraftCS.ini`
 Q toggles allied targeting and direct damage together. `[Combat] TargetAllies=false` is the
 protected startup/F8 default; enable it to start with allied contacts. With it enabled, allied
 targets use yellow circles and the configured `[Damage] FriendlyFirePercent`. With it disabled,
-allies block traces but receive no direct damage or target marker. C4 and native spells retain
+allied units/buildings are skipped by both melee sweeps and ranged reticle/muzzle traces, allowing
+the enemy behind them to be marked and hit without damaging allies. Terrain and gates still block.
+C4 and native spells retain
 their separate policies. `[Shortcuts] ToggleAllyTargeting=Q` is remappable (NONE disables).
 
 | Key | Default | Range / meaning |

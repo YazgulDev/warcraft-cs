@@ -34,7 +34,8 @@ It compares the live native sequence before reusing a cached pose, repairing AI 
 The snapshot supplies terrain-conforming circle vertices and enemy classification; the renderer keeps
 world depth for the ring and screen-space brackets, without altering native unit selection.
 `Combat.TargetAllies` is shared by direct-contact prediction and damage. The Q mailbox toggles it
-on the game thread; protected allies remain physical occluders. Area bombs and native spells keep
+on the game thread; protected allied units/buildings are filtered before nearest-contact selection
+in FPS, TPS melee and both TPS ranged traces. Movement collisions remain native. Area bombs and native spells keep
 their own policies. Startup/F8 reloads the saved default and config upgrades preserve custom shortcuts.
 `ActorJumpView` captures the native model's skinning inputs between world passes and applies physical
 body elevation through that same skinning function for world drawing. It restores the model/cache

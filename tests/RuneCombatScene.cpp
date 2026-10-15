@@ -216,6 +216,11 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
                     wc3::Real(wc3::GetUnitFlyHeight(blocker)),wc3::Real(wc3::GetUnitState(blocker,0)),wc3::IsUnitVisible(blocker,wc3::GetLocalPlayer()),owner,wc3::Real(wc3::GetUnitX(blocker)),wc3::Real(wc3::GetUnitY(blocker)));
             }
         }
+        else if(BackgroundGameplay::Enabled() && command=="blockerstats") {
+            // Read back native health to prove that passthrough never damages the protected foreground ally.
+            if(blocker && wc3::GetUnitTypeId(blocker))wc3::Log("fixture blocker stats hp=%.1f allied=%d",
+                wc3::Real(wc3::GetUnitState(blocker,0)),wc3::IsUnitAlly(blocker,wc3::GetOwningPlayer(unit)));
+        }
         else if(BackgroundGameplay::Enabled() && command=="passive") {
             // Stock abilities are supplied by the disposable map, never bundled with the mod.
             std::string raw;input>>raw;

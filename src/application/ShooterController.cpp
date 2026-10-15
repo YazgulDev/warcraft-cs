@@ -567,9 +567,10 @@ void ShooterController::Strike() {
     float radius = attackRange + 512; wc3::GroupEnumUnitsInRange(group, &x, &y, &radius, 0);
     while ((candidate = wc3::FirstOfGroup(group)) != 0) {
         wc3::GroupRemoveUnit(group, candidate);
-        // Protected allies remain solid contacts: never shoot through them to hit a unit behind them.
+        // Disabled allied targeting makes allies transparent before choosing the nearest weapon contact.
         if (candidate == unit_ || wc3::Real(wc3::GetUnitState(candidate, 0)) <= 0.405f ||
             !wc3::IsUnitVisible(candidate, local)) continue;
+        if(!settings_.targetAllies && wc3::IsUnitAlly(candidate,wc3::GetOwningPlayer(unit_)))continue;
         // Intersect the rendered model's oriented 3D volume instead of one fixed ground cylinder.
         float origin[] = {x, y, z}, direction[] = {vx, vy, vz}, entry = 0;
         float padding = weapon_ == WeaponSlots::Sword ? 28.0f : 0;
