@@ -1,4 +1,4 @@
-# Validation of the 0.1.0 source baseline
+# Validation
 
 ## FPS native pursuit rejection (test branch, 2026-10-11)
 
@@ -694,3 +694,32 @@ Real XAudio2 gain and reticle WGL suites also pass. INI migration passes under P
 and Windows PowerShell 5.1, preserving custom prices, damage, loadout and display preferences.
 Earlier disposable native gameplay evidence remains documented above; this release preparation
 reruns the automated checks rather than claiming a new full campaign or custom-map playthrough.
+
+
+### Release 0.9.0 verification (2026-10-16)
+
+The release includes every feature commit since the immutable v0.8.0 tag. Native-independent
+regressions cover input/window recovery, fog/logging/pacing, camera and HUD frame completion,
+movement/collision/ramps, minimap pixels and restoration, projection/labels/mouse, hitboxes,
+melee/damage/recoil, third-person attack timelines/contact picking, native hover ownership,
+attack scope/lifecycle, transparent obstacles, health bars, spells/pursuit/walking, squad formation,
+spell HUD and buying. The obstacle-cache, native attack and combat guard harnesses now supply
+the new collision and incoming-attack boundaries; the native attack test also rejects protected
+preparation/impact callbacks. Real XAudio2 volume and WGL reticle checks pass. Buy/sky/config
+checks use a workspace temporary directory so sandbox cleanup permissions do not mask results.
+
+Release packaging checks build both normal launcher variants and bind them to the same audited
+source snapshot. Package reflection verifies the full release body and manifest fallback resolve
+to the same reviewed summary, independent EXE hashes, and DLL/MIX-free public ZIPs. Launcher
+regressions exercise consent, installation/update, dependency profiles and Warcraft-only setup;
+INI migration checks preserve customized settings, with Windows PowerShell compatibility checks.
+Ordinary modules exclude opt-in native scene commands and never bundle retail game libraries.
+
+Feature development used disposable Warcraft/DotA scenes for native melee/ranged effects,
+empty swings, locomotion and attack playback, close crowds, target markers, wheel zoom, ramps,
+campaign save/load, follower spells, F9 attack protection, water contacts and allied foreground
+units/buildings. Native hover settings restore after F9/opt-out and follow map-owned changes;
+camera fields were checked at 5000 and 7000. These checks are bounded, not a complete campaign
+or custom-map playthrough. Recent native logic checks used Direct3D because the isolated test
+copy failed OpenGL initialization; separate WGL suites cover rendering state and pixels. This
+release preparation reruns automated checks and does not claim a new full native gameplay pass.

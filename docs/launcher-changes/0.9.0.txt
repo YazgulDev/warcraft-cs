@@ -1,0 +1,12 @@
+- Added native third-person control with melee and ranged unit attacks.
+- Added direct F7 entry, camera wheel zoom and reachable-target markers.
+- Added model-specific walk, run and jump presentation.
+- Fixed interrupted attack animations, close crowds and ranged autoattacks.
+- Fixed narrow ramp traversal and grounded movement support.
+- Added unarmed F9 unit view with configurable enemy targeting and hidden hover circles.
+- Added automatic native spellcasting for combat followers.
+- Added Warcraft-only installation without CS assets or Player Python downloads.
+- Added Q allied targeting and attacks past protected allies.
+- Fixed hits on submerged units while retaining solid obstacles.
+- Fixed campaign HUD restoration and minimap buffer recovery.
+- Changed default draw distance to 5000 and free supply keys to F11 and F12.
