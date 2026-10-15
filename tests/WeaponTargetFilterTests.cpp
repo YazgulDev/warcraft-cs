@@ -1,4 +1,5 @@
 #include "../src/platform/WeaponTargetFilter.hpp"
+#include "../src/platform/UnitCollisionProfile.hpp"
 #include <array>
 #include <cassert>
 #include <cstring>
@@ -35,12 +36,23 @@ int main() {
     *reinterpret_cast<uintptr_t*>(position.data()+0xA8)=reinterpret_cast<uintptr_t>(profile.data());
     *reinterpret_cast<unsigned*>(profile.data()+0x9C)=0x1000000;assert(WeaponTargetFilter::PassThrough(1,base));
     *reinterpret_cast<unsigned*>(profile.data()+0x9C)=1;assert(!WeaponTargetFilter::PassThrough(1,base));
+    // Movement uses live radius/mask regardless of immunity or visual model size; shooting keeps its separate policy.
+    Radius(.5f);auto collision=UnitCollisionProfile::Read(1,base);assert(collision.known && collision.colliding && collision.radius==16);
+    *reinterpret_cast<unsigned*>(profile.data()+0x9C)=0;
+    collision=UnitCollisionProfile::Read(1,base);assert(collision.known && !collision.colliding);
+    *reinterpret_cast<unsigned*>(profile.data()+0x9C)=1;Radius(0);
+    collision=UnitCollisionProfile::Read(1,base);assert(collision.known && !collision.colliding);
+    locust=true;collision=UnitCollisionProfile::Read(1,base);assert(collision.known && !collision.colliding);locust=false;
     Radius(0);hero=true;assert(!WeaponTargetFilter::PassThrough(1,base));hero=false;
     building=true;assert(!WeaponTargetFilter::PassThrough(1,base));building=false;
     // Unresolved or malformed collision facts never grant permission to shoot through an obstacle.
     resolvable=false;assert(!WeaponTargetFilter::PassThrough(1,base));resolvable=true;
     Radius(std::numeric_limits<float>::quiet_NaN());assert(!WeaponTargetFilter::PassThrough(1,base));
     Radius(-1);assert(!WeaponTargetFilter::PassThrough(1,base));
+    assert(!UnitCollisionProfile::Read(1,base).known);
+    Radius(std::numeric_limits<float>::quiet_NaN());assert(!UnitCollisionProfile::Read(1,base).known);
+    Radius(99999);assert(!UnitCollisionProfile::Read(1,base).known);
+    Radius(16);resolvable=false;assert(!UnitCollisionProfile::Read(1,base).known);resolvable=true;
     assert(!WeaponTargetFilter::PassThrough(0,base) && !WeaponTargetFilter::PassThrough(1,0));
     VirtualFree(memory,0,MEM_RELEASE);
 }

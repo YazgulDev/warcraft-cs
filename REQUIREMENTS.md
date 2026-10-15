@@ -33,6 +33,10 @@ The original folder is read locally. Setup creates a separate marked Warcraft co
 
 ## Required Counter-Strike files
 
+These files are optional when **Only Warcraft modes** is checked in either launcher.
+That profile skips CS conversion; bundled Player setup also skips Python/NumPy.
+Source builds still require Python and the C++ toolchain. See [installation profiles](INSTALL.md#2-agree-and-install).
+
 Inside `cstrike`, retain:
 
 - `models/v_ak47.mdl`, `v_m4a1.mdl`, `v_usp.mdl`, `v_awp.mdl`, `v_knife.mdl`, `v_c4.mdl`.

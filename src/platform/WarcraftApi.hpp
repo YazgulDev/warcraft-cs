@@ -6,6 +6,8 @@
 #include "CameraClipChannel.hpp"
 
 namespace wc3 {
+// Convert built-in order names through the owned game's normal string/order registry.
+int OrderId(const char* name);
 // Independent native visibility switches, used only by the offline FPS override adapter.
 extern void (__cdecl* FogEnable)(BOOL);
 extern void (__cdecl* FogMaskEnable)(BOOL);
@@ -23,6 +25,8 @@ void Trace(const char* format, ...);
 void LogError(const char* format, ...);
 void OpenLog(const char* directory);
 float Ground(float x, float y);
+// Combat samples solid terrain/walkables independently of the liquid surface used for movement.
+float AttackSurface(float x,float y,bool waterBlocks);
 // Terrain alone excludes bridge decks so their underside cannot become an upward teleport.
 float TerrainGround(float x, float y);
 // Query real walkable geometry above terrain; removed/dead bridges cease to supply this surface.
@@ -38,6 +42,20 @@ std::vector<Handle> NearbyDestructables(float x, float y, float radius);
 std::vector<Handle> NearbyItems(float x,float y,float radius);
 // Current native min/max attack includes dice, hero attributes, items and buffs; FPS uses their mean.
 float UnitAttackAverage(Handle unit);
+// Animation only: no attack target or automatic pursuit order is assigned.
+void Animate(Handle unit,const char* sequence);
+void AnimateIndex(Handle unit,int sequence);
+void AnimationSeek(Handle unit,int sequence,float seconds);
+// Temporary native blending ownership prevents repeated pose repairs from restarting the transition.
+bool AnimationBlending(Handle unit);
+void AnimationBlending(Handle unit,bool enabled);
+// Observe the sprite's current sequence so direct control can recover a native AI pose overwrite.
+int AnimationSequence(Handle unit);
+// Rendered clip identity is separate from the sprite's queued/pending animation request.
+int ActiveAnimationSequence(Handle unit);
+// Animation rate does not assign native movement/combat orders.
+float AnimationRate(Handle unit);
+void AnimationRate(Handle unit,float rate);
 extern int (__cdecl* GetUnitCurrentOrder)(Handle);
 extern Handle (__cdecl* CreateItem)(int,float*,float*);
 extern void (__cdecl* RemoveItem)(Handle);

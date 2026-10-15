@@ -1,5 +1,55 @@
 # Source modules
 
+`NativeHoverView` owns the verified 1.26a preselection setter and its two UI switches. Live F9 can
+temporarily hide native hover circles independently of GL HUD rendering. Map/script setter requests
+update the saved preference while hidden; leaving F9 or disabling the option restores the latest pair.
+Map replacement discards old UI ownership without writing stale storage. Selection groups and other
+view modes retain their native behavior.
+
+`NativeFramePresentation` observes 1.26a's verified frame-batch completion inside the native present
+method. The HUD no longer depends on which Windows/OpenGL swap entry point presents the frame.
+Upload/readback flushes outside that method and nested callbacks do not compose a second HUD.
+The runtime consumes a completed world once per presentation, independent of frame duration,
+and resets that pending submission at map boundaries. `NativeMinimap` restores the buffer it captured
+even if the HUD target changes. Unknown native signatures retain the previous API swap hook.
+
+The third-person prototype uses `ThirdPersonPose`/`ThirdPersonCamera` in presentation for boom geometry
+and native collision clearance. `HeroAttackTimeline` in combat owns delayed, single-contact swings and
+recovery. `UnitAttack` in platform adapts those swings and aimed ranged launches to native animation, widget geometry and
+unit damage effects; it never issues pursuit orders. `HeroAttackPose` owns the independent visual clock;
+`UnitAttackAnimation` selects authored attack variations, repairs native pose resets at their elapsed
+clip time and restores the native playback rate. It temporarily disables native pose blending during
+the swing, restoring the previous mode on release without changing the map's blend duration.
+Playback reads the model's active clip rather than treating a pending sprite request as Stand.
+The native model selector restores the exact authored index synchronously before elapsed-time seeking,
+without adding sprite-queue requests or issuing gameplay orders during pose repair.
+The controller defers native Stop cleanup while that manual pose is active; autonomous combat
+and movement remain suppressed by the existing native guards.
+Locomotion resumes after that visual clock ends,
+while `HeroAttackTimeline` continues to enforce contact and cooldown. `NativeOrderCancellation` tracks retained targets per actor
+without native dependencies. The native weapon adapter distinguishes scoped manual dispatch from automatic
+preparation/impact, sharing passive squad predicates with the order guard. The controller coordinates these collaborators
+and keeps actor render visibility separate from movement/spell ownership.
+
+`HeroMotionState` in presentation tracks physical takeoff/air/landing and ground locomotion transitions.
+`ModelMotionProfile` parses owned MDX sequences and UnitUI gait speeds without native/platform dependencies.
+`UnitLocomotion` selects those per-unit sequences/rates and yields to casts/stuns/attacks; model/type changes reset metadata.
+It compares the live native sequence before reusing a cached pose, repairing AI overwrites without resetting a correct gait.
+`UnitAttack::Preview` returns a read-only `UnitAimTarget` using the same geometry as attack contact;
+`TargetMarkerView` projects that snapshot without native handle reads or gameplay writes.
+The snapshot supplies terrain-conforming circle vertices and enemy classification; the renderer keeps
+world depth for the ring and screen-space brackets, without altering native unit selection.
+`Combat.TargetAllies` is shared by direct-contact prediction and damage. The Q mailbox toggles it
+on the game thread; protected allied units/buildings are filtered before nearest-contact selection
+in FPS, TPS melee and both TPS ranged traces. Movement collisions remain native. Area bombs and native spells keep
+their own policies. Startup/F8 reloads the saved default and config upgrades preserve custom shortcuts.
+`ActorJumpView` captures the native model's skinning inputs between world passes and applies physical
+body elevation through that same skinning function for world drawing. It restores the model/cache
+at the presentation boundary before the next tick. It does not write unit fly height, grant
+flying movement or change pathing. Map unload discards stale model pointers.
+For manual attacks it also refreshes the grounded body's native skinning after the controller
+repairs elapsed clip time; advancing an animation clock alone cannot update already cached bones.
+
 Sources are grouped by responsibility. Includes name the owning module explicitly; each public type
 has its own header and implementation. There is no global header search path masking dependencies.
 
@@ -7,7 +57,7 @@ has its own header and implementation. There is no global header search path mas
 | --- | --- |
 | `src/runtime` | DLL startup, hook installation, frame composition and fault boundaries |
 | `src/platform` | Verified Warcraft/Windows adapters and native camera/AI/render/world integration |
-| `src/input` | Relative mouse input, look angles, weapon wheel and window-message dispatcher |
+| `src/input` | Relative mouse input, look angles, weapon/camera wheel accumulation and window-message dispatcher |
 | `src/application` | FPS lifecycle and coordination of gameplay systems |
 | `src/config` | Validated configuration snapshots |
 | `src/movement` | Independent movement physics and validated movement tuning contract |
@@ -35,6 +85,9 @@ folders or terminates Warcraft. Reinstall tests use synthetic resources and a ve
 they do not access an actual game installation or run its executable.
 
 `InputDispatcher` translates input into game-thread command mailboxes and returns an optional result.
+`CameraWheel` retains fractional wheel notches and clamps the third-person session boom distance.
+The controller routes TPS zoom separately from FPS weapon scrolling and supplies the same zoom snapshot
+to both camera positioning and reticle rays. Native collision remains in `ThirdPersonCamera`.
 The window procedure forwards unconsumed messages and owns render-resource focus recovery. Native
 adapters isolate engine layouts; `WorldLabelVisibility` consumes a camera snapshot without Warcraft,
 Windows or OpenGL dependencies. Weapon data lives in `combat/Weapon.hpp` independently of the controller.
@@ -49,6 +102,9 @@ regression uses actual Win32 message forwarding without game files or a visible 
 `MovementPhysics` integrates momentum, jumping and gravity without engine calls. `WarcraftCollision`
 sweeps the player footprint against terrain, native bridge decks and solid model volumes supplied by
 `MovementObstacles`. The obstacle adapter owns model/type caches and clears them on map changes.
+`UnitCollisionProfile` reads live Warcraft collision radius/mask, converts native cell radii to world units
+and separates non-colliding map helpers from visual bodies. Movement consumes this profile independently
+of weapon target filtering; unknown profiles retain conservative geometry. Grounded support follows each sweep substep.
 `GameplaySettings` loads movement tuning; the controller applies that snapshot on startup and F8.
 
 `RenderSettings` is part of that validated snapshot. `NativeFrameRate` verifies the supported native
@@ -147,7 +203,9 @@ inventory/recovery capacity. F8 clamps existing surplus reserve and resets fract
 snapshot only. SpellCaster checks the shared native snapshot before replacing an active order.
 
 `NativeWeaponAttack` owns the version-verified native preparation/impact/cleanup adapter. A thread-local
-contact scope substitutes only the weapon's base roll during synchronous impact; native passive rolls,
+manual-contact scope also gates native wind-up retries and attack poses, preventing retained AI targets
+from restarting ranged attack animations. Ordinary RTS units and active fighting followers remain native.
+The same contact scope substitutes only the weapon's base roll during synchronous impact; native passive rolls,
 critical modifiers and attack callbacks remain engine-owned. It temporarily uses instant impact and
 extends only the matching primary impact range getter to the verified ray contact's center distance.
 Ordinary RTS, unrelated components, secondary attack ranges and preparation keep native range. It
@@ -159,3 +217,22 @@ destructables, explicit legacy AWP finishing and disabled/unavailable effects us
 candidates. The controller applies its configurable policy before selecting the nearest unit;
 skipped effects never shorten the ray. Unit type IDs and model filenames are not special-cased.
 Unknown collision facts remain opaque; heroes, structures and physical immune units retain collision.
+
+`WarcraftApi.AttackSurface` samples the verified solid terrain/walkable-height path independently
+of liquid-aware `Ground`. FPS contact and TPS prediction/contact consume the same configurable
+water policy; physics, camera height and spell point picking keep their existing height contracts.
+
+`ControlView` is the single source of truth for weapon FPS, third person and unarmed unit FPS.
+`ShooterController.SelectView` cancels owned input/combat state before switching, while the input,
+movement and presentation adapters apply that mode's policies. Unit view shares native attack
+suppression with controlled modes, retains incoming damage and omits both overlay and native UI.
+`FpsCombatGuard` also owns the verified native attack-target eligibility adapter for F9's configurable
+enemy policy. A live controller predicate scopes it to the protected mode; ordinary actor flags and
+native target-reference getters remain intact. `NativeWeaponAttack` shares the contact guard so a
+previous wind-up cannot bypass a newly enabled policy. Spell/area damage remains native.
+
+`SquadSpellPolicy` owns portable readiness/healing decisions. `SquadSpellcasting` adapts live
+ability slots and native orders to a bounded stock-order catalog, using shared native ability,
+cooldown and map-charge readers. Its order ownership protects wind-up/channeling from formation
+refresh. `SquadController` selects combat/passive behavior, validates player ownership and cancels
+only adapter-owned casts on opt-out. No map ability, mana or autocast switch is rewritten.

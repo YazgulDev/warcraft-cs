@@ -11,7 +11,7 @@ $source=Split-Path -Parent $PSScriptRoot
 . (Join-Path $source 'setup/prebuilt-runtime.ps1')
 $paths=Get-ClientPaths $request
 $runtime=Join-Path $paths.install 'Game'
-Assert-ClientGames $paths.warcraft $paths.cstrike
+Assert-ClientGames $paths.warcraft $paths.cstrike ([bool]$request.WarcraftOnly)
 # Pre-0.5 launchers only offered local compilation and disclosed its tools; preserve that legacy behavior.
 $mode=if ($request.InstallMode) { [string]$request.InstallMode } else { 'Developer' }
 if ($mode -cnotin @('Player','Developer')) { throw 'Choose Player or Developer installation mode.' }
@@ -62,14 +62,16 @@ try {
         Remove-Item -LiteralPath $ready -Force
     }
     Write-Output 'Checking local dependencies...'
-    $python=Get-ClientPython $paths.install $request.PythonExecutable
+    $python=''
+    # Player unit-only setup neither converts assets nor compiles export forwarders.
+    if (!$request.WarcraftOnly -or $mode -eq 'Developer') { $python=Get-ClientPython $paths.install $request.PythonExecutable }
     # Player never invokes the Build Tools installer; both modes convert the owner's game assets locally.
     if ($mode -eq 'Developer') { Install-ClientBuildTools $paths.install }
     $modeInfo=if ($mode -eq 'Player') { 'Player mode: installing bundled modules; no Build Tools or Windows SDK.' } else { 'Developer mode: building modules locally with C++ tools and Windows SDK.' }
     Write-Output $modeInfo
-    & (Join-Path $source 'setup/setup.ps1') -WarcraftDirectory $paths.warcraft -CounterStrikeDirectory $paths.cstrike -RuntimeDirectory $runtime -PythonExecutable $python -SwordModel $swordModel -InstallMode $mode -PrebuiltDirectory $prebuilt
+    & (Join-Path $source 'setup/setup.ps1') -WarcraftDirectory $paths.warcraft -CounterStrikeDirectory $paths.cstrike -RuntimeDirectory $runtime -PythonExecutable $python -SwordModel $swordModel -InstallMode $mode -PrebuiltDirectory $prebuilt -WarcraftOnly:([bool]$request.WarcraftOnly)
     if ($LASTEXITCODE) { throw 'Game setup failed.' }
-    @{source=$source;runtime=$runtime;version=(Get-Content (Join-Path $source 'VERSION') -Raw).Trim();revision=(Split-Path -Leaf $source);sword_model=$swordModel;install_mode=$mode} |
+    @{source=$source;runtime=$runtime;version=(Get-Content (Join-Path $source 'VERSION') -Raw).Trim();revision=(Split-Path -Leaf $source);sword_model=$swordModel;install_mode=$mode;warcraft_only=([bool]$request.WarcraftOnly).ToString()} |
         ConvertTo-Json | Set-Content -LiteralPath (Join-Path $paths.install 'client-installed.json') -Encoding utf8
     Write-Output 'Installation complete. You can now press Play.'
 } finally { Stop-Transcript | Out-Null }

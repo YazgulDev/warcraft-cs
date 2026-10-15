@@ -1,5 +1,156 @@
 # Changelog
 
+## Unreleased — Clean unit view and 5000 draw distance
+
+- Hide Warcraft's native hover/preselection circles on units, buildings and destructables during F9.
+  Add `[UnitView] HideHoverCircles=true` (true/false or 1/0, startup/F8); false retains native circles.
+  Restore map preferences on mode exit, menus and opt-out, track requests made while hidden, and
+  discard unloaded-map state. FPS/TPS target markers and ordinary RTS selection remain available.
+- Set fresh/default `[Rendering] DrawDistance=5000` Warcraft units (range 3000–20000, startup/F8).
+  Missing/empty/malformed distances use 5000; updates preserve explicit saved distances.
+
+## Unreleased — Attacks past protected allies
+
+- With `[Combat] TargetAllies=false` / Q `ALLIES OFF`, skip allied units and buildings before
+  choosing the nearest FPS weapon hit, third-person melee contact or ranged reticle/muzzle target.
+  The enemy behind a protected ally can now be marked and hit; the ally receives no direct damage.
+- Q `ALLIES ON` restores ordinary allied interception and configured friendly damage. Keep
+  terrain/gates/other enemy interception, weapon reach, movement collision, C4 and spell policies.
+  The existing startup/F8 setting and its update-preservation rules still apply.
+
+## Unreleased — Warcraft-only launcher profile
+
+- Add a remembered checkbox in both launcher variants to install F7 third person and F9 unarmed,
+  UI-free first person without a Counter-Strike folder, model/sound conversion or NumPy.
+  Bundled Player setup also skips Python; source builds retain Python/MinHook/C++ requirements.
+- Persist `[Installation] WarcraftOnly` (default false), preserve other settings/saves, and reject
+  older release updates that cannot honor the selected profile. Uncheck and Install with CS to restore weapons.
+- Restrict F6/T and CS supply/buy inputs to installed modes; keep native TPS combat, spells, items,
+  squads and Warcraft audio. Hide unavailable CS hints. Add profile/consent/config/backend regressions.
+
+## Unreleased — Attacks through water
+
+- Separate combat surface sampling from liquid-aware movement height. Water alone no longer
+  clips FPS firearm/melee rays or third-person melee/ranged prediction and contact before a submerged target.
+  Retain solid terrain, cliffs, raised walkable geometry, gates and nearest-body interception.
+- Add `[Combat] WaterBlocksAttacks=false`, with F8 live reload and `true`/`false` or `1`/`0`.
+  `true` restores the previous liquid blocker; missing/empty/malformed values use `false`.
+  Updates preserve custom values. Movement, camera height, water rendering and spell point picking stay unchanged.
+- Add water-plane/terrain regressions for the real third-person picker and config preservation/reload,
+  plus opt-in native submerged-target and rendered-height probes confined to disposable maps.
+
+## Unreleased — Configurable enemy targeting in unit view
+
+- Default `[UnitView] PreventEnemyAttacks=true` prevents hostile basic-attack acquisition,
+  retained wind-up/contacts and map-issued attack orders against the controlled F9 unit.
+  Other units, allies and other view modes retain their native targeting behavior.
+- Set `false`/`0` and press F8 to restore enemy attacks immediately; `true`/`1` enables protection.
+  Missing/empty/malformed values default to true. Updates add the setting and preserve custom choices.
+- No saved vulnerability, visibility, ownership or alliance flags are changed. Already airborne
+  missiles, spells, area damage and direct scripted damage remain native.
+- Verify default protection, live F8 off/on, another unit remaining attackable and normal attacks
+  after F9 exit in a disposable native map, alongside config validation and update preservation.
+
+## Unreleased — Unarmed unit view and squad spellcasting
+
+- Add F9 to enter a separate first-person unit view from RTS, FPS or third person. Hide weapons,
+  crosshair, HUD, native panels and floating labels. Retain WASD/mouse movement and native unit
+  movement speed. Block player attacks, spell requests and purchases while retaining incoming damage.
+  Press F9 again to return to RTS; F6 and F7 retain their existing mode controls.
+- Move the default free all-weapons shortcut from F9 to F12. Migrate the previous F9 binding to
+  an unused F12/F5/F4 while preserving custom layouts. Conflicting custom F9 actions leave the
+  new binding unassigned until the user selects a free key. Add `[UnitView] Enabled=true` with F8 reload.
+- Let H combat followers use supported native attack, healing, buff and summon spells. Preserve
+  mana, cooldowns, recognized map charges and ongoing casts instead of interrupting them with
+  formation orders. O follow mode stops this module's casts; J releases the squad.
+- Add `[Squad] AutomaticSpells`, `SpellSearchRadius`, `AreaSpellRadius`, `HealBelowPercent`,
+  `BuffRefreshSeconds` and `SpellIntervalMs`. F8 reloads settings; updates preserve user values.
+  Native/map autocast switches remain under Warcraft's control. Arbitrary custom orders, items,
+  passives and toggles are not automated.
+- Add config migration/policy regressions and opt-in native spell fixtures. Verify bare unit-view
+  rendering, blocked player combat, incoming damage, native Storm Bolt and Priest healing with
+  stock autocast disabled, and the O/F8 spellcasting opt-outs in a disposable test map.
+
+## Unreleased — Close-contact attack playback
+
+- Follow the model's active clip independently of the sprite's pending request. Dense crowds
+  could keep the request pending and prevent manual attack playback from advancing.
+- Restore the authored model clip and its elapsed time synchronously through the verified native
+  selector before skinning, so close hit reactions cannot starve the queued request.
+- Defer native Stop cleanup while a manual attack owns its pose; native movement, acquisition
+  and damage guards continue to block autonomous combat. Keep contact, cooldown and status rules.
+- Add an isolated six-unit crowd scene and read-only active/pending clip telemetry for regression checks.
+
+## Unreleased — Full attack playback and allied targeting
+
+- Refresh native skinning after repairing the manual attack clock, including while grounded, so
+  rendered bones follow the complete swing. Finish authored clips even when configured recovery
+  is shorter; held attacks wait for both the minimum recovery and the visual backswing.
+- Suspend native pose blending during manual swings so repeated movement pose resets cannot keep
+  the visible attack near its first frame. Restore the previous blending policy when ownership ends.
+- Add Q (`[Shortcuts] ToggleAllyTargeting`) to toggle direct allied contacts and target markers
+  in FPS/TPS. `[Combat] TargetAllies=false` protects allies by default; startup/F8 restores that
+  saved choice. Allies still block traces. C4 splash and native spells retain their policies.
+- Show the current mode in HUD hints. Preserve custom Q bindings and targeting preferences on updates.
+
+## Unreleased — Third-person attack animation recovery
+
+- Separate manual attack playback from combat cooldown. Resume locomotion when the authored attack
+  clip ends, while retaining the existing contact delay and repeat-attack interval.
+- Preserve native alternate attack clips and advance their playback time after movement or impact
+  cleanup resets the pose. Respect native attack-speed modifiers and map-owned time-scale changes.
+- Yield to casts, disabling effects and death. Add portable timing regressions and opt-in native
+  clip-clock telemetry; verify moving attacks and recovery on Arthas, Archmage and Footman.
+
+## Unreleased — Campaign HUD recovery
+
+- Compose the HUD after Warcraft's verified native frame-batch completion, before presentation,
+  independently of the Windows/OpenGL swap entry point. Exclude uploads, readbacks and nested
+  callbacks. Keep the previous swap hook as a fallback for unrecognized renderer signatures.
+- Consume completed world submissions instead of dropping valid campaign frames older than 500 ms.
+  Reset the pending frame on map unload/replacement so menus cannot inherit a previous map's HUD.
+- Capture/restore the minimap from its own draw buffer. Add real WGL front/back-buffer regressions
+  and opt-in campaign save/load and native presentation fixtures, excluded from ordinary client modules.
+
+## Unreleased — Third-person unit control
+
+- Add third-person mouse-wheel zoom without interrupting spells or changing CS weapons. Preserve native camera collision and shared reticle rays. `[ThirdPerson] CameraZoomStep=50` (0..500 world units per notch, 0 disables), `CameraMinDistance=80` / `CameraMaxDistance=1000` (80..1000 each) reload on F8, which restores the bounded `CameraDistance`. Preserve custom values during config updates and discard pending wheel input at focus/menu/mode boundaries.
+- Recover native sprite pose overwrites while standing/running in direct control; leave casts, stuns and manual attacks in charge of their animations.
+- Mark the reachable third-person attack contact with red enemy, green ally or gold destructable brackets and a terrain-conforming ground circle (red enemy/yellow other targets). Remove the TARGET IN RANGE caption. Preview shares melee/ranged contact, native range and occlusion rules with LMB. `[ThirdPerson] ShowTargetIndicator=true` and `TargetCircleRadius=64` (16..256 world units) support F8 reload and config-preserving updates.
+- Suppress retained-target native wind-up timers and attack poses in direct control, fixing Sniper's visible autoattack loop while preserving manual ranged missiles and RTS attacks.
+- Use live Warcraft actor/creature collision footprints on narrow ramps; non-colliding map helpers no longer supply solid model obstacles. Buildings and trees retain solid volumes. `[Movement] UseNativeUnitCollision=true` reloads on F8; false restores legacy creature boxes/actor radius.
+- Resolve grounded support between swept movement substeps, fixing fast uphill traversal without weakening walls or cliff collision. Extend disposable movement and collision-profile regression coverage.
+
+- Fix repeated Stop commands resetting manual attacks next to creeps, including DotA Slardar. Track retained
+  targets per actor and reject autonomous native preparation/impacts while preserving scoped manual attacks,
+  ordinary RTS combat, spell ownership and follow-only squad policies.
+- Add aimed primary ranged attacks with native map missile flight, attack effects, native attack range and
+  configurable range/multiplier/projectile fallback. Keep CS ammo and recoil separate from unit combat.
+- Expand melee contact vertically for short creep models with configurable MeleeHeightTolerance. Restore
+  native animation rate before an attack and keep damage dispatch on the manual contact timeline.
+- Move the melee adapter to UnitAttack; add native guard/lifecycle, retained-target and configuration tests.
+
+- Add configurable F7 direct third-person entry from RTS/FPS and F7 return to RTS. Move free ammo refill to
+  F11; migrate the old F7 default without resetting custom layouts. Keep T view switching and F6 recovery.
+- Extend movement presentation to mobile units: choose authored model indices for walk/run/swim/fly and leap
+  fallback poses; Shift walks, WASD runs. Match native UnitUI gait speeds, with configurable automatic
+  playback, multiplier and manual stride fallback.
+
+- Add speed-matched native run/idle playback and takeoff/air/landing poses for Arthas; render the visible
+  body at its physical jump height and restore its model transform before the next tick. Stock Arthas has no
+  authored Jump sequence, so the prototype reuses its native Hit/Ready poses. Preserve casting/stun/attack
+  ownership and restore playback rate on T/F6/cinematics/focus loss. Add configurable stride/phase durations.
+
+- Add T (configurable ToggleView) to switch active FPS/TPS, retaining F6 RTS recovery, inventory and position.
+- Show the native melee actor with WASD/mouse control, a reticle and existing Z/X/C/V native spell casting.
+- Add native hero attack animations, empty swings and delayed single-contact forward melee sweeps; preserve
+  native attack damage/armor/passives, live attack-speed modifiers and the configured friendly-fire percentage.
+- Separate hero attacks from CS weapon ammunition, recoil, scope and damage multipliers.
+- Add collision-shortened camera geometry and [ThirdPerson] camera/swing settings, validated F8 reload and
+  preservation of custom settings on updates. Default attack timing remains tuned for Arthas.
+- Add attack timeline/camera/config regressions and explicit disposable native Arthas test commands.
+- Document controls, timing semantics, module ownership and prototype limitations in docs/THIRD-PERSON.md.
+
 ## 0.8.0 — 2026-10-12
 
 - Fix bullets and melee contacts being intercepted by nonphysical effect units such as Broodmother

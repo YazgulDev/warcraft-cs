@@ -4,6 +4,7 @@
 #include "RenderSettings.hpp"
 #include "HealthBarSettings.hpp"
 #include "SpellSettings.hpp"
+#include "ThirdPersonSettings.hpp"
 #include "../input/ShortcutBindings.hpp"
 
 #include "../movement/MovementSettings.hpp"
@@ -12,11 +13,16 @@
 
 // Editable combat defaults and live settings are replaced as one complete snapshot on F8.
 struct GameplaySettings {
+    bool warcraftOnly=false; // Installation profile excludes CS weapons, assets, economy and samples.
     LoggingSettings logging;
     RenderSettings render;
     HealthBarSettings healthBars;
     ShortcutBindings shortcuts;
     SpellSettings spells;
+    ThirdPersonSettings thirdPerson;
+    bool unitViewEnabled=true;
+    bool unitViewHideHoverCircles=true; // F9 borrows/restores Warcraft's native preselection presentation.
+    bool unitViewPreventEnemyAttacks=true; // F9 alone can opt out of hostile basic-attack targeting.
 
     MovementSettings movement;
     float runeAmmoPercent = 40;
@@ -29,10 +35,13 @@ struct GameplaySettings {
     bool enableAttackEffects=true;
     // Nonphysical invulnerable effect units cannot shield enemies; F8 can restore legacy ray selection.
     bool ignorePassableInvulnerableObjects=true;
+    bool waterBlocksAttacks=false; // FPS and TPS share solid-surface traces; F8 can restore liquid occlusion.
     // Ordinary AWP damage is the default; instant finishing remains an explicit player opt-in.
     bool awpOneShot = false;
     // One percentage covers owned/allied units and buildings across firearms, melee and C4.
     float friendlyFirePercent = 50;
+    // Q temporarily permits direct allied contacts/markers; F8 restores this saved startup preference.
+    bool targetAllies=false;
     // Limit world labels to nearby FPS activity without altering native resource production.
     float floatingTextDistance=1200;
     // Startup/F8 preference; the Speed shortcut may change visibility for the current session.
@@ -49,6 +58,10 @@ struct GameplaySettings {
     // Recruitment and spacing are configurable without rewriting map data or unit ownership.
     float squadRadius=600,squadFollowDistance=180,squadLeash=900;
     bool squadRearFormation=true,squadYield=true;
+    // Native costs, cooldowns and cast orders govern automatic spells; O never enables this combat AI.
+    bool squadAutomaticSpells=true;
+    float squadSpellRadius=700,squadAreaSpellRadius=250,squadHealBelowPercent=85,squadBuffRefreshSeconds=20;
+    unsigned squadSpellIntervalMs=1000;
     float squadClearance=100,squadYieldAhead=350;
     unsigned squadOrderIntervalMs=150;
     int squadMaxUnits=24;
@@ -62,7 +75,7 @@ struct GameplaySettings {
     BuyAccess buyAccess=BuyAccess::Anywhere;
     float buyRadius=600;
     std::string shopTypes="";
-    // F7 is always a free refill; ordinary purchases still debit native gold.
+    // The refill shortcut is always free; ordinary purchases still debit native gold.
     std::array<int,WeaponSlots::Count> weaponPrice={1250,1550,250,2376,0,3000,500};
     // Reserve excludes the loaded magazine; buying, free refills and runes share this limit.
     std::array<int,WeaponSlots::Count> maxReserve={90,90,100,30,0,0,0};

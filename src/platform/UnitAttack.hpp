@@ -1,0 +1,33 @@
+#pragma once
+#include "WarcraftApi.hpp"
+#include "UnitAttackAnimation.hpp"
+#include "../combat/HeroAttackTimeline.hpp"
+#include "../combat/UnitStatus.hpp"
+#include "../config/GameplaySettings.hpp"
+#include "../combat/UnitHitboxes.hpp"
+#include "../combat/DestructableHitboxes.hpp"
+#include "../combat/UnitAimTarget.hpp"
+
+// Direct unit attacks own their timeline and aimed contact; native ranged missiles never require a pursuit order.
+class UnitAttack {
+public:
+    static bool Supported(wc3::Handle unit);
+    void Reset() {timeline_.Reset();animation_.Reset();}
+    void Cancel() {timeline_.Cancel();animation_.Release();}
+    bool Busy(double now) const {return timeline_.Busy(now);}
+    bool Animating(double now) const {return animation_.Active(now);}
+    bool ContactDue(double now) const {return timeline_.ContactDue(now);}
+    bool Begin(wc3::Handle unit,double now,const GameplaySettings& settings,const UnitStatus& status);
+    UnitAimTarget Preview(wc3::Handle unit,float yaw,float feet,const float* origin,const float* direction,
+        const GameplaySettings& settings,UnitHitboxes& units,DestructableHitboxes& destructables);
+    bool Tick(wc3::Handle unit,double now,float yaw,float feet,const float* aimOrigin,const float* aimDirection,bool casting,
+        const GameplaySettings& settings,const UnitStatus& status,UnitHitboxes& units,DestructableHitboxes& destructables);
+private:
+    UnitAimTarget PickMelee(wc3::Handle unit,float yaw,float feet,const GameplaySettings& settings,
+        UnitHitboxes& units,DestructableHitboxes& destructables);
+    UnitAimTarget PickRanged(wc3::Handle unit,float feet,const float* aimOrigin,const float* aimDirection,
+        const GameplaySettings& settings,UnitHitboxes& units,DestructableHitboxes& destructables);
+    bool Damage(wc3::Handle actor,wc3::Handle target,bool destructable,float distance,bool ranged,const GameplaySettings& settings);
+    HeroAttackTimeline timeline_;
+    UnitAttackAnimation animation_;
+};

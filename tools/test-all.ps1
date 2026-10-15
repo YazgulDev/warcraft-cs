@@ -3,10 +3,12 @@ $root=Split-Path -Parent $PSScriptRoot
 # Standalone checkouts start without build output; each numerical regression runs without game files.
 New-Item -ItemType Directory -Path (Join-Path $root 'build') -Force | Out-Null
 # Fog restoration is a platform-adapter contract with synthetic native switches.
-foreach ($name in @('window-input','fog-of-war','diagnostic-log','native-frame-rate','native-camera-far-clip','movement','movement-obstacles','warcraft-collision','fullscreen-view','minimap-layout','native-minimap','fps-projection','world-labels','mouse-look','hitboxes','melee','combat-damage','gameplay-settings','recoil')) {
+foreach ($name in @('window-input','fog-of-war','diagnostic-log','native-frame-rate','native-frame-presentation','native-camera-far-clip','movement','movement-obstacles','warcraft-collision','fullscreen-view','minimap-layout','native-minimap','fps-projection','world-labels','mouse-look','hitboxes','melee','combat-damage','gameplay-settings','recoil')) {
     & (Join-Path $PSScriptRoot "test-$name.ps1")
 }
 & (Join-Path $PSScriptRoot 'test-tree-and-wheel.ps1')
+& (Join-Path $PSScriptRoot 'test-third-person.ps1')
+& (Join-Path $PSScriptRoot 'test-native-hover-view.ps1')
 # Attack scope/lifecycle regressions use synthetic native entry points, with no game files.
 & (Join-Path $PSScriptRoot 'test-native-weapon-attack.ps1')
 & (Join-Path $PSScriptRoot 'test-weapon-target-filter.ps1')

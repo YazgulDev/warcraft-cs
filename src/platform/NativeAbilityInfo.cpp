@@ -20,6 +20,12 @@ bool Timer(uintptr_t at) {
         Text(type+8)==".?AVCAgentTimer@@";
 }
 }
+std::string NativeAbilityInfo::ClassName(uintptr_t ability) {
+    uintptr_t table=0,locator=0,type=0;
+    // Same guarded MSVC RTTI path used for the optional native ability timer below.
+    if(!Load(ability,table) || !Load(table-sizeof(uintptr_t),locator) || !Load(locator+12,type))return {};
+    return Text(type+8);
+}
 bool NativeAbilityInfo::Definition(uintptr_t base,int ability,int& column,int& row,std::string& icon) {
     if(!base || !ability)return false;
     const unsigned char signature[]={0x51,0x53,0x8B,0xD9,0x57};

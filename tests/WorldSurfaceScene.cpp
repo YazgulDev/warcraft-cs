@@ -17,7 +17,7 @@ void Tick(const char* root) {
             for(int offset=-1024;offset<=1024;offset+=32){
                 float px=x+(axis==0 ? float(offset):0),py=y+(axis==1 ? float(offset):0),deck=0;
                 bool raised=wc3::WalkableSurface(px,py,deck);
-                wc3::Log("surface sample offset=%d x=%.1f y=%.1f terrainBlocked=%d raised=%d deck=%.2f ground=%.2f",offset,px,py,wc3::IsTerrainPathable(&px,&py,1),raised,deck,wc3::Ground(px,py));
+                wc3::Log("surface sample offset=%d x=%.1f y=%.1f terrainBlocked=%d raised=%d deck=%.2f ground=%.2f cliff=%d",offset,px,py,wc3::IsTerrainPathable(&px,&py,1),raised,deck,wc3::Ground(px,py),wc3::GetTerrainCliffLevel(&px,&py));
             }
         }else if(command=="cross"){
             if(unit && wc3::GetUnitTypeId(unit))wc3::RemoveUnit(unit);

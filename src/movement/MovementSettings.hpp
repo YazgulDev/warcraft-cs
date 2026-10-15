@@ -2,6 +2,8 @@
 
 // GoldSrc units are converted only by physics; collision uses Warcraft world units.
 struct MovementSettings {
+    // Live creature footprints replace oversized visual extents; solid buildings/trees keep model geometry.
+    bool useNativeUnitCollision=true;
     // Optional absolute unit-speed scaling replaces the legacy relative slow/haste modifier.
     bool scaleFromUnitMoveSpeed=false;
     float unitMoveSpeedReference=300;

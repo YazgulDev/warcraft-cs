@@ -6,7 +6,7 @@ $request=Get-Content -LiteralPath $RequestFile -Raw -Encoding UTF8 | ConvertFrom
 . (Join-Path $PSScriptRoot 'client-validation.ps1')
 . (Join-Path (Split-Path -Parent $PSScriptRoot) 'setup/warcraft-runtime.ps1')
 $paths=Get-ClientPaths $request
-Assert-ClientGames $paths.warcraft $paths.cstrike
+Assert-ClientGames $paths.warcraft $paths.cstrike ([bool]$request.WarcraftOnly)
 # Old published setup skips existing Game folders. Repair them with this launcher's current policy
 # before handing over to that release's verified asset/module installer.
 $ready=Join-Path $paths.install 'client-installed.json'
