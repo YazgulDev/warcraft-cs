@@ -48,6 +48,8 @@ $sources += '"' + (Join-Path $modRoot 'src/platform/NativeFramePresentation.cpp'
 if($TestGameplay) { $sources += '"'+(Join-Path $modRoot 'tests/FramePresentationScene.cpp')+'"' } # Swap oracle stays private.
 # The FPS camera limit is restored through native generation keys when its map/camera disappears.
 $sources += '"' + (Join-Path $modRoot 'src/platform/NativeCameraFarClip.cpp') + '"'
+# Native preselection borrowing is separate from GL HUD drawing and camera state.
+$sources += '"' + (Join-Path $modRoot 'src/platform/NativeHoverView.cpp') + '"'
 # Keep native health sampling separate from depth-tested presentation.
 $sources += @('platform/UnitHealthBars.cpp','presentation/HealthBarRenderer.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 # Spell state comes from native timers; owned archive icons are decoded/uploaded by separate presentation adapters.

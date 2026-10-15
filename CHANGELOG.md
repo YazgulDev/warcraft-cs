@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — Clean unit view and 5000 draw distance
+
+- Hide Warcraft's native hover/preselection circles on units, buildings and destructables during F9.
+  Add `[UnitView] HideHoverCircles=true` (true/false or 1/0, startup/F8); false retains native circles.
+  Restore map preferences on mode exit, menus and opt-out, track requests made while hidden, and
+  discard unloaded-map state. FPS/TPS target markers and ordinary RTS selection remain available.
+- Set fresh/default `[Rendering] DrawDistance=5000` Warcraft units (range 3000–20000, startup/F8).
+  Missing/empty/malformed distances use 5000; updates preserve explicit saved distances.
+
 ## Unreleased — Attacks past protected allies
 
 - With `[Combat] TargetAllies=false` / Q `ALLIES OFF`, skip allied units and buildings before

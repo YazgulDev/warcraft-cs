@@ -4,6 +4,13 @@ $root=Split-Path -Parent $PSScriptRoot
 $folder=Join-Path $root ('.local/config-merge-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $folder -Force | Out-Null
 $template=Join-Path $root 'config/WarcraftCS.ini'
+# Fresh defaults use 5000, while explicit saved distances and hover opt-outs survive repeated upgrades.
+$distance=Join-Path $folder 'distance-hover.ini'
+@('[Rendering]','DrawDistance=7000','[UnitView]','HideHoverCircles=false') | Set-Content -LiteralPath $distance -Encoding ascii
+Update-GameplayConfig $template $distance
+$distanceText=Get-Content -LiteralPath $distance -Raw
+if(!$distanceText.Contains('DrawDistance=7000') -or !$distanceText.Contains('HideHoverCircles=false')){throw 'Saved visibility preferences overwritten.'}
+if(!(Get-Content -LiteralPath $template -Raw).Contains('DrawDistance=5000')){throw 'Fresh distance default is not 5000.'}
 . (Join-Path $root 'setup/installation-profile.ps1')
 # Only an explicit setup choice replaces the profile; ordinary F8/default migrations preserve it.
 $profile=Join-Path $folder 'profile.ini'
@@ -57,7 +64,7 @@ $config=Join-Path $folder 'legacy.ini'
 # Updates append missing keys inside existing sections while retaining all custom values.
 Update-GameplayConfig $template $config
 $text=Get-Content -LiteralPath $config -Raw
-foreach ($required in @('AmmoPercent=37','Price=0','Damage=81','FriendlyFirePercent=25','AWPOneShot=false','BombCount=0','Access=anywhere','AmmoPrice=80','CSVolumePercent=100','Detailed=true','IntervalMs=1000','MaxFileMB=8','ArchiveCount=3','JumpBoostPercent=0','AutoJump=true','MaxFPS=144','DrawDistance=15000')) {
+foreach ($required in @('AmmoPercent=37','Price=0','Damage=81','FriendlyFirePercent=25','AWPOneShot=false','BombCount=0','Access=anywhere','AmmoPrice=80','CSVolumePercent=100','Detailed=true','IntervalMs=1000','MaxFileMB=8','ArchiveCount=3','JumpBoostPercent=0','AutoJump=true','MaxFPS=144','DrawDistance=5000','HideHoverCircles=true')) {
     if (!$text.Contains($required)) { throw "Missing/patched preference: $required" }
 }
 if ([regex]::Matches($text,'(?m)^\[AK47\]').Count -ne 1) { throw 'Duplicate section can hide new INI keys.' }

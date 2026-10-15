@@ -25,6 +25,11 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     // The unarmed camera is independently configurable; malformed values preserve enabled entry.
     auto unitView=text("UnitView","Enabled","true");
     result.unitViewEnabled=_stricmp(unitView.c_str(),"false") && unitView!="0";
+    // Malformed/missing opt-outs keep the requested clean F9 view; F8 restores immediately when disabled.
+    auto hover=text("UnitView","HideHoverCircles","true");
+    result.unitViewHideHoverCircles=_stricmp(hover.c_str(),"false") && hover!="0";
+    if(_stricmp(hover.c_str(),"true") && _stricmp(hover.c_str(),"false") && hover!="1" && hover!="0")
+        wc3::Log("Invalid UnitView.HideHoverCircles; using true");
     // The requested safe unit-view default reloads with F8; explicit false restores native targeting.
     auto preventAttacks=text("UnitView","PreventEnemyAttacks","true");
     result.unitViewPreventEnemyAttacks=_stricmp(preventAttacks.c_str(),"false") && preventAttacks!="0";

@@ -32,7 +32,7 @@ int main() {
     assert(!settings.disableFogOfWar);
     assert(!settings.healthBars.allies && !settings.healthBars.enemies && settings.healthBars.distance==2000);
     assert(settings.csVolumePercent==100);
-    assert(settings.render.maxFPS==144 && settings.render.drawDistance==15000);
+    assert(settings.render.maxFPS==144 && settings.render.drawDistance==5000);
     assert(!settings.startAllWeapons && settings.startBombs==0 && settings.maxBombs==100 && settings.unlimitedBombPurchases);
     assert(settings.buyAccess==GameplaySettings::BuyAccess::Anywhere && !settings.csSky);
     assert(settings.weaponPrice[0]==1250 && settings.weaponPrice[1]==1550 && settings.weaponPrice[2]==250);
@@ -83,9 +83,9 @@ int main() {
     DeleteFileA(path.c_str());
     // Real INI loading covers explicit legacy mode, bounded targets, bad input and live reload.
     const struct {const char* fps;const char* distance;int expectedFPS;float expectedDistance;} renderCases[]={
-        {"","",144,15000},{"0","5000",0,5000},{"240","15000",240,15000},
+        {"","",144,5000},{"0","5000",0,5000},{"240","15000",240,15000},
         {"1","1",30,3000},{"999","99999",360,20000},{"-2","-3",0,3000},
-        {"nan","inf",144,15000},{"broken","wrong",144,15000},{"120.5","12000.5",120,12000.5f}
+        {"nan","inf",144,5000},{"broken","wrong",144,5000},{"120.5","12000.5",120,12000.5f}
     };
     int renderIndex=0;
     for (const auto& test:renderCases) {
@@ -103,6 +103,12 @@ int main() {
     WritePrivateProfileStringA("Rendering","DrawDistance","15000",renderReload.c_str());
     auto reloaded=GameplaySettings::Load(renderReload);
     assert(reloaded.render.maxFPS==144 && reloaded.render.drawDistance==15000);
+    DeleteFileA(renderReload.c_str());
+    // The clean F9 default is independently reloadable without changing other views' target-marker settings.
+    for(auto value:{"true","false","1","0","broken",""}) {
+        WritePrivateProfileStringA("UnitView","HideHoverCircles",value,renderReload.c_str());
+        assert(GameplaySettings::Load(renderReload).unitViewHideHoverCircles==(strcmp(value,"false") && strcmp(value,"0")));
+    }
     DeleteFileA(renderReload.c_str());
     // Exercise the real optional HUD/fog preference boundary and live snapshot reloads.
     const struct { const char* value; bool enabled; } speedCases[] = {

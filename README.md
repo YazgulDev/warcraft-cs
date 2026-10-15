@@ -54,7 +54,7 @@ apply to fresh configs; updates preserve your existing choices. Earlier changes 
 - No starting C4 by default; unlimited paid C4 purchases and configurable reserve ammunition caps.
 - Multiple planted C4 charges with independent fuses; F11 refills carried equipment and F12 grants every weapon for free.
 - Warcraft sky by default in FPS, optional privately converted CS skyboxes, and visible native walkable bridge decks.
-- Configurable 144 FPS pacing and 15000-unit draw distance; corrected near-ground clipping.
+- Configurable 144 FPS pacing and 5000-unit default draw distance; corrected near-ground clipping.
 - Trunk-based tree collision, cliff retreat, stable idle movement and safe transformations.
 - Rear squad formations and sideways yielding around the player.
 - Camera/distance filtering for floating world labels.
@@ -253,8 +253,8 @@ Edit it and press F8 in FPS.
 
 - `[Rendering] MaxFPS=144` raises the client frame cap above Warcraft's original ~64 FPS.
   Positive targets are clamped to 30вЂ“360; `0` restores the native limiter. Actual FPS depends on
-  hardware, scene load and graphics-driver limits. `DrawDistance=15000` triples the FPS world-camera
-  far clip from 5000 Warcraft units; valid distances are 3000вЂ“20000. Both apply at startup/on F8.
+  hardware, scene load and graphics-driver limits. `DrawDistance=5000` sets the controlled-view camera's
+  far clip in Warcraft units; valid distances are 3000вЂ“20000. Both apply at startup/on F8.
   Updates preserve existing values. Draw distance does not reveal unexplored units or remove the
   map's atmospheric fog; N controls fog of war separately. Greater distances increase render work.
 
@@ -523,6 +523,11 @@ hands, crosshair, HUD, minimap, native panels and floating labels are hidden. Yo
 attack or cast player-requested spells in this mode. By default enemies cannot select it for basic attacks.
 Inventory purchases and free weapon/ammo requests are also blocked while the mode is active.
 Warcraft ambience remains audible; CS footsteps are omitted.
+
+`[UnitView] HideHoverCircles=true` also hides native hover circles on units, buildings and
+destructables in F9. Set `false` and press F8 to retain them; missing/malformed values use `true`.
+Both boolean words and 1/0 work. Leaving F9 restores the map's latest preselection preferences;
+RTS/FPS/TPS selection and target markers keep their own behavior. Updates preserve your choice.
 
 Press **F9 again** or **F6** to return to RTS. **F7** selects third person; **T** switches the
 controlled camera to third person. The free all-weapons shortcut is now **F12**. These keys are

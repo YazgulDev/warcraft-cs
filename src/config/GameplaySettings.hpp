@@ -21,6 +21,7 @@ struct GameplaySettings {
     SpellSettings spells;
     ThirdPersonSettings thirdPerson;
     bool unitViewEnabled=true;
+    bool unitViewHideHoverCircles=true; // F9 borrows/restores Warcraft's native preselection presentation.
     bool unitViewPreventEnemyAttacks=true; // F9 alone can opt out of hostile basic-attack targeting.
 
     MovementSettings movement;

@@ -8,6 +8,7 @@ foreach ($name in @('window-input','fog-of-war','diagnostic-log','native-frame-r
 }
 & (Join-Path $PSScriptRoot 'test-tree-and-wheel.ps1')
 & (Join-Path $PSScriptRoot 'test-third-person.ps1')
+& (Join-Path $PSScriptRoot 'test-native-hover-view.ps1')
 # Attack scope/lifecycle regressions use synthetic native entry points, with no game files.
 & (Join-Path $PSScriptRoot 'test-native-weapon-attack.ps1')
 & (Join-Path $PSScriptRoot 'test-weapon-target-filter.ps1')

@@ -1,6 +1,7 @@
 #include "PluginRuntime.hpp"
 #include "../input/InputDispatcher.hpp"
 #include "../platform/NativeFloatingText.hpp"
+#include "../platform/NativeHoverView.hpp"
 #include "../platform/NativeMinimap.hpp"
 #include "../platform/WarcraftApi.hpp"
 #include "../platform/DiagnosticLog.hpp"
@@ -118,6 +119,7 @@ static uintptr_t CurrentUI() {
 static void ObserveMap(uintptr_t ui) {
     if (mapUI == ui) return;
     // A real UI unload/replacement marks map boundaries; a rendering pause is only a focus pause.
+    NativeHoverView::Reset(); // The old map UI may already have been freed.
     actorJumpView.Reset();controller.ResetMap();overlay.MapChanged(); mapUI = ui;worldPending=false;
     healthBars.Reset();healthBarView.active=false; // Native models/snapshots belong to the current map.
     if (ui) healthy = true;
@@ -190,6 +192,8 @@ static int __fastcall WorldHook(uintptr_t ui, uintptr_t unused) {
         labelView.maximumDistance=controller.Settings().floatingTextDistance;
     }
     NativeFloatingText::SetView(labelView,controller.UnitFirstPerson());
+    // Native hover rings are world decals, independent of the GL HUD filter; other views retain map preferences.
+    NativeHoverView::Update(gameUI,healthy && controller.Visible() && controller.UnitFirstPerson() && controller.Settings().unitViewHideHoverCircles);
     healthBarView=labelView;healthBarView.maximumDistance=controller.Settings().healthBars.distance;
     healthBarView.verticalFov=healthVerticalFov;healthBarView.aspect=healthAspect;
     // Suppress only the controlled actor during world drawing; menus, portraits and RTS still render it.
@@ -337,6 +341,7 @@ static DWORD WINAPI Initialize(void*) {
         [](uintptr_t unit) {return healthy && controller.BlocksPassiveUnit(unit);},
         [](uintptr_t attack) {return healthy && controller.BlocksPassiveAttack(attack);});
     NativeFloatingText::Install(base, Hook);
+    NativeHoverView::Install(base,Hook);
     FpsCombatGuard::Install(base, []() { return healthy ? controller.ViewActor() : 0; },
         [](uintptr_t unit) { return healthy && controller.BlocksPassiveUnit(unit); },
         [](uintptr_t attack) { return healthy && controller.BlocksPassiveAttack(attack); }, Hook,

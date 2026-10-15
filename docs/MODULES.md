@@ -1,5 +1,11 @@
 # Source modules
 
+`NativeHoverView` owns the verified 1.26a preselection setter and its two UI switches. Live F9 can
+temporarily hide native hover circles independently of GL HUD rendering. Map/script setter requests
+update the saved preference while hidden; leaving F9 or disabling the option restores the latest pair.
+Map replacement discards old UI ownership without writing stale storage. Selection groups and other
+view modes retain their native behavior.
+
 `NativeFramePresentation` observes 1.26a's verified frame-batch completion inside the native present
 method. The HUD no longer depends on which Windows/OpenGL swap entry point presents the frame.
 Upload/readback flushes outside that method and nested callbacks do not compose a second HUD.

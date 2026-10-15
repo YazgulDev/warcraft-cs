@@ -74,6 +74,18 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
         else if(BackgroundGameplay::Enabled() && command=="profile")
             wc3::Log("fixture profile only=%d active=%d third=%d unitview=%d buying=%d",
                 controller.Settings().warcraftOnly,controller.Visible(),controller.ThirdPerson(),controller.UnitFirstPerson(),controller.Buying());
+        else if(BackgroundGameplay::Enabled() && command=="hoverstats") {
+            // Inspect the live native switches and actual camera, not only the configured snapshot.
+            using UI=uintptr_t (__fastcall*)(int,int);auto ui=reinterpret_cast<UI>(base+0x300710)(0,0);
+            if(ui)wc3::Log("fixture hover input=%d ui=%d hide=%d view=%d far=%.1f configured=%.1f",
+                *reinterpret_cast<int*>(ui+0x298),*reinterpret_cast<int*>(ui+0x29C),controller.Settings().unitViewHideHoverCircles,
+                controller.UnitFirstPerson(),wc3::Real(wc3::GetCameraField(1)),controller.Settings().render.drawDistance);
+        }
+        else if(BackgroundGameplay::Enabled() && command=="hoverrequest") {
+            // Route a map's EnablePreSelect request through its real public native entry while F9 is active.
+            int enabled=1,visual=1;input>>enabled>>visual;
+            reinterpret_cast<void (__cdecl*)(BOOL,BOOL)>(base+0x3B3B50)(enabled,visual);
+        }
         // Exercise Q's game-thread path without a desktop key or a fixture-only targeting policy.
         else if(BackgroundGameplay::Enabled() && command=="allytoggle")controller.RequestAllyTargetToggle();
         // Exercise production wheel routing without injecting input into the user's desktop.
