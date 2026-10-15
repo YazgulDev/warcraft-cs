@@ -64,6 +64,10 @@ int main() {
     {std::ofstream file(path);file<<"[ThirdPerson]\nCameraDistance=nan\nInitialPitch=bad\nAttackInterval=.4\nContactDelay=2\nAttackRange=-10\nAttackArc=500\nRunCycleDistance=0\nTakeoffDuration=nan\nLandingDuration=5\nMovementAnimations=bad\n";}
     auto settings=GameplaySettings::Load(path);
     assert(settings.unitViewEnabled && settings.unitViewPreventEnemyAttacks && settings.squadAutomaticSpells);
+    assert(!settings.waterBlocksAttacks);
+    WritePrivateProfileStringA("Combat","WaterBlocksAttacks","1",path);assert(GameplaySettings::Load(path).waterBlocksAttacks);
+    WritePrivateProfileStringA("Combat","WaterBlocksAttacks","bad",path);assert(!GameplaySettings::Load(path).waterBlocksAttacks);
+    WritePrivateProfileStringA("Combat","WaterBlocksAttacks","false",path);assert(!GameplaySettings::Load(path).waterBlocksAttacks);
     assert(settings.shortcuts.Key(ShortcutAction::ToggleUnitView)==VK_F9 && settings.shortcuts.Key(ShortcutAction::AllWeapons)==VK_F12);
     assert(settings.thirdPerson.enabled && settings.thirdPerson.distance==500 && settings.thirdPerson.initialPitch==-12);
     assert(settings.thirdPerson.attackRange==30 && settings.thirdPerson.attackArc==120);

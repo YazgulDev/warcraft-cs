@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased — Attacks through water
+
+- Separate combat surface sampling from liquid-aware movement height. Water alone no longer
+  clips FPS firearm/melee rays or third-person melee/ranged prediction and contact before a submerged target.
+  Retain solid terrain, cliffs, raised walkable geometry, gates and nearest-body interception.
+- Add `[Combat] WaterBlocksAttacks=false`, with F8 live reload and `true`/`false` or `1`/`0`.
+  `true` restores the previous liquid blocker; missing/empty/malformed values use `false`.
+  Updates preserve custom values. Movement, camera height, water rendering and spell point picking stay unchanged.
+- Add water-plane/terrain regressions for the real third-person picker and config preservation/reload,
+  plus opt-in native submerged-target and rendered-height probes confined to disposable maps.
+
 ## Unreleased — Configurable enemy targeting in unit view
 
 - Default `[UnitView] PreventEnemyAttacks=true` prevents hostile basic-attack acquisition,

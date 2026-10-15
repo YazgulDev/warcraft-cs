@@ -6,7 +6,7 @@
 
 namespace {
 float targetX=250,reach=600,health=420;
-bool hidden=false,loaded=false,visible=true,transparent=false,wall=false,ally=false;
+bool hidden=false,loaded=false,visible=true,transparent=false,wall=false,ally=false,water=false;
 int animations=0,damageEvents=0,kind=2;
 std::vector<wc3::Handle> group;
 wc3::Bits Pack(float x){wc3::Bits value;std::memcpy(&value,&x,4);return value;}
@@ -30,6 +30,8 @@ bool blending=true;
 bool AnimationBlending(Handle){return blending;}
 void AnimationBlending(Handle,bool enabled){blending=enabled;}
 float Ground(float x,float){return wall && x>=120 ? 200.f : 0.f;}
+// A synthetic high liquid plane reproduces the old false wall while physical terrain/decks remain solid.
+float AttackSurface(float x,float y,bool blocksWater){return water && blocksWater && x>=40 ? 160.f : Ground(x,y);}
 std::vector<Handle> NearbyDestructables(float,float,float){return {};}
 float UnitAttackAverage(Handle){return 100;}
 }
@@ -72,6 +74,9 @@ int main(){
     reach=100;assert(!preview().handle);reach=600;
     targetX=1500;assert(!preview().handle);targetX=250;
     wall=true;assert(!preview().handle);wall=false;
+    water=true;assert(preview().handle==2);settings.waterBlocksAttacks=true;assert(!preview().handle);
+    settings.waterBlocksAttacks=false;assert(preview().handle==2);
+    wall=true;assert(!preview().handle);wall=false;water=false;
     hidden=true;assert(!preview().handle);hidden=false;
     loaded=true;assert(!preview().handle);loaded=false;
     visible=false;assert(!preview().handle);visible=true;
@@ -94,6 +99,9 @@ int main(){
     assert(attack.Tick(1,5,0,0,origin,direction,false,settings,status,units,objects));assert(damageEvents==2 && health==370);
     settings.targetAllies=false;ally=false;
     kind=1;targetX=100;assert(preview().handle==2);targetX=250;assert(!preview().handle);
+    // Melee arcs use the same water setting; toggling liquid transparency never removes real terrain occlusion.
+    targetX=100;water=true;assert(preview().handle==2);settings.waterBlocksAttacks=true;assert(!preview().handle);
+    settings.waterBlocksAttacks=false;assert(preview().handle==2);water=false;targetX=250;
     targetX=100;ally=true;assert(!preview().handle);settings.targetAllies=true;assert(preview().allied);
     kind=0;assert(!preview().handle);
 }

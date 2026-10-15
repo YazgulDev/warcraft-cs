@@ -528,9 +528,9 @@ void ShooterController::Strike() {
     float vx = std::cos(pitch) * std::cos(yaw), vy = std::cos(pitch) * std::sin(yaw), vz = std::sin(pitch);
     float attackRange = WeaponSlots::Melee(weapon_) ? meleeAttack_.range : w.range;
     float nearest = attackRange;
-    // Terrain stops the ray before units behind a hill can be damaged.
+    // Solid terrain/decks stop shots; liquid alone must not shield the visible submerged part of a unit.
     for (float t = 48; t < nearest; t += 48) {
-        if (wc3::Ground(x + vx * t, y + vy * t) > z + vz * t) { nearest = t; break; }
+        if (wc3::AttackSurface(x + vx * t, y + vy * t,settings_.waterBlocksAttacks) > z + vz * t) { nearest = t; break; }
     }
     wc3::Handle group = wc3::CreateGroup(), target = 0, candidate = 0, local = wc3::GetLocalPlayer();
     // Include models whose surface enters range before their center.

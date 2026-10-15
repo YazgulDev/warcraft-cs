@@ -479,6 +479,13 @@ unknown charged spells retain their map's native validation.
 
 ### Weapon attack effects (test branch)
 
+`[Combat] WaterBlocksAttacks=false` lets firearm and melee traces in FPS and third person cross
+the water surface to reach submerged unit hitboxes. The solid bed, cliffs, walkable bridge decks,
+gates and other bodies still obstruct attacks. This does not change movement or water rendering.
+Set `true` and press **F8** to restore the old liquid-surface blocker; `false` disables it.
+`true`/`false` and `1`/`0` are accepted. Missing/empty/malformed values default to `false`, and
+updates preserve existing choices. The same setting applies to third-person target prediction and contact.
+
 `[Combat] EnableAttackEffects=true` routes firearm and melee contacts through the controlled unit's
 native attack preparation and impact. Learned passives and carried items can apply Mana Burn,
 lifesteal, Bash, critical strikes and attack callbacks with Warcraft's own chances, restrictions

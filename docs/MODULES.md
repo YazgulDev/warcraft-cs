@@ -211,6 +211,10 @@ candidates. The controller applies its configurable policy before selecting the 
 skipped effects never shorten the ray. Unit type IDs and model filenames are not special-cased.
 Unknown collision facts remain opaque; heroes, structures and physical immune units retain collision.
 
+`WarcraftApi.AttackSurface` samples the verified solid terrain/walkable-height path independently
+of liquid-aware `Ground`. FPS contact and TPS prediction/contact consume the same configurable
+water policy; physics, camera height and spell point picking keep their existing height contracts.
+
 `ControlView` is the single source of truth for weapon FPS, third person and unarmed unit FPS.
 `ShooterController.SelectView` cancels owned input/combat state before switching, while the input,
 movement and presentation adapters apply that mode's policies. Unit view shares native attack

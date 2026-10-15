@@ -33,6 +33,7 @@ struct GameplaySettings {
     bool enableAttackEffects=true;
     // Nonphysical invulnerable effect units cannot shield enemies; F8 can restore legacy ray selection.
     bool ignorePassableInvulnerableObjects=true;
+    bool waterBlocksAttacks=false; // FPS and TPS share solid-surface traces; F8 can restore liquid occlusion.
     // Ordinary AWP damage is the default; instant finishing remains an explicit player opt-in.
     bool awpOneShot = false;
     // One percentage covers owned/allied units and buildings across firearms, melee and C4.

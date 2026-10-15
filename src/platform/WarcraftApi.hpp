@@ -25,6 +25,8 @@ void Trace(const char* format, ...);
 void LogError(const char* format, ...);
 void OpenLog(const char* directory);
 float Ground(float x, float y);
+// Combat samples solid terrain/walkables independently of the liquid surface used for movement.
+float AttackSurface(float x,float y,bool waterBlocks);
 // Terrain alone excludes bridge decks so their underside cannot become an upward teleport.
 float TerrainGround(float x, float y);
 // Query real walkable geometry above terrain; removed/dead bridges cease to supply this surface.

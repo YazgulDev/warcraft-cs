@@ -4,6 +4,7 @@
 #include "../src/platform/NativeSpellSlots.hpp"
 #include "../src/platform/WeaponTargetFilter.hpp"
 #include "../src/platform/UnitCollisionProfile.hpp"
+#include "../src/platform/SpriteTransform.hpp"
 #include <fstream>
 #include <sstream>
 #include <vector>
@@ -76,6 +77,31 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
         else if(BackgroundGameplay::Enabled() && command=="heroattack")controller.TestHeroAttack();
         else if(BackgroundGameplay::Enabled() && command=="holdattack") {DWORD duration=0;input>>duration;controller.TestHoldAttack(duration);}
         else if(BackgroundGameplay::Enabled() && command=="targetstats")controller.TestLogTarget();
+        else if(BackgroundGameplay::Enabled() && command=="waterenemy") {
+            // Force only disposable targets onto authored shallow/deep-water cells, without pathing relocation.
+            float x=256,y=0,facing=180,scale=1;std::string raw="hfoo";input>>x>>y>>raw>>scale;
+            if(enemy && wc3::GetUnitTypeId(enemy))wc3::RemoveUnit(enemy);
+            enemy=wc3::CreateUnit(wc3::Player(12),HeroSpellSlots::Rawcode(raw),&x,&y,&facing);
+            wc3::SetUnitX(enemy,&x);wc3::SetUnitY(enemy,&y);wc3::PauseUnit(enemy,TRUE);
+            if(std::isfinite(scale) && scale>=.1f && scale<=10)wc3::SetUnitScale(enemy,&scale,&scale,&scale);
+        }
+        else if(BackgroundGameplay::Enabled() && (command=="waterprobe" || command=="aimwater") && enemy) {
+            // Read native surface modes and the rendered transform before trusting a water hit-test hypothesis.
+            auto object=wc3::UnitObject(enemy);uintptr_t sprite=0;Read(object+0x28,sprite);
+            ModelTransform transform;SpriteTransform::Read(sprite,transform);
+            float x=wc3::Real(wc3::GetUnitX(enemy)),y=wc3::Real(wc3::GetUnitY(enemy)),position[]={x,y,0};
+            using Root=uintptr_t (__cdecl*)();using Height=float (__thiscall*)(uintptr_t,const float*,int);
+            auto terrain=reinterpret_cast<Root>(base+0x1F5A0)();auto height=reinterpret_cast<Height>(base+0x763F00);
+            float cachedZ=0;Read(sprite+0xC8,cachedZ);
+            wc3::Log("fixture water x=%.1f y=%.1f location=%.1f terrain=%.1f mode2=%.1f raw=%.1f model=%.1f cached=%.1f fly=%.1f",
+                x,y,wc3::Ground(x,y),wc3::TerrainGround(x,y),height(terrain,position,-2),height(terrain,position,-3),
+                transform.position[2],cachedZ,wc3::Real(wc3::GetUnitFlyHeight(enemy)));
+            if(command=="aimwater") {
+                float offset=60;input>>offset;
+                controller.TestAimPoint(x,y,transform.position[2]+offset);
+            }
+            wc3::Log("fixture water solid=%.1f legacy=%.1f",wc3::AttackSurface(x,y,false),wc3::AttackSurface(x,y,true));
+        }
         else if(BackgroundGameplay::Enabled() && command=="enemyattack") {
             // The normal script-order hook must reject F9 targets and accept them after F8/exit.
             wc3::Log("fixture enemy attack accepted=%d",enemy && unit ? wc3::IssueTargetOrderById(enemy,851983,unit) : -1);

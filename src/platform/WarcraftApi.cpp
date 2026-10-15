@@ -53,7 +53,7 @@ bool Bind(HMODULE game) {
     delete[] bytes;
     if (!correct) { Log("Unsupported Game.dll: expected 1.26.0.6401"); return false; }
     auto base = reinterpret_cast<uintptr_t>(game);
-    // Verified 1.26a GetLocationZ helper: ECX=terrain mode, EDX=raised-surface output,
+    // Verified 1.26a terrain/walkable-surface helper: ECX=terrain mode, EDX=raised-surface output,
     // stack=x/y/include-walkables, ST0=height. Refuse a patched helper instead of guessing its ABI.
     const unsigned char surfaceSignature[] = {0x83,0xEC,0x0C,0xD9,0x44,0x24,0x10,0x53,0xD9,0x5C,0x24,0x04};
     if (memcmp(reinterpret_cast<void*>(base+0x126F0),surfaceSignature,sizeof(surfaceSignature)) != 0) {
@@ -112,6 +112,12 @@ float Ground(float x, float y) {
     float z = Real(GetLocationZ(location));
     RemoveLocation(location);
     return z;
+}
+float AttackSurface(float x,float y,bool waterBlocks) {
+    // GetLocationZ includes water; native mode -1 retains the actual bed/cliffs and raised walkable geometry.
+    // Keep Ground unchanged: movement, camera placement and visible water-level decals have separate contracts.
+    if(waterBlocks || !surfaceHeight)return Ground(x,y);
+    return surfaceHeight(-1,nullptr,x,y,TRUE);
 }
 bool WalkableSurface(float x, float y, float& height) {
     if (!surfaceHeight || !std::isfinite(x) || !std::isfinite(y)) return false;

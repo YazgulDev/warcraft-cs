@@ -136,6 +136,15 @@ public:
     wc3::Handle TestUnit() const { return Visible() ? unit_ : 0; }
 #endif
 #ifdef WCS_GAMEPLAY_TEST
+    // Aim the actual FPS/TPS camera ray at a disposable submerged target, including boom parallax.
+    void TestAimPoint(float x,float y,float z) {
+        recoil_.Reset();
+        for(int pass=0;pass<6;++pass) {
+            float origin[3],direction[3];AimRay(origin,direction);
+            float dx=x-origin[0],dy=y-origin[1];
+            yaw_=std::atan2(dy,dx)/.01745329252f;pitch_=std::atan2(z-origin[2],std::hypot(dx,dy))/.01745329252f;
+        }
+    }
     // Native pose/cooldown samples are confined to a disposable animation regression build.
     void TestAnimationState() const {wc3::Log("fixture pose busy=%d animating=%d sequence=%d rate=%.3f speed=%.1f",heroAttack_.Busy(GetTickCount()*.001),heroAttack_.Animating(GetTickCount()*.001),wc3::AnimationSequence(unit_),wc3::AnimationRate(unit_),movement_.Speed());}
     // Opt-in native oracle uses the production windup/contact, without injecting desktop mouse input.

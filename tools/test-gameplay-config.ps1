@@ -4,6 +4,15 @@ $root=Split-Path -Parent $PSScriptRoot
 $folder=Join-Path $root ('.local/config-merge-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $folder -Force | Out-Null
 $template=Join-Path $root 'config/WarcraftCS.ini'
+# Water occlusion defaults off; explicit legacy opt-ins survive repeated upgrades.
+foreach($choice in @('false','true')) {
+    $water=Join-Path $folder ('water-'+$choice+'.ini')
+    @('[Combat]',('WaterBlocksAttacks='+$choice)) | Set-Content -LiteralPath $water -Encoding ascii
+    Update-GameplayConfig $template $water
+    if(!(Get-Content -LiteralPath $water -Raw).Contains('WaterBlocksAttacks='+$choice)){throw 'Water occlusion preference reset.'}
+    $before=(Get-FileHash -LiteralPath $water).Hash;Update-GameplayConfig $template $water
+    if((Get-FileHash -LiteralPath $water).Hash -ne $before){throw 'Water occlusion update is not idempotent.'}
+}
 # Relocate only legacy AllWeapons=F9, while preserving custom AI preferences and the remainder of the layout.
 $unitConfig=Join-Path $folder 'unit-view.ini'
 @('[Shortcuts]','AllWeapons=F9','Reload=Y','[Squad]','AutomaticSpells=false','SpellSearchRadius=420','[UnitView]','Enabled=false') |

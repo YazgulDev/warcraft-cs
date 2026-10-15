@@ -72,7 +72,8 @@ UnitAimTarget UnitAttack::PickMelee(wc3::Handle actor,float yaw,float feet,const
         origin[2]=feet+std::max(1.f,tuning.attackHeight+height*tuning.meleeHeightTolerance);
         float angle=(yaw-tuning.attackArc*.5f+tuning.attackArc*ray/10)*.01745329252f;
         float direction[]={std::cos(angle),std::sin(angle),0},limit=tuning.attackRange;
-        for(float t=8;t<=limit;t+=8)if(wc3::Ground(x+direction[0]*t,y+direction[1]*t)>=origin[2]) {limit=t;break;}
+        // Share FPS's solid-surface policy, including low melee samples below the water plane.
+        for(float t=8;t<=limit;t+=8)if(wc3::AttackSurface(x+direction[0]*t,y+direction[1]*t,settings.waterBlocksAttacks)>=origin[2]) {limit=t;break;}
         wc3::Handle contact=0;bool isObject=false;
         for(auto unit:candidates) {
             if(unit==actor || wc3::IsUnitHidden(unit) || wc3::IsUnitLoaded(unit) ||
@@ -131,7 +132,7 @@ UnitAimTarget UnitAttack::PickRanged(wc3::Handle actor,float feet,const float* a
     // Both the reticle trace and the body-to-contact trace obey the same nearest-body/terrain rule.
     auto trace=[&](const float* origin,const float* direction,float& limit,bool& destructable) {
         wc3::Handle contact=0;destructable=false;
-        for(float t=0;t<=limit;t+=8)if(wc3::Ground(origin[0]+direction[0]*t,origin[1]+direction[1]*t)>=origin[2]+direction[2]*t){limit=t;break;}
+        for(float t=0;t<=limit;t+=8)if(wc3::AttackSurface(origin[0]+direction[0]*t,origin[1]+direction[1]*t,settings.waterBlocksAttacks)>=origin[2]+direction[2]*t){limit=t;break;}
         for(auto unit:candidates){float entry=0;if(units.Intersect(unit,origin,direction,limit,entry)){limit=entry;contact=unit;destructable=false;}}
         for(auto object:objects){float entry=0;if(wc3::Real(wc3::GetDestructableLife(object))>.405f &&
             destructables.Intersect(object,origin,direction,limit,entry)){limit=entry;contact=object;destructable=true;}}

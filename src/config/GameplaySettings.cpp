@@ -78,6 +78,11 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     auto transparent=text("Combat","IgnorePassableInvulnerableObjects","true");
     if(!_stricmp(transparent.c_str(),"false") || transparent=="0")result.ignorePassableInvulnerableObjects=false;
     else if(_stricmp(transparent.c_str(),"true") && transparent!="1")wc3::Log("Invalid Combat.IgnorePassableInvulnerableObjects; using true");
+    // Only explicit true/1 restores the old water-surface blocker; bad/legacy values keep submerged targets hittable.
+    auto waterBlocks=text("Combat","WaterBlocksAttacks","false");
+    result.waterBlocksAttacks=!_stricmp(waterBlocks.c_str(),"true") || waterBlocks=="1";
+    if(_stricmp(waterBlocks.c_str(),"true") && _stricmp(waterBlocks.c_str(),"false") && waterBlocks!="1" && waterBlocks!="0")
+        wc3::Log("Invalid Combat.WaterBlocksAttacks; using false");
     // Bound diagnostic frequency/storage at the existing INI boundary, including malformed legacy values.
     auto detailed = text("Logging", "Detailed", "true");
     if (!_stricmp(detailed.c_str(), "false") || detailed == "0") result.logging.detailed = false;
