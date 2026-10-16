@@ -1,4 +1,4 @@
-# Warcraft CS 0.8.0
+# Warcraft CS 0.9.0
 
 Counter-Strike 1.6 inside Warcraft III: control your own hero or unit in first person,
 shoot, and play regular maps, campaigns and compatible custom maps.
@@ -11,15 +11,16 @@ Neither variant includes game files, models, sounds, maps or saves.
 You need your own Warcraft III installation. CS 1.6 is required only for the full weapon mode.**
 This is an early prototype with known limitations.
 
-**[Download 0.8.0](https://github.com/YazgulDev/warcraft-cs/releases/tag/v0.8.0)** В·
-[Release Notes](docs/RELEASE-0.8.0.md) В· [Installation](INSTALL.md) В· [Requirements](REQUIREMENTS.md)
+**[Download 0.9.0](https://github.com/YazgulDev/warcraft-cs/releases/tag/v0.9.0)** В·
+[Release Notes](docs/RELEASE-0.9.0.md) В· [Installation](INSTALL.md) В· [Requirements](REQUIREMENTS.md)
 В· [Troubleshooting](TROUBLESHOOTING.md) В· [Discussions](https://github.com/YazgulDev/warcraft-cs/discussions)
 
-0.8.0 adds an FPS minimap, ally/enemy health bars, native hero spells with live icons and cooldowns,
-configurable shortcuts, 144 FPS pacing and a 15000-unit draw distance. It fixes ground clipping,
-stuck movement, unwanted pursuit and transformation crashes, improves squad avoidance, and adds
-unit-scaled weapon damage, native passives and reserve ammunition limits. New economy/C4 defaults
-apply to fresh configs; updates preserve your existing choices. Earlier changes are in the [changelog](CHANGELOG.md).
+0.9.0 adds native third-person melee/ranged combat, camera zoom, an unarmed first-person view,
+automatic squad spellcasting and a Warcraft-only installation profile. It fixes interrupted
+attack animations, narrow ramps, campaign HUD restoration and hits on submerged enemies.
+Protected allies no longer block direct attacks; fresh configs use a 5000-unit draw distance.
+Updates preserve existing preferences. See the [full release notes](docs/RELEASE-0.9.0.md)
+for controls, every new setting, migration guidance and known limitations.
 
 ## Features
 
@@ -62,7 +63,8 @@ apply to fresh configs; updates preserve your existing choices. Earlier changes 
 ## Requirements
 
 - Windows x64 and **Warcraft III 1.26a x86**, with `Game.dll` version `1.26.0.6401`.
-- Installed Counter-Strike 1.6 with loose files in `cstrike/models` and `cstrike/sound`.
+- For CS weapons: installed Counter-Strike 1.6 with loose files in `cstrike/models` and `cstrike/sound`.
+  The Warcraft-only profile does not require CS or asset conversion.
 - Standard `WarcraftCSLauncher.exe` builds locally and needs C++ Build Tools / Windows SDK.
   The separate `WarcraftCSLauncher_DLL_Included.exe` offers Player setup without those tools.
   Both may prepare Python/NumPy after agreement to convert your locally owned CS assets.
@@ -148,7 +150,7 @@ Run in PowerShell, replacing the game paths with your own:
 ```powershell
 git clone https://github.com/YazgulDev/warcraft-cs.git
 cd warcraft-cs
-git switch release/0.8.0
+git switch release/0.9.0
 .\setup.cmd -WarcraftDirectory "E:\Warcraft III" -CounterStrikeDirectory "C:\SteamGames\steamapps\common\Half-Life\cstrike"
 .\play.cmd
 ```
@@ -461,7 +463,7 @@ their implementations are not bundled. Valve/Blizzard game materials are exclude
 For the full list of references, adaptations and license terms, see [NOTICE](NOTICE),
 [LICENSE-MIT](LICENSE-MIT), [LICENSE-APACHE](LICENSE-APACHE) and `licenses/`.
 
-### Unit scaling and ammunition limits (test branch)
+### Unit scaling and ammunition limits
 
 - `[AK47]`, `[M4A1]`, `[USP]` and `[AWP] MaxReserve` set reserve rounds, excluding the magazine.
   Defaults are 90, 90, 100 and 30; range 0..100000. Purchases, F11/F12 and rune rewards all use these caps.
@@ -482,7 +484,7 @@ with 40-second regeneration, while its native cooldown is zero. Its FPS icon dis
 count, and an empty marker blocks requests. The mod does not invent a cooldown or alter the map's timer;
 unknown charged spells retain their map's native validation.
 
-### Weapon attack effects (test branch)
+### Weapon attack effects
 
 `[Combat] WaterBlocksAttacks=false` lets firearm and melee traces in FPS and third person cross
 the water surface to reach submerged unit hitboxes. The solid bed, cliffs, walkable bridge decks,
@@ -515,7 +517,7 @@ the key to old configurations and preserve explicit custom values, including C4 
 `AWPOneShot`. To adopt these defaults in an existing installation, set `[C4] Price=3000`,
 `AmmoPrice=3000` and `[Damage] AWPOneShot=false` explicitly.
 
-### Unarmed first-person unit view (test branch)
+### Unarmed first-person unit view
 
 Select your unit and press **F9** to see the world from its first-person camera. WASD and mouse
 look remain available, with the unit's native movement speed and disabling effects. Weapons,
@@ -545,7 +547,7 @@ empty or malformed values use `true`; `true`/`false` and `1`/`0` are accepted, a
 your choice. This changes attack targeting rather than invulnerability: already airborne missiles,
 spells, area damage and direct map-script damage can still affect the unit.
 
-### Automatic squad spells (test branch)
+### Automatic squad spells
 
 **H** recruits only your nearby units to follow and fight. They can now cast supported native
 combat spells, heal injured allies and use buffs/summons when enemies are nearby. Warcraft
