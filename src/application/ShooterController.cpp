@@ -39,6 +39,7 @@ void ShooterController::Configure(const char* root, uintptr_t gameBase) {
     destructableHitboxes_.Configure(gameBase);
     collision_.Configure(gameBase);
     spells_.Configure(gameBase);
+    unitHudReader_.Configure(gameBase); // Verify map-resolved XP and item art before sampling the actor.
     // Native-only clients do not need a CS mixer or any converted cache to initialize.
     settings_=GameplaySettings::Load(root_+"\\WarcraftCS.ini");
     if(!settings_.warcraftOnly)audio_.Configure(root_);
@@ -189,6 +190,7 @@ void ShooterController::ResetMap() {
     unitLocomotion_.Reset(); // Map handles are already unloaded: discard, do not restore stale actors.
     heroAttack_.Reset();view_=ControlView::WeaponsFirstPerson;viewToggleRequested_=thirdPersonRequested_=unitViewRequested_=false;
     spellHud_={};spellHudTick_=spellHudLog_=0; // Forget per-map art and cooldown snapshots with their ability handles.
+    unitHud_={};unitHudTick_=0; // Never display an unloaded map's portrait stats or items.
     spells_.Reset();spellRequested_=-1;spellCancelRequested_=false; // Forget unloaded-map orders without touching stale handles.
     healthBarToggleRequested_=false;
     allyTargetToggleRequested_=false;
@@ -878,6 +880,10 @@ void ShooterController::Tick(uintptr_t ui) {
     if (escape && Buying()) { buyMenu_.Close();mouseLook_.Reset();suppressFire_=true;escape=false; }
     if (escape || !wc3::GetUnitTypeId(unit_) || wc3::Real(wc3::GetUnitState(unit_, 0)) <= 0.405f) { Disable(true); return; }
     health_ = wc3::Real(wc3::GetUnitState(unit_, 0));
+    // Copy HUD state on the simulation thread; no native unit/item queries occur during GL presentation.
+    if(!UnitFirstPerson() && (settings_.showUnitHud || settings_.showInventory) && now-unitHudTick_>=100) {
+        unitHudTick_=now;unitHud_=unitHudReader_.Read(unit_,settings_.showInventory);
+    }
     UpdateStatus();
     // HUD sampling runs on the game thread and never stores native pointers for the GL overlay.
     if(settings_.showSpellIcons && now-spellHudTick_>=100) {

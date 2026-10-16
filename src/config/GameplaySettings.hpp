@@ -49,6 +49,8 @@ struct GameplaySettings {
     // M changes this session preference; F8 restores the editable startup choice and size.
     bool showMinimap=true;
     bool showSpellIcons=true,showSpellCooldowns=true;
+    bool showUnitHud=true,showInventory=true;
+    float unitHudScalePercent=100;
     float spellIconSizePercent=7;
     float minimapSizePercent=22;
     // Temporary FPS visibility preference; ordinary map fog is restored outside FPS.

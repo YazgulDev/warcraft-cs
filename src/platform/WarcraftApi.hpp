@@ -69,6 +69,9 @@ extern BOOL (__cdecl* UnitAddItem)(Handle,Handle);
 // Native inventories and orders work for ordinary units as well as heroes.
 extern int (__cdecl* UnitInventorySize)(Handle);
 extern Handle (__cdecl* UnitItemInSlot)(Handle,int);
+extern int (__cdecl* GetItemCharges)(Handle);
+extern int (__cdecl* GetHeroXP)(Handle);
+extern int (__cdecl* GetHeroLevel)(Handle);
 extern BOOL (__cdecl* IssuePointOrderById)(Handle,int,float*,float*);
 extern BOOL (__cdecl* IssueTargetOrderById)(Handle,int,Handle);
 uintptr_t UnitObject(Handle unit);

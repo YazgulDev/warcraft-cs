@@ -233,6 +233,9 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         return true;
     };
     result.showSpellIcons=enabledHud("ShowSpellIcons");result.showSpellCooldowns=enabledHud("ShowSpellCooldowns");
+    // These HUD panels reload with F8; the separate clean F9 view always omits them.
+    result.showUnitHud=enabledHud("ShowUnitHud");result.showInventory=enabledHud("ShowInventory");
+    result.unitHudScalePercent=std::max(60.f,number("Interface","UnitHudScalePercent",100,160));
     result.spellIconSizePercent=std::max(4.f,number("Interface","SpellIconSizePercent",7,14));
     // Keep the optional counter hidden for old/invalid configs; accept explicit boolean preferences.
     auto showSpeed=text("Interface","ShowSpeed","false");

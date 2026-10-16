@@ -22,6 +22,7 @@ void Overlay::Text(float x, float y, const char* text, const HudFont* font) {
 }
 void Overlay::ResetGraphics(bool deleteObjects) {
     spellHud_.Reset(deleteObjects);
+    inventoryIcons_.Reset(deleteObjects);unitFont_.Reset(deleteObjects);inventoryFont_.Reset(deleteObjects);
     sky_.Reset(deleteObjects);
     // GPU names belong to one context; never delete old numeric IDs in a replacement context.
     for (int i = 0; i < WeaponSlots::Count; ++i) { guns_[i].Reset(deleteObjects); loaded_[i] = attempted_[i] = false; }
@@ -34,7 +35,7 @@ void Overlay::ContextDeleted(HGLRC context) {
     ResetGraphics(false); context_ = nullptr;
     wc3::Log("Overlay context deleted; GPU names forgotten");
 }
-void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& minimap,const std::vector<UnitHealthBar>& bars,
+void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& minimap,NativePortrait& portrait,const std::vector<UnitHealthBar>& bars,
     const WorldLabelView& barView,float nearPlane,float farPlane) {
     // Explain early returns as well as submitted geometry when investigating a missing aiming mark.
     if (!controller.Visible()) { ReticleDiagnostics::Skip("fps-inactive"); return; }
@@ -51,7 +52,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     } else if (refreshPending_) {
         // Keep surviving resources: blind deletion after Alt-Tab can touch IDs recycled by the game.
         bool valid=font_.Valid() && statusFont_.Valid() && spellFont_.Valid();
-        valid=valid && sky_.Valid() && spellHud_.Valid();
+        valid=valid && sky_.Valid() && spellHud_.Valid() && inventoryIcons_.Valid() && unitFont_.Valid() && inventoryFont_.Valid();
         for (int i=0;i<WeaponSlots::Count;++i) if (loaded_[i] && !guns_[i].TexturesValid()) valid=false;
         for (int i=0;i<WeaponSlots::Count;++i) if (previewLoaded_[i] && !buyPreviews_[i].TexturesValid()) valid=false;
         if (!valid) { ResetGraphics(false); wc3::Log("Overlay lost resources forgotten after focus return"); }
@@ -59,7 +60,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     }
     refreshPending_ = false;
     // Imports can keep the same path across maps; reload those textures in the active rendering context.
-    if(spellIconsRefresh_) {spellHud_.Reset(true);spellIconsRefresh_=false;}
+    if(spellIconsRefresh_) {spellHud_.Reset(true);inventoryIcons_.Reset(true);spellIconsRefresh_=false;}
     // Preserve every GL state touched so Warcraft's next frame renders normally.
     GLint oldMode; glGetIntegerv(GL_MATRIX_MODE, &oldMode); glPushAttrib(GL_ALL_ATTRIB_BITS);
     HWND window = WindowFromDC(dc); RECT client = {};
@@ -143,6 +144,9 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         TargetMarkerView::Draw(controller.AimTarget(),barView,width,height,nearPlane,farPlane);
     // Scale the bottom HUD from a readable 42-pixel font at 1080p, with safe edge padding.
     int statusSize = std::clamp(int(std::lround(height * (42.0f / 1080.0f))), 26, 84);
+    bool unitHudVisible=controller.Settings().showUnitHud && controller.UnitHud().actor;
+    // Choose each font's size once per frame; separate inventory labels avoid rebuilding glyph atlases.
+    if(unitHudVisible)statusSize=std::max(18,statusSize*2/3);
     Font(statusSize);
     controller.Hits().Draw(float(width), float(height));
     char status[160]; sprintf_s(status, "HP %.0f   %s   %d / %d   GOLD %d", controller.Health(),
@@ -153,6 +157,16 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     if(controller.ThirdPerson())sprintf_s(status,"HP %.0f   UNIT ATTACK %.0f   GOLD %d",controller.Health(),
         controller.Status().attackDamage*controller.Settings().thirdPerson.damageMultiplier,controller.Gold());
     float statusPad = statusSize * 0.75f, statusY = height - statusPad;
+    auto unitLayout=UnitHudLayout::Calculate(width,height,controller.Settings().unitHudScalePercent);
+    if(unitHudVisible) {
+        // The new health block reserves the lower left; equipment/notices stack above it.
+        statusY=float(unitLayout.y-16);
+        unitFont_.Ensure(std::clamp(int(unitLayout.portrait*.19f),12,32));
+        UnitHudView::Draw(controller.UnitHud(),unitLayout,portrait,[&](float x,float y,const char* label){Text(x,y,label,&unitFont_);});
+        if(controller.ThirdPerson())sprintf_s(status,"UNIT ATTACK %.0f   GOLD %d",controller.Status().attackDamage*controller.Settings().thirdPerson.damageMultiplier,controller.Gold());
+        else if(WeaponSlots::Melee(index))sprintf_s(status,"%s   GOLD %d",ShooterController::weapons[index].name,controller.Gold());
+        else sprintf_s(status,"%s   %d / %d   GOLD %d",ShooterController::weapons[index].name,controller.Ammo(),controller.Reserve(),controller.Gold());
+    }
     glColor4f(1.0f, 0.85f, 0.3f, 1); Text(statusPad, statusY, status, &statusFont_);
     // Installation progress and fuse are independent of which weapon is currently equipped.
     if (controller.PlantProgress() > 0) {
@@ -174,7 +188,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     controls+=" | "+key(ShortcutAction::ToggleUnitView)+": UNIT VIEW";
     std::string equipment="WHEEL: WEAPONS | "+key(ShortcutAction::Weapon6)+": C4 | "+key(ShortcutAction::Pickup)+": ITEM | "+key(ShortcutAction::Buy)+": BUY | "+key(ShortcutAction::BuyAmmo)+": AMMO";
     // The same control now dispatches the unit's primary melee or ranged attack.
-    if(controller.ThirdPerson())equipment="LMB: UNIT ATTACK | WASD: MOVE | "+key(ShortcutAction::Pickup)+": ITEM | "+key(ShortcutAction::Buy)+": BUY";
+    if(controller.ThirdPerson())equipment="LMB: UNIT ATTACK | WASD: MOVE | WHEEL: CAMERA | "+key(ShortcutAction::Pickup)+": ITEM";
     if(controller.Settings().warcraftOnly)equipment="LMB: UNIT ATTACK | WASD: MOVE | WHEEL: CAMERA | "+key(ShortcutAction::Pickup)+": ITEM";
     // Show the shared direct-contact mode continuously, including after the transient Q notice disappears.
     equipment+=" | "+key(ShortcutAction::ToggleAllyTargeting)+": ALLIES "+(controller.Settings().targetAllies ? "ON" : "OFF");
@@ -182,7 +196,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     char squad[256];sprintf_s(squad,"%s: FIGHT | %s: FOLLOW | %s: RELEASE | SQUAD %u %s | %s: FREE AMMO | %s: ALL WEAPONS",
         key(ShortcutAction::SquadFight).c_str(),key(ShortcutAction::SquadFollow).c_str(),key(ShortcutAction::SquadRelease).c_str(),unsigned(controller.SquadCount()),controller.SquadCount() ? (controller.SquadPassive() ? "FOLLOW" : "COMBAT") : "",key(ShortcutAction::Refill).c_str(),key(ShortcutAction::AllWeapons).c_str());
     // Reduced clients advertise only available actions; native spells and squad controls remain visible.
-    if(controller.Settings().warcraftOnly) {
+    if(controller.Settings().warcraftOnly || controller.ThirdPerson()) {
         sprintf_s(squad,"%s: FIGHT | %s: FOLLOW | %s: RELEASE | SQUAD %u %s",
             key(ShortcutAction::SquadFight).c_str(),key(ShortcutAction::SquadFollow).c_str(),key(ShortcutAction::SquadRelease).c_str(),
             unsigned(controller.SquadCount()),controller.SquadCount() ? (controller.SquadPassive() ? "FOLLOW" : "COMBAT") : "");
@@ -193,6 +207,11 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         for(const auto& row : HudHints::Wrap(group,columns)) {Text(25,hintY,row.c_str());hintY+=23;}
     }
     if (controller.RefillNotice()) Text(statusPad, statusY - statusSize - 16, controller.AmmoMessage(), &statusFont_);
+    if(controller.Settings().showInventory && !unavailableView && !controller.Buying()) {
+        auto layout=InventoryHudLayout::Calculate(width,height,controller.Settings().spellIconSizePercent,controller.Settings().showSpellIcons);
+        inventoryFont_.Ensure(std::clamp(layout.side/3,12,24));
+        UnitHudView::Inventory(controller.UnitHud(),layout,inventoryIcons_,[&](float x,float y,const char* label){Text(x,y,label,&inventoryFont_);});
+    }
     if(controller.Settings().showSpellIcons && !unavailableView && !controller.Buying()) {
         std::array<std::string,4> keys;
         for(int i=0;i<4;++i)keys[i]=key(ShortcutAction(int(ShortcutAction::Spell1)+i));

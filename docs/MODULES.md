@@ -240,6 +240,13 @@ enemy policy. A live controller predicate scopes it to the protected mode; ordin
 native target-reference getters remain intact. `NativeWeaponAttack` shares the contact guard so a
 previous wind-up cannot bypass a newly enabled policy. Spell/area damage remains native.
 
+`NativeUnitHud` samples immutable `UnitHudSnapshot` values on the game thread: unit resources,
+map-resolved XP thresholds and native inventory art/counts. `UnitHudView` draws those values with
+portable `UnitHudLayout` geometry. `HudIconCache` shares bounded map-scoped icon decoding/upload
+between spell and inventory views. `NativePortrait` redirects the native small portrait viewport
+into its own framebuffer with private depth; world color/depth remain untouched. Runtime hooks
+own capture timing and context/map/actor invalidation. F9 opts out before any overlay submission.
+
 `SquadSpellPolicy` owns portable readiness/healing decisions. `SquadSpellcasting` adapts live
 ability slots and native orders to a bounded stock-order catalog, using shared native ability,
 cooldown and map-charge readers. Its order ownership protects wind-up/channeling from formation

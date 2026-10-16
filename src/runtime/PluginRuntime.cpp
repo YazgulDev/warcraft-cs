@@ -3,6 +3,7 @@
 #include "../platform/NativeFloatingText.hpp"
 #include "../platform/NativeHoverView.hpp"
 #include "../platform/NativeMinimap.hpp"
+#include "../platform/NativePortrait.hpp"
 #include "../platform/WarcraftApi.hpp"
 #include "../platform/DiagnosticLog.hpp"
 #include "../platform/GameWindowInput.hpp"
@@ -55,6 +56,7 @@ static WorldLabelView healthBarView;
 static float healthNear=8,healthFar=15000;
 static float healthVerticalFov=85,healthAspect=1;
 static NativeMinimap minimap;
+static NativePortrait portrait;
 static bool healthy = true;
 static DWORD lastWorld = 0;
 static bool worldPending=false;
@@ -85,12 +87,15 @@ static bool WorldRectangle(RECT& rect) {
         GetClientRect(windowInput.Window(), &rect) && rect.right > 0 && rect.bottom > 0;
 }
 static void APIENTRY ViewportHook(GLint x, GLint y, GLsizei width, GLsizei height) {
+    // Native portrait batches render into a private target, including their own depth clears.
+    if(!overlayPass && portrait.Viewport(x,y,width,height)) {originalViewport(0,0,width,height);return;}
     RECT rect={};
     // Expand only world GL submission; native portrait layout and its viewport stay untouched.
     if (WorldRectangle(rect)) FullscreenView::Expand(rect.right,rect.bottom,x,y,width,height);
     originalViewport(x,y,width,height);
 }
 static void APIENTRY ScissorHook(GLint x, GLint y, GLsizei width, GLsizei height) {
+    if(portrait.Capturing()) {portrait.Scissor(x,y);originalScissor(x,y,width,height);return;}
     RECT rect={};
     if (WorldRectangle(rect)) FullscreenView::Expand(rect.right,rect.bottom,x,y,width,height);
     originalScissor(x,y,width,height);
@@ -121,13 +126,13 @@ static void ObserveMap(uintptr_t ui) {
     // A real UI unload/replacement marks map boundaries; a rendering pause is only a focus pause.
     NativeHoverView::Reset(); // The old map UI may already have been freed.
     actorJumpView.Reset();controller.ResetMap();overlay.MapChanged(); mapUI = ui;worldPending=false;
-    healthBars.Reset();healthBarView.active=false; // Native models/snapshots belong to the current map.
+    healthBars.Reset();healthBarView.active=false;portrait.Reset(); // Native snapshots belong to the current map.
     if (ui) healthy = true;
     wc3::Log("Map lifecycle: %s ui=%08X", ui ? "loaded" : "unloaded", ui);
 }
 static BOOL WINAPI DeleteContextHook(HGLRC context) {
     BOOL result = originalDeleteContext(context);
-    if (result) {overlay.ContextDeleted(context);minimap.ContextDeleted(context);}
+    if (result) {overlay.ContextDeleted(context);minimap.ContextDeleted(context);portrait.ContextDeleted(context);}
     return result;
 }
 static void __cdecl InterfaceHook(BOOL show, float* duration) {
@@ -201,6 +206,8 @@ static int __fastcall WorldHook(uintptr_t ui, uintptr_t unused) {
     ActorRenderFilter::Begin(healthy ? controller.HiddenActor() : 0);
     // World submission queues model batches; keep the raised transform until their actual draw completes.
     actorJumpView.Begin(healthy ? controller.JumpViewActor() : 0,controller.ActorFeet(),healthy && controller.ManualAttackAnimating());
+    RECT portraitClient={};if(windowInput.Window())GetClientRect(windowInput.Window(),&portraitClient);
+    portrait.BeginFrame(portraitClient.right,portraitClient.bottom,healthy && controller.Settings().showUnitHud ? controller.HudActor() : 0);
     int result = originalWorld(ui, unused);
     // A completed world belongs to this presentation even if native UI/driver work takes over 500 ms.
     worldPending=true;
@@ -226,6 +233,7 @@ static void __fastcall UIHook(uintptr_t frame, uintptr_t unused) {
     originalUI(frame, unused);
 }
 static void APIENTRY DrawElementsHook(GLenum mode, GLsizei count, GLenum type, const void* indices) {
+    if(portrait.Capturing()) {originalDrawElements(mode,count,type,indices);portrait.Submitted();return;}
     // Warcraft batches the console after world rendering, including cinematic backing textures.
     if (healthy && nativeUIPhase && !overlayPass && controller.Visible() &&
         (controller.UnitFirstPerson() || GetTickCount() - lastWorld < 500)) {
@@ -277,11 +285,12 @@ static void FinishFrame(HDC dc,const char* route) {
         overlay.RefreshAfterFocus();
     }
     overlayPass = true;
+    portrait.Finish();
     // Restore captured minimap pixels before the overlay reads world depth for health bars.
     minimap.FinishFrame();
     // Consume a real world submission, rather than rejecting a valid slow campaign frame by elapsed time.
     bool worldReady=worldPending;worldPending=false;
-    if (healthy && worldReady) overlay.Draw(dc,controller,minimap,healthBars.Items(),healthBarView,healthNear,healthFar);
+    if (healthy && worldReady) overlay.Draw(dc,controller,minimap,portrait,healthBars.Items(),healthBarView,healthNear,healthFar);
     else ReticleDiagnostics::Skip(healthy ? "world-frame-absent" : "controller-fault", 0, 0, GetTickCount() - lastWorld);
     overlayPass = false; nativeUIPhase = false;
     // Observe skipped frames too: a valid context alone does not establish an active FPS overlay.

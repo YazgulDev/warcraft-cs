@@ -19,6 +19,7 @@ foreach ($name in @('window-input','fog-of-war','diagnostic-log','native-frame-r
 & (Join-Path $PSScriptRoot 'test-spell-hud.ps1')
 # HUD text is checked against actual WGL pixels under inherited upload/render state.
 & (Join-Path $PSScriptRoot 'test-hud-font.ps1')
+& (Join-Path $PSScriptRoot 'test-unit-hud.ps1')
 # Buying/sky decoding are independent of Warcraft and use only synthetic/private-free test inputs.
 & (Join-Path $PSScriptRoot 'test-buy-menu.ps1')
 Write-Output 'All native-independent regression suites passed.'

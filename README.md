@@ -341,6 +341,13 @@ Edit it and press F8 in FPS.
 - `[Interface] ShowMinimap=true` shows Warcraft's native minimap in the FPS top-right corner.
 - `[Interface] ShowSpellIcons=true` shows four spell icons at the bottom right; `ShowSpellCooldowns=true`
   adds the live remaining cooldown. `SpellIconSizePercent=7` controls icon size (4..14% of window height).
+- `[Interface] ShowUnitHud=true` shows an animated native portrait, HP, mana and hero experience
+  at the bottom left in F6/F7. `UnitHudScalePercent=100` controls its scale (60..160%).
+  Experience follows the current map's level thresholds; non-heroes have no experience bar.
+  `ShowInventory=true` displays the unit's six inventory slots and item charges above the spells.
+  The inventory row displays native items; use Warcraft's normal inventory controls in RTS.
+  These settings reload with F8 and updates preserve custom values. F9 remains free of HUD.
+  Third-person hints omit CS ammunition, weapon giveaways and weapon purchases.
   Art comes from your current map/game. `LV0` marks an unlearned spell, `PASS` a passive,
   `EMPTY` an unmapped slot, and `?` an unsupported native timer. Rejected casts do not start a fake timer.
     Icons follow the current native command button (including toggle art), skill level and replacement

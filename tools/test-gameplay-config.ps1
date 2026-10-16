@@ -4,6 +4,16 @@ $root=Split-Path -Parent $PSScriptRoot
 $folder=Join-Path $root ('.local/config-merge-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $folder -Force | Out-Null
 $template=Join-Path $root 'config/WarcraftCS.ini'
+# HUD upgrades add missing keys while preserving independent opt-outs and the player's scale.
+$hudConfig=Join-Path $folder 'unit-hud.ini'
+@('[Interface]','ShowUnitHud=false','ShowInventory=false','UnitHudScalePercent=125') | Set-Content -LiteralPath $hudConfig -Encoding ascii
+Update-GameplayConfig $template $hudConfig
+$hudText=Get-Content -LiteralPath $hudConfig -Raw
+foreach($setting in @('ShowUnitHud=false','ShowInventory=false','UnitHudScalePercent=125','ShowSpellIcons=true')) {
+    if(!$hudText.Contains($setting)){throw "Unit HUD migration lost preference: $setting"}
+}
+$hudHash=(Get-FileHash -LiteralPath $hudConfig).Hash;Update-GameplayConfig $template $hudConfig
+if((Get-FileHash -LiteralPath $hudConfig).Hash -ne $hudHash){throw 'Unit HUD migration is not idempotent.'}
 # Fresh defaults use 5000, while explicit saved distances and hover opt-outs survive repeated upgrades.
 $distance=Join-Path $folder 'distance-hover.ini'
 @('[Rendering]','DrawDistance=7000','[UnitView]','HideHoverCircles=false') | Set-Content -LiteralPath $distance -Encoding ascii

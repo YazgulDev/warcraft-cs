@@ -373,5 +373,18 @@ int main() {
     assert(!GameplaySettings::Load(path).unlimitedBombPurchases);
     WritePrivateProfileStringA("Loadout","UnlimitedBombPurchases","true",path.c_str());
     assert(GameplaySettings::Load(path).unlimitedBombPurchases);DeleteFileA(path.c_str());
-    return 0;
+    // The new display preferences use the real F8 parser with bounded scale and safe fallbacks.
+    for(auto value : {"false","0","true","1","broken","nan",""}) {
+        {std::ofstream file(path);file<<"[Interface]\nShowUnitHud="<<value<<"\nShowInventory="<<value<<"\nUnitHudScalePercent="<<value<<"\n";}
+        settings=GameplaySettings::Load(path);
+        bool enabled=strcmp(value,"false") && strcmp(value,"0");
+        assert(settings.showUnitHud==enabled && settings.showInventory==enabled);
+        assert(settings.unitHudScalePercent>=60 && settings.unitHudScalePercent<=160);
+    }
+    for(auto scale : {"-20","999","nan","95"}) {
+        WritePrivateProfileStringA("Interface","UnitHudScalePercent",scale,path.c_str());
+        float expected=!strcmp(scale,"-20") ? 60.f : !strcmp(scale,"999") ? 160.f : !strcmp(scale,"nan") ? 100.f : 95.f;
+        assert(GameplaySettings::Load(path).unitHudScalePercent==expected);
+    }
+    DeleteFileA(path.c_str());return 0;
 }

@@ -63,6 +63,10 @@ NATIVE(BOOL, UnitAddItem, (Handle,Handle), 0x3C73F0)
 // Inventory capacity/slots and follower orders checked against the owned 1.26a binary.
 NATIVE(int, UnitInventorySize, (Handle), 0x3C8F00)
 NATIVE(Handle, UnitItemInSlot, (Handle,int), 0x3C7730)
+// Owned 1.26a native registrations verify these read-only HUD values.
+NATIVE(int, GetItemCharges, (Handle), 0x3C5050)
+NATIVE(int, GetHeroXP, (Handle), 0x3C6A10)
+NATIVE(int, GetHeroLevel, (Handle), 0x3C6ED0)
 NATIVE(BOOL, IssuePointOrderById, (Handle,int,float*,float*), 0x3C8940)
 NATIVE(BOOL, IssueTargetOrderById, (Handle,int,Handle), 0x3C89D0)
 NATIVE(BOOL, UnitDamageTarget, (Handle, Handle, float*, BOOL, BOOL, int, int, int), 0x3C8850)

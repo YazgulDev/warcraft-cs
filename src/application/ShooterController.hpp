@@ -29,6 +29,7 @@
 #include "../inventory/ItemPickup.hpp"
 #include "../squad/SquadController.hpp"
 #include "../platform/SpellCaster.hpp"
+#include "../platform/NativeUnitHud.hpp"
 #include "../presentation/ControlView.hpp"
 #include <string>
 #include <vector>
@@ -95,6 +96,8 @@ public:
     void RequestMinimapToggle() { minimapToggleRequested_=true; }
     bool MinimapVisible() const { return !UnitFirstPerson() && showMinimap_; }
     const SpellHudSlots& SpellHud() const {return spellHud_;}
+    const UnitHudSnapshot& UnitHud() const {return unitHud_;}
+    wc3::Handle HudActor() const {return Visible() && !UnitFirstPerson() ? unit_ : 0;}
     float DisplaySpeed() const { return movement_.Speed()/MovementPhysics::worldScale; }
     // Buy-menu events are consumed on Warcraft's simulation thread, never inside WindowProc.
     void RequestBuyToggle() { buyToggleRequested_=true; }
@@ -270,6 +273,9 @@ private:
     CameraWheel cameraWheel_;
     float thirdPersonDistance_=500;
     GameplaySettings settings_;
+    NativeUnitHud unitHudReader_;
+    UnitHudSnapshot unitHud_;
+    DWORD unitHudTick_=0;
     BuyInventory inventory_;
     BuyMenu buyMenu_;
     bool buyToggleRequested_=false,buyAmmoRequested_=false,suppressFire_=false;
