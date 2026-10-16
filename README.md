@@ -1,4 +1,4 @@
-# Warcraft CS 0.9.0
+# Warcraft CS 0.9.1
 
 Counter-Strike 1.6 inside Warcraft III: control your own hero or unit in first person,
 shoot, and play regular maps, campaigns and compatible custom maps.
@@ -11,16 +11,15 @@ Neither variant includes game files, models, sounds, maps or saves.
 You need your own Warcraft III installation. CS 1.6 is required only for the full weapon mode.**
 This is an early prototype with known limitations.
 
-**[Download 0.9.0](https://github.com/YazgulDev/warcraft-cs/releases/tag/v0.9.0)** В·
-[Release Notes](docs/RELEASE-0.9.0.md) В· [Installation](INSTALL.md) В· [Requirements](REQUIREMENTS.md)
+**[Download 0.9.1](https://github.com/YazgulDev/warcraft-cs/releases/tag/v0.9.1)** В·
+[Release Notes](docs/RELEASE-0.9.1.md) В· [Installation](INSTALL.md) В· [Requirements](REQUIREMENTS.md)
 В· [Troubleshooting](TROUBLESHOOTING.md) В· [Discussions](https://github.com/YazgulDev/warcraft-cs/discussions)
 
-0.9.0 adds native third-person melee/ranged combat, camera zoom, an unarmed first-person view,
-automatic squad spellcasting and a Warcraft-only installation profile. It fixes interrupted
-attack animations, narrow ramps, campaign HUD restoration and hits on submerged enemies.
-Protected allies no longer block direct attacks; fresh configs use a 5000-unit draw distance.
-Updates preserve existing preferences. See the [full release notes](docs/RELEASE-0.9.0.md)
-for controls, every new setting, migration guidance and known limitations.
+0.9.1 fixes HUD text appearing as solid bars after F6 or F7. Shortcut hints, health/ammunition,
+buy-menu text and spell labels now use alpha glyph textures instead of WGL bitmap display lists.
+No gameplay settings or defaults change. See the [0.9.1 release notes](docs/RELEASE-0.9.1.md)
+for the fix, upgrade steps and validation limits; the [0.9.0 notes](docs/RELEASE-0.9.0.md)
+describe the preceding gameplay and installation features.
 
 ## Features
 
@@ -150,7 +149,7 @@ Run in PowerShell, replacing the game paths with your own:
 ```powershell
 git clone https://github.com/YazgulDev/warcraft-cs.git
 cd warcraft-cs
-git switch release/0.9.0
+git switch release/0.9.1
 .\setup.cmd -WarcraftDirectory "E:\Warcraft III" -CounterStrikeDirectory "C:\SteamGames\steamapps\common\Half-Life\cstrike"
 .\play.cmd
 ```

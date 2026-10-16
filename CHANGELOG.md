@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.9.1 — 2026-10-16
 
 - Replace WGL bitmap display-list text with GDI-generated alpha glyph atlases for the F6/F7 HUD,
   including shortcut hints, status, buy-menu text and spell labels. Isolate glyph uploads and drawing

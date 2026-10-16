@@ -723,3 +723,22 @@ camera fields were checked at 5000 and 7000. These checks are bounded, not a com
 or custom-map playthrough. Recent native logic checks used Direct3D because the isolated test
 copy failed OpenGL initialization; separate WGL suites cover rendering state and pixels. This
 release preparation reruns automated checks and does not claim a new full native gameplay pass.
+
+
+### Release 0.9.1 verification (2026-10-16)
+
+The only runtime change since immutable v0.9.0 is the HUD font fix. The complete independent
+wrapper passed on these merged sources. HudFont's hidden Intel UHD WGL oracle compares actual
+glyph pixels at 12/20/26/42/84 sizes, including transparent spaces, poisoned unpack/alpha/color
+state, wireframe/logic/masks/texture matrices, resize, clipping and three context replacements.
+Its preview was visually inspected. An ordinary Player module was tested in offline Warcraft
+1.26a on a disposable map: actual F6/F7, RTS return/direct TPS entry and FPS reentry retained
+readable hints/status/spell labels and buy-menu text. No controller fault or nonzero OpenGL error
+was recorded. The game exited normally. Private config/module restoration was byte-exact and
+the save backup diff was empty. The reporter's GPU/driver remains unverified.
+
+Both 0.9.1 launchers are rebuilt from the same audited source snapshot; the ordinary native
+rebuild changes version/source metadata without changing the tested runtime logic. Package checks
+validate both EXEs, source/version/native hashes, complete release-body and manifest summary
+resolution, native-free public archives and Player payload layout/tamper rejection. The public
+source archive is checked with the mod publication lint against the owned installation.
