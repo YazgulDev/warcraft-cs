@@ -2,7 +2,7 @@
 #include "../combat/UnitHitboxes.hpp"
 #include "../combat/DestructableHitboxes.hpp"
 
-// A spell receives either the visible nearest widget or a point intersecting the world view.
+// Widget selection and the ground point are independent; point spells never snap to a widget's surface.
 struct SpellAim {
     wc3::Handle target=0;
     float x=0,y=0;

@@ -29,7 +29,6 @@ SpellAim SpellAim::Pick(wc3::Handle actor,const float* origin,const float* direc
         if(wc3::Real(wc3::GetDestructableLife(object))<=.405f)continue;
         float entry=0;if(destructables.Intersect(object,origin,direction,limit,entry)) {limit=entry;aim.target=object;}
     }
-    // An object surface is also a valid point for area spells; no sky-facing fallback casts behind the player.
-    if(aim.target) {aim.x=origin[0]+direction[0]*limit;aim.y=origin[1]+direction[1]*limit;aim.point=true;}
+    // Keep the ground intersection independent: a nearby ally's model must not shorten Blink/area casts.
     return aim;
 }

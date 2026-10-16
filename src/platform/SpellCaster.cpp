@@ -37,14 +37,20 @@ const char* SpellCaster::Cast(wc3::Handle unit,int slot,const SpellSettings& set
     int order=settings.order[slot] ? settings.order[slot] : slots_.Order(unit,ability);
     if(!order) {wc3::Log("Spell unavailable unit=%08X slot=%d ability=%08X reason=passive-or-unsupported",unit,slot+1,ability);return "PASSIVE OR UNSUPPORTED SPELL";}
     Cancel();
-    const auto& mode=settings.target[slot];BOOL accepted=FALSE;
+    // A point spell may accept a widget order by converting it to that widget's position. Avoid that snap.
+    std::string mode=settings.target[slot];
+    if(mode=="auto" && slots_.PointOnly(unit,ability,order))mode="point";
+    BOOL accepted=FALSE;
     // Native approach can start synchronously inside IssueOrder; grant cast ownership before that dispatch.
     unit_=unit;order_=order;requested_=GetTickCount();
     // Auto tries legal target forms only. Native rejection never grants mana or resets cooldowns.
     wc3::Handle target=self || mode=="self" ? unit : aim.target;
     float x=aim.x,y=aim.y;
+    // Deliberate Alt/self casting of an area spell uses the actor's ground position, not a widget order.
+    bool selfPoint=mode=="point" && self;
+    if(selfPoint) {x=wc3::Real(wc3::GetUnitX(unit));y=wc3::Real(wc3::GetUnitY(unit));}
     if((mode=="unit" || mode=="self" || mode=="auto") && target)accepted=wc3::IssueTargetOrderById(unit,order,target);
-    if(!accepted && !self && (mode=="point" || mode=="auto") && aim.point)accepted=wc3::IssuePointOrderById(unit,order,&x,&y);
+    if(!accepted && (!self || selfPoint) && (mode=="point" || mode=="auto") && (aim.point || selfPoint))accepted=wc3::IssuePointOrderById(unit,order,&x,&y);
     if(!accepted && (mode=="immediate" || mode=="auto"))accepted=wc3::IssueImmediateOrderById(unit,order);
     wc3::Log("Spell requested unit=%08X slot=%d ability=%08X order=%d mode=%s target=%08X point=%d x=%.1f y=%.1f accepted=%d mana=%.1f",
         unit,slot+1,ability,order,mode.c_str(),target,aim.point,x,y,accepted,wc3::Real(wc3::GetUnitState(unit,2)));

@@ -176,7 +176,10 @@ K queues one shared switch in the controller, which saves both existing team INI
 `ShortcutBindings` is the keyboard snapshot shared by input dispatch, held movement and HUD labels;
 `GameplaySettings` validates the whole layout before replacing it. `HeroSpellSlots` parses owned
 table metadata without engine pointers or bundled game data. `NativeSpellSlots` reads supported
-learned ability order getters, while `SpellAim` resolves the visible reticle widget/world point.
+learned ability order getters and the actor-matched command card's verified point-only order flags.
+`SpellAim` keeps terrain intersection separate from nearest-widget selection, so a nearby ally
+cannot replace the ground aim. `SpellCaster` applies that native point-only policy in auto mode,
+without a spell-name/rawcode whitelist, and preserves explicit target overrides.
 `SpellCaster` owns only explicitly requested spell orders until native completion or deliberate
 player interruption; the controller yields its ordinary order cancellation and firing during that
 state. Map reset forgets orders without issuing commands to unloaded handles.

@@ -68,6 +68,12 @@ uintptr_t NativeSpellSlots::Object(wc3::Handle unit,int ability) const {
     uintptr_t skill=reinterpret_cast<Find>(base_+0x787D0)(object,ability,FALSE,TRUE,TRUE,TRUE),table=0;
     return Read(skill,table) && table>=base_+0x880000 && table<base_+0xA80000 ? skill : 0;
 }
+bool NativeSpellSlots::PointOnly(wc3::Handle unit,int ability,int order) {
+    if(!verified_)return false;
+    using GetUI=uintptr_t (__fastcall*)(int,int);
+    uintptr_t ui=reinterpret_cast<GetUI>(base_+0x300710)(0,0);
+    return NativeCommandCard::PointOnly(base_,ui,Object(unit,ability),ability,order);
+}
 SpellHudSlots NativeSpellSlots::Snapshot(wc3::Handle unit,const SpellSettings& settings) {
     SpellHudSlots result={};if(!unit)return result;
     auto resolved=Resolve(unit);

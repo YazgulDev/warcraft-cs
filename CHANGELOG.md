@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Keep point-targeted spells aimed at terrain independently of nearby units/destructables. In auto
+  mode, use the controlled actor's native command flags to send point-only orders for abilities such
+  as Blink and Flame Strike; a rejected or missing ground point never falls back to a widget target.
+  Alt/self casts use the actor's ground position. Explicit slot target overrides remain available.
+
 ## 0.9.1 — 2026-10-16
 
 - Replace WGL bitmap display-list text with GDI-generated alpha glyph atlases for the F6/F7 HUD,

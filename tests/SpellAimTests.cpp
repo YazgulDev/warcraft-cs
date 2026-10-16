@@ -27,10 +27,13 @@ bool UnitHitboxes::Intersect(wc3::Handle unit,const float*,const float*,float li
 bool DestructableHitboxes::Intersect(wc3::Handle,const float*,const float*,float limit,float& entry) {entry=wall;return entry<limit;}
 int main() {
     UnitHitboxes units;DestructableHitboxes objects;float eye[]={0,0,96},forward[]={1,0,0},down[]={.70710678f,0,-.70710678f};
-    auto aim=SpellAim::Pick(1,eye,forward,100,units,objects);assert(aim.target==2 && aim.point && aim.x==80);
-    wall=40;aim=SpellAim::Pick(1,eye,forward,100,units,objects);assert(aim.target==9 && aim.x==40);wall=1000;
+    auto aim=SpellAim::Pick(1,eye,forward,100,units,objects);assert(aim.target==2 && !aim.point);
+    wall=40;aim=SpellAim::Pick(1,eye,forward,100,units,objects);assert(aim.target==9 && !aim.point);wall=1000;
     aim=SpellAim::Pick(1,eye,forward,50,units,objects);assert(!aim.target && !aim.point);
-    unitsEnabled=false;aim=SpellAim::Pick(1,eye,down,300,units,objects);
+    // The same terrain point survives a nearer unit/destructable; neither widget can snap an area cast.
+    aim=SpellAim::Pick(1,eye,down,300,units,objects);assert(aim.target==2 && aim.point && std::abs(aim.x-96)<.1f);
+    wall=40;aim=SpellAim::Pick(1,eye,down,300,units,objects);assert(aim.target==9 && aim.point && std::abs(aim.x-96)<.1f);
+    wall=1000;unitsEnabled=false;aim=SpellAim::Pick(1,eye,down,300,units,objects);
     assert(!aim.target && aim.point && std::abs(aim.x-96)<.1f);assert(created==destroyed);
     std::puts("PASS spell ray visibility, dead/hidden/loaded filtering, nearest obstruction and no sky fallback.");
 }
