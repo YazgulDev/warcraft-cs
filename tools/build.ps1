@@ -30,6 +30,7 @@ $sources += '"' + (Join-Path $modRoot 'src/geometry/TreeTrunkMesh.cpp') + '"'
 # Shared filled aiming geometry is compiled into both ordinary Player builds and scope rendering.
 $sources += '"' + (Join-Path $modRoot 'src/presentation/ReticleView.cpp') + '"'
 $sources += '"' + (Join-Path $modRoot 'src/presentation/TargetMarkerView.cpp') + '"' # Read-only TPS contact presentation.
+$sources += '"' + (Join-Path $modRoot 'src/presentation/HudFont.cpp') + '"' # Driver-independent HUD glyph coverage.
 # Draw diagnostics are shared by the real reticle and frame/overlay skip paths.
 $sources += '"' + (Join-Path $modRoot 'src/presentation/ReticleDiagnostics.cpp') + '"'
 # Thread-safe bounded diagnostics are a native platform adapter, not controller/file ownership.
