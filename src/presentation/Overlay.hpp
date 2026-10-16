@@ -5,6 +5,7 @@
 #include "SkyView.hpp"
 #include "HealthBarRenderer.hpp"
 #include "SpellHudView.hpp"
+#include "HudFont.hpp"
 class NativeMinimap;
 
 class Overlay {
@@ -19,18 +20,14 @@ private:
     void ResetGraphics(bool deleteObjects);
     SpellHudView spellHud_;
     bool spellIconsRefresh_=false;
-    void Text(float x, float y, const char* text, GLuint font = 0);
-    void Font(HDC dc, int statusSize);
+    void Text(float x, float y, const char* text, const HudFont* font = nullptr);
+    void Font(int statusSize);
     std::string root_;
     GunMesh guns_[WeaponSlots::Count];
     GunMesh buyPreviews_[WeaponSlots::Count];
     bool previewLoaded_[WeaponSlots::Count]={},previewAttempted_[WeaponSlots::Count]={};
     bool loaded_[WeaponSlots::Count] = {}, attempted_[WeaponSlots::Count] = {};
-    GLuint font_ = 0;
-    GLuint statusFont_ = 0;
-    GLuint spellFont_=0;
-    int spellFontSize_=0;
-    int statusFontSize_ = 0;
+    HudFont font_,statusFont_,spellFont_;
     int hintGlyphWidth_ = 12;
     HGLRC context_ = nullptr;
     bool refreshPending_ = false;

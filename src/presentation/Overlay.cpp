@@ -12,27 +12,13 @@
 #include <cstdio>
 #include <cstring>
 
-static GLuint BitmapFont(HDC dc, int size, int* glyphWidth=nullptr) {
-    // Rasterize each size directly so enlarged status text stays sharp instead of stretching pixels.
-    HFONT font = CreateFontA(size, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, ANSI_CHARSET,
-        OUT_TT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, FF_DONTCARE, "Consolas");
-    HGDIOBJ old = SelectObject(dc, font); GLuint lists = glGenLists(96);
-    // Use the actual monospace advance so wrapping remains correct at different Windows DPI settings.
-    if (glyphWidth) {TEXTMETRICA metrics={};GetTextMetricsA(dc,&metrics);*glyphWidth=std::max(1,int(metrics.tmAveCharWidth));}
-    wglUseFontBitmapsA(dc, 32, 96, lists); SelectObject(dc, old); DeleteObject(font);
-    return lists;
+void Overlay::Font(int statusSize) {
+    // Alpha atlases keep hints and resolution-scaled status text independent of WGL bitmap-list drivers.
+    font_.Ensure(20);statusFont_.Ensure(statusSize);
+    hintGlyphWidth_=font_.Advance();
 }
-void Overlay::Font(HDC dc, int statusSize) {
-    if (!font_) font_ = BitmapFont(dc, 20, &hintGlyphWidth_);
-    // Only the bottom HUD scales with resolution; rebuild its glyphs when the viewport size changes.
-    if (statusFontSize_ != statusSize) {
-        if (statusFont_) glDeleteLists(statusFont_, 96);
-        statusFont_ = BitmapFont(dc, statusSize); statusFontSize_ = statusSize;
-    }
-}
-void Overlay::Text(float x, float y, const char* text, GLuint font) {
-    glRasterPos2f(x, y); glListBase((font ? font : font_) - 32);
-    glCallLists(GLsizei(strlen(text)), GL_UNSIGNED_BYTE, text);
+void Overlay::Text(float x, float y, const char* text, const HudFont* font) {
+    (font ? *font : font_).Draw(x,y,text);
 }
 void Overlay::ResetGraphics(bool deleteObjects) {
     spellHud_.Reset(deleteObjects);
@@ -41,13 +27,7 @@ void Overlay::ResetGraphics(bool deleteObjects) {
     for (int i = 0; i < WeaponSlots::Count; ++i) { guns_[i].Reset(deleteObjects); loaded_[i] = attempted_[i] = false; }
     // Menu models obey the same context ownership rules as first-person weapons.
     for (int i=0;i<WeaponSlots::Count;++i) { buyPreviews_[i].Reset(deleteObjects);previewLoaded_[i]=previewAttempted_[i]=false; }
-    if (deleteObjects) {
-        if (font_) glDeleteLists(font_, 96);
-        if (statusFont_) glDeleteLists(statusFont_, 96);
-        if (spellFont_) glDeleteLists(spellFont_,96);
-    }
-    font_ = statusFont_ = 0; statusFontSize_ = 0;
-    spellFont_=0;spellFontSize_=0;
+    font_.Reset(deleteObjects);statusFont_.Reset(deleteObjects);spellFont_.Reset(deleteObjects);
 }
 void Overlay::ContextDeleted(HGLRC context) {
     if (context_ != context) return;
@@ -70,7 +50,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
             glGetString(GL_VENDOR), glGetString(GL_RENDERER), glGetString(GL_VERSION), glIsEnabled(GL_LINE_STIPPLE));
     } else if (refreshPending_) {
         // Keep surviving resources: blind deletion after Alt-Tab can touch IDs recycled by the game.
-        bool valid=(!font_ || glIsList(font_)) && (!statusFont_ || glIsList(statusFont_)) && (!spellFont_ || glIsList(spellFont_));
+        bool valid=font_.Valid() && statusFont_.Valid() && spellFont_.Valid();
         valid=valid && sky_.Valid() && spellHud_.Valid();
         for (int i=0;i<WeaponSlots::Count;++i) if (loaded_[i] && !guns_[i].TexturesValid()) valid=false;
         for (int i=0;i<WeaponSlots::Count;++i) if (previewLoaded_[i] && !buyPreviews_[i].TexturesValid()) valid=false;
@@ -163,7 +143,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         TargetMarkerView::Draw(controller.AimTarget(),barView,width,height,nearPlane,farPlane);
     // Scale the bottom HUD from a readable 42-pixel font at 1080p, with safe edge padding.
     int statusSize = std::clamp(int(std::lround(height * (42.0f / 1080.0f))), 26, 84);
-    Font(dc, statusSize);
+    Font(statusSize);
     controller.Hits().Draw(float(width), float(height));
     char status[160]; sprintf_s(status, "HP %.0f   %s   %d / %d   GOLD %d", controller.Health(),
         ShooterController::weapons[index].name, controller.Ammo(), controller.Reserve(),controller.Gold());
@@ -173,15 +153,15 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     if(controller.ThirdPerson())sprintf_s(status,"HP %.0f   UNIT ATTACK %.0f   GOLD %d",controller.Health(),
         controller.Status().attackDamage*controller.Settings().thirdPerson.damageMultiplier,controller.Gold());
     float statusPad = statusSize * 0.75f, statusY = height - statusPad;
-    glColor4f(1.0f, 0.85f, 0.3f, 1); Text(statusPad, statusY, status, statusFont_);
+    glColor4f(1.0f, 0.85f, 0.3f, 1); Text(statusPad, statusY, status, &statusFont_);
     // Installation progress and fuse are independent of which weapon is currently equipped.
     if (controller.PlantProgress() > 0) {
         char message[80]; sprintf_s(message, "PLANTING C4  %.0f%%", controller.PlantProgress() / 3 * 100);
-        Text(width * 0.5f - 180, height * 0.65f, message, statusFont_);
+        Text(width * 0.5f - 180, height * 0.65f, message, &statusFont_);
     }
     if (controller.BombRemaining() >= 0) {
         char message[80]; sprintf_s(message, "C4 x%u  %.0fs",unsigned(controller.BombCount()),double(std::ceil(controller.BombRemaining())));
-        Text(float(width - statusSize * 9), statusY, message, statusFont_);
+        Text(float(width - statusSize * 9), statusY, message, &statusFont_);
     }
     // Compact hints reflect the configured keys and wrap before the native minimap.
     auto key=[&](ShortcutAction action) {return controller.Shortcut(action);};
@@ -212,35 +192,35 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     for(const auto& group : {controls,equipment,abilities,std::string(squad)}) {
         for(const auto& row : HudHints::Wrap(group,columns)) {Text(25,hintY,row.c_str());hintY+=23;}
     }
-    if (controller.RefillNotice()) Text(statusPad, statusY - statusSize - 16, controller.AmmoMessage(), statusFont_);
+    if (controller.RefillNotice()) Text(statusPad, statusY - statusSize - 16, controller.AmmoMessage(), &statusFont_);
     if(controller.Settings().showSpellIcons && !unavailableView && !controller.Buying()) {
         std::array<std::string,4> keys;
         for(int i=0;i<4;++i)keys[i]=key(ShortcutAction(int(ShortcutAction::Spell1)+i));
         auto layout=SpellHudLayout::Calculate(width,height,controller.Settings().spellIconSizePercent);
         // Match labels to icon size so READY/countdowns do not overlap neighboring slots after resize.
         int size=std::clamp(layout.side/3,12,28);
-        if(size!=spellFontSize_) {if(spellFont_)glDeleteLists(spellFont_,96);spellFont_=BitmapFont(dc,size);spellFontSize_=size;}
+        spellFont_.Ensure(size);
         spellHud_.Draw(controller.SpellHud(),keys,layout,controller.Settings().showSpellCooldowns,
-            [&](float x,float y,const char* label){Text(x,y,label,spellFont_);});
+            [&](float x,float y,const char* label){Text(x,y,label,&spellFont_);});
     }
     // Horizontal CS units match MaxBunnySpeed, excluding vertical falling/jumping velocity.
     // Stack above notices/status so the optional counter never covers health or ammunition.
     if (controller.SpeedVisible()) {
         char speed[64];sprintf_s(speed,"SPEED %.0f u/s (CS)",controller.DisplaySpeed());
         int rows=1+(controller.RefillNotice() ? 1 : 0)+(*controller.Status().Label() ? 1 : 0);
-        Text(statusPad,statusY-(statusSize+16)*rows,speed,statusFont_);
+        Text(statusPad,statusY-(statusSize+16)*rows,speed,&statusFont_);
     }
     // Ground items advertise interaction without issuing a walk-to-item RTS order.
-    if (controller.ItemNearby()) {controls=key(ShortcutAction::Pickup)+": PICK UP ITEM";Text(width*.5f-120,height*.72f,controls.c_str(),statusFont_);}
+    if (controller.ItemNearby()) {controls=key(ShortcutAction::Pickup)+": PICK UP ITEM";Text(width*.5f-120,height*.72f,controls.c_str(),&statusFont_);}
     // Explain blocked controls next to the status HUD while the corresponding Warcraft effect lasts.
     if (*controller.Status().Label()) {
         char effect[96]; sprintf_s(effect, "%s", controller.Status().Label());
         if (!controller.Status().immobilized && std::abs(controller.Status().speedScale - 1) >= 0.01f)
             sprintf_s(effect, "%s  %.0f%% SPEED", controller.Status().Label(), controller.Status().speedScale * 100);
-        Text(statusPad, statusY - (statusSize + 16) * (controller.RefillNotice() ? 2 : 1), effect, statusFont_);
+        Text(statusPad, statusY - (statusSize + 16) * (controller.RefillNotice() ? 2 : 1), effect, &statusFont_);
     }
     BuyMenuView::Draw(controller,width,height,window,[&](float x,float y,const char* text){Text(x,y,text);},
-        [&](float x,float y,const char* title){Text(x,y,title,statusFont_);},
+        [&](float x,float y,const char* title){Text(x,y,title,&statusFont_);},
         [&](int slot,float x,float y,float w,float h) {
             auto item=BuyCatalog::Slot(slot);if (!item) return;
             // Private previews load lazily; absent optional art never prevents a purchase.

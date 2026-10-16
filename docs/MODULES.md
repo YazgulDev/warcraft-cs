@@ -1,5 +1,11 @@
 # Source modules
 
+`HudFont` owns the HUD's GDI glyph rasterization and OpenGL alpha atlas in presentation. It uses
+a separate memory DC and textured quads, avoiding driver-generated WGL bitmap display lists.
+Each font retains its glyph bearings and advances; upload/draw state is restored after use.
+`Overlay` owns the hint/status/spell sizes and forgets their GPU names on context replacement.
+The hidden-window `test-hud-font.ps1` oracle checks actual text pixels without game assets or input.
+
 `NativeHoverView` owns the verified 1.26a preselection setter and its two UI switches. Live F9 can
 temporarily hide native hover circles independently of GL HUD rendering. Map/script setter requests
 update the saved preference while hidden; leaving F9 or disabling the option restores the latest pair.
