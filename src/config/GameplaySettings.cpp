@@ -196,6 +196,13 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
             if(!used){result.shortcuts.Set(ShortcutAction::AllWeapons,candidate);break;}
         }
     }
+    // New Tab/I defaults yield to an older customized action instead of resetting the whole layout.
+    for(auto action:{ShortcutAction::InventoryNumbers,ShortcutAction::InventoryPanel}) {
+        if(!text("Shortcuts",ShortcutBindings::Name(action),"").empty())continue;
+        for(size_t i=0;i<size_t(action);++i)if(result.shortcuts.Key(ShortcutAction(i))==result.shortcuts.Key(action)) {
+            result.shortcuts.Set(action,0);break;
+        }
+    }
     if(!layoutValid || !result.shortcuts.Valid()) {result.shortcuts=ShortcutBindings();wc3::Log("Invalid/conflicting Shortcuts; using default keyboard layout");}
     // Rawcodes and order IDs describe existing abilities; they never grant skills or bypass native costs.
     auto spellsEnabled=text("Spells","Enabled","true");
@@ -235,6 +242,8 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.showSpellIcons=enabledHud("ShowSpellIcons");result.showSpellCooldowns=enabledHud("ShowSpellCooldowns");
     // These HUD panels reload with F8; the separate clean F9 view always omits them.
     result.showUnitHud=enabledHud("ShowUnitHud");result.showInventory=enabledHud("ShowInventory");
+    result.inventoryControls=enabledHud("InventoryControls");
+    result.inventoryDropDistance=std::max(16.f,number("Inventory","DropDistance",80,128));
     result.unitHudScalePercent=std::max(60.f,number("Interface","UnitHudScalePercent",100,160));
     result.spellIconSizePercent=std::max(4.f,number("Interface","SpellIconSizePercent",7,14));
     // Keep the optional counter hidden for old/invalid configs; accept explicit boolean preferences.

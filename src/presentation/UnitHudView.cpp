@@ -42,24 +42,3 @@ void UnitHudView::Draw(const UnitHudSnapshot& unit,const UnitHudLayout& l,Native
     }
     glPopAttrib();
 }
-void UnitHudView::Inventory(const UnitHudSnapshot& unit,const InventoryHudLayout& l,HudIconCache& icons,const Text& text) {
-    if(!unit.actor || !l.side || !unit.inventorySize)return;
-    glPushAttrib(GL_ALL_ATTRIB_BITS);glEnable(GL_BLEND);glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-    for(int i=0;i<6;++i) {
-        float x=float(l.x+i*(l.side+l.gap)),y=float(l.y),side=float(l.side);
-        glDisable(GL_TEXTURE_2D);glColor4f(.36f,.29f,.15f,.95f);Rect(x-2,y-2,side+4,side+4);
-        glColor4f(.025f,.025f,.03f,.92f);Rect(x,y,side,side);
-        const auto& item=unit.items[i];GLuint texture=i<unit.inventorySize ? icons.Texture(item.icon) : 0;
-        if(texture) {
-            glEnable(GL_TEXTURE_2D);glBindTexture(GL_TEXTURE_2D,texture);glColor4f(1,1,1,1);
-            glBegin(GL_QUADS);glTexCoord2f(0,0);glVertex2f(x,y);glTexCoord2f(1,0);glVertex2f(x+side,y);
-            glTexCoord2f(1,1);glVertex2f(x+side,y+side);glTexCoord2f(0,1);glVertex2f(x,y+side);glEnd();
-        }
-        glDisable(GL_TEXTURE_2D);glColor4f(1,.9f,.55f,1);
-        // Charges follow the native item count, including consumables with a single remaining use.
-        if(item.charges>0) {char count[24];sprintf_s(count,"%d",item.charges);text(x+3,y+side-4,count);}
-        else if(item.type && !texture)text(x+3,y+side*.6f,"?");
-        else if(i>=unit.inventorySize) {glColor4f(.14f,.14f,.16f,.7f);Rect(x,y,side,side);}
-    }
-    glPopAttrib();
-}

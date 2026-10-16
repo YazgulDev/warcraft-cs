@@ -5,6 +5,7 @@
 #include "ReticleDiagnostics.hpp"
 #include "BuyMenuView.hpp"
 #include "HudHints.hpp"
+#include "InventoryHudView.hpp"
 #include "../platform/NativeMinimap.hpp"
 #include "../platform/DiagnosticLog.hpp"
 #include <algorithm>
@@ -192,6 +193,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     if(controller.Settings().warcraftOnly)equipment="LMB: UNIT ATTACK | WASD: MOVE | WHEEL: CAMERA | "+key(ShortcutAction::Pickup)+": ITEM";
     // Show the shared direct-contact mode continuously, including after the transient Q notice disappears.
     equipment+=" | "+key(ShortcutAction::ToggleAllyTargeting)+": ALLIES "+(controller.Settings().targetAllies ? "ON" : "OFF");
+    if(controller.Settings().inventoryControls)equipment+=" | "+key(ShortcutAction::InventoryNumbers)+": ITEMS "+(controller.ItemControls().Numbers() ? "ON" : "OFF")+" | "+key(ShortcutAction::InventoryPanel)+": INVENTORY";
     std::string abilities=key(ShortcutAction::HealthBars)+": HEALTH BARS | "+key(ShortcutAction::Spell1)+"/"+key(ShortcutAction::Spell2)+"/"+key(ShortcutAction::Spell3)+"/"+key(ShortcutAction::Spell4)+": SPELLS | "+key(ShortcutAction::SelfCast)+": SELF";
     char squad[256];sprintf_s(squad,"%s: FIGHT | %s: FOLLOW | %s: RELEASE | SQUAD %u %s | %s: FREE AMMO | %s: ALL WEAPONS",
         key(ShortcutAction::SquadFight).c_str(),key(ShortcutAction::SquadFollow).c_str(),key(ShortcutAction::SquadRelease).c_str(),unsigned(controller.SquadCount()),controller.SquadCount() ? (controller.SquadPassive() ? "FOLLOW" : "COMBAT") : "",key(ShortcutAction::Refill).c_str(),key(ShortcutAction::AllWeapons).c_str());
@@ -207,10 +209,10 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         for(const auto& row : HudHints::Wrap(group,columns)) {Text(25,hintY,row.c_str());hintY+=23;}
     }
     if (controller.RefillNotice()) Text(statusPad, statusY - statusSize - 16, controller.AmmoMessage(), &statusFont_);
-    if(controller.Settings().showInventory && !unavailableView && !controller.Buying()) {
-        auto layout=InventoryHudLayout::Calculate(width,height,controller.Settings().spellIconSizePercent,controller.Settings().showSpellIcons);
+    if((controller.Settings().showInventory || controller.InventoryOpen() || controller.ItemControls().Numbers()) && !unavailableView && !controller.Buying()) {
+        auto layout=InventoryHudLayout::Calculate(width,height,controller.Settings().spellIconSizePercent,controller.Settings().showSpellIcons,controller.InventoryOpen());
         inventoryFont_.Ensure(std::clamp(layout.side/3,12,24));
-        UnitHudView::Inventory(controller.UnitHud(),layout,inventoryIcons_,[&](float x,float y,const char* label){Text(x,y,label,&inventoryFont_);});
+        InventoryHudView::Draw(controller.UnitHud(),layout,inventoryIcons_,controller.ItemControls(),[&](float x,float y,const char* label){Text(x,y,label,&inventoryFont_);});
     }
     if(controller.Settings().showSpellIcons && !unavailableView && !controller.Buying()) {
         std::array<std::string,4> keys;
@@ -249,6 +251,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
             }
             if (previewLoaded_[slot]) buyPreviews_[slot].DrawPreview(x,y,w,h);
         });
+    InventoryHudView::Cursor(window,controller.UnitHud(),InventoryHudLayout::Calculate(width,height,controller.Settings().spellIconSizePercent,controller.Settings().showSpellIcons,true),inventoryIcons_,controller.ItemControls());
     glPopMatrix(); glMatrixMode(GL_PROJECTION); glPopMatrix();
     glMatrixMode(GL_TEXTURE); glPopMatrix();
     glMatrixMode(oldMode); glPopAttrib();

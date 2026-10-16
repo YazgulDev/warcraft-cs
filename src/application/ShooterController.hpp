@@ -30,6 +30,7 @@
 #include "../squad/SquadController.hpp"
 #include "../platform/SpellCaster.hpp"
 #include "../platform/NativeUnitHud.hpp"
+#include "InventoryController.hpp"
 #include "../presentation/ControlView.hpp"
 #include <string>
 #include <vector>
@@ -47,7 +48,7 @@ public:
     void ResetMouse() { mouseLook_.Reset(); weaponWheel_.Reset();cameraWheel_.Reset(); }
     // Zoom is presentation-only: it must not cancel channeling or switch a carried CS weapon in TPS.
     void RequestMouseWheel(int delta) {
-        if(!Visible() || Buying() || UnitFirstPerson())return;
+        if(!Visible() || Buying() || InventoryOpen() || UnitFirstPerson())return;
         if(ThirdPerson())cameraWheel_.Add(delta);
         else {RequestSpellCancel();weaponWheel_.Add(delta);}
     }
@@ -77,7 +78,7 @@ public:
     size_t SquadCount() const { return squad_.Count(); }
     bool SquadPassive() const { return squad_.Passive(); }
     // Explicit spell approach/channeling may use the native motor; idle FPS never does.
-    bool NativeCastMovement() const { return Visible() && spells_.Active(); }
+    bool NativeCastMovement() const { return Visible() && Casting(); }
     void RequestSettingsReload() { settingsRequested_=true; }
     // Queue the display switch for the simulation thread, like the other FPS controls.
     void RequestSpeedToggle() { speedToggleRequested_=true; }
@@ -97,6 +98,13 @@ public:
     bool MinimapVisible() const { return !UnitFirstPerson() && showMinimap_; }
     const SpellHudSlots& SpellHud() const {return spellHud_;}
     const UnitHudSnapshot& UnitHud() const {return unitHud_;}
+    const InventoryControls& ItemControls() const {return itemInventory_.State();}
+    bool InventoryOpen() const {return itemInventory_.State().Open();}
+    bool InventoryInputOpen() const {return itemInventory_.State().RoutingOpen();}
+    bool CursorMode() const {return Buying() || InventoryOpen();}
+    void RequestInventory(InventoryControls::Event e) {itemInventory_.Input(e);}
+    void RequestInventoryClose() {inventoryEscape_=true;itemInventory_.Input({InventoryControls::Kind::Close});}
+    void InventoryProjection(float verticalFov) {inventoryVerticalFov_=verticalFov;}
     wc3::Handle HudActor() const {return Visible() && !UnitFirstPerson() ? unit_ : 0;}
     float DisplaySpeed() const { return movement_.Speed()/MovementPhysics::worldScale; }
     // Buy-menu events are consumed on Warcraft's simulation thread, never inside WindowProc.
@@ -200,6 +208,9 @@ private:
     void SelectView(ControlView next);
     void UpdateSquad(DWORD now);
     void AimRay(float* origin,float* direction);
+    SpellAim InventoryAim(int x,int y,int width,int height);
+    bool Casting() const {return spells_.Active() || itemInventory_.Active();}
+    void CancelCasting() {spells_.Cancel();itemInventory_.CancelCasting();}
     void Disable(bool restoreCamera);
     void AimAndMove(float dt);
     void Fire(bool secondary = false);
@@ -244,6 +255,9 @@ private:
     int spellRequested_=-1;
     bool spellCancelRequested_=false;
     SpellCaster spells_;
+    InventoryController itemInventory_;
+    bool inventoryEscape_=false;
+    float inventoryVerticalFov_=85;
     SpellHudSlots spellHud_={};
     DWORD spellHudTick_=0,spellHudLog_=0;
     int squadRequested_=0;

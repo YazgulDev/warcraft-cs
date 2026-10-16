@@ -74,6 +74,9 @@ function Update-GameplayConfig([string]$Template,[string]$Destination) {
                     # Adding Q must not conflict with a custom action that already uses it.
                     if($entry.name -eq 'Shortcuts' -and $Matches[1].Trim() -eq 'ToggleAllyTargeting' -and $usedShortcuts.Contains('Q')){$line='ToggleAllyTargeting=NONE'}
                     if($entry.name -eq 'Shortcuts' -and $Matches[1].Trim() -eq 'ToggleUnitView' -and $usedShortcuts.Contains('F9')){$line='ToggleUnitView=NONE'}
+                    # Existing custom Tab/I controls win over newly introduced inventory defaults.
+                    if($entry.name -eq 'Shortcuts' -and $Matches[1].Trim() -eq 'InventoryNumbers' -and $usedShortcuts.Contains('TAB')){$line='InventoryNumbers=NONE'}
+                    if($entry.name -eq 'Shortcuts' -and $Matches[1].Trim() -eq 'InventoryPanel' -and $usedShortcuts.Contains('I')){$line='InventoryPanel=NONE'}
                     # A migrated/custom refill may already own the new F12 default in a partial old layout.
                     if($entry.name -eq 'Shortcuts' -and $Matches[1].Trim() -eq 'AllWeapons' -and $usedShortcuts.Contains('F12')) {
                         $replacement='NONE'

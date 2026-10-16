@@ -50,6 +50,8 @@ struct GameplaySettings {
     bool showMinimap=true;
     bool showSpellIcons=true,showSpellCooldowns=true;
     bool showUnitHud=true,showInventory=true;
+    bool inventoryControls=true; // Tab/I interactions can be disabled independently of the inventory display.
+    float inventoryDropDistance=80;
     float unitHudScalePercent=100;
     float spellIconSizePercent=7;
     float minimapSizePercent=22;

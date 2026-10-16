@@ -4,6 +4,16 @@ $root=Split-Path -Parent $PSScriptRoot
 $folder=Join-Path $root ('.local/config-merge-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $folder -Force | Out-Null
 $template=Join-Path $root 'config/WarcraftCS.ini'
+# Inventory controls preserve custom Tab/I ownership and saved drop/display settings on repeated upgrades.
+$inventoryConfig=Join-Path $folder 'interactive-inventory.ini'
+@('[Shortcuts]','Speed=TAB','Pickup=I','[Inventory]','DropDistance=96','[Interface]','InventoryControls=false') | Set-Content -LiteralPath $inventoryConfig -Encoding ascii
+Update-GameplayConfig $template $inventoryConfig
+$inventoryText=Get-Content -LiteralPath $inventoryConfig -Raw
+foreach($required in @('Speed=TAB','Pickup=I','InventoryNumbers=NONE','InventoryPanel=NONE','DropDistance=96','InventoryControls=false')) {
+    if(!$inventoryText.Contains($required)){throw "Inventory migration lost preference: $required"}
+}
+$inventoryHash=(Get-FileHash -LiteralPath $inventoryConfig).Hash;Update-GameplayConfig $template $inventoryConfig
+if((Get-FileHash -LiteralPath $inventoryConfig).Hash -ne $inventoryHash){throw 'Inventory migration is not idempotent.'}
 # HUD upgrades add missing keys while preserving independent opt-outs and the player's scale.
 $hudConfig=Join-Path $folder 'unit-hud.ini'
 @('[Interface]','ShowUnitHud=false','ShowInventory=false','UnitHudScalePercent=125') | Set-Content -LiteralPath $hudConfig -Encoding ascii

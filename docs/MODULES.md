@@ -247,6 +247,13 @@ between spell and inventory views. `NativePortrait` redirects the native small p
 into its own framebuffer with private depth; world color/depth remain untouched. Runtime hooks
 own capture timing and context/map/actor invalidation. F9 opts out before any overlay submission.
 
+`InventoryControls` owns bounded input events and stable-item click/drag/target state.
+`InventoryController` coordinates those events with native adapters on the game thread;
+`NativeItemCommands` reads verified inventory order target forms and `NativeItemActions` owns
+explicit item orders during native approach/channeling. The shared cast predicate grants only
+those orders movement ownership. `InventoryHudView` presents slot labels, gestures and a free cursor.
+Windows messages never issue item natives; focus, reload and mode/map boundaries discard gestures.
+
 `SquadSpellPolicy` owns portable readiness/healing decisions. `SquadSpellcasting` adapts live
 ability slots and native orders to a bounded stock-order catalog, using shared native ability,
 cooldown and map-charge readers. Its order ownership protects wind-up/channeling from formation

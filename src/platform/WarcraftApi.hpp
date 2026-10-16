@@ -69,6 +69,12 @@ extern BOOL (__cdecl* UnitAddItem)(Handle,Handle);
 // Native inventories and orders work for ordinary units as well as heroes.
 extern int (__cdecl* UnitInventorySize)(Handle);
 extern Handle (__cdecl* UnitItemInSlot)(Handle,int);
+// Native item validation/effects and droppable restrictions remain authoritative for interactive HUD input.
+extern BOOL (__cdecl* UnitUseItem)(Handle,Handle);
+extern BOOL (__cdecl* UnitUseItemPoint)(Handle,Handle,float*,float*);
+extern BOOL (__cdecl* UnitUseItemTarget)(Handle,Handle,Handle);
+extern BOOL (__cdecl* UnitDropItemPoint)(Handle,Handle,float*,float*);
+extern BOOL (__cdecl* UnitDropItemSlot)(Handle,Handle,int);
 extern int (__cdecl* GetItemCharges)(Handle);
 extern int (__cdecl* GetHeroXP)(Handle);
 extern int (__cdecl* GetHeroLevel)(Handle);

@@ -263,6 +263,7 @@ static void __fastcall PerspectiveHook(uintptr_t output, uintptr_t unused, float
         const float* matrix=reinterpret_cast<const float*>(output);
         if(std::isfinite(matrix[0]) && std::isfinite(matrix[5]) && matrix[0]>0 && matrix[5]>0) {
             healthVerticalFov=2*std::atan(1/matrix[5])/.01745329252f;healthAspect=matrix[5]/matrix[0];
+            controller.InventoryProjection(healthVerticalFov); // Free-cursor item targets use the real native projection.
             healthBarView.verticalFov=healthVerticalFov;healthBarView.aspect=healthAspect;
         }
     }

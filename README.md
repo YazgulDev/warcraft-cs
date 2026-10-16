@@ -345,7 +345,17 @@ Edit it and press F8 in FPS.
   at the bottom left in F6/F7. `UnitHudScalePercent=100` controls its scale (60..160%).
   Experience follows the current map's level thresholds; non-heroes have no experience bar.
   `ShowInventory=true` displays the unit's six inventory slots and item charges above the spells.
-  The inventory row displays native items; use Warcraft's normal inventory controls in RTS.
+  Tab toggles number-item mode: 1..6 activate the corresponding slot instead of selecting a weapon.
+  Press Tab again to restore weapon numbers. I opens a mouse inventory: click to use an item,
+  click a world target when requested, drag outside to drop beside the actor, or drag onto another slot
+  to rearrange it. Right-click cancels a drag/target; I or Esc closes the panel. Camera, movement and
+  attacks are blocked while it owns the cursor. Warcraft retains item costs, cooldowns and drop rules.
+  Keyboard targeting uses the reticle (Alt targets self). F9 has no inventory controls.
+  `[Shortcuts] InventoryNumbers=TAB` and `InventoryPanel=I` are rebindable; older custom Tab/I bindings
+  are preserved and the conflicting new shortcut is set to NONE. `[Interface] InventoryControls=true`
+  enables interaction; `[Inventory] DropDistance=80` sets drop offset (16..128 Warcraft units).
+  These controls and distance apply at startup/F8; reload, focus loss, menus and view/map changes
+  cancel pending mouse gestures. Hidden inventory rows appear temporarily while item mode is active.
   These settings reload with F8 and updates preserve custom values. F9 remains free of HUD.
   Third-person hints omit CS ammunition, weapon giveaways and weapon purchases.
   Art comes from your current map/game. `LV0` marks an unlearned spell, `PASS` a passive,

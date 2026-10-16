@@ -386,5 +386,17 @@ int main() {
         float expected=!strcmp(scale,"-20") ? 60.f : !strcmp(scale,"999") ? 160.f : !strcmp(scale,"nan") ? 100.f : 95.f;
         assert(GameplaySettings::Load(path).unitHudScalePercent==expected);
     }
+    DeleteFileA(path.c_str());
+    // New inventory defaults cannot steal an older customized Tab/I shortcut during parser-only upgrades.
+    {std::ofstream file(path);file<<"[Shortcuts]\nSpeed=TAB\nPickup=I\n[Interface]\nInventoryControls=false\n[Inventory]\nDropDistance=999\n";}
+    settings=GameplaySettings::Load(path);
+    assert(!settings.inventoryControls && settings.inventoryDropDistance==128);
+    assert(settings.shortcuts.Key(ShortcutAction::Speed)==VK_TAB && settings.shortcuts.Key(ShortcutAction::Pickup)=='I');
+    assert(settings.shortcuts.Key(ShortcutAction::InventoryNumbers)==0 && settings.shortcuts.Key(ShortcutAction::InventoryPanel)==0);
+    for(auto value : {"-1","nan","100"}) {
+        WritePrivateProfileStringA("Inventory","DropDistance",value,path.c_str());
+        float expected=!strcmp(value,"-1") ? 16.f : !strcmp(value,"nan") ? 80.f : 100.f;
+        assert(GameplaySettings::Load(path).inventoryDropDistance==expected);
+    }
     DeleteFileA(path.c_str());return 0;
 }

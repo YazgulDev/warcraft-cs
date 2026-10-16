@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Add the F6/F7 animated portrait, HP/mana/map-resolved hero XP and inventory above spells.
+  Tab toggles 1..6 item activation; I opens mouse use, target selection, drag-out dropping and
+  slot rearrangement. Native Warcraft rules govern effects, charges, cooldowns and droppable items.
+  Add rebindable inventory shortcuts, `[Interface] InventoryControls=true` and
+  `[Inventory] DropDistance=80` (16..128 units, startup/F8), preserving existing custom controls.
+  F9 stays clean and third-person hints omit CS ammo/weapon commands.
+
 - Keep point-targeted spells aimed at terrain independently of nearby units/destructables. In auto
   mode, use the controlled actor's native command flags to send point-only orders for abilities such
   as Blink and Flame Strike; a rejected or missing ground point never falls back to a widget target.
