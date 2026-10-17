@@ -31,6 +31,7 @@
 #include "../platform/SpellCaster.hpp"
 #include "../platform/NativeUnitHud.hpp"
 #include "InventoryController.hpp"
+#include "../input/SquadOrderMode.hpp"
 #include "../presentation/ControlView.hpp"
 #include <string>
 #include <vector>
@@ -45,7 +46,7 @@ public:
     // Native window input feeds the dedicated relative-look collector on the same game thread.
     void AttachWindow(HWND window) { mouseLook_.Attach(window); }
     void MouseInput(LPARAM packet,bool accept) { mouseLook_.Input(packet,accept); }
-    void ResetMouse() { mouseLook_.Reset(); weaponWheel_.Reset();cameraWheel_.Reset(); }
+    void ResetMouse() { mouseLook_.Reset(); weaponWheel_.Reset();cameraWheel_.Reset();squadOrderMode_.ClearInput(); }
     // Zoom is presentation-only: it must not cancel channeling or switch a carried CS weapon in TPS.
     void RequestMouseWheel(int delta) {
         if(!Visible() || Buying() || InventoryOpen() || UnitFirstPerson())return;
@@ -74,8 +75,10 @@ public:
     // Release shares the command mailbox: the last H/O/J tap before a frame wins.
     void RequestSquadRelease() { squadRequested_=3; }
     void RequestSquadFocus() {squadRequested_=4;}
+    void RequestSquadOrdersToggle() {if(!ThirdPerson() && !UnitFirstPerson())squadOrderMode_.QueueToggle();}
+    bool SquadOrdersInFPS() const {return squadOrderMode_.RoutingEnabled();}
     bool SquadReticleOrdersEnabled() const {
-        return Visible() && settings_.squadReticleAttack && (ThirdPerson() || UnitFirstPerson() || settings_.squadReticleAttackInFPS);
+        return Visible() && settings_.squadReticleAttack && (ThirdPerson() || UnitFirstPerson() || SquadOrdersInFPS());
     }
     bool BlocksPassiveUnit(uintptr_t object) const { return Visible() && squad_.BlocksUnit(object); }
     bool BlocksPassiveAttack(uintptr_t attack) const { return Visible() && squad_.BlocksAttack(attack); }
@@ -302,6 +305,7 @@ private:
     AmmoRecovery ammoRecovery_;
     ItemPickup itemPickup_;
     SquadController squad_;
+    SquadOrderMode squadOrderMode_;
     std::string ammoMessage_;
     GameAudio audio_;
     float stepDistance_ = 0;

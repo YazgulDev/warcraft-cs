@@ -167,7 +167,7 @@ void ShooterController::Disable(bool restoreCamera) {
     nativeFog_.Update(false);fogToggleRequested_=false;
     buyMenu_.Close();itemInventory_.ClearInput();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1;suppressFire_=true;
     mouseLook_.Reset();
-    squad_.Release(); // Native RTS regains followers and their ordinary attack policy on F6/F10.
+    squadOrderMode_.ClearInput();squad_.Release(); // Native RTS regains followers and their ordinary attack policy on F6/F10.
     if (restoreCamera) {
         // Restoration is our own camera write even though FPS is still active until cleanup completes.
         ownCameraRequest_ = true;
@@ -202,7 +202,7 @@ void ShooterController::ResetMap() {
     mapTileset_=0;
     mouseLook_.Reset();
     weaponWheel_.Reset();cameraWheel_.Reset();
-    squad_.Reset(); // Forget unloaded handles without issuing commands into the next map.
+    squad_.Reset();squadOrderMode_.Configure(settings_.squadReticleAttackInFPS); // New maps restore the configured initial F6 mode.
     // Never dereference a unit handle after a map unload: campaign transitions reuse IDs.
     hitboxes_.Reset(); destructableHitboxes_.Reset(); bombs_.Reset(); plantProgress_ = 0;
     buyMenu_.Close();itemInventory_.ClearInput();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1;suppressFire_=true;
@@ -262,7 +262,7 @@ void ShooterController::SelectView(ControlView next) {
     refillRequested_=allWeaponsRequested_=itemRequested_=buyToggleRequested_=buyAmmoRequested_=false;
     buyKeyRequested_=spellRequested_=-1;spellCancelRequested_=false;
     view_=next;pitch_=ThirdPerson() ? settings_.thirdPerson.initialPitch : 0;
-    squadRequested_=0;if(!SquadReticleOrdersEnabled())squad_.CancelFocus(); // No queued click crosses a view change.
+    squadRequested_=0;squadOrderMode_.ClearInput();if(!SquadReticleOrdersEnabled())squad_.CancelFocus(); // No queued click crosses a view change.
     if(!ThirdPerson()) {wc3::Animate(unit_,"stand");if(!UnitFirstPerson())Play("draw");}
     wc3::Log("View mode=%s unit=%08X",UnitFirstPerson() ? "unit-first-person" : ThirdPerson() ? "third-person" : "first-person",unit_);
     Notice(UnitFirstPerson() ? "FIRST PERSON: UNIT VIEW" : ThirdPerson() ? "THIRD PERSON: UNIT CONTROL" : "FIRST PERSON: CS WEAPONS");
@@ -447,7 +447,8 @@ void ShooterController::ReloadSettings() {
     wc3::Log("Unit scaling fireRate=%d moveSpeed=%d moveReference=%.1f",settings_.scaleFireRateFromAttackSpeed,
         settings_.movement.scaleFromUnitMoveSpeed,settings_.movement.unitMoveSpeedReference);
     itemInventory_.ApplySettings(settings_); // Startup/F8 discard gestures and restore the configured Tab default.
-    squadRequested_=0;if(!SquadReticleOrdersEnabled())squad_.CancelFocus(); // F8 opt-out releases only explicit focus orders.
+    squadOrderMode_.Configure(settings_.squadReticleAttackInFPS);
+    squadRequested_=0;if(!SquadReticleOrdersEnabled())squad_.CancelFocus(); // F8 restores the initial F6 mode and releases opt-outs.
     if(!settings_.inventoryControls)itemInventory_.CancelCasting();
     if(!settings_.spells.enabled)spells_.Cancel(); // Live disabling releases an explicitly owned cast.
     wc3::Log("Health bars configured allies=%d enemies=%d distance=%.0f",settings_.healthBars.allies,settings_.healthBars.enemies,settings_.healthBars.distance);
@@ -714,7 +715,7 @@ void ShooterController::Tick(uintptr_t ui) {
         // Drop background packets; refocusing establishes a fresh cursor anchor without a view jump.
         mouseLook_.Reset();
         weaponWheel_.Reset();cameraWheel_.Reset();
-        itemRequested_=false;squadRequested_=0; // Commands pressed before losing focus must not execute on return.
+        itemRequested_=false;squadRequested_=0;squadOrderMode_.ClearInput(); // Commands pressed before losing focus must not execute on return.
         buyMenu_.Close();itemInventory_.ClearInput();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1;suppressFire_=true;
         CancelPlant(); meleeContact_ = 0;
         // Cancel queued animation events rather than releasing delayed reload sounds on return.
@@ -769,7 +770,7 @@ void ShooterController::Tick(uintptr_t ui) {
     nativeSky_.Update(ui_,Visible() && settings_.nativeSky && !settings_.csSky,mapTileset_);
     nativeFog_.Update(Visible() && fogOfWarDisabled_);
     // A queued display tap cannot take effect after FPS is suspended or left.
-    if (!active_ || suspended_) { itemInventory_.ClearInput();mouseLook_.Reset();weaponWheel_.Reset();cameraWheel_.Reset();itemRequested_=false;squadRequested_=0;speedToggleRequested_=fogToggleRequested_=minimapToggleRequested_=healthBarToggleRequested_=allyTargetToggleRequested_=false;spellRequested_=-1;spellCancelRequested_=false;return; }
+    if (!active_ || suspended_) { itemInventory_.ClearInput();squadOrderMode_.ClearInput();mouseLook_.Reset();weaponWheel_.Reset();cameraWheel_.Reset();itemRequested_=false;squadRequested_=0;speedToggleRequested_=fogToggleRequested_=minimapToggleRequested_=healthBarToggleRequested_=allyTargetToggleRequested_=false;spellRequested_=-1;spellCancelRequested_=false;return; }
     if (settingsRequested_) { settingsRequested_=false;ReloadSettings();if(!Visible())return; } // Unit-view opt-out may return to RTS.
     if(viewToggleRequested_) {viewToggleRequested_=false;ToggleView();}
     if(healthBarToggleRequested_) { healthBarToggleRequested_=false;ToggleHealthBars(); }
@@ -913,6 +914,14 @@ void ShooterController::Tick(uintptr_t ui) {
         unitHudTick_=now;unitHud_=unitHudReader_.Read(unit_,settings_.showInventory || InventoryOpen() || ItemControls().Numbers());
     }
     UpdateStatus();
+    // Apply queued ; before RMB dispatch. Held buttons cannot turn a mode change into an accidental scope/stab.
+    if(squadOrderMode_.Apply(settings_.squadReticleAttack && !ThirdPerson() && !UnitFirstPerson() && !Buying() &&
+        !InventoryInputOpen() && !status_.incapacitated && !status_.contained && !status_.hidden)) {
+        scopeLevel_=0;keys_[VK_RBUTTON]=Down(VK_RBUTTON);suppressFire_=true;
+        if(!squadOrderMode_.Enabled())squad_.CancelFocus();
+        Notice(squadOrderMode_.Enabled() ? "RMB: ALL-UNIT TARGET ORDERS" : "RMB: WEAPON ACTION");
+        wc3::Log("squad F6 right-click orders enabled=%d",squadOrderMode_.Enabled());
+    }
     bool wasInventory=InventoryOpen();
     auto inventoryNotice=itemInventory_.Update(unit_,settings_,UnitFirstPerson() || status_.incapacitated || status_.contained || status_.hidden,yaw_,Down(ShortcutAction::SelfCast),
         [&](int x,int y,int w,int h){return InventoryAim(x,y,w,h);},[&] {

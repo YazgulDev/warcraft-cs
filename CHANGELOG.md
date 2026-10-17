@@ -6,8 +6,10 @@
   outside H/O recruitment radius/cap. Empty aim cancels, restoring the previous follow/combat policy
   and native behavior. Native targeting/pathfinding rules remain authoritative. Inventory cancel and
   buy-menu input keep priority. Add `[Squad] ReticleAttack=true`, `ReticleAttackInFPS=false` (true
-  replaces armed F6 secondary actions) and `ReticleAttackDistance=3000` (100..15000 units), startup/F8
-  with preserved saved values. Clean F9 remains without HUD; the controlled actor is excluded.
+  starts armed F6 with orders) and `ReticleAttackDistance=3000` (100..15000 units), startup/F8
+  with preserved saved values. In F6, **;** toggles RMB orders/weapon action and clears the target on
+  switch-off. Add rebindable `[Shortcuts] SquadOrders=SEMICOLON` and live mode hints; preserve existing
+  semicolon bindings. Clean F9 remains without HUD; the controlled actor is excluded.
 
 - Keep third-person zoom stable near buildings ahead/behind the actor. Add
   `[ThirdPerson] CameraBuildingCollision=false` (true restores building push-in; startup/F8).

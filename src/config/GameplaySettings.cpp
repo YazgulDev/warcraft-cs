@@ -199,8 +199,8 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
             if(!used){result.shortcuts.Set(ShortcutAction::AllWeapons,candidate);break;}
         }
     }
-    // New Tab/I defaults yield to an older customized action instead of resetting the whole layout.
-    for(auto action:{ShortcutAction::InventoryNumbers,ShortcutAction::InventoryPanel}) {
+    // New Tab/I/semicolon defaults yield to an older customized action instead of resetting the whole layout.
+    for(auto action:{ShortcutAction::InventoryNumbers,ShortcutAction::InventoryPanel,ShortcutAction::SquadOrders}) {
         if(!text("Shortcuts",ShortcutBindings::Name(action),"").empty())continue;
         for(size_t i=0;i<size_t(action);++i)if(result.shortcuts.Key(ShortcutAction(i))==result.shortcuts.Key(action)) {
             result.shortcuts.Set(action,0);break;
@@ -280,7 +280,7 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.squadYield=squadSwitch("YieldToPlayer");
     result.squadAutomaticSpells=squadSwitch("AutomaticSpells");
     result.squadReticleAttack=squadSwitch("ReticleAttack");
-    // Preserve armed FPS scope/secondary fire unless the player explicitly assigns RMB to squad orders there.
+    // Startup/F8 restore the initial F6 mode; the semicolon shortcut toggles it for this map session.
     auto fpsOrders=text("Squad","ReticleAttackInFPS","false");
     result.squadReticleAttackInFPS=!_stricmp(fpsOrders.c_str(),"true") || fpsOrders=="1";
     result.squadReticleDistance=std::max(100.f,number("Squad","ReticleAttackDistance",3000,15000));

@@ -204,6 +204,9 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
             unsigned(controller.SquadCount()),controller.SquadCount() ? (controller.SquadPassive() ? "FOLLOW" : "COMBAT") : "");
     }
     if(controller.SquadReticleOrdersEnabled())strcat_s(squad," | RMB: ALL ATTACK / CLEAR");
+    // Armed F6 shows both the rebindable mode switch and its current session choice.
+    if(controller.Settings().squadReticleAttack && !controller.ThirdPerson())
+        equipment+=" | "+key(ShortcutAction::SquadOrders)+": RMB "+(controller.SquadOrdersInFPS() ? "ORDERS" : "WEAPON");
     int hintRight=controller.MinimapVisible() ? mapLayout.x-mapLayout.padding : width-25;
     int columns=std::max(1,(hintRight-25)/hintGlyphWidth_);float hintY=27;
     for(const auto& group : {controls,equipment,abilities,std::string(squad)}) {

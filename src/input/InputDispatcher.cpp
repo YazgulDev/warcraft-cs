@@ -130,6 +130,7 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM k
                 else if(match(ShortcutAction::SquadFight))controller_.RequestSquad(false);
                 else if(match(ShortcutAction::SquadFollow))controller_.RequestSquad(true);
                 else if(match(ShortcutAction::SquadRelease))controller_.RequestSquadRelease();
+                else if(match(ShortcutAction::SquadOrders))controller_.RequestSquadOrdersToggle();
                 else for(int i=0;i<4;++i)if(match(ShortcutAction(int(ShortcutAction::Spell1)+i)))controller_.RequestSpell(i);
             }
         }

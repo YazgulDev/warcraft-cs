@@ -77,6 +77,8 @@ function Update-GameplayConfig([string]$Template,[string]$Destination) {
                     # Existing custom Tab/I controls win over newly introduced inventory defaults.
                     if($entry.name -eq 'Shortcuts' -and $Matches[1].Trim() -eq 'InventoryNumbers' -and $usedShortcuts.Contains('TAB')){$line='InventoryNumbers=NONE'}
                     if($entry.name -eq 'Shortcuts' -and $Matches[1].Trim() -eq 'InventoryPanel' -and $usedShortcuts.Contains('I')){$line='InventoryPanel=NONE'}
+                    # A saved action may already own either spelling of the new physical semicolon key.
+                    if($entry.name -eq 'Shortcuts' -and $Matches[1].Trim() -eq 'SquadOrders' -and ($usedShortcuts.Contains('SEMICOLON') -or $usedShortcuts.Contains(';'))){$line='SquadOrders=NONE'}
                     # A migrated/custom refill may already own the new F12 default in a partial old layout.
                     if($entry.name -eq 'Shortcuts' -and $Matches[1].Trim() -eq 'AllWeapons' -and $usedShortcuts.Contains('F12')) {
                         $replacement='NONE'

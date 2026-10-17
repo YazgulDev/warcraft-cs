@@ -1,5 +1,6 @@
 #include "../src/squad/SquadController.hpp"
 #include "../src/platform/FpsCombatGuard.hpp"
+#include "../src/input/SquadOrderMode.hpp"
 #include <array>
 #include <cassert>
 #include <cstring>
@@ -67,6 +68,13 @@ void CancelAttacks(wc3::Handle u) {if(units[u].target)Stop(u,851972);}
 bool SquadSpellcasting::Tick(wc3::Handle,const GameplaySettings&,DWORD) {++spellTicks;return false;}
 void SquadSpellcasting::Cancel(wc3::Handle) {}
 int main() {
+    // Short ;+RMB routing predicts the queued mode; canceled/disallowed toggles cannot replay after a menu/view change.
+    SquadOrderMode mode;mode.Configure(false);assert(!mode.Enabled() && !mode.RoutingEnabled());
+    mode.QueueToggle();assert(mode.RoutingEnabled() && !mode.Enabled());assert(mode.Apply(true) && mode.Enabled());
+    mode.QueueToggle();assert(!mode.RoutingEnabled());assert(!mode.Apply(false) && mode.Enabled() && mode.RoutingEnabled());
+    mode.QueueToggle();mode.ClearInput();assert(mode.Enabled() && mode.RoutingEnabled());
+    mode.QueueToggle();mode.QueueToggle();assert(!mode.Apply(true) && mode.Enabled());
+    mode.Configure(false);mode.QueueToggle();mode.Apply(true);mode.QueueToggle();assert(mode.Apply(true) && !mode.Enabled());
     for(unsigned i=1;i<units.size();++i)*reinterpret_cast<uintptr_t*>(units[i].objects[0].data()+0x1E8)=100+i;
     units[2].x=-300;units[3].x=2400;units[4].owner=11;units[5].owner=11;
     units[6].building=true;units[7].loaded=true;units[8].hp=0;units[9].owner=12;

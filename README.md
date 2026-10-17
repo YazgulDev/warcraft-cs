@@ -198,6 +198,7 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 | E | Pick up the nearest item/rune if the unit has an available inventory |
 | H / O / J | Your units: follow and fight / follow without attacking / release squad |
 | Right mouse button (F7/F9) | All available owned mobile units attack the unit/building under the reticle; empty aim cancels the common target |
+| ; (armed F6) | Toggle RMB between all-unit target orders and weapon action; switching off clears the common target |
 | F8 | Reload settings |
 | P | Show/hide horizontal speed in CS units/s |
 | M | Show/hide minimap |
@@ -231,7 +232,7 @@ Edit it and press F8 in FPS.
   weapon slots, spell slots, pickup, buying, squad commands, display switches and settings reload.
   Defaults are `Spell1=Z`, `Spell2=X`, `Spell3=C`, `Spell4=V`, `Speed=P`, `Minimap=M`, `SelfCast=ALT`.
   Values are English physical `A-Z`, `0-9`, `F1-F12`, `SPACE`, `CTRL`, `SHIFT`, `ALT`, `TAB`,
-  `PERIOD` (or `.`), and `NONE` to disable an action. Keys are case-insensitive and must be unique;
+  `PERIOD` (or `.`), `SEMICOLON` (or `;`), and `NONE` to disable an action. Keys are case-insensitive and must be unique;
   swap all conflicting bindings together. An invalid layout falls back to the complete default layout
   and logs why. Escape/F10 stay reserved; F6 always remains an FPS recovery alias and may only bind
   ToggleFPS. ToggleFPS cannot be disabled. F8 (or the configured ReloadSettings key) applies edits.
@@ -305,8 +306,13 @@ Edit it and press F8 in FPS.
   firearms, both melee attacks and C4 (including its planter). Range: 0вЂ“100; 0 disables allied damage,
   100 applies full damage. Press F8 to reload; C4 retains the settings from when it was planted.
 - `[Squad] RecruitRadius`, `MaxUnits`, `FollowDistance` and `CombatLeash` control squad behavior.
-  `ReticleAttack=true` enables RMB target orders in F7/F9; `ReticleAttackInFPS=false` keeps armed F6's
-  scope/secondary attack (set true to replace those with squad commands). Both are true/false settings.
+  `ReticleAttack=true` enables RMB target orders in F7/F9. In armed F6 press **;** to switch RMB to
+  squad orders and press **;** again to restore scope/secondary attack and clear the common target.
+  `[Shortcuts] SquadOrders=SEMICOLON` rebinds this toggle (`NONE` disables it); existing custom
+  semicolon bindings are preserved. `[Squad] ReticleAttackInFPS=false` selects weapon action initially
+  (true starts with orders). Both squad switches accept true/false. The toggle lasts for the map;
+  startup, map reset and F8 restore the configured initial choice. Held RMB cannot fire a secondary
+  action when the mode changes; the HUD displays its current role.
   `ReticleAttackDistance=3000` sets picking range in Warcraft units (100..15000). Startup/F8 applies;
   updates preserve saved values. Commands reach all available owned mobile units across the map,
   independent of H/O's recruitment radius/cap; the controlled actor, buildings, dead/hidden/loaded/paused

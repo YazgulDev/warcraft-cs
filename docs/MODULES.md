@@ -269,3 +269,6 @@ formation/leash and spell AI for those exact unit identities; cancellation resto
 policy. `FpsCombatGuard::AttackTargetObject` exposes the verified read-only native target identity
 so cleanup yields to newer orders and discards transferred/reused handles. Window input queues one
 game-thread command; reticle picking and native order dispatch stay outside presentation callbacks.
+`SquadOrderMode` owns the F6 semicolon toggle and predicts queued toggles for short key+RMB sequences.
+Window input never changes native combat state; the controller applies mode changes before RMB work,
+clears pending toggles at focus/view/menu boundaries and restores the saved default on startup/F8/map reset.

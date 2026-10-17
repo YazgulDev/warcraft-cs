@@ -4,6 +4,14 @@ $root=Split-Path -Parent $PSScriptRoot
 $folder=Join-Path $root ('.local/config-merge-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $folder -Force | Out-Null
 $template=Join-Path $root 'config/WarcraftCS.ini'
+# The new default cannot steal a saved semicolon binding, regardless of its supported spelling.
+foreach($spelling in @('SEMICOLON',';')) {
+    $semicolonConfig=Join-Path $folder ('semicolon-'+[guid]::NewGuid().ToString('N')+'.ini')
+    @('[Shortcuts]',('Speed='+$spelling)) | Set-Content -LiteralPath $semicolonConfig -Encoding ascii
+    Update-GameplayConfig $template $semicolonConfig
+    $semicolonText=Get-Content -LiteralPath $semicolonConfig -Raw
+    if(!$semicolonText.Contains('Speed='+$spelling) -or !$semicolonText.Contains('SquadOrders=NONE')){throw 'Semicolon migration stole a saved shortcut.'}
+}
 # New reticle defaults fill old configs; explicit range/weapon-mode opt-ins survive repeated updates.
 $focusConfig=Join-Path $folder 'squad-reticle.ini'
 @('[Squad]','ReticleAttack=false','ReticleAttackInFPS=true','ReticleAttackDistance=800') | Set-Content -LiteralPath $focusConfig -Encoding ascii
