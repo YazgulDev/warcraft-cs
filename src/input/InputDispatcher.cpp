@@ -50,6 +50,11 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM k
     if(!healthy || !controller_.Visible())return std::nullopt;
     // Native pause is always available and regains ordinary RTS input before its system key is forwarded.
     if(key==VK_F10 && (down || up)) {if(tap)controller_.RequestMenu();return 0;}
+    // The inventory's RMB cancellation wins; world commands never leak into cursor UI or weapon actions.
+    if(controller_.SquadReticleOrdersEnabled() && !controller_.InventoryInputOpen() && !controller_.Buying() &&
+        (message==WM_RBUTTONDOWN || message==WM_RBUTTONUP)) {
+        if(message==WM_RBUTTONDOWN)controller_.RequestSquadFocus();return 0;
+    }
     if(controller_.UnitFirstPerson()) {
         // Only view recovery, settings and squad control are actions here; held WASD/jump are sampled by physics.
         if(tap) {

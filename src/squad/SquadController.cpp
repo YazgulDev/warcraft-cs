@@ -11,6 +11,7 @@ bool SquadController::Valid(const Member& member,wc3::Handle owner) const {
         wc3::GetOwningPlayer(member.unit)==owner && wc3::Real(wc3::GetUnitState(member.unit,0))>.405f;
 }
 void SquadController::Capture(wc3::Handle leader,bool passive,const GameplaySettings& settings) {
+    focus_.Cancel(); // A deliberate H/O strategy replaces the temporary all-unit target.
     passive_=passive;wc3::Handle owner=wc3::GetLocalPlayer();
     members_.erase(std::remove_if(members_.begin(),members_.end(),[&](const Member& m) {
         if(!Valid(m,owner) || m.unit==leader){spells_.Forget(m.unit);return true;}return false;
@@ -35,6 +36,7 @@ void SquadController::Capture(wc3::Handle leader,bool passive,const GameplaySett
     wc3::Log("squad capture mode=%s count=%u radius=%.1f",passive_ ? "follow" : "combat",unsigned(members_.size()),radius);
 }
 void SquadController::Tick(wc3::Handle leader,const GameplaySettings& settings,DWORD now,bool travel,float yaw,float vx,float vy) {
+    focus_.Tick(settings,now);
     wc3::Handle owner=wc3::GetLocalPlayer();
     members_.erase(std::remove_if(members_.begin(),members_.end(),[&](const Member& m) {
         if(!Valid(m,owner) || m.unit==leader){spells_.Forget(m.unit);return true;}return false;
@@ -42,6 +44,8 @@ void SquadController::Tick(wc3::Handle leader,const GameplaySettings& settings,D
     float x=wc3::Real(wc3::GetUnitX(leader)),y=wc3::Real(wc3::GetUnitY(leader));
     for (size_t i=0;i<members_.size();++i) {
         auto& m=members_[i];m.attack=*reinterpret_cast<uintptr_t*>(m.object+0x1E8);
+        // Explicit focus orders temporarily outrank passive following, yielding, spell AI and the combat leash.
+        if(focus_.Contains(m.object))continue;
         if (wc3::IsUnitPaused(m.unit) || wc3::IsUnitHidden(m.unit) || wc3::IsUnitLoaded(m.unit)) continue;
         // Passive followers ignore retaliation while walking and after arrival; their combat stats stay intact.
         if (passive_) FpsCombatGuard::CancelAttacks(m.unit);
@@ -71,17 +75,23 @@ void SquadController::Tick(wc3::Handle leader,const GameplaySettings& settings,D
     }
 }
 void SquadController::Release() {
+    focus_.Cancel();
     // J/F6/F10 hand followers back to Warcraft without serializing a disabled-attack state into saves.
     passive_=false;
     for (const auto& m:members_) if (Valid(m,wc3::GetLocalPlayer())) {spells_.Cancel(m.unit);wc3::IssueImmediateOrderById(m.unit,Stop);}
     Reset();
 }
-void SquadController::Reset() { members_.clear();passive_=false;spells_.Reset(); }
+void SquadController::Reset() { focus_.Reset();members_.clear();passive_=false;spells_.Reset(); }
+size_t SquadController::Focus(wc3::Handle leader,wc3::Handle target,const GameplaySettings& settings,DWORD now) {
+    // Stop only adapter-owned support channels before the player replaces their target/strategy.
+    if(target && wc3::UnitObject(target))for(const auto& member:members_)if(Valid(member,wc3::GetLocalPlayer()))spells_.Cancel(member.unit);
+    return focus_.Command(leader,target,settings,now);
+}
 bool SquadController::BlocksUnit(uintptr_t object) const {
-    return passive_ && std::any_of(members_.begin(),members_.end(),[&](const Member& m) { return m.object==object; });
+    return passive_ && !focus_.Contains(object) && std::any_of(members_.begin(),members_.end(),[&](const Member& m) { return m.object==object; });
 }
 bool SquadController::BlocksAttack(uintptr_t attack) const {
-    return passive_ && attack && std::any_of(members_.begin(),members_.end(),[&](const Member& m) { return m.attack==attack; });
+    return passive_ && attack && std::any_of(members_.begin(),members_.end(),[&](const Member& m) { return m.attack==attack && !focus_.Contains(m.object); });
 }
 #ifdef WCS_GAMEPLAY_TEST
 void SquadController::TestLog() const {

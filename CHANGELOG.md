@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Add RMB common-target attack orders in F7/F9 for all available owned mobile units, including units
+  outside H/O recruitment radius/cap. Empty aim cancels, restoring the previous follow/combat policy
+  and native behavior. Native targeting/pathfinding rules remain authoritative. Inventory cancel and
+  buy-menu input keep priority. Add `[Squad] ReticleAttack=true`, `ReticleAttackInFPS=false` (true
+  replaces armed F6 secondary actions) and `ReticleAttackDistance=3000` (100..15000 units), startup/F8
+  with preserved saved values. Clean F9 remains without HUD; the controlled actor is excluded.
+
 - Keep third-person zoom stable near buildings ahead/behind the actor. Add
   `[ThirdPerson] CameraBuildingCollision=false` (true restores building push-in; startup/F8).
   Terrain/destructable obstruction remains enabled; disabled building collision permits camera

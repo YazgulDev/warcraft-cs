@@ -262,3 +262,10 @@ ability slots and native orders to a bounded stock-order catalog, using shared n
 cooldown and map-charge readers. Its order ownership protects wind-up/channeling from formation
 refresh. `SquadController` selects combat/passive behavior, validates player ownership and cancels
 only adapter-owned casts on opt-out. No map ability, mana or autocast switch is rewritten.
+
+`SquadFocusFire` owns temporary all-owned-unit target orders independently of H/O membership and
+formation policy. `SquadController` composes it: explicit focus temporarily overrides passive guards,
+formation/leash and spell AI for those exact unit identities; cancellation restores the underlying
+policy. `FpsCombatGuard::AttackTargetObject` exposes the verified read-only native target identity
+so cleanup yields to newer orders and discards transferred/reused handles. Window input queues one
+game-thread command; reticle picking and native order dispatch stay outside presentation callbacks.

@@ -337,6 +337,16 @@ int main() {
     assert(movement.Speed()<=450.01f);
     DeleteFileA(path.c_str());
     // New squad parameters use the real INI boundary; live snapshots clamp invalid distances/refresh rates.
+    for(auto value:{"true","1","false","0","broken",""}) {
+        {std::ofstream file(path);file<<"[Squad]\nReticleAttack="<<value<<"\nReticleAttackInFPS="<<value<<"\nReticleAttackDistance=nan\n";}
+        auto focus=GameplaySettings::Load(path);
+        assert(focus.squadReticleAttack==(strcmp(value,"false") && strcmp(value,"0")));
+        assert(focus.squadReticleAttackInFPS==(!strcmp(value,"true") || !strcmp(value,"1")) && focus.squadReticleDistance==3000);
+    }
+    for(auto value:{"0","99999","800"}) {
+        WritePrivateProfileStringA("Squad","ReticleAttackDistance",value,path.c_str());
+        assert(GameplaySettings::Load(path).squadReticleDistance==(!strcmp(value,"0") ? 100 : !strcmp(value,"99999") ? 15000 : 800));
+    }
     {std::ofstream file(path);file<<"[Squad]\nRearFormation=false\nYieldToPlayer=0\nPlayerClearance=9999\nYieldAheadDistance=2\nOrderIntervalMs=0\n";}
     settings=GameplaySettings::Load(path);
     assert(!settings.squadRearFormation && !settings.squadYield && settings.squadClearance==300 && settings.squadYieldAhead==300 && settings.squadOrderIntervalMs==50);

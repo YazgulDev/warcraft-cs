@@ -262,6 +262,7 @@ void ShooterController::SelectView(ControlView next) {
     refillRequested_=allWeaponsRequested_=itemRequested_=buyToggleRequested_=buyAmmoRequested_=false;
     buyKeyRequested_=spellRequested_=-1;spellCancelRequested_=false;
     view_=next;pitch_=ThirdPerson() ? settings_.thirdPerson.initialPitch : 0;
+    squadRequested_=0;if(!SquadReticleOrdersEnabled())squad_.CancelFocus(); // No queued click crosses a view change.
     if(!ThirdPerson()) {wc3::Animate(unit_,"stand");if(!UnitFirstPerson())Play("draw");}
     wc3::Log("View mode=%s unit=%08X",UnitFirstPerson() ? "unit-first-person" : ThirdPerson() ? "third-person" : "first-person",unit_);
     Notice(UnitFirstPerson() ? "FIRST PERSON: UNIT VIEW" : ThirdPerson() ? "THIRD PERSON: UNIT CONTROL" : "FIRST PERSON: CS WEAPONS");
@@ -446,6 +447,7 @@ void ShooterController::ReloadSettings() {
     wc3::Log("Unit scaling fireRate=%d moveSpeed=%d moveReference=%.1f",settings_.scaleFireRateFromAttackSpeed,
         settings_.movement.scaleFromUnitMoveSpeed,settings_.movement.unitMoveSpeedReference);
     itemInventory_.ApplySettings(settings_); // Startup/F8 discard gestures and restore the configured Tab default.
+    squadRequested_=0;if(!SquadReticleOrdersEnabled())squad_.CancelFocus(); // F8 opt-out releases only explicit focus orders.
     if(!settings_.inventoryControls)itemInventory_.CancelCasting();
     if(!settings_.spells.enabled)spells_.Cancel(); // Live disabling releases an explicitly owned cast.
     wc3::Log("Health bars configured allies=%d enemies=%d distance=%.0f",settings_.healthBars.allies,settings_.healthBars.enemies,settings_.healthBars.distance);
@@ -673,9 +675,20 @@ void ShooterController::UpdateSquad(DWORD now) {
     if (squadRequested_) {
         // Both keys recruit nearby owned units and change the existing squad's strategy as one operation.
         if (!status_.incapacitated && !status_.contained && !status_.hidden) {
-            squad_.Capture(unit_,squadRequested_==2,settings_);
-            char message[96];sprintf_s(message,"SQUAD: %u | %s",unsigned(squad_.Count()),squad_.Passive() ? "FOLLOW ONLY" : "FOLLOW + FIGHT");
-            ammoMessage_=message;refillTick_=now;
+            if(squadRequested_==4) {
+                if(SquadReticleOrdersEnabled() && !Buying() && !InventoryOpen()) {
+                    float origin[3],direction[3];AimRay(origin,direction);
+                    auto aim=SpellAim::Pick(unit_,origin,direction,settings_.squadReticleDistance,hitboxes_,destructableHitboxes_);
+                    size_t count=squad_.Focus(unit_,aim.target,settings_,now);
+                    char message[96];sprintf_s(message,count ? "ALL UNITS: ATTACK TARGET | %u" : "TARGET ORDER CLEARED",unsigned(count));
+                    Notice(message);wc3::Log("squad reticle target=%08X commanded=%u hp=%.1f",aim.target,unsigned(count),
+                        count ? wc3::Real(wc3::GetUnitState(aim.target,0)) : 0.f);
+                }
+            } else {
+                squad_.Capture(unit_,squadRequested_==2,settings_);
+                char message[96];sprintf_s(message,"SQUAD: %u | %s",unsigned(squad_.Count()),squad_.Passive() ? "FOLLOW ONLY" : "FOLLOW + FIGHT");
+                ammoMessage_=message;refillTick_=now;
+            }
         }
         squadRequested_=0;
     }
@@ -992,7 +1005,8 @@ void ShooterController::Tick(uintptr_t ui) {
         InventoryControls::NumberSlot(settings_.shortcuts.Key(ShortcutAction(int(ShortcutAction::Weapon1)+i)),ItemControls().Numbers(),false)<0) SwitchWeapon(i);
     if (Pressed(ShortcutAction::Reload) && !ThirdPerson()) Reload();
     // Consume the right-click edge for every weapon so holding it across a switch never scopes or stabs.
-    bool secondaryPressed = Pressed(VK_RBUTTON);
+    // Consume the physical edge even when RMB belongs to the squad, preventing a deferred scope/stab.
+    bool secondaryPressed = Pressed(VK_RBUTTON) && !SquadReticleOrdersEnabled();
     if (!ThirdPerson() && !suppressFire_ && weapon_ == 3 && secondaryPressed) {
         // CS-style right-click cycle: normal view, first zoom, second zoom, normal view.
         scopeLevel_ = (scopeLevel_ + 1) % 3;

@@ -279,6 +279,11 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.squadRearFormation=squadSwitch("RearFormation");
     result.squadYield=squadSwitch("YieldToPlayer");
     result.squadAutomaticSpells=squadSwitch("AutomaticSpells");
+    result.squadReticleAttack=squadSwitch("ReticleAttack");
+    // Preserve armed FPS scope/secondary fire unless the player explicitly assigns RMB to squad orders there.
+    auto fpsOrders=text("Squad","ReticleAttackInFPS","false");
+    result.squadReticleAttackInFPS=!_stricmp(fpsOrders.c_str(),"true") || fpsOrders=="1";
+    result.squadReticleDistance=std::max(100.f,number("Squad","ReticleAttackDistance",3000,15000));
     result.squadSpellRadius=std::max(50.f,number("Squad","SpellSearchRadius",700,2000));
     result.squadAreaSpellRadius=std::max(16.f,number("Squad","AreaSpellRadius",250,1000));
     result.squadHealBelowPercent=std::max(1.f,number("Squad","HealBelowPercent",85,100));

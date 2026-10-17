@@ -73,6 +73,10 @@ public:
     void RequestSquad(bool passive) { squadRequested_=passive ? 2 : 1; }
     // Release shares the command mailbox: the last H/O/J tap before a frame wins.
     void RequestSquadRelease() { squadRequested_=3; }
+    void RequestSquadFocus() {squadRequested_=4;}
+    bool SquadReticleOrdersEnabled() const {
+        return Visible() && settings_.squadReticleAttack && (ThirdPerson() || UnitFirstPerson() || settings_.squadReticleAttackInFPS);
+    }
     bool BlocksPassiveUnit(uintptr_t object) const { return Visible() && squad_.BlocksUnit(object); }
     bool BlocksPassiveAttack(uintptr_t attack) const { return Visible() && squad_.BlocksAttack(attack); }
     size_t SquadCount() const { return squad_.Count(); }

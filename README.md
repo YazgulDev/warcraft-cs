@@ -197,6 +197,7 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 | Hold left mouse button with C4 | Plant for 3 seconds while standing on the ground; multiple charges are allowed |
 | E | Pick up the nearest item/rune if the unit has an available inventory |
 | H / O / J | Your units: follow and fight / follow without attacking / release squad |
+| Right mouse button (F7/F9) | All available owned mobile units attack the unit/building under the reticle; empty aim cancels the common target |
 | F8 | Reload settings |
 | P | Show/hide horizontal speed in CS units/s |
 | M | Show/hide minimap |
@@ -304,6 +305,17 @@ Edit it and press F8 in FPS.
   firearms, both melee attacks and C4 (including its planter). Range: 0вЂ“100; 0 disables allied damage,
   100 applies full damage. Press F8 to reload; C4 retains the settings from when it was planted.
 - `[Squad] RecruitRadius`, `MaxUnits`, `FollowDistance` and `CombatLeash` control squad behavior.
+  `ReticleAttack=true` enables RMB target orders in F7/F9; `ReticleAttackInFPS=false` keeps armed F6's
+  scope/secondary attack (set true to replace those with squad commands). Both are true/false settings.
+  `ReticleAttackDistance=3000` sets picking range in Warcraft units (100..15000). Startup/F8 applies;
+  updates preserve saved values. Commands reach all available owned mobile units across the map,
+  independent of H/O's recruitment radius/cap; the controlled actor, buildings, dead/hidden/loaded/paused
+  units and other players' units are excluded. Native attack eligibility/pathfinding still apply.
+  Click empty space to clear the common target and restore the previous H/O policy; other commanded units
+  return to native behavior. Ordinary automatic acquisition may choose nearby enemies again.
+  Target death/invisibility, ownership changes, H/O/J, disabling the feature, RTS/map exit also release
+  the temporary command. Inventory RMB retains its cancel action; buy menus cannot issue squad orders.
+  Allied targets require the existing Q/`TargetAllies` opt-in. F9 keeps its clean screen; aim at the center.
   `RearFormation=true` keeps destinations behind the player. `YieldToPlayer=true` sends followers
   left/right before they rejoin when they enter your travel corridor. `PlayerClearance=100` (60..300)
   and `YieldAheadDistance=350` (clearance..1000) are Warcraft units. `OrderIntervalMs=150` (50..1000)

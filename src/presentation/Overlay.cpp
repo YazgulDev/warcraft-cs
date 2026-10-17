@@ -203,6 +203,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
             key(ShortcutAction::SquadFight).c_str(),key(ShortcutAction::SquadFollow).c_str(),key(ShortcutAction::SquadRelease).c_str(),
             unsigned(controller.SquadCount()),controller.SquadCount() ? (controller.SquadPassive() ? "FOLLOW" : "COMBAT") : "");
     }
+    if(controller.SquadReticleOrdersEnabled())strcat_s(squad," | RMB: ALL ATTACK / CLEAR");
     int hintRight=controller.MinimapVisible() ? mapLayout.x-mapLayout.padding : width-25;
     int columns=std::max(1,(hintRight-25)/hintGlyphWidth_);float hintY=27;
     for(const auto& group : {controls,equipment,abilities,std::string(squad)}) {

@@ -2,6 +2,7 @@
 #include "../platform/WarcraftApi.hpp"
 #include "../config/GameplaySettings.hpp"
 #include "../platform/SquadSpellcasting.hpp"
+#include "SquadFocusFire.hpp"
 #include <vector>
 
 // Owns the temporary FPS squad; native orders preserve pathfinding, statuses and ordinary unit attacks.
@@ -11,6 +12,8 @@ public:
     void Tick(wc3::Handle leader,const GameplaySettings& settings,DWORD now,bool travel,float yaw,float vx,float vy);
     void Release();
     void Reset();
+    size_t Focus(wc3::Handle leader,wc3::Handle target,const GameplaySettings& settings,DWORD now);
+    void CancelFocus() {focus_.Cancel();}
     bool BlocksUnit(uintptr_t object) const;
     bool BlocksAttack(uintptr_t attack) const;
     size_t Count() const { return members_.size(); }
@@ -24,4 +27,5 @@ private:
     std::vector<Member> members_;
     bool passive_=false;
     SquadSpellcasting spells_;
+    SquadFocusFire focus_;
 };

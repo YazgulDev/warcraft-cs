@@ -4,6 +4,16 @@ $root=Split-Path -Parent $PSScriptRoot
 $folder=Join-Path $root ('.local/config-merge-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $folder -Force | Out-Null
 $template=Join-Path $root 'config/WarcraftCS.ini'
+# New reticle defaults fill old configs; explicit range/weapon-mode opt-ins survive repeated updates.
+$focusConfig=Join-Path $folder 'squad-reticle.ini'
+@('[Squad]','ReticleAttack=false','ReticleAttackInFPS=true','ReticleAttackDistance=800') | Set-Content -LiteralPath $focusConfig -Encoding ascii
+Update-GameplayConfig $template $focusConfig
+$focusText=Get-Content -LiteralPath $focusConfig -Raw
+foreach($required in @('ReticleAttack=false','ReticleAttackInFPS=true','ReticleAttackDistance=800')) {
+    if(!$focusText.Contains($required)){throw "Reticle migration lost preference: $required"}
+}
+$focusHash=(Get-FileHash -LiteralPath $focusConfig).Hash;Update-GameplayConfig $template $focusConfig
+if((Get-FileHash -LiteralPath $focusConfig).Hash -ne $focusHash){throw 'Reticle migration is not idempotent.'}
 # Inventory controls preserve custom Tab/I ownership and saved drop/display settings on repeated upgrades.
 $inventoryConfig=Join-Path $folder 'interactive-inventory.ini'
 @('[Shortcuts]','Speed=TAB','Pickup=I','[Inventory]','DropDistance=96','NumbersByDefault=false','[ThirdPerson]','CameraBuildingCollision=true','[Interface]','InventoryControls=false') | Set-Content -LiteralPath $inventoryConfig -Encoding ascii
@@ -19,7 +29,7 @@ $defaultsConfig=Join-Path $folder 'camera-inventory-defaults.ini'
 @('[ThirdPerson]','CameraDistance=650','[Inventory]','DropDistance=90') | Set-Content -LiteralPath $defaultsConfig -Encoding ascii
 Update-GameplayConfig $template $defaultsConfig
 $defaultsText=Get-Content -LiteralPath $defaultsConfig -Raw
-foreach($required in @('CameraDistance=650','DropDistance=90','CameraBuildingCollision=false','NumbersByDefault=true')) {
+foreach($required in @('CameraDistance=650','DropDistance=90','CameraBuildingCollision=false','NumbersByDefault=true','ReticleAttack=true','ReticleAttackInFPS=false','ReticleAttackDistance=3000')) {
     if(!$defaultsText.Contains($required)){throw "New camera/inventory default missing: $required"}
 }
 # HUD upgrades add missing keys while preserving independent opt-outs and the player's scale.

@@ -65,6 +65,9 @@ struct GameplaySettings {
     bool squadRearFormation=true,squadYield=true;
     // Native costs, cooldowns and cast orders govern automatic spells; O never enables this combat AI.
     bool squadAutomaticSpells=true;
+    // Right-click orders are independent of recruitment and optionally replace armed FPS secondary fire.
+    bool squadReticleAttack=true,squadReticleAttackInFPS=false;
+    float squadReticleDistance=3000;
     float squadSpellRadius=700,squadAreaSpellRadius=250,squadHealBelowPercent=85,squadBuffRefreshSeconds=20;
     unsigned squadSpellIntervalMs=1000;
     float squadClearance=100,squadYieldAhead=350;
