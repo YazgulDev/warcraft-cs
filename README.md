@@ -1,4 +1,4 @@
-# Warcraft CS 0.9.1
+# Warcraft CS 0.10.0
 
 Counter-Strike 1.6 inside Warcraft III: control your own hero or unit in first person,
 shoot, and play regular maps, campaigns and compatible custom maps.
@@ -11,15 +11,15 @@ Neither variant includes game files, models, sounds, maps or saves.
 You need your own Warcraft III installation. CS 1.6 is required only for the full weapon mode.**
 This is an early prototype with known limitations.
 
-**[Download 0.9.1](https://github.com/YazgulDev/warcraft-cs/releases/tag/v0.9.1)** В·
-[Release Notes](docs/RELEASE-0.9.1.md) В· [Installation](INSTALL.md) В· [Requirements](REQUIREMENTS.md)
+**[Download 0.10.0](https://github.com/YazgulDev/warcraft-cs/releases/tag/v0.10.0)** В·
+[Release Notes](docs/RELEASE-0.10.0.md) В· [Installation](INSTALL.md) В· [Requirements](REQUIREMENTS.md)
 В· [Troubleshooting](TROUBLESHOOTING.md) В· [Discussions](https://github.com/YazgulDev/warcraft-cs/discussions)
 
-0.9.1 fixes HUD text appearing as solid bars after F6 or F7. Shortcut hints, health/ammunition,
-buy-menu text and spell labels now use alpha glyph textures instead of WGL bitmap display lists.
-No gameplay settings or defaults change. See the [0.9.1 release notes](docs/RELEASE-0.9.1.md)
-for the fix, upgrade steps and validation limits; the [0.9.0 notes](docs/RELEASE-0.9.0.md)
-describe the preceding gameplay and installation features.
+0.10.0 adds the animated F6/F7 unit HUD, interactive inventory and right-click squad commands.
+Tab starts with item numbers; I opens mouse inventory, and Y toggles squad orders in armed F6.
+It also fixes point-spell targeting, building zoom, side-contact snaps and neutral/gate attacks,
+including Kael's native ranged missiles. See the [complete release notes](docs/RELEASE-0.10.0.md)
+for every change, new setting, upgrade steps and validation limits.
 
 ## Features
 
@@ -149,7 +149,7 @@ Run in PowerShell, replacing the game paths with your own:
 ```powershell
 git clone https://github.com/YazgulDev/warcraft-cs.git
 cd warcraft-cs
-git switch release/0.9.1
+git switch release/0.10.0
 .\setup.cmd -WarcraftDirectory "E:\Warcraft III" -CounterStrikeDirectory "C:\SteamGames\steamapps\common\Half-Life\cstrike"
 .\play.cmd
 ```

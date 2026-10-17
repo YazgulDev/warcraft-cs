@@ -742,3 +742,29 @@ rebuild changes version/source metadata without changing the tested runtime logi
 validate both EXEs, source/version/native hashes, complete release-body and manifest summary
 resolution, native-free public archives and Player payload layout/tamper rejection. The public
 source archive is checked with the mod publication lint against the owned installation.
+
+
+### Release 0.10.0 verification (2026-10-18)
+
+Compared all feature commits and source/config changes against immutable v0.9.1. The merged
+runtime passes the complete independent wrapper and INI migration checks. Added coverage
+includes native HUD snapshots/layouts, inventory item identity and gestures, squad ownership,
+Y/legacy-key migration, native ranged widgets/callback reuse, protected-ally ray filtering and
+left/right side collision without transient native placement. Existing physics, bridge/cliff,
+rendering, spell, attack, target filtering, buy/sky and guarded native contracts remain covered.
+
+Disposable ordinary-Player scenes during feature development exercised real F6/F7 HUD and
+inventory, point spells, stable building zoom and item-number defaults, all-owned RMB native
+damage/cancel, Y and scope restoration, natural H combat priority, neutral/gate targeting,
+left/right wall/unit contact with stable idle, and Kael's native gate missiles. Recorded frames
+show native missile flight; gate launch HP remains unchanged until a later native impact.
+Native opt-outs and quest immunity pass. Private DLL/INI restoration is byte-exact, saves diffs
+are empty, and user campaign progress was not used. The final 0.10.0 module receives the same
+native gate/missile smoke check; the release rebuild changes version/source metadata.
+
+Both actual launchers are tested for source/version/native hash binding, native-free public
+ZIPs, installation/update contracts, complete GitHub release-body versus exact-version compact
+summary resolution and Player/Developer dialog previews. Source snapshots and published assets
+are linted/hashed and compared with the immutable tag. Public latest-release lookup/download
+is verified after publication without installing dependencies or changing an existing client.
+This is not a complete campaign/custom-map or cross-driver compatibility claim.

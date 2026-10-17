@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.10.0 — 2026-10-18
 
 - Restore native F7 ranged projectiles against destructable gates/crates, including Kael attacks
   on campaign gates. Resolve/revalidate typed widget identities through native preparation, launch
