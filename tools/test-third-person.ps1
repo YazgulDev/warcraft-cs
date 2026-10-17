@@ -10,6 +10,9 @@ $script=Join-Path $build 'test-third-person.cmd'
 @('@echo off',('call "'+$environment+'" >nul'),
     ('cl /nologo /std:c++17 /EHsc /O2 /W4 /DNOMINMAX '+($sources -join ' ')+' /Fe:third-person-tests.exe'),
     'if not "%errorlevel%"=="0" exit /b 1','third-person-tests.exe','if not "%errorlevel%"=="0" exit /b 1',
+    # Run the production boom with authored native geometry adapters, including unchanged terrain/tree collision.
+    ('cl /nologo /std:c++17 /EHsc /O2 /W4 /DNOMINMAX "'+(Join-Path $root 'tests/ThirdPersonCameraTests.cpp')+'" "'+(Join-Path $root 'src/presentation/ThirdPersonCamera.cpp')+'" /Fe:third-person-camera-tests.exe'),
+    'if not "%errorlevel%"=="0" exit /b 1','third-person-camera-tests.exe','if not "%errorlevel%"=="0" exit /b 1',
     ('cl /nologo /std:c++17 /EHsc /O2 /W4 /DNOMINMAX "'+(Join-Path $root 'tests/UnitAimTargetTests.cpp')+'" "'+(Join-Path $root 'src/platform/UnitAttack.cpp')+'" "'+(Join-Path $root 'src/platform/UnitAttackAnimation.cpp')+'" "'+(Join-Path $root 'src/input/ShortcutBindings.cpp')+'" /Fe:unit-aim-target-tests.exe'),
     'if not "%errorlevel%"=="0" exit /b 1','unit-aim-target-tests.exe','if not "%errorlevel%"=="0" exit /b 1') | Set-Content -LiteralPath $script -Encoding ascii
 Push-Location $build

@@ -4,6 +4,70 @@ $root=Split-Path -Parent $PSScriptRoot
 $folder=Join-Path $root ('.local/config-merge-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $folder -Force | Out-Null
 $template=Join-Path $root 'config/WarcraftCS.ini'
+# Semicolon custom actions survive; only the former squad default migrates to Y.
+foreach($spelling in @('SEMICOLON',';')) {
+    $semicolonConfig=Join-Path $folder ('semicolon-'+[guid]::NewGuid().ToString('N')+'.ini')
+    @('[Shortcuts]',('Speed='+$spelling)) | Set-Content -LiteralPath $semicolonConfig -Encoding ascii
+    Update-GameplayConfig $template $semicolonConfig
+    $semicolonText=Get-Content -LiteralPath $semicolonConfig -Raw
+    if(!$semicolonText.Contains('Speed='+$spelling) -or !$semicolonText.Contains('SquadOrders=Y')){throw 'Semicolon migration stole a saved shortcut.'}
+    foreach($reserved in @($false,$true)) {
+        @('[Shortcuts]',('SquadOrders='+$spelling),$(if($reserved){'Speed=Y'}else{'Speed=G'})) | Set-Content -LiteralPath $semicolonConfig -Encoding ascii
+        Update-GameplayConfig $template $semicolonConfig
+        $migrated=Get-Content -LiteralPath $semicolonConfig -Raw
+        $expected=if($reserved){'NONE'}else{'Y'}
+        if(!$migrated.Contains('SquadOrders='+$expected) -or !$migrated.Contains($(if($reserved){'Speed=Y'}else{'Speed=G'}))){throw 'Old squad default migration lost a custom key.'}
+        $hash=(Get-FileHash $semicolonConfig).Hash;Update-GameplayConfig $template $semicolonConfig
+        if((Get-FileHash $semicolonConfig).Hash -ne $hash){throw 'Squad Y migration is not idempotent.'}
+    }
+}
+# Missing defaults yield to custom Y; custom squad remaps/NONE survive updates.
+foreach($binding in @('','G','NONE')) {
+    $customConfig=Join-Path $folder ('squad-key-'+$binding+'.ini')
+    @('[Shortcuts]','Speed=Y',$(if($binding){'SquadOrders='+$binding}else{'; missing SquadOrders'}),'[Squad]','PreserveCombatOrders=false') | Set-Content -LiteralPath $customConfig -Encoding ascii
+    Update-GameplayConfig $template $customConfig
+    $customText=Get-Content -LiteralPath $customConfig -Raw
+    $expected=if($binding){$binding}else{'NONE'}
+    if(!$customText.Contains('Speed=Y') -or !$customText.Contains('SquadOrders='+$expected) -or !$customText.Contains('PreserveCombatOrders=false')){throw 'Squad migration lost a saved preference.'}
+}
+# New reticle defaults fill old configs; explicit range/weapon-mode opt-ins survive repeated updates.
+$focusConfig=Join-Path $folder 'squad-reticle.ini'
+@('[Squad]','ReticleAttack=false','ReticleAttackInFPS=true','ReticleAttackDistance=800') | Set-Content -LiteralPath $focusConfig -Encoding ascii
+Update-GameplayConfig $template $focusConfig
+$focusText=Get-Content -LiteralPath $focusConfig -Raw
+foreach($required in @('ReticleAttack=false','ReticleAttackInFPS=true','ReticleAttackDistance=800','PreserveCombatOrders=true')) {
+    if(!$focusText.Contains($required)){throw "Reticle migration lost preference: $required"}
+}
+$focusHash=(Get-FileHash -LiteralPath $focusConfig).Hash;Update-GameplayConfig $template $focusConfig
+if((Get-FileHash -LiteralPath $focusConfig).Hash -ne $focusHash){throw 'Reticle migration is not idempotent.'}
+# Inventory controls preserve custom Tab/I ownership and saved drop/display settings on repeated upgrades.
+$inventoryConfig=Join-Path $folder 'interactive-inventory.ini'
+@('[Shortcuts]','Speed=TAB','Pickup=I','[Inventory]','DropDistance=96','NumbersByDefault=false','[ThirdPerson]','CameraBuildingCollision=true','[Interface]','InventoryControls=false') | Set-Content -LiteralPath $inventoryConfig -Encoding ascii
+Update-GameplayConfig $template $inventoryConfig
+$inventoryText=Get-Content -LiteralPath $inventoryConfig -Raw
+foreach($required in @('Speed=TAB','Pickup=I','InventoryNumbers=NONE','InventoryPanel=NONE','DropDistance=96','InventoryControls=false','NumbersByDefault=false','CameraBuildingCollision=true')) {
+    if(!$inventoryText.Contains($required)){throw "Inventory migration lost preference: $required"}
+}
+$inventoryHash=(Get-FileHash -LiteralPath $inventoryConfig).Hash;Update-GameplayConfig $template $inventoryConfig
+if((Get-FileHash -LiteralPath $inventoryConfig).Hash -ne $inventoryHash){throw 'Inventory migration is not idempotent.'}
+# Missing new keys get the requested defaults, without replacing an existing unrelated zoom preference.
+$defaultsConfig=Join-Path $folder 'camera-inventory-defaults.ini'
+@('[ThirdPerson]','CameraDistance=650','[Inventory]','DropDistance=90') | Set-Content -LiteralPath $defaultsConfig -Encoding ascii
+Update-GameplayConfig $template $defaultsConfig
+$defaultsText=Get-Content -LiteralPath $defaultsConfig -Raw
+foreach($required in @('CameraDistance=650','DropDistance=90','CameraBuildingCollision=false','NumbersByDefault=true','ReticleAttack=true','ReticleAttackInFPS=false','ReticleAttackDistance=3000')) {
+    if(!$defaultsText.Contains($required)){throw "New camera/inventory default missing: $required"}
+}
+# HUD upgrades add missing keys while preserving independent opt-outs and the player's scale.
+$hudConfig=Join-Path $folder 'unit-hud.ini'
+@('[Interface]','ShowUnitHud=false','ShowInventory=false','UnitHudScalePercent=125') | Set-Content -LiteralPath $hudConfig -Encoding ascii
+Update-GameplayConfig $template $hudConfig
+$hudText=Get-Content -LiteralPath $hudConfig -Raw
+foreach($setting in @('ShowUnitHud=false','ShowInventory=false','UnitHudScalePercent=125','ShowSpellIcons=true')) {
+    if(!$hudText.Contains($setting)){throw "Unit HUD migration lost preference: $setting"}
+}
+$hudHash=(Get-FileHash -LiteralPath $hudConfig).Hash;Update-GameplayConfig $template $hudConfig
+if((Get-FileHash -LiteralPath $hudConfig).Hash -ne $hudHash){throw 'Unit HUD migration is not idempotent.'}
 # Fresh defaults use 5000, while explicit saved distances and hover opt-outs survive repeated upgrades.
 $distance=Join-Path $folder 'distance-hover.ini'
 @('[Rendering]','DrawDistance=7000','[UnitView]','HideHoverCircles=false') | Set-Content -LiteralPath $distance -Encoding ascii

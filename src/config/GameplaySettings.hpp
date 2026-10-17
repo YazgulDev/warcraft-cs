@@ -49,6 +49,11 @@ struct GameplaySettings {
     // M changes this session preference; F8 restores the editable startup choice and size.
     bool showMinimap=true;
     bool showSpellIcons=true,showSpellCooldowns=true;
+    bool showUnitHud=true,showInventory=true;
+    bool inventoryControls=true; // Tab/I interactions can be disabled independently of the inventory display.
+    float inventoryDropDistance=80;
+    bool inventoryNumbersDefault=true;
+    float unitHudScalePercent=100;
     float spellIconSizePercent=7;
     float minimapSizePercent=22;
     // Temporary FPS visibility preference; ordinary map fog is restored outside FPS.
@@ -58,8 +63,12 @@ struct GameplaySettings {
     // Recruitment and spacing are configurable without rewriting map data or unit ownership.
     float squadRadius=600,squadFollowDistance=180,squadLeash=900;
     bool squadRearFormation=true,squadYield=true;
+    bool squadPreserveCombatOrders=true; // Fighting outranks formation movement; F8 can restore legacy yielding.
     // Native costs, cooldowns and cast orders govern automatic spells; O never enables this combat AI.
     bool squadAutomaticSpells=true;
+    // Right-click orders are independent of recruitment and optionally replace armed FPS secondary fire.
+    bool squadReticleAttack=true,squadReticleAttackInFPS=false;
+    float squadReticleDistance=3000;
     float squadSpellRadius=700,squadAreaSpellRadius=250,squadHealBelowPercent=85,squadBuffRefreshSeconds=20;
     unsigned squadSpellIntervalMs=1000;
     float squadClearance=100,squadYieldAhead=350;

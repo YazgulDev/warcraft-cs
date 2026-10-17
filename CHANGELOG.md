@@ -1,5 +1,62 @@
 # Changelog
 
+## Unreleased
+
+- Restore native F7 ranged projectiles against destructable gates/crates, including Kael attacks
+  on campaign gates. Resolve/revalidate typed widget identities through native preparation, launch
+  and cleanup; native missile flight/damage and quest immunity remain authoritative. Existing
+  NativeRangedProjectiles/EnableAttackEffects preferences and F8 opt-outs retain instant-hit behavior.
+
+- Prevent transient sideways actor/model snaps near known walls and colliding units. Commit the
+  swept-valid position directly while approaching, sliding along or leaving either side of a solid,
+  instead of invoking native nearest-cell relocation and rolling it back. Retain terrain, body-volume
+  and unknown-blocker validation, bridge/cliff support and existing movement configuration.
+
+- Fix RMB target orders being swallowed by a protected ally between the camera and the enemy,
+  including F7. Filter allegiance before nearest-target selection using the existing Q/TargetAllies
+  preference; preserve ally spell/item selection, neutral targets and destructable obstruction.
+  Distinguish an unavailable/rejected native attack from an empty-aim cancellation in HUD feedback.
+
+- Preserve active H-mode combat ahead of yielding and leash movement with
+  `[Squad] PreserveCombatOrders=true` (false restores legacy behavior; startup/F8). Idle followers
+  still yield and follow; explicit RMB attacks retain priority while approaching or fighting.
+  Move the F6 RMB-orders toggle to Y. Migrate the former semicolon default during updates and
+  startup/F8, preserve custom bindings, and disable the new binding if a saved action already owns Y.
+
+- Fix common-target orders on destructable gates/crates, including the gate type used in Human03.
+  Track native widget identity/life separately from units so orders, cancellation, death and handle reuse
+  work correctly. Allow neutral-owned units/buildings in direct FPS/TPS attacks with allied targeting
+  disabled; actual player allies remain protected. Neutral-passive scenery uses native finite damage
+  even with AWP finishing enabled, preserving quest immunity. Existing controls and config keys apply.
+
+- Add RMB common-target attack orders in F7/F9 for all available owned mobile units, including units
+  outside H/O recruitment radius/cap. Empty aim cancels, restoring the previous follow/combat policy
+  and native behavior. Native targeting/pathfinding rules remain authoritative. Inventory cancel and
+  buy-menu input keep priority. Add `[Squad] ReticleAttack=true`, `ReticleAttackInFPS=false` (true
+  starts armed F6 with orders) and `ReticleAttackDistance=3000` (100..15000 units), startup/F8
+  with preserved saved values. In F6, **Y** toggles RMB orders/weapon action and clears the target on
+  switch-off. Add rebindable `[Shortcuts] SquadOrders=Y` and live mode hints; preserve existing
+  custom bindings. Clean F9 remains without HUD; the controlled actor is excluded.
+
+- Keep third-person zoom stable near buildings ahead/behind the actor. Add
+  `[ThirdPerson] CameraBuildingCollision=false` (true restores building push-in; startup/F8).
+  Terrain/destructable obstruction remains enabled; disabled building collision permits camera
+  passage through building models. Start inventory numbers enabled with
+  `[Inventory] NumbersByDefault=true` (false opts out; startup/F8/map reset). Tab still toggles
+  items/weapons; gesture cleanup and view switches preserve its session choice. Preserve saved values.
+
+- Add the F6/F7 animated portrait, HP/mana/map-resolved hero XP and inventory above spells.
+  Tab toggles 1..6 item activation; I opens mouse use, target selection, drag-out dropping and
+  slot rearrangement. Native Warcraft rules govern effects, charges, cooldowns and droppable items.
+  Add rebindable inventory shortcuts, `[Interface] InventoryControls=true` and
+  `[Inventory] DropDistance=80` (16..128 units, startup/F8), preserving existing custom controls.
+  F9 stays clean and third-person hints omit CS ammo/weapon commands.
+
+- Keep point-targeted spells aimed at terrain independently of nearby units/destructables. In auto
+  mode, use the controlled actor's native command flags to send point-only orders for abilities such
+  as Blink and Flame Strike; a rejected or missing ground point never falls back to a widget target.
+  Alt/self casts use the actor's ground position. Explicit slot target overrides remain available.
+
 ## 0.9.1 — 2026-10-16
 
 - Replace WGL bitmap display-list text with GDI-generated alpha glyph atlases for the F6/F7 HUD,

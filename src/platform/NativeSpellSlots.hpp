@@ -11,6 +11,8 @@ public:
     void Reset() {loaded_=false;slots_=HeroSpellSlots();}
     int Ability(wc3::Handle unit,int slot,const SpellSettings& settings,bool diagnostics=true);
     int Order(wc3::Handle unit,int ability);
+    // Use actor-matched native command metadata instead of guessing from rawcodes or order names.
+    bool PointOnly(wc3::Handle unit,int ability,int order);
     uintptr_t Object(wc3::Handle unit,int ability) const;
     SpellHudSlots Snapshot(wc3::Handle unit,const SpellSettings& settings);
 private:

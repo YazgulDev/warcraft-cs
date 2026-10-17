@@ -21,6 +21,7 @@ $sources = @('platform/WarcraftApi.cpp', 'input/MouseLook.cpp', 'movement/Moveme
 # Native spell fixtures are opt-in and are excluded from the installed normal build.
 # Item pickup and temporary native squad policies remain independent of shooter input/rendering.
 $sources += @('config/GameplaySettings.cpp','inventory/ItemPickup.cpp','squad/SquadController.cpp','platform/FpsCombatGuard.cpp') | ForEach-Object { '"' + (Join-Path $modRoot "src/$_") + '"' }
+$sources += '"'+(Join-Path $modRoot 'src/squad/SquadFocusFire.cpp')+'"' # Temporary all-unit targeting stays separate from formation AI.
 $sources += '"' + (Join-Path $modRoot 'src/platform/NativeMovementGuard.cpp') + '"'
 # Attack-effect dispatch is isolated from controller input and native pursuit suppression.
 $sources += '"' + (Join-Path $modRoot 'src/platform/NativeWeaponAttack.cpp') + '"'
@@ -31,6 +32,10 @@ $sources += '"' + (Join-Path $modRoot 'src/geometry/TreeTrunkMesh.cpp') + '"'
 $sources += '"' + (Join-Path $modRoot 'src/presentation/ReticleView.cpp') + '"'
 $sources += '"' + (Join-Path $modRoot 'src/presentation/TargetMarkerView.cpp') + '"' # Read-only TPS contact presentation.
 $sources += '"' + (Join-Path $modRoot 'src/presentation/HudFont.cpp') + '"' # Driver-independent HUD glyph coverage.
+# Unit state, native portrait redirection and reusable icon textures keep separate ownership.
+$sources += @('platform/NativeUnitHud.cpp','platform/NativePortrait.cpp','presentation/HudIconCache.cpp','presentation/UnitHudView.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
+# Interactive inventory owns its gestures, native command adapter, lifecycle and presentation independently.
+$sources += @('platform/NativeItemCommands.cpp','platform/NativeItemActions.cpp','application/InventoryController.cpp','presentation/InventoryHudView.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 # Draw diagnostics are shared by the real reticle and frame/overlay skip paths.
 $sources += '"' + (Join-Path $modRoot 'src/presentation/ReticleDiagnostics.cpp') + '"'
 # Thread-safe bounded diagnostics are a native platform adapter, not controller/file ownership.

@@ -22,7 +22,9 @@ even if the HUD target changes. Unknown native signatures retain the previous AP
 The third-person prototype uses `ThirdPersonPose`/`ThirdPersonCamera` in presentation for boom geometry
 and native collision clearance. `HeroAttackTimeline` in combat owns delayed, single-contact swings and
 recovery. `UnitAttack` in platform adapts those swings and aimed ranged launches to native animation, widget geometry and
-unit damage effects; it never issues pursuit orders. `HeroAttackPose` owns the independent visual clock;
+unit/widget damage effects; it never issues pursuit orders. Ranged gate launches use
+`NativeAttackTarget` identities in `NativeWeaponAttack` through prepare/impact/cleanup, including
+callback removal/reuse; missiles remain engine-owned after dispatch. `HeroAttackPose` owns the independent visual clock;
 `UnitAttackAnimation` selects authored attack variations, repairs native pose resets at their elapsed
 clip time and restores the native playback rate. It temporarily disables native pose blending during
 the swing, restoring the previous mode on release without changing the map's blend duration.
@@ -111,6 +113,9 @@ sweeps the player footprint against terrain, native bridge decks and solid model
 `UnitCollisionProfile` reads live Warcraft collision radius/mask, converts native cell radii to world units
 and separates non-colliding map helpers from visual bodies. Movement consumes this profile independently
 of weapon target filtering; unknown profiles retain conservative geometry. Grounded support follows each sweep substep.
+Position commit uses exact XY within the existing two-footprint contact neighborhood on either side
+of known solids. The sweep owns approach/slide/retreat there, so native nearest-cell placement never
+publishes a transient sprite relocation. Open-space unknown blockers retain native placement checks.
 `GameplaySettings` loads movement tuning; the controller applies that snapshot on startup and F8.
 
 `RenderSettings` is part of that validated snapshot. `NativeFrameRate` verifies the supported native
@@ -176,7 +181,10 @@ K queues one shared switch in the controller, which saves both existing team INI
 `ShortcutBindings` is the keyboard snapshot shared by input dispatch, held movement and HUD labels;
 `GameplaySettings` validates the whole layout before replacing it. `HeroSpellSlots` parses owned
 table metadata without engine pointers or bundled game data. `NativeSpellSlots` reads supported
-learned ability order getters, while `SpellAim` resolves the visible reticle widget/world point.
+learned ability order getters and the actor-matched command card's verified point-only order flags.
+`SpellAim` keeps terrain intersection separate from nearest-widget selection, so a nearby ally
+cannot replace the ground aim. `SpellCaster` applies that native point-only policy in auto mode,
+without a spell-name/rawcode whitelist, and preserves explicit target overrides.
 `SpellCaster` owns only explicitly requested spell orders until native completion or deliberate
 player interruption; the controller yields its ordinary order cancellation and firing during that
 state. Map reset forgets orders without issuing commands to unloaded handles.
@@ -237,8 +245,45 @@ enemy policy. A live controller predicate scopes it to the protected mode; ordin
 native target-reference getters remain intact. `NativeWeaponAttack` shares the contact guard so a
 previous wind-up cannot bypass a newly enabled policy. Spell/area damage remains native.
 
+`NativeUnitHud` samples immutable `UnitHudSnapshot` values on the game thread: unit resources,
+map-resolved XP thresholds and native inventory art/counts. `UnitHudView` draws those values with
+portable `UnitHudLayout` geometry. `HudIconCache` shares bounded map-scoped icon decoding/upload
+between spell and inventory views. `NativePortrait` redirects the native small portrait viewport
+into its own framebuffer with private depth; world color/depth remain untouched. Runtime hooks
+own capture timing and context/map/actor invalidation. F9 opts out before any overlay submission.
+
+`InventoryControls` owns bounded input events and stable-item click/drag/target state.
+`InventoryController` coordinates those events with native adapters on the game thread;
+`NativeItemCommands` reads verified inventory order target forms and `NativeItemActions` owns
+explicit item orders during native approach/channeling. The shared cast predicate grants only
+those orders movement ownership. `InventoryHudView` presents slot labels, gestures and a free cursor.
+Windows messages never issue item natives; focus, reload and mode/map boundaries discard gestures.
+Gesture cleanup preserves the session Tab choice; `ApplySettings` and map reset restore the validated
+`NumbersByDefault` preference. `ThirdPersonCamera` keeps building proxy collision opt-in independently
+of terrain/destructable boom collision and combat hitboxes.
+
 `SquadSpellPolicy` owns portable readiness/healing decisions. `SquadSpellcasting` adapts live
 ability slots and native orders to a bounded stock-order catalog, using shared native ability,
 cooldown and map-charge readers. Its order ownership protects wind-up/channeling from formation
 refresh. `SquadController` selects combat/passive behavior, validates player ownership and cancels
 only adapter-owned casts on opt-out. No map ability, mana or autocast switch is rewritten.
+`PreserveCombatOrders` keeps a live native attack target ahead of corridor/leash travel while
+leaving idle attack-move refresh and native spell decisions available. Combat ownership transitions
+are logged once rather than per frame. Explicit common-target approaches already outrank all travel.
+
+`SquadFocusFire` owns temporary all-owned-unit target orders independently of H/O membership and
+formation policy. `SquadController` composes it: explicit focus temporarily overrides passive guards,
+formation/leash and spell AI for those exact unit identities; cancellation restores the underlying
+policy. `FpsCombatGuard::AttackTargetObject` exposes the verified read-only native target identity
+so cleanup yields to newer orders and discards transferred/reused handles. Window input queues one
+game-thread command; reticle picking and native order dispatch stay outside presentation callbacks.
+`SquadOrderMode` owns the F6 Y toggle and predicts queued toggles for short key+RMB sequences.
+Window input never changes native combat state; the controller applies mode changes before RMB work,
+clears pending toggles at focus/view/menu boundaries and restores the saved default on startup/F8/map reset.
+`NativeAttackTarget` owns typed current-map widget identity/life access for common-target orders,
+including destructable gates. `AttackTargetPolicy` distinguishes neutral ownership from player allies
+for direct contact filtering/damage; native eligibility and quest immunity remain engine-owned.
+
+The shared `SpellAim` ray picker accepts an optional action-owned unit filter before hit distance
+is shortened. Squad orders supply their allegiance policy so protected allies cannot hide enemies;
+spell/item callers retain unfiltered ally selection. Ground/destructable occlusion stays shared.

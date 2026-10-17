@@ -55,6 +55,8 @@ Handle (__cdecl* GetOwningPlayer)(Handle)=[](Handle unit)->Handle{return unit==1
 BOOL (__cdecl* IsUnitEnemy)(Handle,Handle)=[](Handle unit,Handle owner)->BOOL{return unit==1 && owner==11;};
 }
 int main() {
+    // Read-only identity fails closed until the native target signature is verified.
+    assert(FpsCombatGuard::AttackTargetObject(1)==0);
     std::vector<unsigned char> image(0x3D0000);base=uintptr_t(image.data());
     auto actorGetter=[](){return actor;};auto unitPolicy=[](uintptr_t){return false;};
     auto attackPolicy=[](uintptr_t at){return at==passiveAttack;};
@@ -70,6 +72,7 @@ int main() {
     for(auto at:{0x3C8E20,0x3C8DA0})std::memcpy(image.data()+at,text,sizeof(text));
     std::memcpy(image.data()+0x3BAD70,convert,sizeof(convert));
     FpsCombatGuard::Install(base,actorGetter,unitPolicy,attackPolicy,Hook);assert(checked && started);
+    assert(FpsCombatGuard::AttackTargetObject(1)==123 && FpsCombatGuard::HasAttackTarget(1));
     // Native morph/combat callbacks require a non-null retained target; pursuit is blocked at dispatch/motor.
     assert(targetGetter && targetGetter(actorAttack,0)==123 && targetGetter(passiveAttack,0)==123);
     assert(targetGetter(13,0)==123 && FpsCombatGuard::HasAttackTarget(1));
