@@ -174,6 +174,6 @@ limits remain in the [0.9.1 notes](https://github.com/YazgulDev/warcraft-cs/blob
 - Preserved active squad combat and fixed orders intercepted by protected allies.
 - Fixed neutral structure and gate attacks, including native ranged projectiles.
 - Fixed Blink and Flame Strike targeting near allies.
-- Stabilized third-person zoom near buildings and side collision near walls and units.
+- Fixed unstable third-person zoom near buildings and side collision near walls and units.
 - Enabled item numbers by default and preserved custom settings during upgrades.
 -->
