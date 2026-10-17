@@ -106,8 +106,8 @@ bool UnitAttack::Damage(wc3::Handle actor,wc3::Handle target,bool destructable,f
     if(allied && !settings.targetAllies)return false; // Recheck at dispatch, preserving alliance changes.
     float damage=CombatDamage::Amount(base,allied,false,before,settings.friendlyFirePercent);
     bool projectile=ranged && tuning.nativeRangedProjectiles;
-    // Warcraft rolls native attack effects and creates its missile; non-native contacts have an explicit instant fallback.
-    bool effects=damage>0 && !destructable && settings.enableAttackEffects && (projectile ?
+    // Ranged gates need the same native missile as unit targets; retain the existing instant melee/opt-out fallback.
+    bool effects=damage>0 && (!destructable || projectile) && settings.enableAttackEffects && (projectile ?
         NativeWeaponAttack::Launch(actor,target,damage,distance) : NativeWeaponAttack::Apply(actor,target,damage,distance));
     if(damage>0 && !effects)wc3::UnitDamageTarget(actor,target,&damage,TRUE,FALSE,NativeWeaponAttack::AttackType(actor),4,0);
     float after=life();

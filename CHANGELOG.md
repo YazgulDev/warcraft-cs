@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Restore native F7 ranged projectiles against destructable gates/crates, including Kael attacks
+  on campaign gates. Resolve/revalidate typed widget identities through native preparation, launch
+  and cleanup; native missile flight/damage and quest immunity remain authoritative. Existing
+  NativeRangedProjectiles/EnableAttackEffects preferences and F8 opt-outs retain instant-hit behavior.
+
 - Prevent transient sideways actor/model snaps near known walls and colliding units. Commit the
   swept-valid position directly while approaching, sliding along or leaving either side of a solid,
   instead of invoking native nearest-cell relocation and rolling it back. Retain terrain, body-volume

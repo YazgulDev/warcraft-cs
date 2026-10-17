@@ -1,5 +1,6 @@
 #include "NativeWeaponAttack.hpp"
 #include "FpsCombatGuard.hpp"
+#include "NativeAttackTarget.hpp"
 #include <cmath>
 #include <cstring>
 
@@ -77,8 +78,9 @@ float* __fastcall DamageRoll(uintptr_t attack,uintptr_t,float* result) {
 template<class T> bool Read(uintptr_t address,T& value) {
     SIZE_T got=0;return address && ReadProcessMemory(GetCurrentProcess(),reinterpret_cast<void*>(address),&value,sizeof(value),&got) && got==sizeof(value);
 }
-bool Execute(wc3::Handle attacker,wc3::Handle victim,uintptr_t object,uintptr_t attack,uintptr_t target,float damage,float distance,int kind,bool projectile) {
+bool Execute(wc3::Handle attacker,const NativeAttackTarget& victim,uintptr_t object,uintptr_t attack,float damage,float distance,int kind,bool projectile) {
     Contact current={attack,damage,distance,false,false};Contact* previous=contact;
+    uintptr_t target=victim.object;
     using Finish=void (__thiscall*)(uintptr_t,uintptr_t);
     // Retain the authored ranged kind for TPS so Warcraft creates its own missile from current map data.
     float zero=0;int instantKind=projectile ? kind : kind==1 ? 1 : 4;
@@ -90,7 +92,8 @@ bool Execute(wc3::Handle attacker,wc3::Handle victim,uintptr_t object,uintptr_t 
         // Native wind-up rolls Bash/critical chances before impact. Its callbacks also notify map attack triggers.
         reinterpret_cast<Prepare>(gameBase+0x281580)(object,target,&zero,&zero);
         uintptr_t currentAttack=0;
-        if(wc3::UnitObject(attacker)==object && wc3::UnitObject(victim)==target &&
+        // Native impact accepts a CWidget, including gates. Revalidate its original typed identity after callbacks.
+        if(wc3::UnitObject(attacker)==object && victim.Valid() &&
             Read(object+0x1E8,currentAttack) && currentAttack==attack) {
             current.inImpact=true;
             reinterpret_cast<Impact>(gameBase+0xCF660)(attack,target,0,0,1,0,1);
@@ -101,7 +104,7 @@ bool Execute(wc3::Handle attacker,wc3::Handle victim,uintptr_t object,uintptr_t 
         // Attack callbacks can transform/remove the hero; never restore a freed/replaced attack component.
         if(wc3::UnitObject(attacker)==object) {
             // Release native per-attack flags/counters, just as the ordinary attack animation ends.
-            reinterpret_cast<Finish>(gameBase+0x276330)(object,wc3::UnitObject(victim)==target ? target : 0);
+            reinterpret_cast<Finish>(gameBase+0x276330)(object,victim.Valid() ? target : 0);
             int currentKind=0;
             if(wc3::UnitObject(attacker)==object && Read(object+0x1E8,stillOwned) && stillOwned==attack &&
                 Read(attack+0xDC,currentKind) && currentKind==instantKind)
@@ -143,10 +146,12 @@ void NativeWeaponAttack::Install(uintptr_t base,HookInstaller hook,wc3::Handle (
 namespace {
 bool Dispatch(wc3::Handle attacker,wc3::Handle target,float damage,float contactDistance,bool projectile) {
     if(!available || contact || !std::isfinite(damage) || damage<=0 || !std::isfinite(contactDistance) || contactDistance<0)return false;
-    uintptr_t object=wc3::UnitObject(attacker),victim=wc3::UnitObject(target),attack=0;int kind=0;
-    if(!object || !victim || !Read(object+0x1E8,attack) || !Read(attack+0xDC,kind) || kind<1 || kind>8)return false;
+    // Resolve the widget type once; a destructable handle must never be validated as a CUnit.
+    auto victim=NativeAttackTarget::Resolve(target);
+    uintptr_t object=wc3::UnitObject(attacker),attack=0;int kind=0;
+    if(!object || !victim.Valid() || !Read(object+0x1E8,attack) || !Read(attack+0xDC,kind) || kind<1 || kind>8)return false;
     // Once the pipeline has run, even an evaded/immune hit is handled: never add a fallback second hit.
-    bool substituted=Execute(attacker,target,object,attack,victim,damage,contactDistance,kind,projectile);
+    bool substituted=Execute(attacker,victim,object,attack,damage,contactDistance,kind,projectile);
     wc3::Log("Weapon attack effects attacker=%08X target=%08X base=%.1f substituted=%d nativeKind=%d distance=%.1f projectile=%d",attacker,target,damage,substituted,kind,contactDistance,projectile);
     return true;
 }

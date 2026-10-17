@@ -11,6 +11,7 @@ bool hidden=false,loaded=false,visible=true,transparent=false,wall=false,ally=fa
 bool screen=false,reverse=false,screenAllied=true,gate=false;
 float screenX=60,screenHealth=500;
 int animations=0,damageEvents=0,kind=2;
+bool launchHandled=false;int launches=0;wc3::Handle launchedTarget=0;
 std::vector<wc3::Handle> group;
 wc3::Bits Pack(float x){wc3::Bits value;std::memcpy(&value,&x,4);return value;}
 }
@@ -44,7 +45,7 @@ int PrimaryKind(wc3::Handle){return kind;}
 float PrimaryRange(wc3::Handle){return reach;}
 int AttackType(wc3::Handle){return 0;}
 bool Apply(wc3::Handle,wc3::Handle,float,float){return false;}
-bool Launch(wc3::Handle,wc3::Handle,float,float){return false;}
+bool Launch(wc3::Handle,wc3::Handle target,float,float){++launches;launchedTarget=target;return launchHandled;}
 }
 bool WeaponTargetFilter::PassThrough(wc3::Handle,uintptr_t){return transparent;}
 bool UnitHitboxes::Intersect(wc3::Handle unit,const float* origin,const float* direction,float limit,float& entry,float) {
@@ -143,5 +144,19 @@ int main(){
         attack.Reset();assert(attack.Begin(1,now,settings,status));
         assert(attack.Tick(1,now+1,0,0,origin,direction,false,settings,status,units,objects));now+=2;
         assert(health==320);
+    }
+    // Ranged gates dispatch a native missile rather than an extra instant damage event; opt-outs retain direct contact.
+    gate=true;ally=false;kind=2;targetX=250;launchHandled=true;
+    int priorLaunches=launches,priorDamage=damageEvents;
+    attack.Reset();assert(attack.Begin(1,now,settings,status));
+    assert(!attack.Tick(1,now+1,0,0,origin,direction,false,settings,status,units,objects));now+=3;
+    assert(launches==priorLaunches+1 && launchedTarget==4 && damageEvents==priorDamage);
+    for(int fallback=0;fallback<4;++fallback) {
+        launchHandled=fallback!=0;settings.thirdPerson.nativeRangedProjectiles=fallback!=1;
+        settings.enableAttackEffects=fallback!=2;kind=fallback==3 ? 1 : 2;
+        priorLaunches=launches;priorDamage=damageEvents;
+        attack.Reset();assert(attack.Begin(1,now,settings,status));
+        attack.Tick(1,now+1,0,0,origin,direction,false,settings,status,units,objects);now+=3;
+        assert(damageEvents==priorDamage+1 && launches==priorLaunches+(fallback==0 ? 1 : 0));
     }
 }

@@ -559,7 +559,11 @@ native attack preparation and impact. Learned passives and carried items can app
 lifesteal, Bash, critical strikes and attack callbacks with Warcraft's own chances, restrictions
 and orb priority. Incompatible orb effects do not become stackable; map-specific scripted effects
 still depend on the map's implementation. No basic attack/chase order or extra weapon projectile
-is issued. C4 explosions and destructable hits retain direct damage.
+is issued. C4, firearm and melee hits on destructables retain direct damage.
+In F7, ranged attacks also launch the native missile against gates/crates and neutral structures.
+`[ThirdPerson] NativeRangedProjectiles=true` preserves the map missile and flight time; it requires
+`EnableAttackEffects=true`. Set either false and press F8 for direct hits. Native quest immunity
+and unit attack armor rules still apply; a launched missile never adds an instant duplicate hit.
 
 Firearms use their configured FPS range even on a melee hero. After the ray verifies the target
 and terrain, only that contact's native impact range check is extended to its target distance.

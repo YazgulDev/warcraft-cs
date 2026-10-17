@@ -22,7 +22,9 @@ even if the HUD target changes. Unknown native signatures retain the previous AP
 The third-person prototype uses `ThirdPersonPose`/`ThirdPersonCamera` in presentation for boom geometry
 and native collision clearance. `HeroAttackTimeline` in combat owns delayed, single-contact swings and
 recovery. `UnitAttack` in platform adapts those swings and aimed ranged launches to native animation, widget geometry and
-unit damage effects; it never issues pursuit orders. `HeroAttackPose` owns the independent visual clock;
+unit/widget damage effects; it never issues pursuit orders. Ranged gate launches use
+`NativeAttackTarget` identities in `NativeWeaponAttack` through prepare/impact/cleanup, including
+callback removal/reuse; missiles remain engine-owned after dispatch. `HeroAttackPose` owns the independent visual clock;
 `UnitAttackAnimation` selects authored attack variations, repairs native pose resets at their elapsed
 clip time and restores the native playback rate. It temporarily disables native pose blending during
 the swing, restoring the previous mode on release without changing the map's blend duration.
