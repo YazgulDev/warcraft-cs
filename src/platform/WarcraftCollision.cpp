@@ -136,14 +136,15 @@ void WarcraftCollision::Move(wc3::Handle unit, MovementPhysics& movement, float 
         bool raised = floor > wc3::TerrainGround(x, y) + .01f;
         float deck = 0;
         bool checkedCliff = wc3::IsTerrainPathable(&x, &y, 1) && CliffCell(x,y) && !wc3::WalkableSurface(x, y, deck);
-        bool escapingSolid=false;
-        // Do not send a validated retreat back through Warcraft's nearest-walkable-cell search:
-        // it may snap the actor into the same obstruction that the swept checks just let it leave.
-        for(const auto& box:obstacles) if(Overlaps(box,originalX,originalY,radius_*2) &&
-            ExitDistance(box,x,y,radius_)<ExitDistance(box,originalX,originalY,radius_)-.001f) escapingSolid=true;
+        // Swept collision already owns this local contact. Native nearest-cell placement can publish a
+        // sideways sprite snap even when its logical coordinates are immediately rolled back afterward.
+        // Preserve exact validated XY for approach, parallel sliding and retreat on either side of a solid.
+        bool nearSolid=std::any_of(obstacles.begin(),obstacles.end(),[&](const Bounds3& box) {
+            return Overlaps(box,originalX,originalY,radius_*2) || Overlaps(box,x,y,radius_*2);
+        });
         if(checkedCliff && floor<movement.FeetZ()-.01f) movement.BeginFall();
-        if (!movement.Grounded() || movement.FeetZ() - floor > movement.StepHeight() || raised || checkedCliff || escapingSolid) {
-            // XY-only setters preserve the checked air path; SetUnitPosition relocates walkers off cliffs/props.
+        if (!movement.Grounded() || movement.FeetZ() - floor > movement.StepHeight() || raised || checkedCliff || nearSolid) {
+            // XY-only setters preserve the checked path. Unknown blockers in open space retain native validation below.
             wc3::SetUnitX(unit, &x); wc3::SetUnitY(unit, &y);
         } else {
             wc3::SetUnitPosition(unit, &x, &y);

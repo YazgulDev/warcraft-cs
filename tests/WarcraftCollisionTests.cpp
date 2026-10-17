@@ -16,10 +16,12 @@ bool tree=false,canopyBounds=false;
 bool wideCliff=false;
 float slopeGradient=.3f;
 bool narrowPassage=false;
+int sideContact=0,sideRelocations=0;bool sideUnit=false;
 wc3::Bits Bits(float value) { wc3::Bits bits;std::memcpy(&bits,&value,4);return bits; }
 wc3::Bits __cdecl X(wc3::Handle) {return Bits(unitX);}
 wc3::Bits __cdecl Y(wc3::Handle) {return Bits(unitY);}
 BOOL __cdecl Blocked(float* x,float* y,int) {
+    if(sideContact)return FALSE; // Unit collision/side volumes are independent of the terrain pathing grid.
     // Stock tree pathing retains its trunk footprint while the canopy above remains empty space.
     if(tree) return *x>=88 && *x<=152 && std::abs(*y)<=32;
     if(slope) return FALSE;
@@ -36,6 +38,10 @@ wc3::Bits __cdecl Maximum(wc3::Handle) { return Bits(4096); }
 void __cdecl Remove(wc3::Handle) {}
 int __cdecl Level(float* x,float*) { return (drop || cliff) && *x>=32 ? (drop ? 1 : 3) : 2; }
 void __cdecl Position(wc3::Handle,float* x,float* y) {
+    // Native placement may briefly publish a sideways snap even if the caller later restores logical XY.
+    if(sideContact && (!sideUnit || std::abs(*x)<96) && *y*sideContact>8) {
+        unitX=*x;unitY=*y+sideContact*80;++sideRelocations;return;
+    }
     // Native Warcraft may relocate a blocked unit; collision must discard that search result.
     unitX=*x+(nativeBlocked && *x>0 && (!tree || *x>=64) ? 80 : 0);unitY=*y;
 }
@@ -74,6 +80,10 @@ bool WalkableSurface(float,float y,float& height){
 bool DiagnosticLog::Due(DWORD&,bool) { return false; }
 // The synthetic world replaces only native discovery; actual swept collision/physics runs unchanged.
 std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,bool) {
+    if(sideContact) {
+        float reach=sideUnit ? 64.f : 4096.f;
+        return {{{-reach,sideContact>0 ? 48.f : -64.f,100},{reach,sideContact>0 ? 64.f : -48.f,300}}};
+    }
     if (tree) return canopyBounds ? std::vector<Bounds3>{{{-93,-231,100},{334,193,413}}} :
         std::vector<Bounds3>{{{101,-21,100},{138,22,384}}};
     if (prop || wall) return {{{60,-50,100},{80,50,wall ? 300.f : 140.f}}};
@@ -169,5 +179,21 @@ int main(){
     retreat=forward;retreat.forward=-1;
     for(int frame=0;frame<40;++frame){jumper.Step(retreat,.05f,250);collision.Move(1,jumper,.05f);}
     Require(unitX<0 && jumper.Grounded(),"fast grounded sweeps traverse the ramp downhill");
+    // Left/right side contacts retain forward sliding without ever publishing a native relocation before rollback.
+    slope=false;bridgeAlive=false;
+    for(bool unit:{false,true})for(int side:{-1,1}) {
+        sideUnit=unit;sideContact=side;sideRelocations=0;unitX=unitY=0;jumper.Reset(100);
+        MoveInput diagonal=forward;diagonal.right=float(-side);
+        for(int frame=0;frame<60;++frame) {
+            float x=unitX,y=unitY;jumper.Step(diagonal,1.f/60,250);
+            float allowed=jumper.Speed()/60+.01f; // Wall sliding can retain more tangent speed than an open diagonal.
+            collision.Move(1,jumper,1.f/60);
+            Require(std::hypot(unitX-x,unitY-y)<=allowed,"side contact cannot teleport beyond the integrated motion");
+            if(!unit || std::abs(unitX)<64)Require(unitY*side<=24.01f,"side contact still blocks penetration");
+        }
+        Require(sideRelocations==0,"validated side movement must never invoke a snapping native placement");
+        Require(unitX>200,"holding forward against a side obstacle must retain tangential sliding");
+    }
+    sideContact=0;
     std::puts("Warcraft bridge/collision regressions passed.");
 }

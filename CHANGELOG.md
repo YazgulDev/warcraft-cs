@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Prevent transient sideways actor/model snaps near known walls and colliding units. Commit the
+  swept-valid position directly while approaching, sliding along or leaving either side of a solid,
+  instead of invoking native nearest-cell relocation and rolling it back. Retain terrain, body-volume
+  and unknown-blocker validation, bridge/cliff support and existing movement configuration.
+
 - Fix RMB target orders being swallowed by a protected ally between the camera and the enemy,
   including F7. Filter allegiance before nearest-target selection using the existing Q/TargetAllies
   preference; preserve ally spell/item selection, neutral targets and destructable obstruction.

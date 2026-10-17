@@ -111,6 +111,9 @@ sweeps the player footprint against terrain, native bridge decks and solid model
 `UnitCollisionProfile` reads live Warcraft collision radius/mask, converts native cell radii to world units
 and separates non-colliding map helpers from visual bodies. Movement consumes this profile independently
 of weapon target filtering; unknown profiles retain conservative geometry. Grounded support follows each sweep substep.
+Position commit uses exact XY within the existing two-footprint contact neighborhood on either side
+of known solids. The sweep owns approach/slide/retreat there, so native nearest-cell placement never
+publishes a transient sprite relocation. Open-space unknown blockers retain native placement checks.
 `GameplaySettings` loads movement tuning; the controller applies that snapshot on startup and F8.
 
 `RenderSettings` is part of that validated snapshot. `NativeFrameRate` verifies the supported native
