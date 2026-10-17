@@ -3,7 +3,7 @@
 #include <algorithm>
 
 SpellAim SpellAim::Pick(wc3::Handle actor,const float* origin,const float* direction,float distance,
-    UnitHitboxes& units,DestructableHitboxes& destructables) {
+    UnitHitboxes& units,DestructableHitboxes& destructables,const std::function<bool(wc3::Handle)>& unitFilter) {
     SpellAim aim;float limit=distance;
     // The first terrain crossing limits target picking; point casts require a real surface under the reticle.
     for(float t=0;t<=distance;t+=24) {
@@ -22,6 +22,8 @@ SpellAim SpellAim::Pick(wc3::Handle actor,const float* origin,const float* direc
         wc3::GroupRemoveUnit(group,candidate);
         if(candidate==actor || wc3::Real(wc3::GetUnitState(candidate,0))<=.405f || wc3::IsUnitHidden(candidate) ||
             wc3::IsUnitLoaded(candidate) || !wc3::IsUnitVisible(candidate,local))continue;
+        // Rejected allies must not shorten an attack ray and hide a valid enemy behind them; spells accept allies by default.
+        if(unitFilter && !unitFilter(candidate))continue;
         float entry=0;if(units.Intersect(candidate,origin,direction,limit,entry)) {limit=entry;aim.target=candidate;}
     }
     wc3::DestroyGroup(group);

@@ -682,9 +682,13 @@ void ShooterController::UpdateSquad(DWORD now) {
             if(squadRequested_==4) {
                 if(SquadReticleOrdersEnabled() && !Buying() && !InventoryOpen()) {
                     float origin[3],direction[3];AimRay(origin,direction);
-                    auto aim=SpellAim::Pick(unit_,origin,direction,settings_.squadReticleDistance,hitboxes_,destructableHitboxes_);
+                    // Apply attack allegiance before nearest-hit selection: our followers can stand between the camera and an enemy.
+                    auto aim=SpellAim::Pick(unit_,origin,direction,settings_.squadReticleDistance,hitboxes_,destructableHitboxes_,
+                        [&](wc3::Handle candidate){return settings_.targetAllies || wc3::IsUnitEnemy(candidate,wc3::GetLocalPlayer()) || wc3::IsNeutralUnit(candidate);});
                     size_t count=squad_.Focus(unit_,aim.target,settings_,now);
-                    char message[96];sprintf_s(message,count ? "ALL UNITS: ATTACK TARGET | %u" : "TARGET ORDER CLEARED",unsigned(count));
+                    // A rejected attack is different from deliberately clicking empty space; expose that distinction in the HUD.
+                    char message[96];sprintf_s(message,count ? "ALL UNITS: ATTACK TARGET | %u" :
+                        aim.target ? "NO AVAILABLE UNITS CAN ATTACK TARGET" : "TARGET ORDER CLEARED",unsigned(count));
                     Notice(message);wc3::Log("squad reticle target=%08X commanded=%u hp=%.1f",aim.target,unsigned(count),
                         count ? NativeAttackTarget::Resolve(aim.target).Life() : 0.f);
                 }

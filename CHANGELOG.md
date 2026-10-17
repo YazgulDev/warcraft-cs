@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Fix RMB target orders being swallowed by a protected ally between the camera and the enemy,
+  including F7. Filter allegiance before nearest-target selection using the existing Q/TargetAllies
+  preference; preserve ally spell/item selection, neutral targets and destructable obstruction.
+  Distinguish an unavailable/rejected native attack from an empty-aim cancellation in HUD feedback.
+
 - Preserve active H-mode combat ahead of yielding and leash movement with
   `[Squad] PreserveCombatOrders=true` (false restores legacy behavior; startup/F8). Idle followers
   still yield and follow; explicit RMB attacks retain priority while approaching or fighting.

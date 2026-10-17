@@ -278,3 +278,7 @@ clears pending toggles at focus/view/menu boundaries and restores the saved defa
 `NativeAttackTarget` owns typed current-map widget identity/life access for common-target orders,
 including destructable gates. `AttackTargetPolicy` distinguishes neutral ownership from player allies
 for direct contact filtering/damage; native eligibility and quest immunity remain engine-owned.
+
+The shared `SpellAim` ray picker accepts an optional action-owned unit filter before hit distance
+is shortened. Squad orders supply their allegiance policy so protected allies cannot hide enemies;
+spell/item callers retain unfiltered ally selection. Ground/destructable occlusion stays shared.

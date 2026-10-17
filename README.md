@@ -321,6 +321,9 @@ Edit it and press F8 in FPS.
   updates preserve saved values. Commands reach all available owned mobile units across the map,
   independent of H/O's recruitment radius/cap; the controlled actor, buildings, dead/hidden/loaded/paused
   units and other players' units are excluded. Native attack eligibility/pathfinding still apply.
+  With allied targeting disabled, protected allies between the camera and the enemy do not intercept
+  the command ray. Q opt-in makes them selectable again. If a target is picked but no native attack
+  is accepted, the HUD reports that no available units can attack it; empty aim reports cancellation.
   Click empty space to clear the common target and restore the previous H/O policy; other commanded units
   return to native behavior. Ordinary automatic acquisition may choose nearby enemies again.
   Target death/invisibility, ownership changes, H/O/J, disabling the feature, RTS/map exit also release
