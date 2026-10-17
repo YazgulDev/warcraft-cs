@@ -61,13 +61,19 @@ void SquadController::Tick(wc3::Handle leader,const GameplaySettings& settings,D
             settings.squadClearance,settings.squadYieldAhead,settings.squadRearFormation,settings.squadYield);
         float tx=destination.x,ty=destination.y;
         float targetDelta=std::hypot(tx-m.targetX,ty-m.targetY);int order=wc3::GetUnitCurrentOrder(m.unit);
-        // Combat attack-move lets units acquire enemies naturally. An active fight is kept until the leash is exceeded.
+        // Combat owns movement even in the player's corridor or beyond the leash; idle attack-move still follows.
         bool fighting=!passive_ && FpsCombatGuard::HasAttackTarget(m.unit);
-        if (fighting && distance<settings.squadLeash && !destination.yielding) continue;
+        bool combatHeld=fighting && settings.squadPreserveCombatOrders;
+        // Log ownership transitions once, allowing native combat/yield priority to be diagnosed without per-frame noise.
+        if(combatHeld!=m.combatHeld) {
+            m.combatHeld=combatHeld;
+            wc3::Log("squad combat priority unit=%08X held=%d corridor=%d distance=%.1f",m.unit,combatHeld,destination.yielding,distance);
+        }
+        if (combatHeld || (fighting && distance<settings.squadLeash && !destination.yielding)) continue;
         int travelOrder=passive_ || destination.yielding ? Move : Attack;
         bool outside=std::hypot(tx-ux,ty-uy)>(destination.yielding ? 20.f : 60.f);
         if (outside && (!m.orderTick || targetDelta>40 || m.yielding!=destination.yielding || order!=travelOrder || distance>settings.squadLeash)) {
-            // Yielding uses Move even in combat mode so an attack-move cannot immediately reacquire in the corridor.
+            // Idle yielding uses Move so an attack-move cannot immediately reacquire in the corridor.
             BOOL accepted=wc3::IssuePointOrderById(m.unit,travelOrder,&tx,&ty);
             m.targetX=tx;m.targetY=ty;m.orderTick=now;m.yielding=destination.yielding;
             wc3::Log("squad order unit=%08X mode=%s yielding=%d accepted=%d x=%.1f y=%.1f",m.unit,passive_ ? "follow" : "combat",destination.yielding,accepted,tx,ty);

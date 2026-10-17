@@ -22,7 +22,7 @@ public:
     void TestLog() const;
 #endif
 private:
-    struct Member { wc3::Handle unit;uintptr_t object,attack;float targetX=0,targetY=0;DWORD orderTick=0;bool yielding=false; };
+    struct Member { wc3::Handle unit;uintptr_t object,attack;float targetX=0,targetY=0;DWORD orderTick=0;bool yielding=false,combatHeld=false; };
     bool Valid(const Member& member,wc3::Handle owner) const;
     std::vector<Member> members_;
     bool passive_=false;

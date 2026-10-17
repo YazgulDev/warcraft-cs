@@ -337,16 +337,27 @@ int main() {
     assert(movement.Speed()<=450.01f);
     DeleteFileA(path.c_str());
     // New squad parameters use the real INI boundary; live snapshots clamp invalid distances/refresh rates.
-    assert(ShortcutBindings{}.Key(ShortcutAction::SquadOrders)==VK_OEM_1);
+    assert(ShortcutBindings{}.Key(ShortcutAction::SquadOrders)=='Y');
     assert(ShortcutBindings::Parse("SEMICOLON")==VK_OEM_1 && ShortcutBindings::Parse(";")==VK_OEM_1 && ShortcutBindings::Label(VK_OEM_1)==";");
     {std::ofstream file(path);file<<"[Shortcuts]\nSpeed=SEMICOLON\n";}
-    auto oldSemicolon=GameplaySettings::Load(path);assert(oldSemicolon.shortcuts.Key(ShortcutAction::Speed)==VK_OEM_1 && oldSemicolon.shortcuts.Key(ShortcutAction::SquadOrders)==0);
+    auto oldSemicolon=GameplaySettings::Load(path);assert(oldSemicolon.shortcuts.Key(ShortcutAction::Speed)==VK_OEM_1 && oldSemicolon.shortcuts.Key(ShortcutAction::SquadOrders)=='Y');
+    // Upgrade the old default at startup/F8 too; an existing custom Y action wins without resetting the layout.
+    for(auto oldKey:{"SEMICOLON",";"}) {
+        {std::ofstream file(path);file<<"[Shortcuts]\nSquadOrders="<<oldKey<<"\n";}
+        assert(GameplaySettings::Load(path).shortcuts.Key(ShortcutAction::SquadOrders)=='Y');
+        WritePrivateProfileStringA("Shortcuts","Speed","Y",path.c_str());
+        auto collision=GameplaySettings::Load(path);
+        assert(collision.shortcuts.Key(ShortcutAction::Speed)=='Y' && collision.shortcuts.Key(ShortcutAction::SquadOrders)==0);
+    }
+    WritePrivateProfileStringA("Shortcuts","SquadOrders",nullptr,path.c_str());
+    assert(GameplaySettings::Load(path).shortcuts.Key(ShortcutAction::SquadOrders)==0);
     WritePrivateProfileStringA("Shortcuts","SquadOrders","G",path.c_str());assert(GameplaySettings::Load(path).shortcuts.Key(ShortcutAction::SquadOrders)=='G');
     WritePrivateProfileStringA("Shortcuts","SquadOrders","NONE",path.c_str());assert(GameplaySettings::Load(path).shortcuts.Key(ShortcutAction::SquadOrders)==0);
     for(auto value:{"true","1","false","0","broken",""}) {
-        {std::ofstream file(path);file<<"[Squad]\nReticleAttack="<<value<<"\nReticleAttackInFPS="<<value<<"\nReticleAttackDistance=nan\n";}
+        {std::ofstream file(path);file<<"[Squad]\nReticleAttack="<<value<<"\nReticleAttackInFPS="<<value<<"\nPreserveCombatOrders="<<value<<"\nReticleAttackDistance=nan\n";}
         auto focus=GameplaySettings::Load(path);
         assert(focus.squadReticleAttack==(strcmp(value,"false") && strcmp(value,"0")));
+        assert(focus.squadPreserveCombatOrders==(strcmp(value,"false") && strcmp(value,"0")));
         assert(focus.squadReticleAttackInFPS==(!strcmp(value,"true") || !strcmp(value,"1")) && focus.squadReticleDistance==3000);
     }
     for(auto value:{"0","99999","800"}) {

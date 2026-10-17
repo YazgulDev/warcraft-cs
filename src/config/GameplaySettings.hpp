@@ -63,6 +63,7 @@ struct GameplaySettings {
     // Recruitment and spacing are configurable without rewriting map data or unit ownership.
     float squadRadius=600,squadFollowDistance=180,squadLeash=900;
     bool squadRearFormation=true,squadYield=true;
+    bool squadPreserveCombatOrders=true; // Fighting outranks formation movement; F8 can restore legacy yielding.
     // Native costs, cooldowns and cast orders govern automatic spells; O never enables this combat AI.
     bool squadAutomaticSpells=true;
     // Right-click orders are independent of recruitment and optionally replace armed FPS secondary fire.

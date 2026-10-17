@@ -199,9 +199,12 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
             if(!used){result.shortcuts.Set(ShortcutAction::AllWeapons,candidate);break;}
         }
     }
-    // New Tab/I/semicolon defaults yield to an older customized action instead of resetting the whole layout.
+    // Upgrade the former squad default without stealing Y from another saved action.
+    bool oldSquadKey=result.shortcuts.Key(ShortcutAction::SquadOrders)==VK_OEM_1;
+    if(oldSquadKey)result.shortcuts.Set(ShortcutAction::SquadOrders,'Y');
+    // New Tab/I/Y defaults yield to an older customized action instead of resetting the whole layout.
     for(auto action:{ShortcutAction::InventoryNumbers,ShortcutAction::InventoryPanel,ShortcutAction::SquadOrders}) {
-        if(!text("Shortcuts",ShortcutBindings::Name(action),"").empty())continue;
+        if(!text("Shortcuts",ShortcutBindings::Name(action),"").empty() && !(action==ShortcutAction::SquadOrders && oldSquadKey))continue;
         for(size_t i=0;i<size_t(action);++i)if(result.shortcuts.Key(ShortcutAction(i))==result.shortcuts.Key(action)) {
             result.shortcuts.Set(action,0);break;
         }
@@ -278,9 +281,10 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     };
     result.squadRearFormation=squadSwitch("RearFormation");
     result.squadYield=squadSwitch("YieldToPlayer");
+    result.squadPreserveCombatOrders=squadSwitch("PreserveCombatOrders");
     result.squadAutomaticSpells=squadSwitch("AutomaticSpells");
     result.squadReticleAttack=squadSwitch("ReticleAttack");
-    // Startup/F8 restore the initial F6 mode; the semicolon shortcut toggles it for this map session.
+    // Startup/F8 restore the initial F6 mode; the configured Y shortcut toggles it for this map session.
     auto fpsOrders=text("Squad","ReticleAttackInFPS","false");
     result.squadReticleAttackInFPS=!_stricmp(fpsOrders.c_str(),"true") || fpsOrders=="1";
     result.squadReticleDistance=std::max(100.f,number("Squad","ReticleAttackDistance",3000,15000));

@@ -1,6 +1,6 @@
 #pragma once
 
-// Predict queued semicolon toggles so a quick key+RMB sequence uses the mode the player just selected.
+// Predict queued Y (or rebound key) toggles so a quick key+RMB sequence uses the selected mode.
 class SquadOrderMode {
 public:
     void Configure(bool enabled) {enabled_=enabled;pending_=false;}

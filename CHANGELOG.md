@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Preserve active H-mode combat ahead of yielding and leash movement with
+  `[Squad] PreserveCombatOrders=true` (false restores legacy behavior; startup/F8). Idle followers
+  still yield and follow; explicit RMB attacks retain priority while approaching or fighting.
+  Move the F6 RMB-orders toggle to Y. Migrate the former semicolon default during updates and
+  startup/F8, preserve custom bindings, and disable the new binding if a saved action already owns Y.
+
 - Fix common-target orders on destructable gates/crates, including the gate type used in Human03.
   Track native widget identity/life separately from units so orders, cancellation, death and handle reuse
   work correctly. Allow neutral-owned units/buildings in direct FPS/TPS attacks with allied targeting
@@ -13,9 +19,9 @@
   and native behavior. Native targeting/pathfinding rules remain authoritative. Inventory cancel and
   buy-menu input keep priority. Add `[Squad] ReticleAttack=true`, `ReticleAttackInFPS=false` (true
   starts armed F6 with orders) and `ReticleAttackDistance=3000` (100..15000 units), startup/F8
-  with preserved saved values. In F6, **;** toggles RMB orders/weapon action and clears the target on
-  switch-off. Add rebindable `[Shortcuts] SquadOrders=SEMICOLON` and live mode hints; preserve existing
-  semicolon bindings. Clean F9 remains without HUD; the controlled actor is excluded.
+  with preserved saved values. In F6, **Y** toggles RMB orders/weapon action and clears the target on
+  switch-off. Add rebindable `[Shortcuts] SquadOrders=Y` and live mode hints; preserve existing
+  custom bindings. Clean F9 remains without HUD; the controlled actor is excluded.
 
 - Keep third-person zoom stable near buildings ahead/behind the actor. Add
   `[ThirdPerson] CameraBuildingCollision=false` (true restores building push-in; startup/F8).

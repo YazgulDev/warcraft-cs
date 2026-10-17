@@ -72,7 +72,7 @@ void CancelAttacks(wc3::Handle u) {if(units[u].target)Stop(u,851972);}
 bool SquadSpellcasting::Tick(wc3::Handle,const GameplaySettings&,DWORD) {++spellTicks;return false;}
 void SquadSpellcasting::Cancel(wc3::Handle) {}
 int main() {
-    // Short ;+RMB routing predicts the queued mode; canceled/disallowed toggles cannot replay after a menu/view change.
+    // Short Y+RMB routing predicts the queued mode; canceled/disallowed toggles cannot replay after a menu/view change.
     SquadOrderMode mode;mode.Configure(false);assert(!mode.Enabled() && !mode.RoutingEnabled());
     mode.QueueToggle();assert(mode.RoutingEnabled() && !mode.Enabled());assert(mode.Apply(true) && mode.Enabled());
     mode.QueueToggle();assert(!mode.RoutingEnabled());assert(!mode.Apply(false) && mode.Enabled() && mode.RoutingEnabled());
@@ -117,4 +117,24 @@ int main() {
     stopped=stops;controller.Tick(1,settings,8200,true,0,0,0);assert(stops==stopped+2);
     gateGeneration=0;gateLife=0;assert(controller.Focus(1,14,settings,9000)==0);gateLife=500;
     units[5].owner=15;assert(controller.Focus(1,5,settings,10000)==2);controller.CancelFocus();
+    // A naturally acquired fight in the travel corridor must not be replaced by sideways movement or the leash.
+    controller.Reset();units[2].x=100;controller.Capture(1,false,settings);
+    units[2].target=wc3::UnitObject(4);units[2].order=851983;
+    int moved=points;stopped=stops;int castAttempts=spellTicks;
+    controller.Tick(1,settings,11000,true,0,1,0);
+    assert(points==moved && stops==stopped && units[2].order==851983 && spellTicks>castAttempts);
+    units[1].x=-2000;controller.Tick(1,settings,12000,true,0,1,0);
+    assert(points==moved && stops==stopped && units[2].target==wc3::UnitObject(4));
+    // Losing the target resumes ordinary yielding. Idle attack-move must remain refreshable as the player moves.
+    units[1].x=0;units[2].target=0;units[2].order=0;
+    controller.Tick(1,settings,13000,true,0,1,0);assert(points==++moved && units[2].order==851986);
+    units[2].x=-500;controller.Tick(1,settings,14000,true,0,1,0);assert(points==++moved && units[2].order==851983);
+    units[1].x=400;controller.Tick(1,settings,15000,true,0,1,0);assert(points==++moved);
+    // Live opt-out restores legacy combat yielding; explicit player focus retains priority even with it disabled.
+    units[1].x=0;units[2].x=100;units[2].target=wc3::UnitObject(4);settings.squadPreserveCombatOrders=false;
+    controller.Tick(1,settings,16000,true,0,1,0);assert(points==++moved && units[2].order==851986);
+    controller.Focus(1,4,settings,17000);stopped=stops;
+    controller.Tick(1,settings,18000,true,0,1,0);assert(points==moved && stops==stopped);
+    controller.CancelFocus();controller.Capture(1,true,settings);units[2].target=wc3::UnitObject(4);
+    controller.Tick(1,settings,19000,true,0,1,0);assert(!units[2].target && points==++moved);
 }

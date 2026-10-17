@@ -917,7 +917,7 @@ void ShooterController::Tick(uintptr_t ui) {
         unitHudTick_=now;unitHud_=unitHudReader_.Read(unit_,settings_.showInventory || InventoryOpen() || ItemControls().Numbers());
     }
     UpdateStatus();
-    // Apply queued ; before RMB dispatch. Held buttons cannot turn a mode change into an accidental scope/stab.
+    // Apply queued Y toggles before RMB dispatch. Held buttons cannot turn a mode change into an accidental scope/stab.
     if(squadOrderMode_.Apply(settings_.squadReticleAttack && !ThirdPerson() && !UnitFirstPerson() && !Buying() &&
         !InventoryInputOpen() && !status_.incapacitated && !status_.contained && !status_.hidden)) {
         scopeLevel_=0;keys_[VK_RBUTTON]=Down(VK_RBUTTON);suppressFire_=true;

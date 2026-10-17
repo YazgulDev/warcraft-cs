@@ -4,20 +4,38 @@ $root=Split-Path -Parent $PSScriptRoot
 $folder=Join-Path $root ('.local/config-merge-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $folder -Force | Out-Null
 $template=Join-Path $root 'config/WarcraftCS.ini'
-# The new default cannot steal a saved semicolon binding, regardless of its supported spelling.
+# Semicolon custom actions survive; only the former squad default migrates to Y.
 foreach($spelling in @('SEMICOLON',';')) {
     $semicolonConfig=Join-Path $folder ('semicolon-'+[guid]::NewGuid().ToString('N')+'.ini')
     @('[Shortcuts]',('Speed='+$spelling)) | Set-Content -LiteralPath $semicolonConfig -Encoding ascii
     Update-GameplayConfig $template $semicolonConfig
     $semicolonText=Get-Content -LiteralPath $semicolonConfig -Raw
-    if(!$semicolonText.Contains('Speed='+$spelling) -or !$semicolonText.Contains('SquadOrders=NONE')){throw 'Semicolon migration stole a saved shortcut.'}
+    if(!$semicolonText.Contains('Speed='+$spelling) -or !$semicolonText.Contains('SquadOrders=Y')){throw 'Semicolon migration stole a saved shortcut.'}
+    foreach($reserved in @($false,$true)) {
+        @('[Shortcuts]',('SquadOrders='+$spelling),$(if($reserved){'Speed=Y'}else{'Speed=G'})) | Set-Content -LiteralPath $semicolonConfig -Encoding ascii
+        Update-GameplayConfig $template $semicolonConfig
+        $migrated=Get-Content -LiteralPath $semicolonConfig -Raw
+        $expected=if($reserved){'NONE'}else{'Y'}
+        if(!$migrated.Contains('SquadOrders='+$expected) -or !$migrated.Contains($(if($reserved){'Speed=Y'}else{'Speed=G'}))){throw 'Old squad default migration lost a custom key.'}
+        $hash=(Get-FileHash $semicolonConfig).Hash;Update-GameplayConfig $template $semicolonConfig
+        if((Get-FileHash $semicolonConfig).Hash -ne $hash){throw 'Squad Y migration is not idempotent.'}
+    }
+}
+# Missing defaults yield to custom Y; custom squad remaps/NONE survive updates.
+foreach($binding in @('','G','NONE')) {
+    $customConfig=Join-Path $folder ('squad-key-'+$binding+'.ini')
+    @('[Shortcuts]','Speed=Y',$(if($binding){'SquadOrders='+$binding}else{'; missing SquadOrders'}),'[Squad]','PreserveCombatOrders=false') | Set-Content -LiteralPath $customConfig -Encoding ascii
+    Update-GameplayConfig $template $customConfig
+    $customText=Get-Content -LiteralPath $customConfig -Raw
+    $expected=if($binding){$binding}else{'NONE'}
+    if(!$customText.Contains('Speed=Y') -or !$customText.Contains('SquadOrders='+$expected) -or !$customText.Contains('PreserveCombatOrders=false')){throw 'Squad migration lost a saved preference.'}
 }
 # New reticle defaults fill old configs; explicit range/weapon-mode opt-ins survive repeated updates.
 $focusConfig=Join-Path $folder 'squad-reticle.ini'
 @('[Squad]','ReticleAttack=false','ReticleAttackInFPS=true','ReticleAttackDistance=800') | Set-Content -LiteralPath $focusConfig -Encoding ascii
 Update-GameplayConfig $template $focusConfig
 $focusText=Get-Content -LiteralPath $focusConfig -Raw
-foreach($required in @('ReticleAttack=false','ReticleAttackInFPS=true','ReticleAttackDistance=800')) {
+foreach($required in @('ReticleAttack=false','ReticleAttackInFPS=true','ReticleAttackDistance=800','PreserveCombatOrders=true')) {
     if(!$focusText.Contains($required)){throw "Reticle migration lost preference: $required"}
 }
 $focusHash=(Get-FileHash -LiteralPath $focusConfig).Hash;Update-GameplayConfig $template $focusConfig

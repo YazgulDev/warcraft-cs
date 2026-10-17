@@ -198,7 +198,7 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 | E | Pick up the nearest item/rune if the unit has an available inventory |
 | H / O / J | Your units: follow and fight / follow without attacking / release squad |
 | Right mouse button (F7/F9) | All available owned mobile units attack the unit/building or destructable gate under the reticle; empty aim cancels the common target |
-| ; (armed F6) | Toggle RMB between all-unit target orders and weapon action; switching off clears the common target |
+| Y (armed F6) | Toggle RMB between all-unit target orders and weapon action; switching off clears the common target |
 | F8 | Reload settings |
 | P | Show/hide horizontal speed in CS units/s |
 | M | Show/hide minimap |
@@ -309,10 +309,11 @@ Edit it and press F8 in FPS.
   firearms, both melee attacks and C4 (including its planter). Range: 0вЂ“100; 0 disables allied damage,
   100 applies full damage. Press F8 to reload; C4 retains the settings from when it was planted.
 - `[Squad] RecruitRadius`, `MaxUnits`, `FollowDistance` and `CombatLeash` control squad behavior.
-  `ReticleAttack=true` enables RMB target orders in F7/F9. In armed F6 press **;** to switch RMB to
-  squad orders and press **;** again to restore scope/secondary attack and clear the common target.
-  `[Shortcuts] SquadOrders=SEMICOLON` rebinds this toggle (`NONE` disables it); existing custom
-  semicolon bindings are preserved. `[Squad] ReticleAttackInFPS=false` selects weapon action initially
+  `ReticleAttack=true` enables RMB target orders in F7/F9. In armed F6 press **Y** to switch RMB to
+  squad orders and press **Y** again to restore scope/secondary attack and clear the common target.
+  `[Shortcuts] SquadOrders=Y` rebinds this toggle (`NONE` disables it). Startup/F8 and updates
+  migrate the former semicolon default to Y, preserving other custom squad bindings. If another saved
+  action already uses Y, that action keeps it and SquadOrders becomes NONE. `[Squad] ReticleAttackInFPS=false` selects weapon action initially
   (true starts with orders). Both squad switches accept true/false. The toggle lasts for the map;
   startup, map reset and F8 restore the configured initial choice. Held RMB cannot fire a secondary
   action when the mode changes; the HUD displays its current role.
@@ -327,7 +328,12 @@ Edit it and press F8 in FPS.
   Player-allied targets require the existing Q/`TargetAllies` opt-in; neutral targets and destructable gates
   do not. F9 keeps its clean screen; aim at the center.
   `RearFormation=true` keeps destinations behind the player. `YieldToPlayer=true` sends followers
-  left/right before they rejoin when they enter your travel corridor. `PlayerClearance=100` (60..300)
+  left/right before they rejoin when they enter your travel corridor.
+  `PreserveCombatOrders=true` keeps fighting units in combat even inside that corridor or beyond
+  `CombatLeash`; idle units still yield/follow, and automatic spells retain their native rules.
+  `false` restores legacy combat yielding/leash movement. This accepts true/false or 1/0; missing,
+  empty or invalid values use true. Startup/F8 applies it; updates preserve saved choices. Explicit
+  RMB target orders always outrank formation movement, including the approach to their target. `PlayerClearance=100` (60..300)
   and `YieldAheadDistance=350` (clearance..1000) are Warcraft units. `OrderIntervalMs=150` (50..1000)
   controls response frequency. All reload with F8 and survive launcher updates; native pathfinding
   still governs travel around obstacles.
