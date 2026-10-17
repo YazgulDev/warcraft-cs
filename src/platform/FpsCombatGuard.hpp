@@ -10,4 +10,6 @@ bool BlocksIncomingAttack(uintptr_t attack,uintptr_t target);
 void CancelOrders(wc3::Handle unit);
 void CancelAttacks(wc3::Handle unit);
 bool HasAttackTarget(wc3::Handle unit);
+// Read-only identity lets temporary squad orders yield to newer native targets without canceling them.
+uintptr_t AttackTargetObject(wc3::Handle unit);
 }

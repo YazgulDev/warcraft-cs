@@ -7,6 +7,8 @@
 
 namespace {
 std::array<unsigned char,0x300> actor{},victim{},attack{};
+std::array<unsigned char,0x100> gates[2]{};int gateGeneration=0;bool gateAlive=true,reuseGateDuringPrepare=false;
+uintptr_t expectedVictim=0,finishedTarget=0;
 bool alive=true,removeDuringPrepare=false,removeDuringFinish=false,evade=false;
 bool incomingProtected=false;
 int prepared=0,finished=0,impacts=0;
@@ -49,10 +51,12 @@ void __fastcall Prepare(uintptr_t,uintptr_t,uintptr_t,float*,float*) {
     rollHook(Attack(),0,&result);assert(result==42);
     rangeHook(Attack(),0,&result,0);assert(result==120); // Preparation keeps native range.
     if(removeDuringPrepare)alive=false;
+    if(reuseGateDuringPrepare)gateGeneration=1;
 }
-void __fastcall Finish(uintptr_t,uintptr_t,uintptr_t) {++finished;if(removeDuringFinish)alive=false;}
-void __fastcall Impact(uintptr_t component,uintptr_t,uintptr_t,int,int,int,int,int) {
+void __fastcall Finish(uintptr_t,uintptr_t,uintptr_t target) {++finished;finishedTarget=target;if(removeDuringFinish)alive=false;}
+void __fastcall Impact(uintptr_t component,uintptr_t,uintptr_t target,int,int,int,int,int) {
     ++impacts;
+    if(expectedVictim)assert(target==expectedVictim);
     assert(*reinterpret_cast<int*>(attack.data()+0xDC)==expectedKind);
     float range=0;
     rangeHook(component+4,0,&range,0);assert(range==120);
@@ -71,6 +75,9 @@ void Jump(uintptr_t address,void* destination) {
 }
 namespace wc3 {
 uintptr_t UnitObject(Handle handle) {return handle==1 && alive ? Actor() : handle==2 ? Victim() : 0;}
+uintptr_t DestructableObject(Handle handle) {return handle==3 && gateAlive ? uintptr_t(gates[gateGeneration].data()) : 0;}
+int (__cdecl* GetUnitTypeId)(Handle)=[](Handle h){return UnitObject(h) ? 123 : 0;};
+int (__cdecl* GetDestructableTypeId)(Handle)=[](Handle h){return DestructableObject(h) ? 456 : 0;};
 void Log(const char*,...) {}
 void Trace(const char*,...) {}
 }
@@ -131,11 +138,20 @@ int main() {
     // Ranged launch snapshots the scoped damage while retaining missile kind and restoring ordinary stats afterwards.
     expectedKind=2;assert(NativeWeaponAttack::Launch(1,2,123,60) && impacts==5 && finished==5);
     assert(*reinterpret_cast<int*>(attack.data()+0xDC)==2);
+    // Destructable missiles use the exact widget through prepare/impact/finish, without a unit cast or double hit.
+    expectedVictim=wc3::DestructableObject(3);
+    assert(NativeWeaponAttack::Launch(1,3,123,60) && impacts==6 && finished==6 && finishedTarget==expectedVictim);
+    assert(*reinterpret_cast<int*>(attack.data()+0xDC)==2);
+    reuseGateDuringPrepare=true;
+    assert(NativeWeaponAttack::Launch(1,3,123,60) && impacts==6 && finished==7 && finishedTarget==0);
+    reuseGateDuringPrepare=false;gateAlive=false;
+    assert(!NativeWeaponAttack::Launch(1,3,123,60) && impacts==6 && finished==7);
+    expectedVictim=0;
     int previousPrepared=prepared;controlled=0;
     // Passive-view protection must reject both preparation and impact before native callbacks run.
     incomingProtected=true;
     prepareHook(Actor(),0,Victim(),&zero,&zero);impactHook(Attack(),0,Victim(),0,0,1,0,1);
-    assert(prepared==previousPrepared && impacts==5);
+    assert(prepared==previousPrepared && impacts==6);
     incomingProtected=false;prepareHook(Actor(),0,Victim(),&zero,&zero);
     assert(prepared==previousPrepared+1); // Returning to RTS restores autonomous wind-up callbacks.
     windupHook(Attack(),0,0);poseHook(Attack(),0,Actor());assert(windups==2 && poses==2);

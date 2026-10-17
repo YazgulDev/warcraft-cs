@@ -149,14 +149,14 @@ bool FpsCombatGuard::BlocksIncomingAttack(uintptr_t attack,uintptr_t target) {
     int player=reinterpret_cast<int (__thiscall*)(uintptr_t)>(*reinterpret_cast<uintptr_t*>(table+0xEC))(source);
     return player>=0 && player<16 && wc3::IsUnitEnemy(actor,wc3::Player(player));
 }
-bool FpsCombatGuard::HasAttackTarget(wc3::Handle unit) {
+uintptr_t FpsCombatGuard::AttackTargetObject(wc3::Handle unit) {
     // Never call the version-specific target getter if its native signature failed validation.
-    if (!targetVerified) return false;
+    if (!targetVerified) return 0;
     uintptr_t object=wc3::UnitObject(unit),attack=object ? *reinterpret_cast<uintptr_t*>(object+0x1E8) : 0;
     // Cleanup observes the native target without changing the reference Warcraft owns.
-    uintptr_t target=attack ? nativeTarget(attack) : 0;
-    return target!=0;
+    return attack ? nativeTarget(attack) : 0;
 }
+bool FpsCombatGuard::HasAttackTarget(wc3::Handle unit) {return AttackTargetObject(unit)!=0;}
 void FpsCombatGuard::CancelAttacks(wc3::Handle unit) {
     // Move orders suppress retaliation natively and must survive passive squad travel.
     if (wc3::GetUnitCurrentOrder(unit)!=851986) CancelOrders(unit);

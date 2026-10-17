@@ -69,9 +69,20 @@ extern BOOL (__cdecl* UnitAddItem)(Handle,Handle);
 // Native inventories and orders work for ordinary units as well as heroes.
 extern int (__cdecl* UnitInventorySize)(Handle);
 extern Handle (__cdecl* UnitItemInSlot)(Handle,int);
+// Native item validation/effects and droppable restrictions remain authoritative for interactive HUD input.
+extern BOOL (__cdecl* UnitUseItem)(Handle,Handle);
+extern BOOL (__cdecl* UnitUseItemPoint)(Handle,Handle,float*,float*);
+extern BOOL (__cdecl* UnitUseItemTarget)(Handle,Handle,Handle);
+extern BOOL (__cdecl* UnitDropItemPoint)(Handle,Handle,float*,float*);
+extern BOOL (__cdecl* UnitDropItemSlot)(Handle,Handle,int);
+extern int (__cdecl* GetItemCharges)(Handle);
+extern int (__cdecl* GetHeroXP)(Handle);
+extern int (__cdecl* GetHeroLevel)(Handle);
 extern BOOL (__cdecl* IssuePointOrderById)(Handle,int,float*,float*);
 extern BOOL (__cdecl* IssueTargetOrderById)(Handle,int,Handle);
 uintptr_t UnitObject(Handle unit);
+// Resolve a current-map destructable without misclassifying it as a unit or retaining stale pointers.
+uintptr_t DestructableObject(Handle destructable);
 std::string DestructableModelPath(int type);
 float DestructableFacing(Handle object);
 Handle Effect(const char* model, float x, float y);

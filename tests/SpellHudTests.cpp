@@ -64,6 +64,19 @@ int main() {
     Store(ui.data()+0x64,1);live=NativeAbilitySlots::Read(uintptr_t(nativeImage),uintptr_t(actor.data()));assert(!live[0]);
     Store(ui.data()+0x64,0);Store(ability.data()+0x24,uintptr_t(ability.data()));Store(ability.data()+0x28,uint32_t(0));
     live=NativeAbilitySlots::Read(uintptr_t(nativeImage),uintptr_t(actor.data()));assert(live[0]==88); // Corrupt cycles terminate.
+    // Readonly point/unit order flags use the verified x86 getter and an actor-owned command button.
+    Store(buttonData.data()+0x6D4,uintptr_t(ability.data()));
+    unsigned char flagsGetter[]={0x8B,0x44,0x24,0x04,0x56,0x8B,0xF1,0xB8,2,0,0,0,0x5E,0xC2,4,0};
+    std::memcpy(nativeImage+0x372C30,flagsGetter,sizeof(flagsGetter));
+    assert(NativeCommandCard::PointOnly(uintptr_t(nativeImage),uintptr_t(gameUI.data()),uintptr_t(ability.data()),77,852000));
+    for(unsigned flags:{0u,4u,6u,8u}) {
+        Store(nativeImage+0x372C30+8,flags);
+        assert(!NativeCommandCard::PointOnly(uintptr_t(nativeImage),uintptr_t(gameUI.data()),uintptr_t(ability.data()),77,852000));
+    }
+    Store(nativeImage+0x372C30+8,2u);Store(buttonData.data()+0x6D4,uintptr_t(ability.data())+4);
+    assert(!NativeCommandCard::PointOnly(uintptr_t(nativeImage),uintptr_t(gameUI.data()),uintptr_t(ability.data()),77,852000));
+    Store(buttonData.data()+0x6D4,uintptr_t(ability.data()));nativeImage[0x372C30]=0;
+    assert(!NativeCommandCard::PointOnly(uintptr_t(nativeImage),uintptr_t(gameUI.data()),uintptr_t(ability.data()),77,852000));
     VirtualFree(nativeImage,0,MEM_RELEASE);
     Store(ability.data()+0x24,0u);Store(ability.data()+0x28,0u);
     NativeAbilityInfo::Read(uintptr_t(ability.data()),slot);assert(slot.cooldown==5); // No wall-clock ticking during pause.

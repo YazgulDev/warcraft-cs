@@ -1,0 +1,2 @@
+- Fixed HUD text appearing as solid bars after pressing F6 or F7.
+- Improved shortcut hints, status, buy-menu text and spell labels across font sizes and OpenGL context changes.

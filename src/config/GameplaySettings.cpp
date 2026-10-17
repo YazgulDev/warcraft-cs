@@ -49,6 +49,9 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     float pitch=std::strtof(pitchText.c_str(),&pitchEnd);
     if(pitchEnd!=pitchText.c_str() && !*pitchEnd && std::isfinite(pitch))result.thirdPerson.initialPitch=std::clamp(pitch,-60.f,30.f);
     result.thirdPerson.clearance=number("ThirdPerson","CameraClearance",16,64);
+    // Opt in only on an explicit true: broad building boxes otherwise cause unwanted automatic zoom.
+    auto buildingCollision=text("ThirdPerson","CameraBuildingCollision","false");
+    result.thirdPerson.buildingCollision=!_stricmp(buildingCollision.c_str(),"true") || buildingCollision=="1";
     result.thirdPerson.attackRange=std::max(30.f,number("ThirdPerson","AttackRange",150,400));
     result.thirdPerson.attackArc=std::max(1.f,number("ThirdPerson","AttackArc",50,120));
     result.thirdPerson.attackHeight=number("ThirdPerson","AttackHeight",64,200);
@@ -196,6 +199,16 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
             if(!used){result.shortcuts.Set(ShortcutAction::AllWeapons,candidate);break;}
         }
     }
+    // Upgrade the former squad default without stealing Y from another saved action.
+    bool oldSquadKey=result.shortcuts.Key(ShortcutAction::SquadOrders)==VK_OEM_1;
+    if(oldSquadKey)result.shortcuts.Set(ShortcutAction::SquadOrders,'Y');
+    // New Tab/I/Y defaults yield to an older customized action instead of resetting the whole layout.
+    for(auto action:{ShortcutAction::InventoryNumbers,ShortcutAction::InventoryPanel,ShortcutAction::SquadOrders}) {
+        if(!text("Shortcuts",ShortcutBindings::Name(action),"").empty() && !(action==ShortcutAction::SquadOrders && oldSquadKey))continue;
+        for(size_t i=0;i<size_t(action);++i)if(result.shortcuts.Key(ShortcutAction(i))==result.shortcuts.Key(action)) {
+            result.shortcuts.Set(action,0);break;
+        }
+    }
     if(!layoutValid || !result.shortcuts.Valid()) {result.shortcuts=ShortcutBindings();wc3::Log("Invalid/conflicting Shortcuts; using default keyboard layout");}
     // Rawcodes and order IDs describe existing abilities; they never grant skills or bypass native costs.
     auto spellsEnabled=text("Spells","Enabled","true");
@@ -233,6 +246,14 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         return true;
     };
     result.showSpellIcons=enabledHud("ShowSpellIcons");result.showSpellCooldowns=enabledHud("ShowSpellCooldowns");
+    // These HUD panels reload with F8; the separate clean F9 view always omits them.
+    result.showUnitHud=enabledHud("ShowUnitHud");result.showInventory=enabledHud("ShowInventory");
+    result.inventoryControls=enabledHud("InventoryControls");
+    result.inventoryDropDistance=std::max(16.f,number("Inventory","DropDistance",80,128));
+    // Startup/F8 default to item numbers; an explicit false/0 preserves a weapon-first preference.
+    auto itemNumbers=text("Inventory","NumbersByDefault","true");
+    result.inventoryNumbersDefault=_stricmp(itemNumbers.c_str(),"false") && itemNumbers!="0";
+    result.unitHudScalePercent=std::max(60.f,number("Interface","UnitHudScalePercent",100,160));
     result.spellIconSizePercent=std::max(4.f,number("Interface","SpellIconSizePercent",7,14));
     // Keep the optional counter hidden for old/invalid configs; accept explicit boolean preferences.
     auto showSpeed=text("Interface","ShowSpeed","false");
@@ -260,7 +281,13 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     };
     result.squadRearFormation=squadSwitch("RearFormation");
     result.squadYield=squadSwitch("YieldToPlayer");
+    result.squadPreserveCombatOrders=squadSwitch("PreserveCombatOrders");
     result.squadAutomaticSpells=squadSwitch("AutomaticSpells");
+    result.squadReticleAttack=squadSwitch("ReticleAttack");
+    // Startup/F8 restore the initial F6 mode; the configured Y shortcut toggles it for this map session.
+    auto fpsOrders=text("Squad","ReticleAttackInFPS","false");
+    result.squadReticleAttackInFPS=!_stricmp(fpsOrders.c_str(),"true") || fpsOrders=="1";
+    result.squadReticleDistance=std::max(100.f,number("Squad","ReticleAttackDistance",3000,15000));
     result.squadSpellRadius=std::max(50.f,number("Squad","SpellSearchRadius",700,2000));
     result.squadAreaSpellRadius=std::max(16.f,number("Squad","AreaSpellRadius",250,1000));
     result.squadHealBelowPercent=std::max(1.f,number("Squad","HealBelowPercent",85,100));

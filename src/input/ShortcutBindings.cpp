@@ -5,9 +5,9 @@
 namespace {
 const char* names[]={"ToggleFPS","Forward","Backward","Left","Right","Jump","Crouch","Walk","Reload","Buy","BuyAmmo","Pickup",
     "SquadFight","SquadFollow","SquadRelease","Speed","Fog","Minimap","HealthBars","Refill","AllWeapons","ReloadSettings",
-    "Spell1","Spell2","Spell3","Spell4","SelfCast","Weapon1","Weapon2","Weapon3","Weapon4","Weapon5","Weapon6","Weapon7","ToggleView","ToggleThirdPerson","ToggleAllyTargeting","ToggleUnitView"};
+    "Spell1","Spell2","Spell3","Spell4","SelfCast","Weapon1","Weapon2","Weapon3","Weapon4","Weapon5","Weapon6","Weapon7","ToggleView","ToggleThirdPerson","ToggleAllyTargeting","ToggleUnitView","InventoryNumbers","InventoryPanel","SquadOrders"};
 const int defaults[]={VK_F6,'W','S','A','D',VK_SPACE,VK_CONTROL,VK_SHIFT,'R','B',VK_OEM_PERIOD,'E',
-    'H','O','J','P','N','M','K',VK_F11,VK_F12,VK_F8,'Z','X','C','V',VK_MENU,'1','2','3','4','5','6','7','T',VK_F7,'Q',VK_F9};
+    'H','O','J','P','N','M','K',VK_F11,VK_F12,VK_F8,'Z','X','C','V',VK_MENU,'1','2','3','4','5','6','7','T',VK_F7,'Q',VK_F9,VK_TAB,'I','Y'};
 static_assert(sizeof(defaults)/sizeof(*defaults)==ShortcutBindings::Count);
 }
 ShortcutBindings::ShortcutBindings() {std::copy(std::begin(defaults),std::end(defaults),keys_.begin());}
@@ -21,6 +21,8 @@ int ShortcutBindings::Parse(std::string value) {
     if(value=="NONE") return 0;
     if(value.size()==1 && std::isalnum(static_cast<unsigned char>(value[0]))) return value[0];
     if(value=="." || value=="PERIOD")return VK_OEM_PERIOD;
+    // Canonical INI name and visible punctuation refer to the same physical semicolon key.
+    if(value==";" || value=="SEMICOLON")return VK_OEM_1;
     if(value=="SPACE")return VK_SPACE;
     if(value=="CTRL" || value=="CONTROL")return VK_CONTROL;
     if(value=="SHIFT")return VK_SHIFT;
@@ -45,6 +47,7 @@ std::string ShortcutBindings::Label(int key) {
     if((key>='A' && key<='Z') || (key>='0' && key<='9'))return std::string(1,char(key));
     if(key>=VK_F1 && key<=VK_F12)return "F"+std::to_string(key-VK_F1+1);
     if(key==VK_OEM_PERIOD)return ".";
+    if(key==VK_OEM_1)return ";";
     if(key==VK_SPACE)return "SPACE";
     if(key==VK_CONTROL)return "CTRL";
     if(key==VK_SHIFT)return "SHIFT";

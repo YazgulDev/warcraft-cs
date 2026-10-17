@@ -337,6 +337,33 @@ int main() {
     assert(movement.Speed()<=450.01f);
     DeleteFileA(path.c_str());
     // New squad parameters use the real INI boundary; live snapshots clamp invalid distances/refresh rates.
+    assert(ShortcutBindings{}.Key(ShortcutAction::SquadOrders)=='Y');
+    assert(ShortcutBindings::Parse("SEMICOLON")==VK_OEM_1 && ShortcutBindings::Parse(";")==VK_OEM_1 && ShortcutBindings::Label(VK_OEM_1)==";");
+    {std::ofstream file(path);file<<"[Shortcuts]\nSpeed=SEMICOLON\n";}
+    auto oldSemicolon=GameplaySettings::Load(path);assert(oldSemicolon.shortcuts.Key(ShortcutAction::Speed)==VK_OEM_1 && oldSemicolon.shortcuts.Key(ShortcutAction::SquadOrders)=='Y');
+    // Upgrade the old default at startup/F8 too; an existing custom Y action wins without resetting the layout.
+    for(auto oldKey:{"SEMICOLON",";"}) {
+        {std::ofstream file(path);file<<"[Shortcuts]\nSquadOrders="<<oldKey<<"\n";}
+        assert(GameplaySettings::Load(path).shortcuts.Key(ShortcutAction::SquadOrders)=='Y');
+        WritePrivateProfileStringA("Shortcuts","Speed","Y",path.c_str());
+        auto collision=GameplaySettings::Load(path);
+        assert(collision.shortcuts.Key(ShortcutAction::Speed)=='Y' && collision.shortcuts.Key(ShortcutAction::SquadOrders)==0);
+    }
+    WritePrivateProfileStringA("Shortcuts","SquadOrders",nullptr,path.c_str());
+    assert(GameplaySettings::Load(path).shortcuts.Key(ShortcutAction::SquadOrders)==0);
+    WritePrivateProfileStringA("Shortcuts","SquadOrders","G",path.c_str());assert(GameplaySettings::Load(path).shortcuts.Key(ShortcutAction::SquadOrders)=='G');
+    WritePrivateProfileStringA("Shortcuts","SquadOrders","NONE",path.c_str());assert(GameplaySettings::Load(path).shortcuts.Key(ShortcutAction::SquadOrders)==0);
+    for(auto value:{"true","1","false","0","broken",""}) {
+        {std::ofstream file(path);file<<"[Squad]\nReticleAttack="<<value<<"\nReticleAttackInFPS="<<value<<"\nPreserveCombatOrders="<<value<<"\nReticleAttackDistance=nan\n";}
+        auto focus=GameplaySettings::Load(path);
+        assert(focus.squadReticleAttack==(strcmp(value,"false") && strcmp(value,"0")));
+        assert(focus.squadPreserveCombatOrders==(strcmp(value,"false") && strcmp(value,"0")));
+        assert(focus.squadReticleAttackInFPS==(!strcmp(value,"true") || !strcmp(value,"1")) && focus.squadReticleDistance==3000);
+    }
+    for(auto value:{"0","99999","800"}) {
+        WritePrivateProfileStringA("Squad","ReticleAttackDistance",value,path.c_str());
+        assert(GameplaySettings::Load(path).squadReticleDistance==(!strcmp(value,"0") ? 100 : !strcmp(value,"99999") ? 15000 : 800));
+    }
     {std::ofstream file(path);file<<"[Squad]\nRearFormation=false\nYieldToPlayer=0\nPlayerClearance=9999\nYieldAheadDistance=2\nOrderIntervalMs=0\n";}
     settings=GameplaySettings::Load(path);
     assert(!settings.squadRearFormation && !settings.squadYield && settings.squadClearance==300 && settings.squadYieldAhead==300 && settings.squadOrderIntervalMs==50);
@@ -373,5 +400,36 @@ int main() {
     assert(!GameplaySettings::Load(path).unlimitedBombPurchases);
     WritePrivateProfileStringA("Loadout","UnlimitedBombPurchases","true",path.c_str());
     assert(GameplaySettings::Load(path).unlimitedBombPurchases);DeleteFileA(path.c_str());
-    return 0;
+    // The new display preferences use the real F8 parser with bounded scale and safe fallbacks.
+    for(auto value : {"false","0","true","1","broken","nan",""}) {
+        {std::ofstream file(path);file<<"[Interface]\nShowUnitHud="<<value<<"\nShowInventory="<<value<<"\nUnitHudScalePercent="<<value<<"\n";}
+        settings=GameplaySettings::Load(path);
+        bool enabled=strcmp(value,"false") && strcmp(value,"0");
+        assert(settings.showUnitHud==enabled && settings.showInventory==enabled);
+        assert(settings.unitHudScalePercent>=60 && settings.unitHudScalePercent<=160);
+    }
+    for(auto scale : {"-20","999","nan","95"}) {
+        WritePrivateProfileStringA("Interface","UnitHudScalePercent",scale,path.c_str());
+        float expected=!strcmp(scale,"-20") ? 60.f : !strcmp(scale,"999") ? 160.f : !strcmp(scale,"nan") ? 100.f : 95.f;
+        assert(GameplaySettings::Load(path).unitHudScalePercent==expected);
+    }
+    DeleteFileA(path.c_str());
+    // New inventory defaults cannot steal an older customized Tab/I shortcut during parser-only upgrades.
+    {std::ofstream file(path);file<<"[Shortcuts]\nSpeed=TAB\nPickup=I\n[Interface]\nInventoryControls=false\n[Inventory]\nDropDistance=999\n";}
+    settings=GameplaySettings::Load(path);
+    assert(!settings.inventoryControls && settings.inventoryDropDistance==128);
+    // The new default loads without migration and explicit weapon-first choices survive F8.
+    assert(settings.inventoryNumbersDefault);
+    for(auto value:{"false","0","true","1","broken"}) {
+        WritePrivateProfileStringA("Inventory","NumbersByDefault",value,path.c_str());
+        assert(GameplaySettings::Load(path).inventoryNumbersDefault==(strcmp(value,"false") && strcmp(value,"0")));
+    }
+    assert(settings.shortcuts.Key(ShortcutAction::Speed)==VK_TAB && settings.shortcuts.Key(ShortcutAction::Pickup)=='I');
+    assert(settings.shortcuts.Key(ShortcutAction::InventoryNumbers)==0 && settings.shortcuts.Key(ShortcutAction::InventoryPanel)==0);
+    for(auto value : {"-1","nan","100"}) {
+        WritePrivateProfileStringA("Inventory","DropDistance",value,path.c_str());
+        float expected=!strcmp(value,"-1") ? 16.f : !strcmp(value,"nan") ? 80.f : 100.f;
+        assert(GameplaySettings::Load(path).inventoryDropDistance==expected);
+    }
+    DeleteFileA(path.c_str());return 0;
 }

@@ -1,4 +1,4 @@
-# Warcraft CS 0.9.0
+# Warcraft CS 0.9.1
 
 Counter-Strike 1.6 inside Warcraft III: control your own hero or unit in first person,
 shoot, and play regular maps, campaigns and compatible custom maps.
@@ -11,16 +11,15 @@ Neither variant includes game files, models, sounds, maps or saves.
 You need your own Warcraft III installation. CS 1.6 is required only for the full weapon mode.**
 This is an early prototype with known limitations.
 
-**[Download 0.9.0](https://github.com/YazgulDev/warcraft-cs/releases/tag/v0.9.0)** В·
-[Release Notes](docs/RELEASE-0.9.0.md) В· [Installation](INSTALL.md) В· [Requirements](REQUIREMENTS.md)
+**[Download 0.9.1](https://github.com/YazgulDev/warcraft-cs/releases/tag/v0.9.1)** В·
+[Release Notes](docs/RELEASE-0.9.1.md) В· [Installation](INSTALL.md) В· [Requirements](REQUIREMENTS.md)
 В· [Troubleshooting](TROUBLESHOOTING.md) В· [Discussions](https://github.com/YazgulDev/warcraft-cs/discussions)
 
-0.9.0 adds native third-person melee/ranged combat, camera zoom, an unarmed first-person view,
-automatic squad spellcasting and a Warcraft-only installation profile. It fixes interrupted
-attack animations, narrow ramps, campaign HUD restoration and hits on submerged enemies.
-Protected allies no longer block direct attacks; fresh configs use a 5000-unit draw distance.
-Updates preserve existing preferences. See the [full release notes](docs/RELEASE-0.9.0.md)
-for controls, every new setting, migration guidance and known limitations.
+0.9.1 fixes HUD text appearing as solid bars after F6 or F7. Shortcut hints, health/ammunition,
+buy-menu text and spell labels now use alpha glyph textures instead of WGL bitmap display lists.
+No gameplay settings or defaults change. See the [0.9.1 release notes](docs/RELEASE-0.9.1.md)
+for the fix, upgrade steps and validation limits; the [0.9.0 notes](docs/RELEASE-0.9.0.md)
+describe the preceding gameplay and installation features.
 
 ## Features
 
@@ -150,7 +149,7 @@ Run in PowerShell, replacing the game paths with your own:
 ```powershell
 git clone https://github.com/YazgulDev/warcraft-cs.git
 cd warcraft-cs
-git switch release/0.9.0
+git switch release/0.9.1
 .\setup.cmd -WarcraftDirectory "E:\Warcraft III" -CounterStrikeDirectory "C:\SteamGames\steamapps\common\Half-Life\cstrike"
 .\play.cmd
 ```
@@ -198,6 +197,8 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 | Hold left mouse button with C4 | Plant for 3 seconds while standing on the ground; multiple charges are allowed |
 | E | Pick up the nearest item/rune if the unit has an available inventory |
 | H / O / J | Your units: follow and fight / follow without attacking / release squad |
+| Right mouse button (F7/F9) | All available owned mobile units attack the unit/building or destructable gate under the reticle; empty aim cancels the common target |
+| Y (armed F6) | Toggle RMB between all-unit target orders and weapon action; switching off clears the common target |
 | F8 | Reload settings |
 | P | Show/hide horizontal speed in CS units/s |
 | M | Show/hide minimap |
@@ -215,6 +216,10 @@ See [third-person controls, settings and limits](docs/THIRD-PERSON.md).
 Mouse wheel up/down moves the third-person camera closer/farther. `[ThirdPerson] CameraZoomStep=50`
 sets the step; `CameraMinDistance=80` / `CameraMaxDistance=1000` bound the requested distance.
 F8 reloads these settings and resets zoom to `CameraDistance`; wheel choices otherwise last for the map.
+The camera keeps this distance near buildings by default: their broad model boxes can include empty
+space and previously forced extreme close-ups from either side. `[ThirdPerson] CameraBuildingCollision=false`
+controls this policy (true restores building push-in; startup/F8). With false the camera may pass through
+building models; terrain and tree/gate collision still shorten the boom.
 Reachable targets have brackets and a ground circle: red for enemies, yellow for other contacts.
 `[ThirdPerson] ShowTargetIndicator` hides/shows both; `TargetCircleRadius=64` sets the circle radius
 in Warcraft units (16..256). Change them in `Game/WarcraftCS/WarcraftCS.ini` and press F8 to reload.
@@ -227,7 +232,7 @@ Edit it and press F8 in FPS.
   weapon slots, spell slots, pickup, buying, squad commands, display switches and settings reload.
   Defaults are `Spell1=Z`, `Spell2=X`, `Spell3=C`, `Spell4=V`, `Speed=P`, `Minimap=M`, `SelfCast=ALT`.
   Values are English physical `A-Z`, `0-9`, `F1-F12`, `SPACE`, `CTRL`, `SHIFT`, `ALT`, `TAB`,
-  `PERIOD` (or `.`), and `NONE` to disable an action. Keys are case-insensitive and must be unique;
+  `PERIOD` (or `.`), `SEMICOLON` (or `;`), and `NONE` to disable an action. Keys are case-insensitive and must be unique;
   swap all conflicting bindings together. An invalid layout falls back to the complete default layout
   and logs why. Escape/F10 stay reserved; F6 always remains an FPS recovery alias and may only bind
   ToggleFPS. ToggleFPS cannot be disabled. F8 (or the configured ReloadSettings key) applies edits.
@@ -243,7 +248,10 @@ Edit it and press F8 in FPS.
   mana, cooldowns, legal targets and native cast range remain Warcraft's responsibility.
   Native basic attacks and retaliation cannot start a chase while FPS owns the hero; other units and
   the hero's spell components retain native control, and F6 immediately restores ordinary RTS attacks.
-  AimDistance only limits reticle selection; point spells require an actual ground/object surface under the reticle.
+  AimDistance only limits reticle selection; point spells require an actual terrain surface under the reticle.
+  Auto mode reads the actor's native command flags: point-only spells such as Blink and Flame Strike
+  use that terrain point, independently of a nearby unit or destructable. Alt/self casts of these
+  spells use the actor's ground position; explicit per-slot target modes still take precedence.
   Movement/fire/reload/weapon switching and opening the buy menu interrupt windup or channeling;
   held movement/fire does not repeatedly interrupt a newly started cast. Mouse look remains available.
   For custom map heroes, edited ability lists or unsupported dynamic order getters, set
@@ -270,6 +278,9 @@ Edit it and press F8 in FPS.
   then alternate A + mouse left and D + mouse right. Hold Space to jump on landing and retain momentum.
   Turning in the air builds speed; straight jumps retain the run-up. `JumpBoostPercent=0` is the default,
   with an optional 0вЂ“100% bonus per moving takeoff. Low objects can be cleared above their bounds; tall solids remain blocked.
+  Side contact with known walls/units preserves swept-valid coordinates for approach, sliding and
+  retreat, preventing native nearest-cell placement from snapping the model sideways. Terrain,
+  solid volumes and unknown native blockers remain checked; existing collision settings still apply.
   Walking/jumping off a cliff starts a gravity-driven fall. Tune these [movement settings](docs/MOVEMENT.md);
   all apply on F8 without resetting the current jump. Default speed cap: 1000 CS units/s; configurable up to 2000.
 
@@ -287,7 +298,10 @@ Edit it and press F8 in FPS.
   Updates preserve existing values, so older configs with `AWPOneShot=true` need an explicit edit to disable it.
 - **Q** toggles direct allied targeting in FPS and third person. The HUD shows `ALLIES ON/OFF`.
   `[Combat] TargetAllies=false` protects allied units/buildings from direct attacks and suppresses
-  their target markers by default. `true`/`1` enable contacts; `false`/`0` disable them; malformed
+  their markers. Neutral ownership is handled separately, so neutral buildings/creatures remain targetable.
+  Destructable gates/crates support the same RMB orders; neither direct attacks nor orders remove native
+  quest immunity. Neutral-passive scenery takes finite native damage even with AWP finishing enabled.
+  `true`/`1` enable allied contacts; `false`/`0` disable them; malformed
   values use false. Startup/F8 restores this saved preference. `[Shortcuts] ToggleAllyTargeting=Q`
   is remappable; `NONE` disables the shortcut. Updates preserve custom choices, and an older custom
   action bound to Q keeps Q while this new action is added as NONE. With allied targeting disabled,
@@ -298,8 +312,34 @@ Edit it and press F8 in FPS.
   firearms, both melee attacks and C4 (including its planter). Range: 0вЂ“100; 0 disables allied damage,
   100 applies full damage. Press F8 to reload; C4 retains the settings from when it was planted.
 - `[Squad] RecruitRadius`, `MaxUnits`, `FollowDistance` and `CombatLeash` control squad behavior.
+  `ReticleAttack=true` enables RMB target orders in F7/F9. In armed F6 press **Y** to switch RMB to
+  squad orders and press **Y** again to restore scope/secondary attack and clear the common target.
+  `[Shortcuts] SquadOrders=Y` rebinds this toggle (`NONE` disables it). Startup/F8 and updates
+  migrate the former semicolon default to Y, preserving other custom squad bindings. If another saved
+  action already uses Y, that action keeps it and SquadOrders becomes NONE. `[Squad] ReticleAttackInFPS=false` selects weapon action initially
+  (true starts with orders). Both squad switches accept true/false. The toggle lasts for the map;
+  startup, map reset and F8 restore the configured initial choice. Held RMB cannot fire a secondary
+  action when the mode changes; the HUD displays its current role.
+  `ReticleAttackDistance=3000` sets picking range in Warcraft units (100..15000). Startup/F8 applies;
+  updates preserve saved values. Commands reach all available owned mobile units across the map,
+  independent of H/O's recruitment radius/cap; the controlled actor, buildings, dead/hidden/loaded/paused
+  units and other players' units are excluded. Native attack eligibility/pathfinding still apply.
+  With allied targeting disabled, protected allies between the camera and the enemy do not intercept
+  the command ray. Q opt-in makes them selectable again. If a target is picked but no native attack
+  is accepted, the HUD reports that no available units can attack it; empty aim reports cancellation.
+  Click empty space to clear the common target and restore the previous H/O policy; other commanded units
+  return to native behavior. Ordinary automatic acquisition may choose nearby enemies again.
+  Target death/invisibility, ownership changes, H/O/J, disabling the feature, RTS/map exit also release
+  the temporary command. Inventory RMB retains its cancel action; buy menus cannot issue squad orders.
+  Player-allied targets require the existing Q/`TargetAllies` opt-in; neutral targets and destructable gates
+  do not. F9 keeps its clean screen; aim at the center.
   `RearFormation=true` keeps destinations behind the player. `YieldToPlayer=true` sends followers
-  left/right before they rejoin when they enter your travel corridor. `PlayerClearance=100` (60..300)
+  left/right before they rejoin when they enter your travel corridor.
+  `PreserveCombatOrders=true` keeps fighting units in combat even inside that corridor or beyond
+  `CombatLeash`; idle units still yield/follow, and automatic spells retain their native rules.
+  `false` restores legacy combat yielding/leash movement. This accepts true/false or 1/0; missing,
+  empty or invalid values use true. Startup/F8 applies it; updates preserve saved choices. Explicit
+  RMB target orders always outrank formation movement, including the approach to their target. `PlayerClearance=100` (60..300)
   and `YieldAheadDistance=350` (clearance..1000) are Warcraft units. `OrderIntervalMs=150` (50..1000)
   controls response frequency. All reload with F8 and survive launcher updates; native pathfinding
   still governs travel around obstacles.
@@ -339,6 +379,27 @@ Edit it and press F8 in FPS.
 - `[Interface] ShowMinimap=true` shows Warcraft's native minimap in the FPS top-right corner.
 - `[Interface] ShowSpellIcons=true` shows four spell icons at the bottom right; `ShowSpellCooldowns=true`
   adds the live remaining cooldown. `SpellIconSizePercent=7` controls icon size (4..14% of window height).
+- `[Interface] ShowUnitHud=true` shows an animated native portrait, HP, mana and hero experience
+  at the bottom left in F6/F7. `UnitHudScalePercent=100` controls its scale (60..160%).
+  Experience follows the current map's level thresholds; non-heroes have no experience bar.
+  `ShowInventory=true` displays the unit's six inventory slots and item charges above the spells.
+  Tab toggles number-item mode: 1..6 activate the corresponding slot instead of selecting a weapon.
+  Press Tab again to restore weapon numbers. I opens a mouse inventory: click to use an item,
+  click a world target when requested, drag outside to drop beside the actor, or drag onto another slot
+  to rearrange it. Right-click cancels a drag/target; I or Esc closes the panel. Camera, movement and
+  attacks are blocked while it owns the cursor. Warcraft retains item costs, cooldowns and drop rules.
+  Keyboard targeting uses the reticle (Alt targets self). F9 has no inventory controls.
+  `[Shortcuts] InventoryNumbers=TAB` and `InventoryPanel=I` are rebindable; older custom Tab/I bindings
+  are preserved and the conflicting new shortcut is set to NONE. `[Interface] InventoryControls=true`
+  enables interaction; `[Inventory] DropDistance=80` sets drop offset (16..128 Warcraft units).
+  `[Inventory] NumbersByDefault=true` enables item numbers immediately, without pressing Tab first.
+  Use false for weapon numbers by default. Startup, F8 and map reset restore this choice; closing I,
+  focus loss and view changes preserve the current Tab toggle. Both settings accept true/false and
+  updates preserve explicit preferences.
+  These controls and distance apply at startup/F8; reload, focus loss, menus and view/map changes
+  cancel pending mouse gestures. Hidden inventory rows appear temporarily while item mode is active.
+  These settings reload with F8 and updates preserve custom values. F9 remains free of HUD.
+  Third-person hints omit CS ammunition, weapon giveaways and weapon purchases.
   Art comes from your current map/game. `LV0` marks an unlearned spell, `PASS` a passive,
   `EMPTY` an unmapped slot, and `?` an unsupported native timer. Rejected casts do not start a fake timer.
     Icons follow the current native command button (including toggle art), skill level and replacement
@@ -498,7 +559,11 @@ native attack preparation and impact. Learned passives and carried items can app
 lifesteal, Bash, critical strikes and attack callbacks with Warcraft's own chances, restrictions
 and orb priority. Incompatible orb effects do not become stackable; map-specific scripted effects
 still depend on the map's implementation. No basic attack/chase order or extra weapon projectile
-is issued. C4 explosions and destructable hits retain direct damage.
+is issued. C4, firearm and melee hits on destructables retain direct damage.
+In F7, ranged attacks also launch the native missile against gates/crates and neutral structures.
+`[ThirdPerson] NativeRangedProjectiles=true` preserves the map missile and flight time; it requires
+`EnableAttackEffects=true`. Set either false and press F8 for direct hits. Native quest immunity
+and unit attack armor rules still apply; a launched missile never adds an instant duplicate hit.
 
 Firearms use their configured FPS range even on a melee hero. After the ray verifies the target
 and terrain, only that contact's native impact range check is extended to its target distance.

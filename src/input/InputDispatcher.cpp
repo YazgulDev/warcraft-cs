@@ -28,10 +28,13 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM k
     if(healthy && controller_.Visible() && (message==WM_LBUTTONDOWN || message==WM_LBUTTONUP || message==WM_RBUTTONDOWN || message==WM_RBUTTONUP || message==WM_MOUSEWHEEL))
         wc3::Trace("control mouseMessage=%u wheel=%d buying=%d",message,message==WM_MOUSEWHEEL ? GET_WHEEL_DELTA_WPARAM(key) : 0,controller_.Buying());
     if(message==WM_INPUT) {
-        controller_.MouseInput(data,healthy && controller_.Visible() && !controller_.Buying() && GetForegroundWindow()==window);
+        controller_.MouseInput(data,healthy && controller_.Visible() && !controller_.CursorMode() && GetForegroundWindow()==window);
         if(healthy && controller_.Visible())return DefWindowProcA(window,message,key,data);
     }
-    if(message==WM_ACTIVATEAPP)controller_.ResetMouse();
+    if(message==WM_ACTIVATEAPP) {
+        controller_.ResetMouse();
+        if(!key) {controller_.RequestInventory({InventoryControls::Kind::Close});if(GetCapture()==window)ReleaseCapture();}
+    }
     // F6 remains a recovery alias even after remapping ToggleFPS, including native campaign movie transitions.
     if((key==VK_F6 || match(ShortcutAction::ToggleFPS)) && (down || up)) {
         if(tap)controller_.RequestToggle();return 0;
@@ -47,6 +50,11 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM k
     if(!healthy || !controller_.Visible())return std::nullopt;
     // Native pause is always available and regains ordinary RTS input before its system key is forwarded.
     if(key==VK_F10 && (down || up)) {if(tap)controller_.RequestMenu();return 0;}
+    // The inventory's RMB cancellation wins; world commands never leak into cursor UI or weapon actions.
+    if(controller_.SquadReticleOrdersEnabled() && !controller_.InventoryInputOpen() && !controller_.Buying() &&
+        (message==WM_RBUTTONDOWN || message==WM_RBUTTONUP)) {
+        if(message==WM_RBUTTONDOWN)controller_.RequestSquadFocus();return 0;
+    }
     if(controller_.UnitFirstPerson()) {
         // Only view recovery, settings and squad control are actions here; held WASD/jump are sampled by physics.
         if(tap) {
@@ -56,6 +64,33 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM k
             else if(match(ShortcutAction::SquadFollow))controller_.RequestSquad(true);
             else if(match(ShortcutAction::SquadRelease))controller_.RequestSquadRelease();
         }
+        if(down || up || message==WM_CHAR || message==WM_SYSCHAR || (message>=WM_MOUSEFIRST && message<=WM_MOUSELAST))return 0;
+    }
+    // Inventory gestures enter a bounded game-thread mailbox; Windows events never mutate native items.
+    if(controller_.Settings().inventoryControls) {
+        if((match(ShortcutAction::InventoryNumbers) || match(ShortcutAction::InventoryPanel)) && (down || up)) {
+            if(tap)controller_.RequestInventory({match(ShortcutAction::InventoryNumbers) ? InventoryControls::Kind::Numbers : InventoryControls::Kind::Panel});
+            if(GetCapture()==window)ReleaseCapture();return 0;
+        }
+        int slot=InventoryControls::NumberSlot(int(key),controller_.ItemControls().RoutingNumbers() || controller_.InventoryInputOpen(),controller_.Buying());
+        if(slot>=0 && (down || up)) {
+            if(tap) {InventoryControls::Event e{InventoryControls::Kind::Use};e.slot=slot;e.self=(GetAsyncKeyState(bindings.Key(ShortcutAction::SelfCast))&0x8000)!=0;controller_.RequestInventory(e);}return 0;
+        }
+    }
+    if(controller_.InventoryInputOpen()) {
+        if(tap && key==VK_ESCAPE) {controller_.RequestInventoryClose();if(GetCapture()==window)ReleaseCapture();return 0;}
+        if(tap && match(ShortcutAction::ReloadSettings)) {controller_.RequestSettingsReload();return 0;}
+        if(message==WM_LBUTTONDOWN || message==WM_LBUTTONUP || message==WM_MOUSEMOVE || message==WM_RBUTTONDOWN) {
+            RECT client={};GetClientRect(window,&client);
+            InventoryControls::Event e{message==WM_LBUTTONDOWN ? InventoryControls::Kind::Down :
+                message==WM_LBUTTONUP ? InventoryControls::Kind::Up : message==WM_RBUTTONDOWN ? InventoryControls::Kind::Cancel : InventoryControls::Kind::Move};
+            e.x=short(LOWORD(data));e.y=short(HIWORD(data));e.width=client.right;e.height=client.bottom;
+            e.self=(GetAsyncKeyState(bindings.Key(ShortcutAction::SelfCast))&0x8000)!=0; // Preserve Alt on short click sequences before the next game tick.
+            controller_.RequestInventory(e);
+            if(message==WM_LBUTTONDOWN)SetCapture(window);
+            if((message==WM_LBUTTONUP || message==WM_RBUTTONDOWN) && GetCapture()==window)ReleaseCapture();
+        }
+        // Clicking/dragging never leaks through to native RTS orders, scope, firing or camera motion.
         if(down || up || message==WM_CHAR || message==WM_SYSCHAR || (message>=WM_MOUSEFIRST && message<=WM_MOUSELAST))return 0;
     }
     if(controller_.Buying() && message==WM_LBUTTONDOWN) {
@@ -95,6 +130,7 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM k
                 else if(match(ShortcutAction::SquadFight))controller_.RequestSquad(false);
                 else if(match(ShortcutAction::SquadFollow))controller_.RequestSquad(true);
                 else if(match(ShortcutAction::SquadRelease))controller_.RequestSquadRelease();
+                else if(match(ShortcutAction::SquadOrders))controller_.RequestSquadOrdersToggle();
                 else for(int i=0;i<4;++i)if(match(ShortcutAction(int(ShortcutAction::Spell1)+i)))controller_.RequestSpell(i);
             }
         }

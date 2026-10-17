@@ -22,7 +22,7 @@ function Update-GameplayConfig([string]$Template,[string]$Destination) {
         }
     }
     # Only the old default changes: F7 is now TPS entry. Preserve custom refill keys and the rest of the layout.
-    $shortcutSection=$false;$refillIndex=-1;$thirdBinding=$false;$unitViewBinding=$false;$allWeaponsIndex=-1
+    $shortcutSection=$false;$refillIndex=-1;$thirdBinding=$false;$unitViewBinding=$false;$allWeaponsIndex=-1;$oldSquadIndex=-1
     $usedShortcuts=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
     for($i=0;$i -lt $lines.Count;$i++) {
         if($lines[$i] -match '^\s*\[([^\]]+)\]\s*$'){$shortcutSection=$Matches[1] -eq 'Shortcuts';continue}
@@ -32,6 +32,7 @@ function Update-GameplayConfig([string]$Template,[string]$Destination) {
             if($name -eq 'ToggleUnitView'){$unitViewBinding=$true}
             if($name -eq 'AllWeapons' -and $value -eq 'F9'){$allWeaponsIndex=$i}
             if($name -eq 'Refill' -and $value -eq 'F7'){$refillIndex=$i}
+            if($name -eq 'SquadOrders' -and $value -in @('SEMICOLON',';')){$oldSquadIndex=$i}
         }
     }
     if(!$thirdBinding -and $refillIndex -ge 0) {
@@ -47,6 +48,12 @@ function Update-GameplayConfig([string]$Template,[string]$Destination) {
         foreach($candidate in @('F12','F5','F4')){if(!$usedShortcuts.Contains($candidate)){$replacement=$candidate;break}}
         $lines[$allWeaponsIndex]='AllWeapons='+$replacement;$changed=$true
         [void]$usedShortcuts.Remove('F9');[void]$usedShortcuts.Add($replacement)
+    }
+    # Move only the former squad default to Y; a saved Y action and custom squad keys remain authoritative.
+    if($oldSquadIndex -ge 0) {
+        $replacement=if($usedShortcuts.Contains('Y')){'NONE'}else{'Y'}
+        $lines[$oldSquadIndex]='SquadOrders='+$replacement;$changed=$true
+        [void]$usedShortcuts.Add($replacement)
     }
     foreach ($entry in $defaults) {
         $start=-1;$end=$lines.Count
@@ -74,6 +81,11 @@ function Update-GameplayConfig([string]$Template,[string]$Destination) {
                     # Adding Q must not conflict with a custom action that already uses it.
                     if($entry.name -eq 'Shortcuts' -and $Matches[1].Trim() -eq 'ToggleAllyTargeting' -and $usedShortcuts.Contains('Q')){$line='ToggleAllyTargeting=NONE'}
                     if($entry.name -eq 'Shortcuts' -and $Matches[1].Trim() -eq 'ToggleUnitView' -and $usedShortcuts.Contains('F9')){$line='ToggleUnitView=NONE'}
+                    # Existing custom Tab/I controls win over newly introduced inventory defaults.
+                    if($entry.name -eq 'Shortcuts' -and $Matches[1].Trim() -eq 'InventoryNumbers' -and $usedShortcuts.Contains('TAB')){$line='InventoryNumbers=NONE'}
+                    if($entry.name -eq 'Shortcuts' -and $Matches[1].Trim() -eq 'InventoryPanel' -and $usedShortcuts.Contains('I')){$line='InventoryPanel=NONE'}
+                    # Adding the new Y default must not overwrite another saved action.
+                    if($entry.name -eq 'Shortcuts' -and $Matches[1].Trim() -eq 'SquadOrders' -and $usedShortcuts.Contains('Y')){$line='SquadOrders=NONE'}
                     # A migrated/custom refill may already own the new F12 default in a partial old layout.
                     if($entry.name -eq 'Shortcuts' -and $Matches[1].Trim() -eq 'AllWeapons' -and $usedShortcuts.Contains('F12')) {
                         $replacement='NONE'
