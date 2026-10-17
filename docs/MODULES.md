@@ -72,7 +72,7 @@ has its own header and implementation. There is no global header search path mas
 | `src/combat` | Weapon/damage/recoil/melee rules, hitboxes, C4 and status effects |
 | `src/economy` | Buy catalog, navigation, inventory transactions and shop access |
 | `src/inventory` | Item/rune pickup and ammunition recovery |
-| `src/squad` | Recruitment and follow/fight/release policies |
+| `src/squad` | Recruitment, focus orders, follow/fight/release and unreserved army AI policies |
 | `src/geometry` | Model bounds, transformations, ray tests and tree meshes |
 | `src/audio` | CS sample loading/mixing and its configurable master gain, separate from Warcraft's audio |
 | `src/presentation` | FPS camera/HUD/menu/weapon/scope/sky rendering and world-label visibility |
@@ -287,3 +287,18 @@ for direct contact filtering/damage; native eligibility and quest immunity remai
 The shared `SpellAim` ray picker accepts an optional action-owned unit filter before hit distance
 is shortened. Squad orders supply their allegiance policy so protected allies cannot hide enemies;
 spell/item callers retain unfiltered ally selection. Ground/destructable occlusion stays shared.
+
+`ArmyPlan` owns portable stock-race/custom build plans. `ArmyAI` runs a bounded game-thread
+decision loop through Warcraft's normal construction/training/resource orders. The controller
+supplies exact squad/focus exclusions, while the adapter rechecks local ownership and actor
+availability before enumerating any army. Construction leases and travel identities prevent
+duplicate sites and stale-handle commands. `ShopAccess` shares live merchant/proximity validation;
+the controller yields native selection, UI and camera during shop interaction and restores the
+captured actor/view on close. `WeaponDefaults` supplies one stable-slot tuning snapshot; validated
+config, buy catalog, audio/cache tables, wheel and presentation include every appended weapon.
+
+Army commands execute at the completed native frame boundary, after world/UI/overlay submission.
+Build orders can create birth models immediately; issuing them from the earlier world hook can
+draw those models before native skinning initializes their matrices. The next frame now performs
+its normal model update before drawing newly constructed objects. Training reservations also
+survive Warcraft's zero-current-order reports and pause/background gaps.

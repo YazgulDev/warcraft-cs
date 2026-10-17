@@ -15,6 +15,7 @@ public:
     size_t Focus(wc3::Handle leader,wc3::Handle target,const GameplaySettings& settings,DWORD now);
     void CancelFocus() {focus_.Cancel();}
     bool BlocksUnit(uintptr_t object) const;
+    bool Reserved(wc3::Handle unit) const; // Army AI yields to both recruited members and explicit common targets.
     bool BlocksAttack(uintptr_t attack) const;
     size_t Count() const { return members_.size(); }
     bool Passive() const { return passive_; }

@@ -21,6 +21,13 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM k
     bool down=message==WM_KEYDOWN || message==WM_SYSKEYDOWN;
     bool up=message==WM_KEYUP || message==WM_SYSKEYUP;
     bool tap=down && !(data&(1L<<30));
+    // A native shop owns its command card and pointer; E/Escape return to the captured view.
+    if(controller_.Shopping()) {
+        if((match(ShortcutAction::Pickup) || key==VK_ESCAPE || key==VK_F6 || key==VK_F7 || key==VK_F9) && (down || up)) {
+            if(tap)controller_.RequestShopClose();return 0;
+        }
+        return std::nullopt;
+    }
     // Log only configured mod controls, never text entry or unrelated desktop keystrokes.
     bool control=key==VK_F6 || match(ShortcutAction::ToggleFPS) || match(ShortcutAction::ToggleThirdPerson) || match(ShortcutAction::ToggleUnitView);
     if(healthy && controller_.Visible())for(size_t i=0;i<ShortcutBindings::Count;++i)control|=match(ShortcutAction(i));
@@ -63,6 +70,7 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM k
             else if(match(ShortcutAction::SquadFight))controller_.RequestSquad(false);
             else if(match(ShortcutAction::SquadFollow))controller_.RequestSquad(true);
             else if(match(ShortcutAction::SquadRelease))controller_.RequestSquadRelease();
+            else if(match(ShortcutAction::ArmyAI))controller_.RequestArmyAI();
         }
         if(down || up || message==WM_CHAR || message==WM_SYSCHAR || (message>=WM_MOUSEFIRST && message<=WM_MOUSELAST))return 0;
     }
@@ -106,7 +114,7 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM k
         if(tap && !controller_.Buying()) {
             for(auto action:{ShortcutAction::Forward,ShortcutAction::Backward,ShortcutAction::Left,ShortcutAction::Right,
                 ShortcutAction::Jump,ShortcutAction::Crouch,ShortcutAction::Reload})if(match(action))controller_.RequestSpellCancel();
-            for(int i=0;i<WeaponSlots::Count;++i)if(match(ShortcutAction(int(ShortcutAction::Weapon1)+i)))controller_.RequestSpellCancel();
+            for(int i=0;i<WeaponSlots::ShortcutCount;++i)if(match(ShortcutAction(int(ShortcutAction::Weapon1)+i)))controller_.RequestSpellCancel();
         }
         // Buy row numbers belong to the open catalog even when weapon shortcuts were remapped.
         if(controller_.Buying() && key>='0' && key<='9') {if(tap)controller_.RequestBuyKey(int(key-'0'));return 0;}
@@ -131,6 +139,7 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM k
                 else if(match(ShortcutAction::SquadFollow))controller_.RequestSquad(true);
                 else if(match(ShortcutAction::SquadRelease))controller_.RequestSquadRelease();
                 else if(match(ShortcutAction::SquadOrders))controller_.RequestSquadOrdersToggle();
+                else if(match(ShortcutAction::ArmyAI))controller_.RequestArmyAI();
                 else for(int i=0;i<4;++i)if(match(ShortcutAction(int(ShortcutAction::Spell1)+i)))controller_.RequestSpell(i);
             }
         }

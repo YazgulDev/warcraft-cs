@@ -54,7 +54,7 @@ void GameAudio::Configure(const std::string& root) {
         } while (FindNextFileA(search, &entry));
         FindClose(search);
     }
-    static const char* weapons[] = {"ak47", "m4a1", "usp", "awp", "knife", "c4", "sword"};
+    const auto& weapons=WeaponSlots::Caches;
     for (int weapon = 0; weapon < WeaponSlots::Count; ++weapon) {
         std::ifstream file(root + "\\assets\\" + weapons[weapon] + ".wca", std::ios::binary);
         char magic[4]; uint32_t count = 0;
@@ -109,16 +109,19 @@ void GameAudio::Play(const char* name, float volume) {
     HRESULT result = voice->SubmitSourceBuffer(&buffer);
     wc3::Log("CS sound=%s volume=%.2f overlapping=%u queued=%08X", name, volume, occupied, result);
 }
-float GameAudio::BeginAnimation(int weapon, const char* name, DWORD start) {
+float GameAudio::Duration(int weapon,const char* name) const {
+    auto found=timelines_[weapon].find(name);return found==timelines_[weapon].end() ? 0 : found->second.duration;
+}
+float GameAudio::BeginAnimation(int weapon, const char* name, DWORD start,float rate) {
     auto found = timelines_[weapon].find(name);
     current_ = found == timelines_[weapon].end() ? nullptr : &found->second;
-    event_ = 0; start_ = start;
+    event_ = 0; start_ = start;rate_=rate;
     Tick(start);
     return current_ ? current_->duration : 0;
 }
 void GameAudio::Tick(DWORD now) {
     // Both the mesh and sound events use the controller's same animation start clock.
-    float elapsed = (now - start_) * 0.001f;
+    float elapsed = (now - start_) * 0.001f*rate_;
     while (current_ && event_ < current_->events.size() && current_->events[event_].time <= elapsed) {
         const Event& event = current_->events[event_++]; Play(event.sound.c_str());
         wc3::Log("animation audio expected=%.3f actual=%.3f", event.time, elapsed);

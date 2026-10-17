@@ -200,7 +200,7 @@ def main():
     args.output.mkdir(parents=True, exist_ok=True)
     manifest = []
     weapon_sounds = set()
-    for weapon in ("ak47", "m4a1", "usp", "awp", "knife", "c4"):
+    for weapon in ("ak47", "m4a1", "usp", "awp", "knife", "c4", "deagle", "glock18", "mp5", "p90", "m249", "m3", "xm1014"):
         model = StudioModel(args.cstrike / "models" / f"v_{weapon}.mdl")
         # Both silencer-capable weapons are permanently unsilenced in this mod, including their geometry.
         excluded = ("silencer.bmp",) if weapon in ("m4a1", "usp") else ()
@@ -221,10 +221,17 @@ def main():
     # Keep retail-derived files in the private lab, with their source fingerprints.
     sounds = args.output / "sounds"
     sounds.mkdir(exist_ok=True)
-    weapon_sounds.update(("ak47-1.wav", "m4a1_unsil-1.wav", "usp_unsil-1.wav", "awp1.wav", "knife_slash1.wav", "knife_hit1.wav", "knife_hit2.wav", "knife_hit3.wav", "knife_hit4.wav", "knife_stab.wav", "knife_hitwall1.wav", "c4_plant.wav", "c4_click.wav",
-                          "c4_explode1.wav", "c4_beep1.wav", "c4_beep3.wav", "c4_beep4.wav", "c4_beep5.wav"))
+    required_sounds={"deagle-1.wav", "glock18-2.wav", "mp5-1.wav", "p90-1.wav", "m249-1.wav", "m3-1.wav", "xm1014-1.wav", "ak47-1.wav", "m4a1_unsil-1.wav", "usp_unsil-1.wav", "awp1.wav", "knife_slash1.wav", "knife_hit1.wav", "knife_hit2.wav", "knife_hit3.wav", "knife_hit4.wav", "knife_stab.wav", "knife_hitwall1.wav", "c4_plant.wav", "c4_click.wav",
+                          "c4_explode1.wav", "c4_beep1.wav", "c4_beep3.wav", "c4_beep4.wav", "c4_beep5.wav"}
+    weapon_sounds.update(required_sounds)
     for name in sorted(weapon_sounds):
         source = args.cstrike / "sound" / "weapons" / name
+        # Some retail animation events reference absent samples (XM1014 cliprelease1); retain silence for that event.
+        if not source.is_file() and name not in required_sounds:
+            print(f"Optional animation sample absent in owned installation: {name}")
+            continue
+        if not source.is_file():
+            raise FileNotFoundError(f"Required owned weapon sample is missing: {source}")
         shutil.copy2(source, sounds / name)
     # Default concrete samples cover footsteps, jump push-off and landings independently of weapons.
     for step in range(1, 5):

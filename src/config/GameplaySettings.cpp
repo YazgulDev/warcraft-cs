@@ -19,6 +19,23 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         if (end==value.c_str() || *end || !std::isfinite(parsed)) { wc3::Log("Invalid config %s.%s; using default",section,key);return fallback; }
         return std::clamp(parsed,0.0f,maximum);
     };
+    // New session controls reload with F8; malformed toggles preserve their documented defaults.
+    auto enabled=[&](const char* section,const char* key) {auto value=text(section,key,"true");return _stricmp(value.c_str(),"false") && value!="0";};
+    result.shopInteraction=enabled("Shops","Enabled");
+    result.shopInteractionRadius=std::max(100.f,number("Shops","Radius",450,1200));
+    result.shotgunPellets=int(std::max(1.f,number("Shotguns","Pellets",8,16)));
+    result.shotgunSpreadDegrees=number("Shotguns","SpreadDegrees",5,15);
+    auto& ai=result.armyAI;ai.enabled=enabled("ArmyAI","Enabled");
+    ai.intervalMs=unsigned(std::max(500.f,number("ArmyAI","IntervalMs",1500,10000)));
+    ai.productionRetrySeconds=unsigned(std::max(30.f,number("ArmyAI","ProductionRetrySeconds",180,3600)));
+    ai.workers=int(number("ArmyAI","Workers",6,30));ai.soldiers=int(number("ArmyAI","Soldiers",24,100));
+    ai.defenders=int(number("ArmyAI","Defenders",3,100));ai.supplyBuildings=int(number("ArmyAI","SupplyBuildings",6,30));
+    ai.baseRadius=std::max(100.f,number("ArmyAI","BaseRadius",900,3000));
+    ai.supportDistance=std::max(100.f,number("ArmyAI","SupportDistance",350,1500));
+    ai.buildRadius=std::max(192.f,number("ArmyAI","BuildRadius",450,1500));
+    ai.resourceRadius=std::max(300.f,number("ArmyAI","ResourceRadius",1600,5000));
+    auto rawcode=[&](const char* key) {auto value=text("ArmyAI",key,"");return value.size()==4 && value.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")==std::string::npos ? value : std::string();};
+    ai.worker=rawcode("Worker");ai.hall=rawcode("Hall");ai.supply=rawcode("Supply");ai.barracks=rawcode("Barracks");ai.soldier=rawcode("Soldier");
     // Missing/malformed profile values preserve the full mod's backwards-compatible default.
     auto profile=text("Installation","WarcraftOnly","false");
     result.warcraftOnly=!_stricmp(profile.c_str(),"true") || profile=="1";
@@ -203,7 +220,7 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     bool oldSquadKey=result.shortcuts.Key(ShortcutAction::SquadOrders)==VK_OEM_1;
     if(oldSquadKey)result.shortcuts.Set(ShortcutAction::SquadOrders,'Y');
     // New Tab/I/Y defaults yield to an older customized action instead of resetting the whole layout.
-    for(auto action:{ShortcutAction::InventoryNumbers,ShortcutAction::InventoryPanel,ShortcutAction::SquadOrders}) {
+    for(auto action:{ShortcutAction::InventoryNumbers,ShortcutAction::InventoryPanel,ShortcutAction::SquadOrders,ShortcutAction::ArmyAI}) {
         if(!text("Shortcuts",ShortcutBindings::Name(action),"").empty() && !(action==ShortcutAction::SquadOrders && oldSquadKey))continue;
         for(size_t i=0;i<size_t(action);++i)if(result.shortcuts.Key(ShortcutAction(i))==result.shortcuts.Key(action)) {
             result.shortcuts.Set(action,0);break;
@@ -328,14 +345,25 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         const char* fallback=strchr("NWIC",*code) ? "snow" : strchr("OD",*code) ? "DrkG" : strchr("AZJ",*code) ? "forest" : "Des";
         result.tilesetSky[static_cast<unsigned char>(*code)]=sky(key,fallback);
     }
-    const char* sections[]={"AK47","M4A1","USP","AWP","Knife","C4","Sword"};
+    const auto& sections=WeaponSlots::Sections;
     for (int slot=0;slot<WeaponSlots::Count;++slot) {
+        auto& weapon=result.weapons[slot];
+        // Reloading can tighten capacities and change cadence without granting ammunition.
+        if(WeaponSlots::Firearm(slot)) {
+            weapon.magazine=int(std::max(1.f,number(sections[slot],"Magazine",float(weapon.magazine),1000)));
+            weapon.interval=std::max(.025f,number(sections[slot],"FireInterval",weapon.interval,10));
+            weapon.reload=std::max(.1f,number(sections[slot],"ReloadSeconds",weapon.reload,30));
+            weapon.range=std::max(100.f,number(sections[slot],"Range",weapon.range,15000));
+            result.weaponKick[slot]=number(sections[slot],"Kick",result.weaponKick[slot],10);
+        }
+        result.weaponMoveSpeed[slot]=std::max(50.f,number(sections[slot],"MoveSpeed",result.weaponMoveSpeed[slot],500));
+        result.weaponModelScale[slot]=std::max(.25f,number(sections[slot],"ModelScale",result.weaponModelScale[slot],2));
         result.damage[slot]=number(sections[slot],"Damage",result.damage[slot],1000000);
         result.heroMultiplier[slot]=number(sections[slot],"HeroMultiplier",result.heroMultiplier[slot],1000);
         result.weaponPrice[slot]=int(number(sections[slot],"Price",float(result.weaponPrice[slot]),1000000));
         result.ammoPrice[slot]=int(number(sections[slot],"AmmoPrice",float(result.ammoPrice[slot]),1000000));
         result.ammoPack[slot]=int(std::max(1.0f,number(sections[slot],"AmmoPack",float(std::max(1,result.ammoPack[slot])),1000)));
-        if(slot<4)result.maxReserve[slot]=int(number(sections[slot],"MaxReserve",float(result.maxReserve[slot]),100000));
+        if(WeaponSlots::Firearm(slot))result.maxReserve[slot]=int(number(sections[slot],"MaxReserve",float(result.maxReserve[slot]),100000));
     }
     result.knifeSecondaryDamage=number("Knife","SecondaryDamage",65,1000000);
     result.swordSecondaryDamage=number("Sword","SecondaryDamage",240,1000000);

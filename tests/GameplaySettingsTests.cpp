@@ -431,5 +431,15 @@ int main() {
         float expected=!strcmp(value,"-1") ? 16.f : !strcmp(value,"nan") ? 80.f : 100.f;
         assert(GameplaySettings::Load(path).inventoryDropDistance==expected);
     }
+    // New options use the real loader, including malformed/range handling and a saved U action on upgrade.
+    {std::ofstream f(path);f<<"[ArmyAI]\nWorkers=99\nIntervalMs=nan\nProductionRetrySeconds=99999\nEnabled=false\nWorker=hpea\nHall=bad\n[Shops]\nRadius=-1\n[Shotguns]\nPellets=0\nSpreadDegrees=99\n[Deagle]\nMagazine=9999\nFireInterval=0\nReloadSeconds=nan\nPrice=777\n[Shortcuts]\nPickup=U\n";}
+    auto added=GameplaySettings::Load(path);
+    assert(!added.armyAI.enabled && added.armyAI.workers==30 && added.armyAI.intervalMs==1500);
+    assert(added.armyAI.productionRetrySeconds==3600);
+    assert(added.armyAI.worker=="hpea" && added.armyAI.hall.empty() && added.shopInteractionRadius==100);
+    assert(added.shotgunPellets==1 && added.shotgunSpreadDegrees==15);
+    assert(added.weapons[WeaponSlots::Deagle].magazine==1000 && added.weapons[WeaponSlots::Deagle].interval==.025f);
+    assert(added.weapons[WeaponSlots::Deagle].reload==2.2f && added.weaponPrice[WeaponSlots::Deagle]==777);
+    assert(added.shortcuts.Key(ShortcutAction::Pickup)=='U' && added.shortcuts.Key(ShortcutAction::ArmyAI)==0);
     DeleteFileA(path.c_str());return 0;
 }

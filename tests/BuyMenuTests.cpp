@@ -14,7 +14,7 @@ int main() {
         gold=3000;assert(bombs.Buy(WeaponSlots::C4,quickAmmo,settings,gold,count,reserve,1,0)==BuyInventory::Result::Bought);
         assert(gold==0 && count==1);
     }
-    int ammo[7]={},reserve[7]={},magazines[]={30,30,12,10,0,1,0},reserves[]={90,90,100,30,0,0,0};
+    int ammo[WeaponSlots::Count]={},reserve[WeaponSlots::Count]={},magazines[WeaponSlots::Count]={30,30,12,10,0,1,0,7,20,30,50,100,8,7},reserves[WeaponSlots::Count]={90,90,100,30,0,0,0,35,120,120,100,200,32,32};
     inventory.Reset(settings,ammo,reserve,magazines,reserves);
     assert(!inventory.owned[0] && !inventory.owned[3] && inventory.owned[2] && inventory.owned[4] && !inventory.owned[5] && inventory.owned[6]);
     assert(ammo[2]==12 && reserve[2]==100 && ammo[5]==0 && ammo[0]==0 && reserve[0]==0);
@@ -73,11 +73,20 @@ int main() {
     for (const auto& item : BuyCatalog::Entries) {
         assert(item.slot>=0 && item.slot<WeaponSlots::Count && !seen[item.slot]);seen[item.slot]=true;
         assert(BuyCatalog::Find(item.category,item.key)==&item);
-        BuyMenu menu;menu.Toggle();menu.Select(item.category==BuyCatalog::Category::Pistols ? 1 : item.category==BuyCatalog::Category::Rifles ? 4 : 8,2);
+        BuyMenu menu;menu.Toggle();menu.Select(item.category==BuyCatalog::Category::Pistols ? 1 : item.category==BuyCatalog::Category::Rifles ? 4 : item.category==BuyCatalog::Category::Shotguns ? 2 : item.category==BuyCatalog::Category::SMGs ? 3 : item.category==BuyCatalog::Category::Machineguns ? 5 : 8,2);
         assert(menu.Select(item.key,2).slot==item.slot);
     }
     for (bool present : seen) assert(present);
-    BuyMenu menu;menu.Toggle();assert(menu.Select(2,2).slot==-1 && menu.Current()==BuyMenu::Page::Main);
+    // Appended firearms obey the same paid ownership, reload capacities and free-grant boundaries as the original slots.
+    for(int slot=WeaponSlots::Deagle;slot<WeaponSlots::Count;++slot) {
+        BuyInventory fresh;int wallet=settings.weaponPrice[slot],loaded=0,spare=0;
+        assert(fresh.Buy(slot,false,settings,wallet,loaded,spare,magazines[slot],reserves[slot])==BuyInventory::Result::Bought);
+        assert(wallet==0 && loaded==magazines[slot] && fresh.owned[slot] && spare==0);
+        wallet=settings.ammoPrice[slot];
+        assert(fresh.Buy(slot,true,settings,wallet,loaded,spare,magazines[slot],reserves[slot])==BuyInventory::Result::Bought);
+        assert(wallet==0 && spare==settings.ammoPack[slot]);
+    }
+    BuyMenu menu;menu.Toggle();assert(menu.Select(9,2).slot==-1 && menu.Current()==BuyMenu::Page::Main);
     assert(menu.Select(6,2).primaryAmmo && menu.Select(7,2).secondaryAmmo);
     menu.Select(4,2);assert(menu.Select(3,2).slot==3);menu.Select(0,2);assert(menu.Current()==BuyMenu::Page::Main);
     menu.Select(0,2);assert(!menu.Open());

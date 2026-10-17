@@ -106,7 +106,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     glMatrixMode(GL_PROJECTION); glPushMatrix(); glLoadIdentity();
     int index = controller.WeaponIndex();
     // Slightly tighten USP/AWP framing while preserving the original lower-edge arm origins.
-    static constexpr float projectionScales[] = {0.72f, 0.78f, 0.94f, 0.73f, 1.0f, 0.95f, 0.85f};
+    const auto& projectionScales=controller.Settings().weaponModelScale;
     float projectionScale = projectionScales[index];
     float top = std::tan(45.0f * 0.01745329252f) * projectionScale; float side = top * width / height;
     glFrustum(-side, side, -top, top, 1, 200);
@@ -114,7 +114,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     // Unit-only installations never open even a retained cache from an earlier full install.
     if (!controller.Settings().warcraftOnly && !attempted_[index]) {
         attempted_[index] = true;
-        static const char* names[] = {"ak47", "m4a1", "usp", "awp", "knife", "c4", "sword"};
+        const auto& names=WeaponSlots::Caches;
         loaded_[index] = guns_[index].Load(root_ + "\\assets\\" + names[index] + ".wcg");
     }
     if (!controller.ThirdPerson() && loaded_[index] && !controller.Status().contained && !controller.Status().hidden && !controller.Scoped() && (index != WeaponSlots::C4 || controller.Ammo() > 0)) {
@@ -151,9 +151,9 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     Font(statusSize);
     controller.Hits().Draw(float(width), float(height));
     char status[160]; sprintf_s(status, "HP %.0f   %s   %d / %d   GOLD %d", controller.Health(),
-        ShooterController::weapons[index].name, controller.Ammo(), controller.Reserve(),controller.Gold());
+        controller.WeaponData(index).name, controller.Ammo(), controller.Reserve(),controller.Gold());
     // Melee equipment has no magazine; show only its name instead of a misleading empty-ammo counter.
-    if (WeaponSlots::Melee(index)) sprintf_s(status, "HP %.0f   %s   GOLD %d", controller.Health(), ShooterController::weapons[index].name,controller.Gold());
+    if (WeaponSlots::Melee(index)) sprintf_s(status, "HP %.0f   %s   GOLD %d", controller.Health(), controller.WeaponData(index).name,controller.Gold());
     // Hero combat has no magazine or CS weapon label; expose the mode and live native attack instead.
     if(controller.ThirdPerson())sprintf_s(status,"HP %.0f   UNIT ATTACK %.0f   GOLD %d",controller.Health(),
         controller.Status().attackDamage*controller.Settings().thirdPerson.damageMultiplier,controller.Gold());
@@ -165,8 +165,8 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         unitFont_.Ensure(std::clamp(int(unitLayout.portrait*.19f),12,32));
         UnitHudView::Draw(controller.UnitHud(),unitLayout,portrait,[&](float x,float y,const char* label){Text(x,y,label,&unitFont_);});
         if(controller.ThirdPerson())sprintf_s(status,"UNIT ATTACK %.0f   GOLD %d",controller.Status().attackDamage*controller.Settings().thirdPerson.damageMultiplier,controller.Gold());
-        else if(WeaponSlots::Melee(index))sprintf_s(status,"%s   GOLD %d",ShooterController::weapons[index].name,controller.Gold());
-        else sprintf_s(status,"%s   %d / %d   GOLD %d",ShooterController::weapons[index].name,controller.Ammo(),controller.Reserve(),controller.Gold());
+        else if(WeaponSlots::Melee(index))sprintf_s(status,"%s   GOLD %d",controller.WeaponData(index).name,controller.Gold());
+        else sprintf_s(status,"%s   %d / %d   GOLD %d",controller.WeaponData(index).name,controller.Ammo(),controller.Reserve(),controller.Gold());
     }
     glColor4f(1.0f, 0.85f, 0.3f, 1); Text(statusPad, statusY, status, &statusFont_);
     // Installation progress and fuse are independent of which weapon is currently equipped.
@@ -189,9 +189,10 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     controls+=" | "+key(ShortcutAction::ToggleUnitView)+": UNIT VIEW";
     std::string equipment="WHEEL: WEAPONS | "+key(ShortcutAction::Weapon6)+": C4 | "+key(ShortcutAction::Pickup)+": ITEM | "+key(ShortcutAction::Buy)+": BUY | "+key(ShortcutAction::BuyAmmo)+": AMMO";
     // The same control now dispatches the unit's primary melee or ranged attack.
-    if(controller.ThirdPerson())equipment="LMB: UNIT ATTACK | WASD: MOVE | WHEEL: CAMERA | "+key(ShortcutAction::Pickup)+": ITEM";
-    if(controller.Settings().warcraftOnly)equipment="LMB: UNIT ATTACK | WASD: MOVE | WHEEL: CAMERA | "+key(ShortcutAction::Pickup)+": ITEM";
+    if(controller.ThirdPerson())equipment="LMB: UNIT ATTACK | WASD: MOVE | WHEEL: CAMERA | "+key(ShortcutAction::Pickup)+": ITEM / SHOP";
+    if(controller.Settings().warcraftOnly)equipment="LMB: UNIT ATTACK | WASD: MOVE | WHEEL: CAMERA | "+key(ShortcutAction::Pickup)+": ITEM / SHOP";
     // Show the shared direct-contact mode continuously, including after the transient Q notice disappears.
+    equipment+=" | "+key(ShortcutAction::ArmyAI)+": ARMY AI "+(controller.ArmyAIActive() ? "ON" : "OFF");
     equipment+=" | "+key(ShortcutAction::ToggleAllyTargeting)+": ALLIES "+(controller.Settings().targetAllies ? "ON" : "OFF");
     if(controller.Settings().inventoryControls)equipment+=" | "+key(ShortcutAction::InventoryNumbers)+": ITEMS "+(controller.ItemControls().Numbers() ? "ON" : "OFF")+" | "+key(ShortcutAction::InventoryPanel)+": INVENTORY";
     std::string abilities=key(ShortcutAction::HealthBars)+": HEALTH BARS | "+key(ShortcutAction::Spell1)+"/"+key(ShortcutAction::Spell2)+"/"+key(ShortcutAction::Spell3)+"/"+key(ShortcutAction::Spell4)+": SPELLS | "+key(ShortcutAction::SelfCast)+": SELF";
@@ -209,7 +210,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         equipment+=" | "+key(ShortcutAction::SquadOrders)+": RMB "+(controller.SquadOrdersInFPS() ? "ORDERS" : "WEAPON");
     int hintRight=controller.MinimapVisible() ? mapLayout.x-mapLayout.padding : width-25;
     int columns=std::max(1,(hintRight-25)/hintGlyphWidth_);float hintY=27;
-    for(const auto& group : {controls,equipment,abilities,std::string(squad)}) {
+    if(!controller.Buying())for(const auto& group : {controls,equipment,abilities,std::string(squad)}) {
         for(const auto& row : HudHints::Wrap(group,columns)) {Text(25,hintY,row.c_str());hintY+=23;}
     }
     if (controller.RefillNotice()) Text(statusPad, statusY - statusSize - 16, controller.AmmoMessage(), &statusFont_);

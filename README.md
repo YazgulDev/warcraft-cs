@@ -17,9 +17,14 @@ This is an early prototype with known limitations.
 
 0.10.0 adds the animated F6/F7 unit HUD, interactive inventory and right-click squad commands.
 Tab starts with item numbers; I opens mouse inventory, and Y toggles squad orders in armed F6.
+
 It also fixes point-spell targeting, building zoom, side-contact snaps and neutral/gate attacks,
 including Kael's native ranged missiles. See the [complete release notes](docs/RELEASE-0.10.0.md)
 for every change, new setting, upgrade steps and validation limits.
+
+The current feature branch expands the paid arsenal with Deagle, Glock, MP5, P90,
+M249, M3 and XM1014; adds native shop interaction on E in F6/F7 and army AI on U.
+See [arsenal, shops and AI controls/configuration](docs/ARSENAL-SHOPS-AI.md).
 
 ## Features
 
@@ -195,7 +200,8 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 | 1 / 2 / 3 / 4 / 5 / 6 / 7 | AK47 / M4A1 / USP / AWP / knife / C4 / original greatsword |
 | Mouse wheel up / down | Previous / next owned weapon |
 | Hold left mouse button with C4 | Plant for 3 seconds while standing on the ground; multiple charges are allowed |
-| E | Pick up the nearest item/rune if the unit has an available inventory |
+| E | Open a nearby looked-at native shop in F6/F7; otherwise pick up an item/rune. E/Escape returns from a shop |
+| U | Toggle army AI for free owned workers/buildings/troops; H/O members and explicit targets take priority |
 | H / O / J | Your units: follow and fight / follow without attacking / release squad |
 | Right mouse button (F7/F9) | All available owned mobile units attack the unit/building or destructable gate under the reticle; empty aim cancels the common target |
 | Y (armed F6) | Toggle RMB between all-unit target orders and weapon action; switching off clears the common target |

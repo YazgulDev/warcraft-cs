@@ -18,7 +18,8 @@ public static class LauncherReinstallTests {
             File.Copy(versionedDll,Path.Combine(wc,"Game.dll"));
             foreach (string name in new[] {"Mssfast.m3d","Mp3dec.asi","Reverb3.flt"}) Write(Path.Combine(wc,"redist","miles",name),"owned provider");
             Write(Path.Combine(wc,"Maps","official.w3x"),"owned map");
-            foreach (string weapon in new[] {"ak47","m4a1","usp","awp","knife","c4"}) Write(Path.Combine(cs,"models","v_"+weapon+".mdl"),"synthetic model");
+            // Reinstall must validate the complete owned arsenal without requiring any retail model data in tests.
+            foreach (string weapon in new[] {"ak47","m4a1","usp","awp","knife","c4","deagle","glock18","mp5","p90","m249","m3","xm1014"}) Write(Path.Combine(cs,"models","v_"+weapon+".mdl"),"synthetic model");
             Write(Path.Combine(cs,"sound","weapons","knife_slash1.wav"),"synthetic sound");
             Write(Path.Combine(cs,"sound","player","pl_step1.wav"),"synthetic sound");
             var request=new ClientRequest {WarcraftDirectory=wc,CounterStrikeDirectory=cs,InstallDirectory=Path.Combine(trial,"Client"),InstallMode=mode};

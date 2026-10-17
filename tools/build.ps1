@@ -22,6 +22,7 @@ $sources = @('platform/WarcraftApi.cpp', 'input/MouseLook.cpp', 'movement/Moveme
 # Item pickup and temporary native squad policies remain independent of shooter input/rendering.
 $sources += @('config/GameplaySettings.cpp','inventory/ItemPickup.cpp','squad/SquadController.cpp','platform/FpsCombatGuard.cpp') | ForEach-Object { '"' + (Join-Path $modRoot "src/$_") + '"' }
 $sources += '"'+(Join-Path $modRoot 'src/squad/SquadFocusFire.cpp')+'"' # Temporary all-unit targeting stays separate from formation AI.
+$sources += '"'+(Join-Path $modRoot 'src/squad/ArmyAI.cpp')+'"' # Resource spending and support orders use only unreserved owned units.
 $sources += '"' + (Join-Path $modRoot 'src/platform/NativeMovementGuard.cpp') + '"'
 # Attack-effect dispatch is isolated from controller input and native pursuit suppression.
 $sources += '"' + (Join-Path $modRoot 'src/platform/NativeWeaponAttack.cpp') + '"'

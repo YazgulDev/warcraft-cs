@@ -10,7 +10,7 @@ void Rect(float x,float y,float w,float h,bool outline=false) {
     glVertex2f(x,y);glVertex2f(x+w,y);glVertex2f(x+w,y+h);glVertex2f(x,y+h);glEnd();
 }
 const char* MainLabel(int key) {
-    switch (key) { case 1:return "PISTOLS";case 4:return "RIFLES";case 6:return "PRIMARY AMMO";
+    switch (key) { case 1:return "PISTOLS";case 2:return "SHOTGUNS";case 3:return "SMGS";case 4:return "RIFLES";case 5:return "MACHINE GUNS";case 6:return "PRIMARY AMMO";
         case 7:return "SECONDARY AMMO";case 8:return "EQUIPMENT";default:return ""; }
 }
 }
@@ -19,7 +19,9 @@ void Draw(const ShooterController& controller,int width,int height,HWND window,c
     if (!controller.Buying()) return;
     BuyMenuLayout box(width,height);auto page=controller.BuyPage();const auto& settings=controller.Settings();
     const char* title=page==BuyMenu::Page::Main ? "BUY MENU" : page==BuyMenu::Page::Rifles ? "BUY RIFLES (PRIMARY WEAPON)" :
-        page==BuyMenu::Page::Pistols ? "BUY PISTOLS (SECONDARY WEAPON)" : "BUY EQUIPMENT";
+        page==BuyMenu::Page::Pistols ? "BUY PISTOLS (SECONDARY WEAPON)" :
+        page==BuyMenu::Page::Shotguns ? "BUY SHOTGUNS" : page==BuyMenu::Page::SMGs ? "BUY SMGS" :
+        page==BuyMenu::Page::Machineguns ? "BUY MACHINE GUNS" : "BUY EQUIPMENT";
     // Recreate the original translucent black/amber panel, sparse category keys and red hovered rows.
     glColor4f(0,0,0,.77f);Rect(box.x,box.y,box.width,box.height);
     glColor4f(1,.72f,.22f,.9f);glLineWidth(1);
@@ -37,7 +39,7 @@ void Draw(const ShooterController& controller,int width,int height,HWND window,c
         glColor4f(1,.72f,.22f,.95f);Rect(box.listX,rowY,box.listWidth,box.row*.63f,true);
         char label[100];sprintf_s(label,"%d %s",key,item ? item->name : MainLabel(key));
         // Long labels use familiar short gun names in the list; full names remain in the detail panel.
-        if (item) sprintf_s(label,"%d %s",key,ShooterController::weapons[item->slot].name);
+        if (item) sprintf_s(label,"%d %s",key,controller.WeaponData(item->slot).name);
         text(box.listX+box.width*.009f,rowY+box.row*.43f,label);
         if (item && (previewSlot<0 || selected)) previewSlot=item->slot;
     }
@@ -45,7 +47,7 @@ void Draw(const ShooterController& controller,int width,int height,HWND window,c
     if (hover==0) { glColor4f(.95f,.025f,.005f,.94f);Rect(box.listX,box.cancelY,box.listWidth,box.row*.63f); }
     glColor4f(1,.72f,.22f,1);text(box.listX+box.width*.009f,box.cancelY+box.row*.43f,page==BuyMenu::Page::Main ? "0 CANCEL" : "0 BACK");
     if (previewSlot>=0) {
-        auto item=BuyCatalog::Slot(previewSlot);const auto& weapon=ShooterController::weapons[previewSlot];
+        auto item=BuyCatalog::Slot(previewSlot);const auto& weapon=controller.WeaponData(previewSlot);
         Rect(box.detailX,box.previewY,box.detailWidth,box.previewHeight,true);
         preview(previewSlot,box.detailX,box.previewY,box.detailWidth,box.previewHeight);
         // Show actual configurable gameplay values rather than unrelated real-world ballistics.

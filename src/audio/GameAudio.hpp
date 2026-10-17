@@ -16,7 +16,8 @@ public:
     void SetVolumePercent(float percent);
     float VolumePercent() const;
     void Play(const char* name, float volume = 0.75f);
-    float BeginAnimation(int weapon, const char* name, DWORD start);
+    float Duration(int weapon,const char* name) const;
+    float BeginAnimation(int weapon, const char* name, DWORD start,float rate=1);
     void Tick(DWORD now);
     void CancelAnimation();
     void Stop();
@@ -35,5 +36,6 @@ private:
     std::array<std::map<std::string, Sequence>, WeaponSlots::Count> timelines_;
     const Sequence* current_ = nullptr;
     DWORD start_ = 0;
+    float rate_=1;
     size_t event_ = 0;
 };

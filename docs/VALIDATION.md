@@ -1,5 +1,37 @@
 # Validation
 
+## Current feature branch: arsenal, native shops and army AI
+
+The native-independent regression suite and affected buy/config/settings/recoil/spell/army
+tests cover all 14 catalog slots, category/row reachability, paid ownership and reserves,
+U migration conflicts, F8 bounds, hidden mining workers, production reservations with an
+empty native building order, pause gaps, synchronous map ownership transfers, combat/manual
+exclusions, arrival stops, base defense and passive O policy while a native shop owns input.
+The verified native frame boundary regression remains the construction dispatch boundary.
+
+Private conversion of the owner's models produced 14 weapon caches and hand-free previews.
+An optional missing XM1014 animation sample is reported and remains silent; required firing
+samples remain mandatory. Ordinary Player verification purchased and fired Deagle, Glock,
+MP5, P90, M249, M3 and XM1014; paid ammunition and M249/shotgun reloads completed. The visible
+M249 mouse row purchased the same entry as keyboard navigation.
+
+In an isolated Kael scene, native shop purchases in F7/F6 charged exactly 350/175 gold and
+updated inventory/native hero stats. E restored the captured view. One O follower remained
+reserved while AI constructed farms/barracks, gathered resources, sent support and defended
+against a scripted raid. Four worker orders took the initial two workers to the configured
+six, without repeated queueing during zero-current-order training. U off stopped new decisions.
+Visible construction and combat survived more than 110 seconds after camera movement. An
+independent unchanged-module RTS control also exercised normal barracks construction.
+
+The initial pre-world build dispatch exposed a native uninitialized skin-matrix crash;
+AI orders now execute after completed world/UI/overlay submission. The subsequent long native
+run had no controller/native faults. Test modules/configs were restored byte-for-byte and the
+tests used a separate offline game copy. This validates the human build plan and the listed
+interactions; it does not claim full campaign coverage or native testing of every race/custom plan.
+
+Both launcher variants retain the normal source/version/native hash and setup/reinstall
+validation path. Model validation fixtures represent the complete expanded owned arsenal.
+
 ## FPS native pursuit rejection (test branch, 2026-10-11)
 
 The guard rejects the controlled basic-attack component at native validation/dispatch and intercepts
