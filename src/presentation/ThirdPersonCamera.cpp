@@ -16,16 +16,19 @@ ThirdPersonPose ThirdPersonCamera::Position(wc3::Handle actor,float z,float yaw,
         if(wc3::Real(wc3::GetDestructableLife(object))>.405f &&
             destructables.Intersect(object,pose.pivot.data(),direction,limit,entry))limit=entry;
     }
-    auto group=wc3::CreateGroup();float radius=settings.distance+512;
-    wc3::GroupEnumUnitsInRange(group,&x,&y,&radius,0);
-    while(auto object=wc3::FirstOfGroup(group)) {
-        wc3::GroupRemoveUnit(group,object);float entry=0;
-        // Ordinary moving followers must not make the camera bounce; solid buildings do shorten it.
-        if(object!=actor && wc3::IsUnitType(object,2) && !wc3::IsUnitHidden(object) &&
-            wc3::Real(wc3::GetUnitState(object,0))>.405f &&
-            units.Intersect(object,pose.pivot.data(),direction,limit,entry,settings.clearance))limit=entry;
+    // Render bounds are combat proxies, not building walls: entering an empty part gives entry=0
+    // even when the building is ahead. Default to stable zoom; retain the old obstruction option.
+    if(settings.buildingCollision) {
+        auto group=wc3::CreateGroup();float radius=settings.distance+512;
+        wc3::GroupEnumUnitsInRange(group,&x,&y,&radius,0);
+        while(auto object=wc3::FirstOfGroup(group)) {
+            wc3::GroupRemoveUnit(group,object);float entry=0;
+            if(object!=actor && wc3::IsUnitType(object,2) && !wc3::IsUnitHidden(object) &&
+                wc3::Real(wc3::GetUnitState(object,0))>.405f &&
+                units.Intersect(object,pose.pivot.data(),direction,limit,entry,settings.clearance))limit=entry;
+        }
+        wc3::DestroyGroup(group);
     }
-    wc3::DestroyGroup(group);
     // Keep the requested free-space distance; clearance is reserved only when geometry shortens the boom.
     pose.Place(limit<settings.distance ? std::max(0.f,limit-settings.clearance) : limit);return pose;
 }

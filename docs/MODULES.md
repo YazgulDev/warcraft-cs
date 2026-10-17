@@ -253,6 +253,9 @@ own capture timing and context/map/actor invalidation. F9 opts out before any ov
 explicit item orders during native approach/channeling. The shared cast predicate grants only
 those orders movement ownership. `InventoryHudView` presents slot labels, gestures and a free cursor.
 Windows messages never issue item natives; focus, reload and mode/map boundaries discard gestures.
+Gesture cleanup preserves the session Tab choice; `ApplySettings` and map reset restore the validated
+`NumbersByDefault` preference. `ThirdPersonCamera` keeps building proxy collision opt-in independently
+of terrain/destructable boom collision and combat hitboxes.
 
 `SquadSpellPolicy` owns portable readiness/healing decisions. `SquadSpellcasting` adapts live
 ability slots and native orders to a bounded stock-order catalog, using shared native ability,

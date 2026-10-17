@@ -102,4 +102,13 @@ int main() {
     settings.inventoryControls=true;controller.Input({Kind::Panel});controller.Update(1,settings,false,0,false,pick,prepare);
     SetCapture(window);assert(GetCapture()==window);controller.ClearInput();assert(!GetCapture());
     controller.Input({Kind::Panel});SetCapture(window);controller.Reset();assert(!GetCapture());DestroyWindow(window);
+    // Real startup/F8 settings enable item numbers without Tab; gesture cleanup preserves a later Tab choice.
+    controller.ApplySettings(settings);assert(controller.State().Numbers());
+    controller.Input({Kind::Numbers});controller.Update(1,settings,false,0,false,pick,prepare);
+    assert(!controller.State().Numbers());controller.ClearInput();assert(!controller.State().Numbers());
+    controller.Reset();assert(controller.State().Numbers());
+    settings.inventoryNumbersDefault=false;controller.ApplySettings(settings);assert(!controller.State().Numbers());
+    controller.Input({Kind::Numbers});controller.Update(1,settings,false,0,false,pick,prepare);assert(controller.State().Numbers());
+    controller.ApplySettings(settings);assert(!controller.State().Numbers());
+    settings.inventoryControls=false;settings.inventoryNumbersDefault=true;controller.ApplySettings(settings);controller.Reset();assert(!controller.State().Numbers());
 }

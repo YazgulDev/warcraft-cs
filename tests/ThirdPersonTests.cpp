@@ -63,6 +63,12 @@ int main() {
     char path[MAX_PATH];GetFullPathNameA("third-person-settings-test.ini",MAX_PATH,path,nullptr);
     {std::ofstream file(path);file<<"[ThirdPerson]\nCameraDistance=nan\nInitialPitch=bad\nAttackInterval=.4\nContactDelay=2\nAttackRange=-10\nAttackArc=500\nRunCycleDistance=0\nTakeoffDuration=nan\nLandingDuration=5\nMovementAnimations=bad\n";}
     auto settings=GameplaySettings::Load(path);
+    // Building zoom is opt-in on startup/F8; malformed/missing values cannot restore the unwanted push-in.
+    assert(!settings.thirdPerson.buildingCollision);
+    for(auto value:{"true","1","false","0","broken"}) {
+        WritePrivateProfileStringA("ThirdPerson","CameraBuildingCollision",value,path);
+        assert(GameplaySettings::Load(path).thirdPerson.buildingCollision==(!strcmp(value,"true") || !strcmp(value,"1")));
+    }
     assert(settings.unitViewEnabled && settings.unitViewPreventEnemyAttacks && settings.squadAutomaticSpells);
     assert(!settings.waterBlocksAttacks);
     WritePrivateProfileStringA("Combat","WaterBlocksAttacks","1",path);assert(GameplaySettings::Load(path).waterBlocksAttacks);

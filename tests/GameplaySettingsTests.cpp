@@ -391,6 +391,12 @@ int main() {
     {std::ofstream file(path);file<<"[Shortcuts]\nSpeed=TAB\nPickup=I\n[Interface]\nInventoryControls=false\n[Inventory]\nDropDistance=999\n";}
     settings=GameplaySettings::Load(path);
     assert(!settings.inventoryControls && settings.inventoryDropDistance==128);
+    // The new default loads without migration and explicit weapon-first choices survive F8.
+    assert(settings.inventoryNumbersDefault);
+    for(auto value:{"false","0","true","1","broken"}) {
+        WritePrivateProfileStringA("Inventory","NumbersByDefault",value,path.c_str());
+        assert(GameplaySettings::Load(path).inventoryNumbersDefault==(strcmp(value,"false") && strcmp(value,"0")));
+    }
     assert(settings.shortcuts.Key(ShortcutAction::Speed)==VK_TAB && settings.shortcuts.Key(ShortcutAction::Pickup)=='I');
     assert(settings.shortcuts.Key(ShortcutAction::InventoryNumbers)==0 && settings.shortcuts.Key(ShortcutAction::InventoryPanel)==0);
     for(auto value : {"-1","nan","100"}) {

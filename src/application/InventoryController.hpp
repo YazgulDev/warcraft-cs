@@ -12,7 +12,8 @@ public:
     void Configure(uintptr_t base) {actions_.Configure(base);}
     void Input(InventoryControls::Event e) {controls_.Queue(e);}
     const InventoryControls& State() const {return controls_;}
-    void Reset() {ClearInput();actions_.Reset();}
+    void Reset() {ClearInput();controls_.Reset(defaultNumbers_);actions_.Reset();}
+    void ApplySettings(const GameplaySettings& settings);
     void ClearInput();
     bool Active() const {return actions_.Active();}
     void CancelCasting() {actions_.Cancel();}
@@ -21,4 +22,5 @@ public:
 private:
     InventoryControls controls_;
     NativeItemActions actions_;
+    bool defaultNumbers_=true;
 };

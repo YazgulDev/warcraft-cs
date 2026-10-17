@@ -3,13 +3,20 @@
 
 void InventoryController::ClearInput() {
     // F8, view changes and map exit may close the panel while LMB still owns capture outside the window.
-    bool pointer=controls_.Open() || controls_.RoutingOpen();controls_.Reset();
+    bool pointer=controls_.Open() || controls_.RoutingOpen();controls_.Reset(controls_.Numbers());
     if(pointer && GetCapture())ReleaseCapture();
+}
+void InventoryController::ApplySettings(const GameplaySettings& settings) {
+    // Only startup/F8/map reset restore the default. Closing I, changing view or losing focus preserves Tab.
+    ClearInput();defaultNumbers_=settings.inventoryControls && settings.inventoryNumbersDefault;
+    controls_.Reset(defaultNumbers_);
 }
 const char* InventoryController::Update(wc3::Handle actor,const GameplaySettings& settings,bool blocked,float yaw,bool self,
     const Aim& pick,const std::function<void()>& prepare) {
     actions_.Update();
-    if(blocked || !settings.inventoryControls) {ClearInput();actions_.Cancel();return nullptr;}
+    if(blocked || !settings.inventoryControls) {
+        ClearInput();if(!settings.inventoryControls)controls_.Reset(false);actions_.Cancel();return nullptr;
+    }
     // Map triggers/consumption may replace an item while the mouse is held or a target is being chosen.
     if((controls_.PressedSlot()>=0 && wc3::UnitItemInSlot(actor,controls_.PressedSlot())!=controls_.PressedItem()) ||
         (controls_.TargetSlot()>=0 && wc3::UnitItemInSlot(actor,controls_.TargetSlot())!=controls_.TargetItem()))controls_.Cancel();

@@ -15,7 +15,8 @@ public:
         events_.push_back(e);
     }
     bool Next(Event& e) {if(events_.empty())return false;e=events_.front();events_.pop_front();return true;}
-    void Reset() {numbers_=open_=false;Cancel();events_.clear();}
+    // Gesture cleanup can preserve Tab; startup/map reload supplies its configured default.
+    void Reset(bool numbers=false) {numbers_=numbers;open_=false;Cancel();events_.clear();}
     void ToggleNumbers() {numbers_=!numbers_;}
     void TogglePanel() {open_=!open_;Cancel();}
     void Close() {open_=false;Cancel();}

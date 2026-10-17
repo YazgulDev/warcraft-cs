@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Keep third-person zoom stable near buildings ahead/behind the actor. Add
+  `[ThirdPerson] CameraBuildingCollision=false` (true restores building push-in; startup/F8).
+  Terrain/destructable obstruction remains enabled; disabled building collision permits camera
+  passage through building models. Start inventory numbers enabled with
+  `[Inventory] NumbersByDefault=true` (false opts out; startup/F8/map reset). Tab still toggles
+  items/weapons; gesture cleanup and view switches preserve its session choice. Preserve saved values.
+
 - Add the F6/F7 animated portrait, HP/mana/map-resolved hero XP and inventory above spells.
   Tab toggles 1..6 item activation; I opens mouse use, target selection, drag-out dropping and
   slot rearrangement. Native Warcraft rules govern effects, charges, cooldowns and droppable items.

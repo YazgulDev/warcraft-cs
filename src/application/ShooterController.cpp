@@ -445,7 +445,7 @@ void ShooterController::ReloadSettings() {
     for(int slot=0;slot<4;++slot)reserve_[slot]=std::min(reserve_[slot],settings_.maxReserve[slot]);
     wc3::Log("Unit scaling fireRate=%d moveSpeed=%d moveReference=%.1f",settings_.scaleFireRateFromAttackSpeed,
         settings_.movement.scaleFromUnitMoveSpeed,settings_.movement.unitMoveSpeedReference);
-    itemInventory_.ClearInput(); // F8 discards gestures and pending uses under the old control layout.
+    itemInventory_.ApplySettings(settings_); // Startup/F8 discard gestures and restore the configured Tab default.
     if(!settings_.inventoryControls)itemInventory_.CancelCasting();
     if(!settings_.spells.enabled)spells_.Cancel(); // Live disabling releases an explicitly owned cast.
     wc3::Log("Health bars configured allies=%d enemies=%d distance=%.0f",settings_.healthBars.allies,settings_.healthBars.enemies,settings_.healthBars.distance);

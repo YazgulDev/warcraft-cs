@@ -49,6 +49,9 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     float pitch=std::strtof(pitchText.c_str(),&pitchEnd);
     if(pitchEnd!=pitchText.c_str() && !*pitchEnd && std::isfinite(pitch))result.thirdPerson.initialPitch=std::clamp(pitch,-60.f,30.f);
     result.thirdPerson.clearance=number("ThirdPerson","CameraClearance",16,64);
+    // Opt in only on an explicit true: broad building boxes otherwise cause unwanted automatic zoom.
+    auto buildingCollision=text("ThirdPerson","CameraBuildingCollision","false");
+    result.thirdPerson.buildingCollision=!_stricmp(buildingCollision.c_str(),"true") || buildingCollision=="1";
     result.thirdPerson.attackRange=std::max(30.f,number("ThirdPerson","AttackRange",150,400));
     result.thirdPerson.attackArc=std::max(1.f,number("ThirdPerson","AttackArc",50,120));
     result.thirdPerson.attackHeight=number("ThirdPerson","AttackHeight",64,200);
@@ -244,6 +247,9 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.showUnitHud=enabledHud("ShowUnitHud");result.showInventory=enabledHud("ShowInventory");
     result.inventoryControls=enabledHud("InventoryControls");
     result.inventoryDropDistance=std::max(16.f,number("Inventory","DropDistance",80,128));
+    // Startup/F8 default to item numbers; an explicit false/0 preserves a weapon-first preference.
+    auto itemNumbers=text("Inventory","NumbersByDefault","true");
+    result.inventoryNumbersDefault=_stricmp(itemNumbers.c_str(),"false") && itemNumbers!="0";
     result.unitHudScalePercent=std::max(60.f,number("Interface","UnitHudScalePercent",100,160));
     result.spellIconSizePercent=std::max(4.f,number("Interface","SpellIconSizePercent",7,14));
     // Keep the optional counter hidden for old/invalid configs; accept explicit boolean preferences.

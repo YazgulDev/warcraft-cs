@@ -214,6 +214,10 @@ See [third-person controls, settings and limits](docs/THIRD-PERSON.md).
 Mouse wheel up/down moves the third-person camera closer/farther. `[ThirdPerson] CameraZoomStep=50`
 sets the step; `CameraMinDistance=80` / `CameraMaxDistance=1000` bound the requested distance.
 F8 reloads these settings and resets zoom to `CameraDistance`; wheel choices otherwise last for the map.
+The camera keeps this distance near buildings by default: their broad model boxes can include empty
+space and previously forced extreme close-ups from either side. `[ThirdPerson] CameraBuildingCollision=false`
+controls this policy (true restores building push-in; startup/F8). With false the camera may pass through
+building models; terrain and tree/gate collision still shorten the boom.
 Reachable targets have brackets and a ground circle: red for enemies, yellow for other contacts.
 `[ThirdPerson] ShowTargetIndicator` hides/shows both; `TargetCircleRadius=64` sets the circle radius
 in Warcraft units (16..256). Change them in `Game/WarcraftCS/WarcraftCS.ini` and press F8 to reload.
@@ -354,6 +358,10 @@ Edit it and press F8 in FPS.
   `[Shortcuts] InventoryNumbers=TAB` and `InventoryPanel=I` are rebindable; older custom Tab/I bindings
   are preserved and the conflicting new shortcut is set to NONE. `[Interface] InventoryControls=true`
   enables interaction; `[Inventory] DropDistance=80` sets drop offset (16..128 Warcraft units).
+  `[Inventory] NumbersByDefault=true` enables item numbers immediately, without pressing Tab first.
+  Use false for weapon numbers by default. Startup, F8 and map reset restore this choice; closing I,
+  focus loss and view changes preserve the current Tab toggle. Both settings accept true/false and
+  updates preserve explicit preferences.
   These controls and distance apply at startup/F8; reload, focus loss, menus and view/map changes
   cancel pending mouse gestures. Hidden inventory rows appear temporarily while item mode is active.
   These settings reload with F8 and updates preserve custom values. F9 remains free of HUD.

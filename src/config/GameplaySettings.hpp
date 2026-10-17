@@ -52,6 +52,7 @@ struct GameplaySettings {
     bool showUnitHud=true,showInventory=true;
     bool inventoryControls=true; // Tab/I interactions can be disabled independently of the inventory display.
     float inventoryDropDistance=80;
+    bool inventoryNumbersDefault=true;
     float unitHudScalePercent=100;
     float spellIconSizePercent=7;
     float minimapSizePercent=22;
