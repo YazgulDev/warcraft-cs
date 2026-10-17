@@ -8,6 +8,8 @@
 #include "../platform/FpsCombatGuard.hpp"
 #include "../platform/NativeWeaponAttack.hpp"
 #include "../platform/WeaponTargetFilter.hpp"
+#include "../platform/AttackTargetPolicy.hpp"
+#include "../platform/NativeAttackTarget.hpp"
 #include "../economy/BuyAccess.hpp"
 #include "../presentation/BuyMenuLayout.hpp"
 #include "../presentation/CursorAimRay.hpp"
@@ -588,7 +590,7 @@ void ShooterController::Strike() {
         // Disabled allied targeting makes allies transparent before choosing the nearest weapon contact.
         if (candidate == unit_ || wc3::Real(wc3::GetUnitState(candidate, 0)) <= 0.405f ||
             !wc3::IsUnitVisible(candidate, local)) continue;
-        if(!settings_.targetAllies && wc3::IsUnitAlly(candidate,wc3::GetOwningPlayer(unit_)))continue;
+        if(!settings_.targetAllies && AttackTargetPolicy::Allied(candidate,wc3::GetOwningPlayer(unit_)))continue;
         // Intersect the rendered model's oriented 3D volume instead of one fixed ground cylinder.
         float origin[] = {x, y, z}, direction[] = {vx, vy, vz}, entry = 0;
         float padding = weapon_ == WeaponSlots::Sword ? 28.0f : 0;
@@ -613,12 +615,13 @@ void ShooterController::Strike() {
         }
     }
     if (target) {
-        if(!destructable && !settings_.targetAllies && wc3::IsUnitAlly(target,wc3::GetOwningPlayer(unit_)))return;
+        if(!destructable && !settings_.targetAllies && AttackTargetPolicy::Allied(target,wc3::GetOwningPlayer(unit_)))return;
         // The existing hero is the attacker, preserving mission kill/XP trigger ownership.
         auto life = [&]() { return wc3::Real(destructable ? wc3::GetDestructableLife(target) : wc3::GetUnitState(target,0)); };
         float before = life();
-        bool allied = !destructable && wc3::IsUnitAlly(target,wc3::GetOwningPlayer(unit_));
-        bool lethal = !destructable && CombatDamage::FinishesTarget(settings_.FinishingAWP(weapon_),allied);
+        bool allied = !destructable && AttackTargetPolicy::Allied(target,wc3::GetOwningPlayer(unit_));
+        bool lethal = !destructable && AttackTargetPolicy::FinishingAllowed(target,wc3::GetOwningPlayer(unit_)) &&
+            CombatDamage::FinishesTarget(settings_.FinishingAWP(weapon_),allied);
         // Alliance changes are evaluated at contact; friendly AWP scales ordinary damage instead of finishing.
         // Hero mode applies the current attack and per-weapon multiplier at contact; friendly reduction follows it.
         float attack=settings_.heroDamage ? wc3::UnitAttackAverage(unit_) : 0;
@@ -683,7 +686,7 @@ void ShooterController::UpdateSquad(DWORD now) {
                     size_t count=squad_.Focus(unit_,aim.target,settings_,now);
                     char message[96];sprintf_s(message,count ? "ALL UNITS: ATTACK TARGET | %u" : "TARGET ORDER CLEARED",unsigned(count));
                     Notice(message);wc3::Log("squad reticle target=%08X commanded=%u hp=%.1f",aim.target,unsigned(count),
-                        count ? wc3::Real(wc3::GetUnitState(aim.target,0)) : 0.f);
+                        count ? NativeAttackTarget::Resolve(aim.target).Life() : 0.f);
                 }
             } else {
                 squad_.Capture(unit_,squadRequested_==2,settings_);

@@ -81,6 +81,8 @@ extern int (__cdecl* GetHeroLevel)(Handle);
 extern BOOL (__cdecl* IssuePointOrderById)(Handle,int,float*,float*);
 extern BOOL (__cdecl* IssueTargetOrderById)(Handle,int,Handle);
 uintptr_t UnitObject(Handle unit);
+// Resolve a current-map destructable without misclassifying it as a unit or retaining stale pointers.
+uintptr_t DestructableObject(Handle destructable);
 std::string DestructableModelPath(int type);
 float DestructableFacing(Handle object);
 Handle Effect(const char* model, float x, float y);

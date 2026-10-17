@@ -84,7 +84,7 @@ void SquadController::Release() {
 void SquadController::Reset() { focus_.Reset();members_.clear();passive_=false;spells_.Reset(); }
 size_t SquadController::Focus(wc3::Handle leader,wc3::Handle target,const GameplaySettings& settings,DWORD now) {
     // Stop only adapter-owned support channels before the player replaces their target/strategy.
-    if(target && wc3::UnitObject(target))for(const auto& member:members_)if(Valid(member,wc3::GetLocalPlayer()))spells_.Cancel(member.unit);
+    if(NativeAttackTarget::Resolve(target).Valid())for(const auto& member:members_)if(Valid(member,wc3::GetLocalPlayer()))spells_.Cancel(member.unit);
     return focus_.Command(leader,target,settings,now);
 }
 bool SquadController::BlocksUnit(uintptr_t object) const {

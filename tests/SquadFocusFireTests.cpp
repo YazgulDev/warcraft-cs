@@ -14,6 +14,7 @@ struct Unit {
 };
 std::array<Unit,13> units;std::vector<wc3::Handle> group;int targets=0,stops=0,points=0,spellTicks=0;
 SquadController* squad=nullptr;
+alignas(uintptr_t) std::array<unsigned char,0x200> gateObjects[2]{};int gateGeneration=0;float gateLife=500;
 wc3::Bits Encoded(float value) {wc3::Bits bits;memcpy(&bits,&value,4);return bits;}
 wc3::Handle __cdecl Group() {group.clear();return 1;}
 void __cdecl Destroy(wc3::Handle) {}
@@ -26,7 +27,7 @@ BOOL __cdecl Target(wc3::Handle unit,int order,wc3::Handle target) {
     // This is the real callback boundary: passive guards must already permit the explicit order.
     assert(!squad->BlocksUnit(wc3::UnitObject(unit)) && !squad->BlocksAttack(100+unit));
     if(!units[unit].accept)return FALSE;
-    units[unit].order=order;units[unit].target=wc3::UnitObject(target);return TRUE;
+    units[unit].order=order;units[unit].target=NativeAttackTarget::Resolve(target).object;return TRUE;
 }
 BOOL __cdecl Stop(wc3::Handle unit,int order) {++stops;units[unit].order=order;units[unit].target=0;return TRUE;}
 BOOL __cdecl Point(wc3::Handle unit,int order,float*,float*) {++points;units[unit].order=order;return TRUE;}
@@ -35,7 +36,10 @@ namespace wc3 {
 void Log(const char*,...) {}
 float Real(Bits bits) {float f;memcpy(&f,&bits,4);return f;}
 uintptr_t UnitObject(Handle unit) {return unit && unit<units.size() && units[unit].exists ? uintptr_t(units[unit].objects[units[unit].generation].data()) : 0;}
-bool IsNeutralUnit(Handle) {return false;}
+uintptr_t DestructableObject(Handle handle) {return handle==14 ? uintptr_t(gateObjects[gateGeneration].data()) : 0;}
+bool IsNeutralUnit(Handle handle) {return handle<units.size() && units[handle].owner==15;}
+Bits (__cdecl* GetDestructableLife)(Handle)=[](Handle h){assert(h==14);return Encoded(gateLife);};
+int (__cdecl* GetDestructableTypeId)(Handle)=[](Handle h){return h==14 ? 456 : 0;};
 Handle (__cdecl* GetLocalPlayer)()=[]()->Handle{return 10;};
 Handle (__cdecl* GetOwningPlayer)(Handle)=[](Handle u)->Handle{return units[u].owner;};
 int (__cdecl* GetUnitTypeId)(Handle)=[](Handle u){return UnitObject(u) ? 123 : 0;};
@@ -104,4 +108,13 @@ int main() {
     settings.squadReticleAttack=false;stopped=stops;controller.Tick(1,settings,5300,true,0,0,0);assert(stops==stopped+1);
     settings.squadReticleAttack=true;assert(controller.Focus(1,4,settings,6000)==2);
     stopped=stops;controller.Reset();assert(stops==stopped && controller.Count()==0);
+    // Campaign gates are destructable widgets: resolve their own identity/life and retain/cancel native attacks.
+    assert(controller.Focus(1,14,settings,7000)==2);
+    assert(units[2].target==wc3::DestructableObject(14) && units[3].target==wc3::DestructableObject(14));
+    controller.Tick(1,settings,7200,true,0,0,0);stopped=stops;
+    controller.CancelFocus();assert(stops==stopped+2);
+    assert(controller.Focus(1,14,settings,8000)==2);gateGeneration=1;
+    stopped=stops;controller.Tick(1,settings,8200,true,0,0,0);assert(stops==stopped+2);
+    gateGeneration=0;gateLife=0;assert(controller.Focus(1,14,settings,9000)==0);gateLife=500;
+    units[5].owner=15;assert(controller.Focus(1,5,settings,10000)==2);controller.CancelFocus();
 }

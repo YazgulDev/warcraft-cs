@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Fix common-target orders on destructable gates/crates, including the gate type used in Human03.
+  Track native widget identity/life separately from units so orders, cancellation, death and handle reuse
+  work correctly. Allow neutral-owned units/buildings in direct FPS/TPS attacks with allied targeting
+  disabled; actual player allies remain protected. Neutral-passive scenery uses native finite damage
+  even with AWP finishing enabled, preserving quest immunity. Existing controls and config keys apply.
+
 - Add RMB common-target attack orders in F7/F9 for all available owned mobile units, including units
   outside H/O recruitment radius/cap. Empty aim cancels, restoring the previous follow/combat policy
   and native behavior. Native targeting/pathfinding rules remain authoritative. Inventory cancel and

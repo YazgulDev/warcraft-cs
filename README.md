@@ -197,7 +197,7 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 | Hold left mouse button with C4 | Plant for 3 seconds while standing on the ground; multiple charges are allowed |
 | E | Pick up the nearest item/rune if the unit has an available inventory |
 | H / O / J | Your units: follow and fight / follow without attacking / release squad |
-| Right mouse button (F7/F9) | All available owned mobile units attack the unit/building under the reticle; empty aim cancels the common target |
+| Right mouse button (F7/F9) | All available owned mobile units attack the unit/building or destructable gate under the reticle; empty aim cancels the common target |
 | ; (armed F6) | Toggle RMB between all-unit target orders and weapon action; switching off clears the common target |
 | F8 | Reload settings |
 | P | Show/hide horizontal speed in CS units/s |
@@ -295,7 +295,10 @@ Edit it and press F8 in FPS.
   Updates preserve existing values, so older configs with `AWPOneShot=true` need an explicit edit to disable it.
 - **Q** toggles direct allied targeting in FPS and third person. The HUD shows `ALLIES ON/OFF`.
   `[Combat] TargetAllies=false` protects allied units/buildings from direct attacks and suppresses
-  their target markers by default. `true`/`1` enable contacts; `false`/`0` disable them; malformed
+  their markers. Neutral ownership is handled separately, so neutral buildings/creatures remain targetable.
+  Destructable gates/crates support the same RMB orders; neither direct attacks nor orders remove native
+  quest immunity. Neutral-passive scenery takes finite native damage even with AWP finishing enabled.
+  `true`/`1` enable allied contacts; `false`/`0` disable them; malformed
   values use false. Startup/F8 restores this saved preference. `[Shortcuts] ToggleAllyTargeting=Q`
   is remappable; `NONE` disables the shortcut. Updates preserve custom choices, and an older custom
   action bound to Q keeps Q while this new action is added as NONE. With allied targeting disabled,
@@ -321,7 +324,8 @@ Edit it and press F8 in FPS.
   return to native behavior. Ordinary automatic acquisition may choose nearby enemies again.
   Target death/invisibility, ownership changes, H/O/J, disabling the feature, RTS/map exit also release
   the temporary command. Inventory RMB retains its cancel action; buy menus cannot issue squad orders.
-  Allied targets require the existing Q/`TargetAllies` opt-in. F9 keeps its clean screen; aim at the center.
+  Player-allied targets require the existing Q/`TargetAllies` opt-in; neutral targets and destructable gates
+  do not. F9 keeps its clean screen; aim at the center.
   `RearFormation=true` keeps destinations behind the player. `YieldToPlayer=true` sends followers
   left/right before they rejoin when they enter your travel corridor. `PlayerClearance=100` (60..300)
   and `YieldAheadDistance=350` (clearance..1000) are Warcraft units. `OrderIntervalMs=150` (50..1000)

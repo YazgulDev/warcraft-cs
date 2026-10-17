@@ -8,10 +8,7 @@ bool SquadFocusFire::Valid(const Member& member) const {
         wc3::GetOwningPlayer(member.unit)==wc3::GetLocalPlayer() && wc3::Real(wc3::GetUnitState(member.unit,0))>.405f;
 }
 bool SquadFocusFire::ValidTarget(const GameplaySettings& settings) const {
-    return target_ && targetObject_ && wc3::UnitObject(target_)==targetObject_ && wc3::GetUnitTypeId(target_) &&
-        wc3::Real(wc3::GetUnitState(target_,0))>.405f && !wc3::IsUnitHidden(target_) && !wc3::IsUnitLoaded(target_) &&
-        wc3::IsUnitVisible(target_,wc3::GetLocalPlayer()) &&
-        (settings.targetAllies || wc3::IsUnitEnemy(target_,wc3::GetLocalPlayer()) || wc3::IsNeutralUnit(target_));
+    return target_.Eligible(wc3::GetLocalPlayer(),settings.targetAllies);
 }
 bool SquadFocusFire::Contains(uintptr_t object) const {
     return Active() && std::any_of(members_.begin(),members_.end(),[&](const Member& member){return member.object==object;});
@@ -19,10 +16,10 @@ bool SquadFocusFire::Contains(uintptr_t object) const {
 bool SquadFocusFire::Owns(const Member& member) const {
     // A newer script/player order must survive cancellation, including attacks against a different target.
     uintptr_t current=FpsCombatGuard::AttackTargetObject(member.unit);
-    return current==targetObject_ || (!current && wc3::GetUnitCurrentOrder(member.unit)==Attack);
+    return current==target_.object || (!current && wc3::GetUnitCurrentOrder(member.unit)==Attack);
 }
 size_t SquadFocusFire::Command(wc3::Handle leader,wc3::Handle target,const GameplaySettings& settings,DWORD now) {
-    Cancel();target_=target;targetObject_=target ? wc3::UnitObject(target) : 0;requested_=now;
+    Cancel();target_=NativeAttackTarget::Resolve(target);requested_=now;
     if(!settings.squadReticleAttack || target==leader || !ValidTarget(settings)) {Reset();return 0;}
     auto group=wc3::CreateGroup();wc3::GroupEnumUnitsOfPlayer(group,wc3::GetLocalPlayer(),0);
     while(auto unit=wc3::FirstOfGroup(group)) {
@@ -36,8 +33,8 @@ size_t SquadFocusFire::Command(wc3::Handle leader,wc3::Handle target,const Gamep
     wc3::DestroyGroup(group);
     // Publish ownership before dispatch so passive H/O guards permit this explicit player attack.
     members_.erase(std::remove_if(members_.begin(),members_.end(),[&](const Member& member) {
-        BOOL accepted=wc3::IssueTargetOrderById(member.unit,Attack,target_);
-        wc3::Log("squad focus order unit=%08X target=%08X accepted=%d",member.unit,target_,accepted);
+        BOOL accepted=wc3::IssueTargetOrderById(member.unit,Attack,target_.handle);
+        wc3::Log("squad focus order unit=%08X target=%08X accepted=%d destructable=%d",member.unit,target_.handle,accepted,target_.destructable);
         return !accepted;
     }),members_.end());
     if(members_.empty())Reset();return members_.size();
@@ -55,7 +52,6 @@ void SquadFocusFire::Cancel() {
     // Empty-space clicks release only orders we still own; Warcraft acquisition and H/O then resume normally.
     for(const auto& member:members_)if(Valid(member) && Owns(member))wc3::IssueImmediateOrderById(member.unit,Stop);
     // Native health at release diagnoses whether an accepted order reached combat, without per-frame logging.
-    if(Active())wc3::Log("squad focus cleared target=%08X count=%u hp=%.1f",target_,unsigned(members_.size()),
-        wc3::UnitObject(target_)==targetObject_ ? wc3::Real(wc3::GetUnitState(target_,0)) : 0.f);
+    if(Active())wc3::Log("squad focus cleared target=%08X count=%u hp=%.1f",target_.handle,unsigned(members_.size()),target_.Life());
     Reset();
 }

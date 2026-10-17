@@ -1,6 +1,7 @@
 #include "UnitAttack.hpp"
 #include "NativeWeaponAttack.hpp"
 #include "WeaponTargetFilter.hpp"
+#include "AttackTargetPolicy.hpp"
 #include "../combat/CombatDamage.hpp"
 #include <cmath>
 
@@ -38,7 +39,7 @@ UnitAimTarget UnitAttack::Preview(wc3::Handle unit,float yaw,float feet,const fl
     int kind=NativeWeaponAttack::PrimaryKind(unit);if(!kind)return {};
     auto target=kind==1 ? PickMelee(unit,yaw,feet,settings,units,destructables) :
         PickRanged(unit,feet,origin,direction,settings,units,destructables);
-    target.allied=target.handle && !target.destructable && wc3::IsUnitAlly(target.handle,wc3::GetOwningPlayer(unit));
+    target.allied=target.handle && !target.destructable && AttackTargetPolicy::Allied(target.handle,wc3::GetOwningPlayer(unit));
     // Recheck allegiance after selection; protected allies are already skipped by both pickers.
     if(target.allied && !settings.targetAllies)return {};
     if(target.handle) {
@@ -79,7 +80,7 @@ UnitAimTarget UnitAttack::PickMelee(wc3::Handle actor,float yaw,float feet,const
             if(unit==actor || wc3::IsUnitHidden(unit) || wc3::IsUnitLoaded(unit) ||
                 wc3::Real(wc3::GetUnitState(unit,0))<=.405f || !wc3::IsUnitVisible(unit,wc3::GetLocalPlayer()))continue;
             // Skip protected allies before shortening any sweep ray; they cannot hide the enemy behind them.
-            if(!settings.targetAllies && wc3::IsUnitAlly(unit,wc3::GetOwningPlayer(actor)))continue;
+            if(!settings.targetAllies && AttackTargetPolicy::Allied(unit,wc3::GetOwningPlayer(actor)))continue;
             if(settings.ignorePassableInvulnerableObjects && WeaponTargetFilter::PassThrough(unit,
                 reinterpret_cast<uintptr_t>(GetModuleHandleA("Game.dll"))))continue;
             float entry=0;if(units.Intersect(unit,origin,direction,limit,entry)) {limit=entry;contact=unit;isObject=false;}
@@ -101,7 +102,7 @@ bool UnitAttack::Damage(wc3::Handle actor,wc3::Handle target,bool destructable,f
     const auto& tuning=settings.thirdPerson;
     auto life=[&] {return wc3::Real(destructable ? wc3::GetDestructableLife(target) : wc3::GetUnitState(target,0));};
     float before=life(),base=wc3::UnitAttackAverage(actor)*tuning.damageMultiplier;
-    bool allied=!destructable && wc3::IsUnitAlly(target,wc3::GetOwningPlayer(actor));
+    bool allied=!destructable && AttackTargetPolicy::Allied(target,wc3::GetOwningPlayer(actor));
     if(allied && !settings.targetAllies)return false; // Recheck at dispatch, preserving alliance changes.
     float damage=CombatDamage::Amount(base,allied,false,before,settings.friendlyFirePercent);
     bool projectile=ranged && tuning.nativeRangedProjectiles;
@@ -127,7 +128,7 @@ UnitAimTarget UnitAttack::PickRanged(wc3::Handle actor,float feet,const float* a
         if(unit!=actor && !wc3::IsUnitHidden(unit) && !wc3::IsUnitLoaded(unit) &&
             wc3::Real(wc3::GetUnitState(unit,0))>.405f && wc3::IsUnitVisible(unit,wc3::GetLocalPlayer()) &&
             // The reticle and muzzle traces share one filtered list, including allied buildings.
-            (settings.targetAllies || !wc3::IsUnitAlly(unit,wc3::GetOwningPlayer(actor))) &&
+            (settings.targetAllies || !AttackTargetPolicy::Allied(unit,wc3::GetOwningPlayer(actor))) &&
             !(settings.ignorePassableInvulnerableObjects && WeaponTargetFilter::PassThrough(unit,
                 reinterpret_cast<uintptr_t>(GetModuleHandleA("Game.dll")))))candidates.push_back(unit);
     }

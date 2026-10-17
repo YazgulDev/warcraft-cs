@@ -1,12 +1,13 @@
 #include "../src/platform/UnitAttack.hpp"
 #include "../src/platform/NativeWeaponAttack.hpp"
 #include "../src/platform/WeaponTargetFilter.hpp"
+#include "../src/platform/AttackTargetPolicy.hpp"
 #include <cassert>
 #include <cstring>
 
 namespace {
 float targetX=250,reach=600,health=420;
-bool hidden=false,loaded=false,visible=true,transparent=false,wall=false,ally=false,water=false;
+bool hidden=false,loaded=false,visible=true,transparent=false,wall=false,ally=false,water=false,neutral=false;
 bool screen=false,reverse=false,screenAllied=true,gate=false;
 float screenX=60,screenHealth=500;
 int animations=0,damageEvents=0,kind=2;
@@ -36,6 +37,7 @@ float Ground(float x,float){return wall && x>=120 ? 200.f : 0.f;}
 float AttackSurface(float x,float y,bool blocksWater){return water && blocksWater && x>=40 ? 160.f : Ground(x,y);}
 std::vector<Handle> NearbyDestructables(float,float,float){return gate ? std::vector<Handle>{4} : std::vector<Handle>{};}
 float UnitAttackAverage(Handle){return 100;}
+bool IsNeutralUnit(Handle unit){return unit==2 && neutral;}
 }
 namespace NativeWeaponAttack {
 int PrimaryKind(wc3::Handle){return kind;}
@@ -132,4 +134,14 @@ int main(){
     // No enemy in reach means a miss rather than an accidental allied contact.
     targetX=1500;assert(!preview().handle);settings.targetAllies=true;assert(preview().handle==3);
     kind=0;assert(!preview().handle);
+    // Neutral-passive structures can carry an allied bit; neither selection nor contact may apply friendly protection.
+    screen=false;ally=true;neutral=true;health=420;settings.targetAllies=false;
+    assert(!AttackTargetPolicy::FinishingAllowed(2,1));
+    for(int weaponKind:{1,2}) {
+        kind=weaponKind;targetX=kind==1 ? 100.f : 250.f;health=420;
+        assert(preview().handle==2 && !preview().allied && !preview().enemy);
+        attack.Reset();assert(attack.Begin(1,now,settings,status));
+        assert(attack.Tick(1,now+1,0,0,origin,direction,false,settings,status,units,objects));now+=2;
+        assert(health==320);
+    }
 }

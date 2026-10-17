@@ -272,3 +272,6 @@ game-thread command; reticle picking and native order dispatch stay outside pres
 `SquadOrderMode` owns the F6 semicolon toggle and predicts queued toggles for short key+RMB sequences.
 Window input never changes native combat state; the controller applies mode changes before RMB work,
 clears pending toggles at focus/view/menu boundaries and restores the saved default on startup/F8/map reset.
+`NativeAttackTarget` owns typed current-map widget identity/life access for common-target orders,
+including destructable gates. `AttackTargetPolicy` distinguishes neutral ownership from player allies
+for direct contact filtering/damage; native eligibility and quest immunity remain engine-owned.

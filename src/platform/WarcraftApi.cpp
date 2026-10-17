@@ -209,6 +209,11 @@ uintptr_t UnitObject(Handle unit) {
     using Resolve=uintptr_t (__fastcall*)(Handle,uintptr_t);
     return unit ? reinterpret_cast<Resolve>(nativeBase+0x3BDCB0)(unit,0) : 0;
 }
+uintptr_t DestructableObject(Handle destructable) {
+    // Same host-validated resolver already used by destructable geometry and transform readers.
+    using Resolve=uintptr_t (__fastcall*)(Handle,uintptr_t);
+    return destructable ? reinterpret_cast<Resolve>(nativeBase+0x3BE010)(destructable,0) : 0;
+}
 float UnitAttackAverage(Handle unit) {
     uintptr_t object=UnitObject(unit);
     uintptr_t attack=object ? *reinterpret_cast<uintptr_t*>(object+0x1E8) : 0;
