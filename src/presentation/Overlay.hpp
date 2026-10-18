@@ -1,4 +1,5 @@
 #pragma once
+#include "GrenadeWorldView.hpp"
 #include "../combat/WeaponSlots.hpp"
 #include "GunMesh.hpp"
 #include "../application/ShooterController.hpp"
@@ -38,4 +39,5 @@ private:
     DWORD lastDiagnostic_ = 0;
     MuzzleFlashPulse muzzleFlash_;
     SkyView sky_;
+    GrenadeWorldView grenadeWorld_;
 };

@@ -113,8 +113,11 @@ units briefly pause; already paused units and the controlled actor are excluded,
 and only pauses acquired by this feature are released. Set UnitStunSeconds=0 to
 disable that adaptation. Smoke is a visual volume with depth-tested soft puffs,
 near-eye density and fade; it does not block bullets or alter native AI sight.
-Flight bodies/clouds use original geometry, while held models/previews and
-impact/explosion sounds come from the owner's installed CS files.
+Thrown bodies use the owner's original `w_hegrenade.mdl`, `w_flashbang.mdl` and
+`w_smokegrenade.mdl` with their textures, real perspective and world occlusion.
+Clouds use original soft puffs. Held models/previews and impact/explosion sounds
+also come from the owner's installed CS files. Rerun setup/update to convert the
+three world models into private `assets/world` caches.
 
 All settings merge without overwriting custom values. F8 applies prices/carry
 limits and tuning to subsequent launches; live flights/clouds keep their snapshot.
@@ -127,6 +130,7 @@ limits and tuning to subsequent launches; live flights/clouds keep their snapsho
 | FuseSeconds | 1.5 | .2–10 seconds after launch |
 | ReleaseDelay / RecoverySeconds | .25 / .8 | 0–1 / .1–3 seconds of throw animation |
 | MaxActive | 32 | 1–128 simultaneous flights/clouds |
+| WorldModelScale / WorldSpinDegrees | 1 / 360 | .25–4 visual scale / 0–1440 degrees/s in flight; F8 affects new throws |
 | Each grenade: Capacity | 1 / 2 / 1 | 1–100 charges |
 | Price / AmmoPrice | above / above | 0–1000000 gold; one grenade per purchase |
 | MoveSpeed / ModelScale | 250 / .9 | 50–500 CS units/s / .25–2 model FOV scale |

@@ -37,7 +37,7 @@ void GrenadeView::Draw(const std::vector<GrenadeVisual>& items,const WorldLabelV
     GLint mode;glGetIntegerv(GL_MATRIX_MODE,&mode);Begin(width,height);glEnable(GL_DEPTH_TEST);glDepthFunc(GL_LEQUAL);glDepthRange(0,1);
     float inside=0;
     for(const auto& item:items) {
-        if(!item.smoke){Placement at;if(Project(item.position,item.radius,view,width,height,nearPlane,farPlane,at))Disc(at,item.slot==WeaponSlots::Flashbang ? .9f : .25f,item.slot==WeaponSlots::HE ? .38f : .3f,.17f,1,false);continue;}
+        if(!item.smoke)continue; // Textured 3D flight bodies belong to GrenadeWorldView, not the cloud billboard pass.
         // Original soft billboards use real world depth; smoke never writes a wall into the depth buffer.
         auto center=item.position;center[2]+=item.radius*.5f;
         for(int i=0;i<25;++i) {

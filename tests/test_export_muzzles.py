@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'tools'))
-from export_models import StudioModel
+from export_models import StudioModel, export_world_grenades
 
 def fixture(path, count=3, bone=0):
     data=bytearray(244+112+80+769+count*88)
@@ -18,6 +18,14 @@ def fixture(path, count=3, bone=0):
     path.write_bytes(data)
 
 class MuzzleExportTests(unittest.TestCase):
+    def test_world_models_use_owned_world_sources(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);(root/'models').mkdir();output=root/'output'
+            for name in ('hegrenade','flashbang','smokegrenade'):fixture(root/'models'/f'w_{name}.mdl',0)
+            entries=export_world_grenades(root,output)
+            self.assertEqual([item['model'] for item in entries],['w_hegrenade.mdl','w_flashbang.mdl','w_smokegrenade.mdl'])
+            for name in ('hegrenade','flashbang','smokegrenade'):
+                self.assertTrue((output/'world'/f'{name}.wcg').read_bytes().endswith(b'WCM1'+bytes(4)))
     def test_selected_and_dual_attachments(self):
         with tempfile.TemporaryDirectory() as folder:
             src=Path(folder)/'source.mdl';dst=Path(folder)/'gun.wcg';fixture(src)

@@ -23,6 +23,7 @@ void Overlay::Text(float x, float y, const char* text, const HudFont* font) {
     (font ? *font : font_).Draw(x,y,text);
 }
 void Overlay::ResetGraphics(bool deleteObjects) {
+    grenadeWorld_.Reset(deleteObjects);
     spellHud_.Reset(deleteObjects);
     inventoryIcons_.Reset(deleteObjects);unitFont_.Reset(deleteObjects);inventoryFont_.Reset(deleteObjects);
     sky_.Reset(deleteObjects);
@@ -52,7 +53,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
             glGetString(GL_VENDOR), glGetString(GL_RENDERER), glGetString(GL_VERSION), glIsEnabled(GL_LINE_STIPPLE));
     } else if (refreshPending_) {
         // Keep surviving resources: blind deletion after Alt-Tab can touch IDs recycled by the game.
-        bool valid=font_.Valid() && statusFont_.Valid() && spellFont_.Valid();
+        bool valid=font_.Valid() && statusFont_.Valid() && spellFont_.Valid() && grenadeWorld_.Valid();
         valid=valid && sky_.Valid() && spellHud_.Valid() && inventoryIcons_.Valid() && unitFont_.Valid() && inventoryFont_.Valid();
         for (int i=0;i<WeaponSlots::Count;++i) if (loaded_[i] && !guns_[i].TexturesValid()) valid=false;
         for (int i=0;i<WeaponSlots::Count;++i) if (previewLoaded_[i] && !buyPreviews_[i].TexturesValid()) valid=false;
@@ -102,6 +103,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     // World depth still exists here; the first-person weapon clears it in the next pass.
     if(controller.UnitFirstPerson()) {
         if(!controller.Status().contained && !controller.Status().hidden) {
+            grenadeWorld_.Draw(root_,controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
             GrenadeView::Draw(controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
             GrenadeView::Flash(controller.FlashOpacity(),width,height);
         }
@@ -112,8 +114,10 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     unsigned barCount=0;
     if(!controller.Status().contained && !controller.Status().hidden && !controller.Buying())
         barCount=HealthBarRenderer::Draw(bars,barView,width,height,nearPlane,farPlane);
-    if(!controller.Status().contained && !controller.Status().hidden)
+    if(!controller.Status().contained && !controller.Status().hidden) {
+        grenadeWorld_.Draw(root_,controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
         GrenadeView::Draw(controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
+    }
     glMatrixMode(GL_PROJECTION); glPushMatrix(); glLoadIdentity();
     int index = controller.WeaponIndex();
     // Slightly tighten USP/AWP framing while preserving the original lower-edge arm origins.

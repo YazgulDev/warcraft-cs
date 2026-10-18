@@ -367,10 +367,10 @@ if((Get-FileHash -LiteralPath $viewmodel).Hash -ne $visualHash){throw 'Viewmodel
 
 # Grenade updates preserve saved effect/carry/price preferences and insert every new sibling once.
 $grenades=Join-Path $folder 'custom-grenades.ini'
-@('[Grenades]','Enabled=false','FuseSeconds=2.25','[HEGrenade]','Price=777','Capacity=4','[Flashbang]','UnitStunSeconds=0','[SmokeGrenade]','DurationSeconds=7') | Set-Content -LiteralPath $grenades -Encoding ascii
+@('[Grenades]','Enabled=false','FuseSeconds=2.25','WorldModelScale=1.25','WorldSpinDegrees=180','[HEGrenade]','Price=777','Capacity=4','[Flashbang]','UnitStunSeconds=0','[SmokeGrenade]','DurationSeconds=7') | Set-Content -LiteralPath $grenades -Encoding ascii
 Update-GameplayConfig $template $grenades
 $grenadeText=Get-Content -LiteralPath $grenades -Raw
-foreach($setting in @('Enabled=false','FuseSeconds=2.25','Price=777','Capacity=4','UnitStunSeconds=0','DurationSeconds=7','ThrowSpeed=750','AmmoPrice=300','BlindSeconds=3','Opacity=0.85')) {
+foreach($setting in @('Enabled=false','FuseSeconds=2.25','WorldModelScale=1.25','WorldSpinDegrees=180','Price=777','Capacity=4','UnitStunSeconds=0','DurationSeconds=7','ThrowSpeed=750','AmmoPrice=300','BlindSeconds=3','Opacity=0.85')) {
     if(!$grenadeText.Contains($setting)){throw "Grenade migration lost preference/default: $setting"}
 }
 foreach($section in @('Grenades','HEGrenade','Flashbang','SmokeGrenade')) {

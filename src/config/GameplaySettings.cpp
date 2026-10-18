@@ -47,6 +47,8 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     grenades.smokeSeconds=std::max(1.f,number("SmokeGrenade","DurationSeconds",18,60));
     grenades.smokeOpacity=number("SmokeGrenade","Opacity",.85f,1);
     grenades.maxActive=unsigned(std::max(1.f,number("Grenades","MaxActive",32,128)));
+    grenades.worldModelScale=std::max(.25f,number("Grenades","WorldModelScale",1,4));
+    grenades.worldSpin=number("Grenades","WorldSpinDegrees",360,1440);
     result.shopInteraction=enabled("Shops","Enabled");
     result.shopInteractionRadius=std::max(100.f,number("Shops","Radius",450,1200));
     result.shotgunPellets=int(std::max(1.f,number("Shotguns","Pellets",8,16)));

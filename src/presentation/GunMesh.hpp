@@ -10,9 +10,12 @@ public:
     void Draw(const char* animation,float seconds,float flash=0,float flashScale=1,unsigned serial=0,bool geometry=true);
     // Hand-free private caches fit the complete weapon in the buy menu's preview rectangle.
     void DrawPreview(float x,float y,float width,float height);
+    // World props retain GoldSrc axes and their authored idle pose, centered on the physical projectile.
+    void DrawWorld();
     void Reset(bool deleteTextures);
     bool TexturesValid() const;
 private:
+    void Geometry(const std::vector<float>& bones,bool viewmodel);
     struct Vertex { float x, y, z, u, v; unsigned bone; };
     struct Mesh { unsigned texture; std::vector<Vertex> vertices; };
     struct Sequence { std::string name; float fps; unsigned frames; std::vector<float> bones; };

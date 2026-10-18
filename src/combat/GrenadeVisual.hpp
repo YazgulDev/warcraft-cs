@@ -7,4 +7,5 @@ struct GrenadeVisual {
     int slot=0;
     float radius=4,opacity=1,age=0;
     bool smoke=false;
+    float yaw=0,spin=0,modelScale=1;
 };

@@ -20,6 +20,8 @@ public static class LauncherReinstallTests {
             Write(Path.Combine(wc,"Maps","official.w3x"),"owned map");
             // Reinstall must validate the complete owned arsenal without requiring any retail model data in tests.
             foreach (string weapon in new[] {"ak47","m4a1","usp","awp","knife","c4","deagle","glock18","mp5","p90","m249","m3","xm1014","hegrenade","flashbang","smokegrenade"}) Write(Path.Combine(cs,"models","v_"+weapon+".mdl"),"synthetic model");
+            // World-model preflight uses only fixture-owned bytes, like viewmodel preflight above.
+            foreach (string weapon in new[] {"hegrenade","flashbang","smokegrenade"}) Write(Path.Combine(cs,"models","w_"+weapon+".mdl"),"synthetic world model");
             Write(Path.Combine(cs,"sound","weapons","knife_slash1.wav"),"synthetic sound");
             Write(Path.Combine(cs,"sound","player","pl_step1.wav"),"synthetic sound");
             var request=new ClientRequest {WarcraftDirectory=wc,CounterStrikeDirectory=cs,InstallDirectory=Path.Combine(trial,"Client"),InstallMode=mode};

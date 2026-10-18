@@ -8,4 +8,5 @@ struct GrenadeSettings {
     float heRadius=350,flashRadius=1000,flashSeconds=3,flashUnitStunSeconds=2;
     float smokeRadius=300,smokeSeconds=18,smokeOpacity=.85f;
     unsigned maxActive=32;
+    float worldModelScale=1,worldSpin=360;
 };

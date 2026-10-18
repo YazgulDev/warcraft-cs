@@ -507,5 +507,11 @@ int main() {
     }
     {std::ofstream f(path);f<<"[Grenades]\nEnabled=false\nFuseSeconds=2.25\n[Flashbang]\nCapacity=3\nUnitStunSeconds=0\n[SmokeGrenade]\nDurationSeconds=7\n";}
     const auto grenades=GameplaySettings::Load(path);assert(!grenades.grenades.enabled && grenades.grenades.fuse==2.25f && grenades.weapons[WeaponSlots::Flashbang].magazine==3 && grenades.grenades.flashUnitStunSeconds==0 && grenades.grenades.smokeSeconds==7);
+    // World geometry tuning uses the real F8 parser and never permits a zero/unsafe scale.
+    for(auto value:{"-1","99999","nan","bad","","0.5"}) {
+        WritePrivateProfileStringA("Grenades","WorldModelScale",value,path.c_str());WritePrivateProfileStringA("Grenades","WorldSpinDegrees",value,path.c_str());
+        auto world=GameplaySettings::Load(path).grenades;assert(world.worldModelScale>=.25f && world.worldModelScale<=4 && world.worldSpin>=0 && world.worldSpin<=1440);
+        if(!strcmp(value,"nan") || !strcmp(value,"bad") || !*value)assert(world.worldModelScale==1 && world.worldSpin==360);
+    }
     DeleteFileA(path.c_str());return 0;
 }

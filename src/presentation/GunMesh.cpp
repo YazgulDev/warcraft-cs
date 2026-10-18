@@ -119,19 +119,7 @@ void GunMesh::Draw(const char* animation,float seconds,float flash,float flashSc
         float a = sequence->bones[f0 * bones.size() + i], b = sequence->bones[f1 * bones.size() + i];
         bones[i] = a + (b - a) * weight;
     }
-    glEnable(GL_TEXTURE_2D); glColor4f(1, 1, 1, 1);
-    if(geometry)for (const auto& mesh : meshes_) {
-        glBindTexture(GL_TEXTURE_2D, textures_[mesh.texture]); glBegin(GL_TRIANGLES);
-        for (const auto& v : mesh.vertices) {
-            const float* m = &bones[v.bone * 12];
-            float x = m[0] * v.x + m[1] * v.y + m[2] * v.z + m[3];
-            float y = m[4] * v.x + m[5] * v.y + m[6] * v.z + m[7];
-            float z = m[8] * v.x + m[9] * v.y + m[10] * v.z + m[11];
-            // CS viewmodels store the left-hand pose; mirror it for the default right-hand view.
-            glTexCoord2f(v.u, v.v); glVertex3f(y, z, -x);
-        }
-        glEnd();
-    }
+    if(geometry)Geometry(bones,true);
     if(flash>0 && !muzzles_.empty()) {
         const auto& muzzle=muzzles_[(serial ? serial-1 : 0)%muzzles_.size()];const float* m=&bones[muzzle.bone*12];
         float x=m[0]*muzzle.x+m[1]*muzzle.y+m[2]*muzzle.z+m[3];
@@ -140,6 +128,35 @@ void GunMesh::Draw(const char* animation,float seconds,float flash,float flashSc
         MuzzleFlashView::Draw(y,z,-x,flash,flashScale,serial);
         if(serial!=lastFlashSerial_) {lastFlashSerial_=serial;wc3::Log("muzzle flash model=%s serial=%u point=%.2f,%.2f,%.2f",label_.c_str(),serial,y,z,-x);}
     }
+}
+void GunMesh::Geometry(const std::vector<float>& bones,bool viewmodel) {
+    glEnable(GL_TEXTURE_2D);glColor4f(1,1,1,1);
+    for (const auto& mesh : meshes_) {
+        glBindTexture(GL_TEXTURE_2D, textures_[mesh.texture]); glBegin(GL_TRIANGLES);
+        for (const auto& v : mesh.vertices) {
+            const float* m = &bones[v.bone * 12];
+            float x = m[0] * v.x + m[1] * v.y + m[2] * v.z + m[3];
+            float y = m[4] * v.x + m[5] * v.y + m[6] * v.z + m[7];
+            float z = m[8] * v.x + m[9] * v.y + m[10] * v.z + m[11];
+            // CS viewmodels store the left-hand pose; mirror it for the default right-hand view.
+            glTexCoord2f(v.u,v.v);
+            if(viewmodel)glVertex3f(y,z,-x);else glVertex3f(x,y,z);
+        }
+        glEnd();
+    }
+}
+void GunMesh::DrawWorld() {
+    if(sequences_.empty() || meshes_.empty())return;
+    const Sequence* pose=&sequences_.front();for(const auto& s:sequences_)if(s.name=="idle"){pose=&s;break;}
+    std::vector<float> bones(pose->bones.begin(),pose->bones.begin()+boneCount_*12);
+    float minimum[3]={1e30f,1e30f,1e30f},maximum[3]={-1e30f,-1e30f,-1e30f};
+    for(const auto& mesh:meshes_)for(const auto& v:mesh.vertices) {
+        const float* m=&bones[v.bone*12];float p[]={m[0]*v.x+m[1]*v.y+m[2]*v.z+m[3],m[4]*v.x+m[5]*v.y+m[6]*v.z+m[7],m[8]*v.x+m[9]*v.y+m[10]*v.z+m[11]};
+        for(int i=0;i<3;++i){minimum[i]=std::min(minimum[i],p[i]);maximum[i]=std::max(maximum[i],p[i]);}
+    }
+    // Retail props have an offset origin; centering keeps their textured body attached to the swept projectile hull.
+    glPushMatrix();glTranslatef(-(minimum[0]+maximum[0])*.5f,-(minimum[1]+maximum[1])*.5f,-(minimum[2]+maximum[2])*.5f);
+    Geometry(bones,false);glPopMatrix();
 }
 
 void GunMesh::DrawPreview(float x,float y,float width,float height) {

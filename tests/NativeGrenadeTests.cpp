@@ -55,7 +55,10 @@ int main() {
     field.Tick(audio,1,{0,0,100},{1,0,0});assert(releases==0); // A paused native clock cannot advance a lease.
     clockSeconds=4;field.Tick(audio,1,{0,0,100},{1,0,0});assert(!paused[2] && paused[3] && releases==1 && field.FlashOpacity()==0);
     field.Reset();Scene();settings.grenades.maxActive=1;
+    settings.grenades.worldModelScale=1.25f;
     assert(field.Throw(1,WeaponSlots::Smoke,{0,0,100},{1,0,0},{},settings));assert(!field.Throw(1,WeaponSlots::HE,{},{1,0,0},{},settings));
+    settings.grenades.worldModelScale=3;clockSeconds=.1f;field.Tick(audio,1,{0,0,100},{1,0,0});
+    assert(field.Visuals().size()==1 && field.Visuals()[0].modelScale==1.25f && field.Visuals()[0].spin>0); // Launch snapshot owns world appearance.
     clockSeconds=2;field.Tick(audio,1,{0,0,100},{1,0,0});assert(field.Visuals().size()==1 && field.Visuals()[0].smoke && damages==0);
     clockSeconds=30;field.Tick(audio,1,{0,0,100},{1,0,0});assert(field.Visuals().empty());
     field.Reset();Scene();cover={Bounds3{{12,-30,0},{14,30,200}}};

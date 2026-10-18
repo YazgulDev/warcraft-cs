@@ -109,7 +109,12 @@ bool NativeGrenades::Tick(GameAudio& audio,wc3::Handle viewer,const GrenadePoint
             flight.Advance(elapsed,obstacles,[](float x,float y){return wc3::AttackSurface(x,y,false);});
             if(flight.bounced)audio.Play("grenade_hit1.wav",.3f);
             if(elapsed>=flight.settings.fuse){charge.detonated=true;events.push_back(charge);}
-            else visuals_.push_back({flight.position,charge.slot,5,1,elapsed,false});
+            else {
+                bool resting=std::abs(flight.velocity[2])<1 && std::hypot(flight.velocity[0],flight.velocity[1])<10;
+                // Only the visual prop spins; settling restores the retail model's flat resting pose.
+                float yaw=std::atan2(flight.velocity[1],flight.velocity[0])*57.2957795f;
+                visuals_.push_back({flight.position,charge.slot,5,1,elapsed,false,yaw,resting ? 0 : elapsed*flight.settings.worldSpin,flight.settings.worldModelScale});
+            }
         }
         if(charge.detonated && charge.slot==WeaponSlots::Smoke) {
             float opacity=flight.settings.smokeOpacity*std::min(1.f,effectAge)*std::clamp((flight.settings.smokeSeconds-effectAge)/3,0.f,1.f);

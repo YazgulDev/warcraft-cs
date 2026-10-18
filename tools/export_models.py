@@ -204,6 +204,14 @@ class StudioModel:
         return sounds
 
 
+def export_world_grenades(cstrike: Path, output: Path) -> list[dict]:
+    # Thrown bodies are the owner's w_ models, never scaled viewmodels or generated billboard substitutes.
+    destination = output / "world"
+    destination.mkdir(parents=True, exist_ok=True)
+    return [StudioModel(cstrike / "models" / f"w_{name}.mdl").export(destination / f"{name}.wcg", muzzle_attachments=())
+            for name in ("hegrenade", "flashbang", "smokegrenade")]
+
+
 def main():
     from export_skies import export as export_skies
     parser = argparse.ArgumentParser(description=__doc__)
@@ -227,6 +235,7 @@ def main():
         manifest.append(model.export(args.output / f"{weapon}.wcg", excluded, muzzle))
         weapon_sounds.update(model.audio_timeline(args.output / f"{weapon}.wca"))
         export_preview(args.output / f"{weapon}.wcg", args.output / "buy" / f"{weapon}.wcg", model.texture_names())
+    manifest.extend(export_world_grenades(args.cstrike, args.output))
     # Import only an explicitly selected/private model; public packages contain no external sword asset.
     if args.sword_model:
         sword = StudioModel(args.sword_model)

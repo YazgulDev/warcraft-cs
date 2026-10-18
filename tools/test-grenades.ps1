@@ -12,7 +12,9 @@ $script=Join-Path $build 'test-grenades.cmd'
     ('cl /nologo /std:c++17 /EHsc /O2 /W4 /DNOMINMAX "'+(Join-Path $root 'tests/NativeGrenadeTests.cpp')+'" "'+(Join-Path $root 'src/platform/NativeGrenades.cpp')+'" "'+(Join-Path $root 'src/input/ShortcutBindings.cpp')+'" /Fe:native-grenade-tests.exe'),
     'if errorlevel 1 exit /b 1','native-grenade-tests.exe','if errorlevel 1 exit /b 1',
     ('cl /nologo /std:c++17 /EHsc /O2 /W4 /DNOMINMAX "'+(Join-Path $root 'tests/GrenadeViewTests.cpp')+'" "'+(Join-Path $root 'src/presentation/GrenadeView.cpp')+'" /Fe:grenade-view-tests.exe user32.lib gdi32.lib opengl32.lib'),
-    'if errorlevel 1 exit /b 1','grenade-view-tests.exe') | Set-Content -LiteralPath $script -Encoding ascii
+    'if errorlevel 1 exit /b 1','grenade-view-tests.exe','if errorlevel 1 exit /b 1',
+    ('cl /nologo /std:c++17 /EHsc /O2 /W4 /DNOMINMAX "'+(Join-Path $root 'tests/GrenadeWorldViewTests.cpp')+'" "'+(Join-Path $root 'src/presentation/GrenadeWorldView.cpp')+'" "'+(Join-Path $root 'src/presentation/GunMesh.cpp')+'" "'+(Join-Path $root 'src/presentation/MuzzleFlashView.cpp')+'" /Fe:grenade-world-view-tests.exe user32.lib gdi32.lib opengl32.lib'),
+    'if errorlevel 1 exit /b 1','grenade-world-view-tests.exe') | Set-Content -LiteralPath $script -Encoding ascii
 Push-Location $build
 try { & $env:COMSPEC /d /c $script;if ($LASTEXITCODE) { throw 'Grenade verification failed.' };Write-Output 'PASS pin/release/launch cancellation, trajectory, thin-wall bounce, fuse, falloff and facing.' }
 finally { Pop-Location }

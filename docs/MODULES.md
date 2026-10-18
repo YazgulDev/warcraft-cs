@@ -326,3 +326,5 @@ contacts, while the presentation starts the burst clip only once.
 ### Grenades
 
 `GrenadeThrow` owns pin/release/launch/recovery transitions; `GrenadeProjectile` calculates portable swept-hull flight, falloff and exposure. `NativeGrenades` adapts native pause-aware timers, collision snapshots, damage, gates and timed flash disorientation leases. `GrenadeVisual` is a read-only snapshot, and `GrenadeView` draws flights/clouds against native world depth before held-weapon depth clearing, then flash blindness after the HUD. No renderer modifies native targets. Map unload forgets native handles. Tests use synthetic clocks/targets and actual hidden-WGL pixels, without retail assets.
+
+`GrenadeWorldView` owns the three private w_ prop caches and context lifecycle. It reconstructs the native camera projection before weapon depth clearing, preserves original xyz axes and textured geometry, and centers authored offsets on projectile positions. GunMesh shares geometry submission between held and world models. GrenadeView now owns clouds/blindness only.
