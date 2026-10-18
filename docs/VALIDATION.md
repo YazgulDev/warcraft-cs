@@ -1,5 +1,13 @@
 # Validation
 
+## Close-contact camera obstruction follow-up (2026-10-19)
+
+Production camera regressions reproduce a zero-distance boom inside a broad destructable
+proxy, then cover walkable bridge/ladder proxies, separate gate/tree contacts and terrain.
+Only camera obstruction filtering changes; weapon intersections and physical movement
+retain their own collision contracts. Existing building opt-in and wheel distances remain.
+
+
 ## CS grenade throw reach (2026-10-19)
 
 A native-adapter regression first reproduces the short level throw (less than 100 world

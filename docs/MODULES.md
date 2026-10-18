@@ -265,7 +265,9 @@ those orders movement ownership. `InventoryHudView` presents slot labels, gestur
 Windows messages never issue item natives; focus, reload and mode/map boundaries discard gestures.
 Gesture cleanup preserves the session Tab choice; `ApplySettings` and map reset restore the validated
 `NumbersByDefault` preference. `ThirdPersonCamera` keeps building proxy collision opt-in independently
-of terrain/destructable boom collision and combat hitboxes.
+of terrain/destructable boom collision and combat hitboxes. Walkable bridge/ladder decks
+and zero-entry containing proxies are excluded from camera obstruction: their enclosing
+boxes are not separate walls. Combat hitboxes and movement keep their own contracts.
 
 `SquadSpellPolicy` owns portable readiness/healing decisions. `SquadSpellcasting` adapts live
 ability slots and native orders to a bounded stock-order catalog, using shared native ability,

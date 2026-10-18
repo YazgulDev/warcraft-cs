@@ -246,7 +246,8 @@ F8 reloads these settings and resets zoom to `CameraDistance`; wheel choices oth
 The camera keeps this distance near buildings by default: their broad model boxes can include empty
 space and previously forced extreme close-ups from either side. `[ThirdPerson] CameraBuildingCollision=false`
 controls this policy (true restores building push-in; startup/F8). With false the camera may pass through
-building models; terrain and tree/gate collision still shorten the boom.
+building models; terrain and separate tree/gate surfaces still shorten the boom.
+Walkable bridge/ladder proxies and boxes already containing the camera pivot do not force close-ups.
 Reachable targets have brackets and a ground circle: red for enemies, yellow for other contacts.
 `[ThirdPerson] ShowTargetIndicator` hides/shows both; `TargetCircleRadius=64` sets the circle radius
 in Warcraft units (16..256). Change them in `Game/WarcraftCS/WarcraftCS.ini` and press F8 to reload.

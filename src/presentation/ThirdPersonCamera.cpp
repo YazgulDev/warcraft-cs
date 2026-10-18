@@ -12,9 +12,13 @@ ThirdPersonPose ThirdPersonCamera::Position(wc3::Handle actor,float z,float yaw,
         if(wc3::TerrainGround(px,py)+settings.clearance>=pz) {limit=std::max(0.f,t-8);break;}
     }
     for(auto object:wc3::NearbyDestructables(x,y,settings.distance+512)) {
+        if(wc3::Real(wc3::GetDestructableLife(object))<=.405f)continue;
+        float deck=0,cx=wc3::Real(wc3::GetDestructableX(object)),cy=wc3::Real(wc3::GetDestructableY(object));
+        // Walkable bridges/ladders enclose empty space above their decks; their box is not a camera wall.
+        if(wc3::WalkableSurface(cx,cy,deck))continue;
         float entry=0;
-        if(wc3::Real(wc3::GetDestructableLife(object))>.405f &&
-            destructables.Intersect(object,pose.pivot.data(),direction,limit,entry))limit=entry;
+        // A pivot already inside a broad model proxy must be allowed to look out instead of collapsing to zero.
+        if(destructables.Intersect(object,pose.pivot.data(),direction,limit,entry) && entry>0)limit=entry;
     }
     // Render bounds are combat proxies, not building walls: entering an empty part gives entry=0
     // even when the building is ahead. Default to stable zoom; retain the old obstruction option.
