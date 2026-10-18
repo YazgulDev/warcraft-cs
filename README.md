@@ -303,6 +303,7 @@ Edit it and press F8 in FPS.
   Side contact with known walls/units preserves swept-valid coordinates for approach, sliding and
   retreat, preventing native nearest-cell placement from snapping the model sideways. Terrain,
   solid volumes and unknown native blockers remain checked; existing collision settings still apply.
+  Landing catches ledge/low-prop tops under the full footprint; cliff rims no longer trap a landed foot.
   Walking/jumping off a cliff starts a gravity-driven fall. Tune these [movement settings](docs/MOVEMENT.md);
   all apply on F8 without resetting the current jump. Default speed cap: 1000 CS units/s; configurable up to 2000.
 

@@ -18,6 +18,9 @@ block takeoff; release Space after recovery. Existing slows still cap movement s
 Jump over low solids when the feet clear their transformed model bounds. Land on their top or continue
 past them. Taller walls, buildings and trees retain collision. Walking or jumping off a ledge keeps the
 current height initially, then gravity accelerates the fall until landing. No fall damage is added.
+Landing uses the player's full collision footprint: a foot reaching the top catches the lip before
+the center crosses, and support ends after the trailing foot leaves. Native cliff rims include the
+lower-bank pathing cell; validated movement there avoids Warcraft's nearest-cell relocation.
 Map bounds and unsupported flat pathing cells remain blocked. Unknown custom models cannot grant
 permission to cross blocked pathing. Native cliff levels distinguish cliff faces from ordinary hills.
 Shallow-water support retains Warcraft's native height rather than dropping onto the submerged mesh.

@@ -1,5 +1,25 @@
 # Validation
 
+## Ledge landing and lower-bank traversal follow-up (2026-10-18)
+
+The real movement/collision regression reproduces a foot landing on a lip while its center remains
+outside: center-only support sinks below the top and blocks the next step. It now checks landing,
+immediate traversal and a subsequent gravity-driven drop at 20/60/144 Hz, eight approach directions,
+legacy radius 24 and native radii 16/32. A model-backed low prop covers the same partial landing.
+Additional regressions reproduce the outer blocked lower-bank cell and native hull relocation with
+a clear center beside a cliff. Existing bridges/destruction, water, tall and unknown blockers,
+maximum-speed thin walls, steep ramps, trunk retreat and left/right wall sliding still pass.
+
+Separate owned offline 1.26a maps compare ordinary Player modules: the previous module stops at
+x=289 on the lower bank; the fixed module passes x=614 and lands at z=0. Uphill jumps, retreat
+and diagonal movement also run on that terrain. A native scaled barricade catches the foot at
+z=33.7 with the center still outside its model, then permits traversal and falling to z=0 in F6
+and F7; the previous module instead falls to z=0 beside the lip. That map disables the test actor's
+native pathing before entry to preserve the deliberately overlapping spawn; production swept
+collision remains active. A first fixture attempt was discarded because native placement moved
+the actor away during loading. No campaign was opened; each owned process restored its lab DLL
+and INI byte-for-byte. These checks do not establish traversal for every custom-map obstruction.
+
 ## Current follow-up: per-shell ammunition and firing interruption
 
 Portable reload tests cover delayed shell credit, single transfer per completed
