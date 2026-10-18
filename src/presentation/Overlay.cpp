@@ -1,5 +1,6 @@
 #include "Overlay.hpp"
 #include "ScopeView.hpp"
+#include "GrenadeView.hpp"
 #include "ReticleView.hpp"
 #include "TargetMarkerView.hpp"
 #include "ReticleDiagnostics.hpp"
@@ -40,8 +41,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     const WorldLabelView& barView,float nearPlane,float farPlane) {
     // Explain early returns as well as submitted geometry when investigating a missing aiming mark.
     if (!controller.Visible()) { ReticleDiagnostics::Skip("fps-inactive"); return; }
-    // Unit view contains no mod HUD, arms, reticle, menu or hit feedback; the native sky remains in the world.
-    if(controller.UnitFirstPerson())return;
+    // Clean unit view still receives physical grenade smoke/blindness; its HUD and arms stay hidden below.
     if (!wglGetCurrentContext()) { ReticleDiagnostics::Skip("no-gl-context"); return; }
     HGLRC current = wglGetCurrentContext();
     if (context_ != current) {
@@ -100,9 +100,20 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     if (controller.Settings().csSky && !controller.Status().contained && !controller.Status().hidden)
         sky_.Draw(root_,controller.SkyName(),controller.ViewYaw(),controller.ViewPitch(),controller.ViewFov(),float(width)/height);
     // World depth still exists here; the first-person weapon clears it in the next pass.
+    if(controller.UnitFirstPerson()) {
+        if(!controller.Status().contained && !controller.Status().hidden) {
+            GrenadeView::Draw(controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
+            GrenadeView::Flash(controller.FlashOpacity(),width,height);
+        }
+        glMatrixMode(GL_TEXTURE);glPopMatrix();glMatrixMode(oldMode);glPopAttrib();
+        if(activeTexture)activeTexture(oldTexture);
+        return;
+    }
     unsigned barCount=0;
     if(!controller.Status().contained && !controller.Status().hidden && !controller.Buying())
         barCount=HealthBarRenderer::Draw(bars,barView,width,height,nearPlane,farPlane);
+    if(!controller.Status().contained && !controller.Status().hidden)
+        GrenadeView::Draw(controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
     glMatrixMode(GL_PROJECTION); glPushMatrix(); glLoadIdentity();
     int index = controller.WeaponIndex();
     // Slightly tighten USP/AWP framing while preserving the original lower-edge arm origins.
@@ -262,6 +273,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
             if (previewLoaded_[slot]) buyPreviews_[slot].DrawPreview(x,y,w,h);
         });
     InventoryHudView::Cursor(window,controller.UnitHud(),InventoryHudLayout::Calculate(width,height,controller.Settings().spellIconSizePercent,controller.Settings().showSpellIcons,true),inventoryIcons_,controller.ItemControls());
+    GrenadeView::Flash(controller.FlashOpacity(),width,height); // Blindness covers hands, scope and HUD together.
     glPopMatrix(); glMatrixMode(GL_PROJECTION); glPopMatrix();
     glMatrixMode(GL_TEXTURE); glPopMatrix();
     glMatrixMode(oldMode); glPopAttrib();

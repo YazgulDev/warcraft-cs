@@ -3,6 +3,7 @@
 #include "LoggingSettings.hpp"
 #include "RenderSettings.hpp"
 #include "ViewmodelSettings.hpp"
+#include "GrenadeSettings.hpp"
 #include "HealthBarSettings.hpp"
 #include "SpellSettings.hpp"
 #include "ArmyAISettings.hpp"
@@ -21,6 +22,7 @@ struct GameplaySettings {
     LoggingSettings logging;
     RenderSettings render;
     ViewmodelSettings viewmodel;
+    GrenadeSettings grenades;
     HealthBarSettings healthBars;
     ShortcutBindings shortcuts;
     SpellSettings spells;
@@ -36,8 +38,8 @@ struct GameplaySettings {
     // Zero restores individual gun ranges; the default also covers the visible camera volume.
     float minimumFirearmRange=30000;
     std::array<Weapon,WeaponSlots::Count> weapons=WeaponDefaults::Weapons;
-    std::array<float,WeaponSlots::Count> weaponMoveSpeed={221,230,250,210,250,250,220,250,250,250,245,220,230,240};
-    std::array<float,WeaponSlots::Count> weaponModelScale={.72f,.78f,.94f,.73f,1,.95f,.85f,.9f,.94f,.8f,.8f,.75f,.8f,.8f};
+    std::array<float,WeaponSlots::Count> weaponMoveSpeed={221,230,250,210,250,250,220,250,250,250,245,220,230,240,250,250,250};
+    std::array<float,WeaponSlots::Count> weaponModelScale={.72f,.78f,.94f,.73f,1,.95f,.85f,.9f,.94f,.8f,.8f,.75f,.8f,.8f,.9f,.9f,.9f};
     std::array<float,WeaponSlots::Count> weaponKick={0,0,0,0,0,0,0,2.5f,.8f,.8f,.8f,.8f,5,3};
     bool unitViewEnabled=true;
     bool unitViewHideHoverCircles=true; // F9 borrows/restores Warcraft's native preselection presentation.
@@ -104,18 +106,18 @@ struct GameplaySettings {
     float buyRadius=600;
     std::string shopTypes="";
     // The refill shortcut is always free; ordinary purchases still debit native gold.
-    std::array<int,WeaponSlots::Count> weaponPrice={1250,1550,250,2376,0,3000,500,650,400,1500,2350,5750,1700,3000};
+    std::array<int,WeaponSlots::Count> weaponPrice={1250,1550,250,2376,0,3000,500,650,400,1500,2350,5750,1700,3000,300,200,300};
     // Reserve excludes the loaded magazine; buying, free refills and runes share this limit.
     std::array<int,WeaponSlots::Count> maxReserve={90,90,100,30,0,0,0,35,120,120,100,200,32,32};
     // C4 quick replenishment buys the same single charge as its catalog entry.
-    std::array<int,WeaponSlots::Count> ammoPrice={80,60,25,125,0,3000,0,40,20,20,50,60,65,65};
-    std::array<int,WeaponSlots::Count> ammoPack={30,30,12,10,0,1,0,7,20,30,50,100,8,7};
+    std::array<int,WeaponSlots::Count> ammoPrice={80,60,25,125,0,3000,0,40,20,20,50,60,65,65,300,200,300};
+    std::array<int,WeaponSlots::Count> ammoPack={30,30,12,10,0,1,0,7,20,30,50,100,8,7,1,1,1};
     bool csSky=false;
     // Every FPS map gets Warcraft's own backdrop unless the player explicitly disables it.
     bool nativeSky=true;
     std::string defaultSky="Des";
     std::array<std::string,256> tilesetSky{};
-    std::array<float, WeaponSlots::Count> damage = {36,33,34,115,40,2500,120,54,25,26,21,32,104,80};
+    std::array<float, WeaponSlots::Count> damage = {36,33,34,115,40,2500,120,54,25,26,21,32,104,80,100,0,0};
     std::array<float, WeaponSlots::Count> heroMultiplier = {1,1,1,3,1,1,3,1.6f,.75f,.8f,.65f,1,3,2.4f};
     float knifeSecondaryDamage = 65, swordSecondaryDamage = 240;
     static GameplaySettings Load(const std::string& filename);

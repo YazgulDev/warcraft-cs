@@ -67,6 +67,8 @@ $sources += '"' + (Join-Path $modRoot 'src/platform/NativeCommandCard.cpp') + '"
 # Keyboard metadata and native spell targeting/order ownership are separate from the application coordinator.
 $sources += @('input/ShortcutBindings.cpp','config/HeroSpellSlots.cpp','platform/NativeSpellSlots.cpp','platform/SpellAim.cpp','platform/SpellCaster.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 $sources += '"' + (Join-Path $modRoot 'src/platform/MovementObstacles.cpp') + '"'
+$sources += '"' + (Join-Path $modRoot 'src/platform/NativeGrenades.cpp') + '"'
+$sources += '"' + (Join-Path $modRoot 'src/presentation/GrenadeView.cpp') + '"'
 $sources += '"' + (Join-Path $modRoot 'src/platform/UnitCollisionProfile.cpp') + '"' # Live movement collision is independent of weapon geometry.
 # Third-person presentation and native melee coordination retain separate ownership from FPS weapons.
 $sources += @('presentation/ThirdPersonCamera.cpp','platform/UnitAttack.cpp','platform/UnitLocomotion.cpp','platform/ActorJumpView.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }

@@ -60,7 +60,8 @@ void Draw(const ShooterController& controller,int width,int height,HWND window,c
         sprintf_s(value,": %s",item->caliber);line("CALIBER / TYPE",value);
         // Keep magazine/reserve in one row so the existing panel also fits small windows.
         sprintf_s(value,": %d / %d",weapon.magazine,settings.maxReserve[previewSlot]);
-        if (!WeaponSlots::Melee(previewSlot) && previewSlot!=WeaponSlots::C4) line("CLIP / RESERVE",value);
+        if(WeaponSlots::Grenade(previewSlot)){sprintf_s(value,": %d",weapon.magazine);line("CARRY LIMIT",value);}
+        else if (!WeaponSlots::Melee(previewSlot) && previewSlot!=WeaponSlots::C4) line("CLIP / RESERVE",value);
         sprintf_s(value,": %.0f",settings.ContactDamage(previewSlot,false,controller.Status().attackDamage));line("BASE DAMAGE",value);
         if (weapon.interval>0 && !WeaponSlots::Melee(previewSlot)) {
             // Display the cadence actually used by combat, including the optional native IAS multiplier.

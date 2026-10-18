@@ -365,6 +365,21 @@ $visualHash=(Get-FileHash -LiteralPath $viewmodel).Hash
 Update-GameplayConfig $template $viewmodel
 if((Get-FileHash -LiteralPath $viewmodel).Hash -ne $visualHash){throw 'Viewmodel migration is not idempotent.'}
 
+# Grenade updates preserve saved effect/carry/price preferences and insert every new sibling once.
+$grenades=Join-Path $folder 'custom-grenades.ini'
+@('[Grenades]','Enabled=false','FuseSeconds=2.25','[HEGrenade]','Price=777','Capacity=4','[Flashbang]','UnitStunSeconds=0','[SmokeGrenade]','DurationSeconds=7') | Set-Content -LiteralPath $grenades -Encoding ascii
+Update-GameplayConfig $template $grenades
+$grenadeText=Get-Content -LiteralPath $grenades -Raw
+foreach($setting in @('Enabled=false','FuseSeconds=2.25','Price=777','Capacity=4','UnitStunSeconds=0','DurationSeconds=7','ThrowSpeed=750','AmmoPrice=300','BlindSeconds=3','Opacity=0.85')) {
+    if(!$grenadeText.Contains($setting)){throw "Grenade migration lost preference/default: $setting"}
+}
+foreach($section in @('Grenades','HEGrenade','Flashbang','SmokeGrenade')) {
+    if([regex]::Matches($grenadeText,'(?m)^\['+$section+'\]').Count -ne 1){throw 'Duplicate grenade section.'}
+}
+$grenadeHash=(Get-FileHash -LiteralPath $grenades).Hash
+Update-GameplayConfig $template $grenades
+if((Get-FileHash -LiteralPath $grenades).Hash -ne $grenadeHash){throw 'Grenade migration is not idempotent.'}
+
 # Shared reach upgrades old firearm ranges without rewriting their saved values; an explicit opt-out survives.
 foreach($saved in @('', 'MinimumFirearmRange=0', 'MinimumFirearmRange=42000')) {
     $reachConfig=Join-Path $folder 'custom-firearm-range.ini'

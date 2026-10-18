@@ -29,6 +29,24 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.viewmodel.muzzleFlash=enabled("Viewmodel","MuzzleFlash");
     result.viewmodel.flashMilliseconds=unsigned(std::max(10.f,number("Viewmodel","MuzzleFlashMilliseconds",65,200)));
     result.viewmodel.flashScale=number("Viewmodel","MuzzleFlashScale",1,3);
+    // Throw snapshots isolate live projectiles/clouds from later F8 tuning changes.
+    auto& grenades=result.grenades;
+    grenades.enabled=enabled("Grenades","Enabled");
+    grenades.throwSpeed=std::max(50.f,number("Grenades","ThrowSpeed",750,2000));
+    grenades.gravity=std::max(50.f,number("Grenades","Gravity",800,2000));
+    grenades.bounce=number("Grenades","Bounce",.45f,.9f);
+    grenades.inheritedVelocity=number("Grenades","InheritedVelocity",1,2);
+    grenades.fuse=std::max(.2f,number("Grenades","FuseSeconds",1.5f,10));
+    grenades.releaseDelay=number("Grenades","ReleaseDelay",.25f,1);
+    grenades.recovery=std::max(.1f,number("Grenades","RecoverySeconds",.8f,3));
+    grenades.heRadius=std::max(32.f,number("HEGrenade","Radius",350,2000));
+    grenades.flashRadius=std::max(32.f,number("Flashbang","Radius",1000,3000));
+    grenades.flashSeconds=number("Flashbang","BlindSeconds",3,10);
+    grenades.flashUnitStunSeconds=number("Flashbang","UnitStunSeconds",2,10);
+    grenades.smokeRadius=std::max(32.f,number("SmokeGrenade","Radius",300,1000));
+    grenades.smokeSeconds=std::max(1.f,number("SmokeGrenade","DurationSeconds",18,60));
+    grenades.smokeOpacity=number("SmokeGrenade","Opacity",.85f,1);
+    grenades.maxActive=unsigned(std::max(1.f,number("Grenades","MaxActive",32,128)));
     result.shopInteraction=enabled("Shops","Enabled");
     result.shopInteractionRadius=std::max(100.f,number("Shops","Radius",450,1200));
     result.shotgunPellets=int(std::max(1.f,number("Shotguns","Pellets",8,16)));
@@ -373,6 +391,7 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
             weapon.range=std::max(100.f,number(sections[slot],"Range",weapon.range,50000));
             result.weaponKick[slot]=number(sections[slot],"Kick",result.weaponKick[slot],10);
         }
+        if(WeaponSlots::Grenade(slot))weapon.magazine=int(std::max(1.f,number(sections[slot],"Capacity",float(weapon.magazine),100)));
         result.weaponMoveSpeed[slot]=std::max(50.f,number(sections[slot],"MoveSpeed",result.weaponMoveSpeed[slot],500));
         result.weaponModelScale[slot]=std::max(.25f,number(sections[slot],"ModelScale",result.weaponModelScale[slot],2));
         result.damage[slot]=number(sections[slot],"Damage",result.damage[slot],1000000);
@@ -390,7 +409,7 @@ float GameplaySettings::ContactDamage(int slot,bool secondary,float heroAttack) 
     if (slot<0 || slot>=WeaponSlots::Count) return 0;
     // Native average attack works for heroes and creeps, including their active bonuses; heavy melee keeps its ratio.
     float heavy=secondary ? (slot==WeaponSlots::Knife ? 65.0f/40 : slot==WeaponSlots::Sword ? 2.0f : 1.0f) : 1.0f;
-    if (heroDamage && slot!=WeaponSlots::C4) return std::max(0.0f,heroAttack)*heroMultiplier[slot]*heavy;
+    if (heroDamage && slot!=WeaponSlots::C4 && !WeaponSlots::Grenade(slot)) return std::max(0.0f,heroAttack)*heroMultiplier[slot]*heavy;
     return secondary && slot==WeaponSlots::Knife ? knifeSecondaryDamage :
         secondary && slot==WeaponSlots::Sword ? swordSecondaryDamage : damage[slot];
 }

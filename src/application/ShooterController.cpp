@@ -33,6 +33,7 @@ void ShooterController::Configure(const char* root, uintptr_t gameBase) {
     hitboxes_.Configure(gameBase);
     destructableHitboxes_.Configure(gameBase);
     collision_.Configure(gameBase);
+    grenades_.Configure(gameBase);
     spells_.Configure(gameBase);itemInventory_.Configure(gameBase);
     unitHudReader_.Configure(gameBase); // Verify map-resolved XP and item art before sampling the actor.
     // Native-only clients do not need a CS mixer or any converted cache to initialize.
@@ -111,6 +112,7 @@ bool ShooterController::Down(int key) const {
 }
 bool ShooterController::Pressed(int key) { if(key<=0 || key>=256)return false;bool down = Down(key), rising = down && !keys_[key]; keys_[key] = down; return rising; }
 const char* ShooterController::Sequence(const char* name) const {
+    if(WeaponSlots::Grenade(weapon_) && !strcmp(name,"draw"))return "deploy";
     // The owned Glock model's shoot/shoot2 animate three kicks; shoot3 is its ordinary single shot.
     if(weapon_==WeaponSlots::Glock && !strcmp(name,"shoot1"))return "shoot3";
     if((weapon_==WeaponSlots::Deagle || weapon_==WeaponSlots::Glock || weapon_==WeaponSlots::MP5 || weapon_==WeaponSlots::M249) && !strcmp(name,"idle"))return "idle1";
@@ -211,7 +213,7 @@ void ShooterController::ResetMap() {
     weaponWheel_.Reset();cameraWheel_.Reset();
     squad_.Reset();squadOrderMode_.Configure(settings_.squadReticleAttackInFPS); // New maps restore the configured initial F6 mode.
     // Never dereference a unit handle after a map unload: campaign transitions reuse IDs.
-    hitboxes_.Reset(); destructableHitboxes_.Reset(); bombs_.Reset(); plantProgress_ = 0;
+    hitboxes_.Reset(); destructableHitboxes_.Reset(); bombs_.Reset();grenades_.Reset();grenadeThrow_.Reset(); plantProgress_ = 0;
     buyMenu_.Close();itemInventory_.ClearInput();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1;suppressFire_=true;
     fixtureGate_ = 0;
     unit_ = 0; active_ = false; suspended_ = false; paused_ = false; ui_ = 0; tick_ = {};
@@ -411,7 +413,7 @@ void ShooterController::Camera() {
 }
 void ShooterController::Reload() {
     const Weapon& w = settings_.weapons[weapon_];
-    if (WeaponSlots::Melee(weapon_) || weapon_ == WeaponSlots::C4 || reloadEnd_ || ammo_[weapon_] == w.magazine || reserve_[weapon_] <= 0) return;
+    if (!WeaponSlots::Firearm(weapon_) || reloadEnd_ || ammo_[weapon_] == w.magazine || reserve_[weapon_] <= 0) return;
     flashWeapon_=-1;
     // Calibrate against a full magazine so one or two missing shells cannot slow the whole animation down.
     bool shells=weapon_==WeaponSlots::M3 || weapon_==WeaponSlots::XM1014;
@@ -582,6 +584,7 @@ void ShooterController::CloseShop() {
     wc3::Log("shop closed actor=%08X view=%d",unit_,int(view_));
 }
 bool ShooterController::Fire(bool secondary,bool burstRound,bool interruptReload) {
+    if(WeaponSlots::Grenade(weapon_))return false; // Grenades never use a hitscan shot, recoil or muzzle event.
     if(settings_.warcraftOnly)return false;
     const Weapon& w = settings_.weapons[weapon_]; DWORD now = GetTickCount();
     // Keep CS's fractional firing interval: truncating 87.5ms would permit an early M4 shot.
@@ -732,9 +735,29 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
     }
 }
 void ShooterController::CancelPlant() {
+    // Existing equipment transitions also cancel an unlaunched throw and release its held-pin pose.
+    if(grenadeThrow_.Active()){grenadeThrow_.Reset();audio_.CancelAnimation();Play("idle");wc3::Log("grenade throw canceled");}
     if (plantProgress_ <= 0) return;
     plantProgress_ = 0; audio_.CancelAnimation(); Play("idle");
     wc3::Log("C4 planting canceled");
+}
+void ShooterController::ThrowGrenade(bool pressed) {
+    if(!settings_.grenades.enabled || Casting() || suppressFire_ || status_.disarmed || status_.incapacitated || CursorMode()) {CancelPlant();return;}
+    if(!grenadeThrow_.Active() && ammo_[weapon_]<=0){if(pressed)Notice("NO GRENADES");return;}
+    auto event=grenadeThrow_.Step(GetTickCount()*.001,pressed,Down(VK_LBUTTON),grenadePullSeconds_,settings_.grenades.releaseDelay,settings_.grenades.recovery);
+    if(event==GrenadeThrow::Event::Pull) {
+        grenadePullSeconds_=Play("pullpin");if(grenadePullSeconds_<=0)grenadePullSeconds_=1;
+    } else if(event==GrenadeThrow::Event::Throw)Play("throw");
+    else if(event==GrenadeThrow::Event::Launch) {
+        float eye[3],direction[3];AimRay(eye,direction);
+        GrenadePoint motion={movement_.VelocityX(),movement_.VelocityY(),movement_.VerticalVelocity()};
+        if(grenades_.Throw(unit_,weapon_,{eye[0],eye[1],eye[2]},{direction[0],direction[1],direction[2]},motion,settings_)) {
+            --ammo_[weapon_];wc3::Log("grenade inventory slot=%d remaining=%d",weapon_,ammo_[weapon_]);
+        } else Notice("GRENADE LIMIT REACHED");
+    } else if(event==GrenadeThrow::Event::Finished) {
+        if(ammo_[weapon_]>0)Play("draw");
+        else {SwitchWeapon(inventory_.owned[WeaponSlots::Pistol] ? WeaponSlots::Pistol : WeaponSlots::Knife);}
+    }
 }
 void ShooterController::PlantC4(float dt) {
     float x = wc3::Real(wc3::GetUnitX(unit_)), y = wc3::Real(wc3::GetUnitY(unit_));
@@ -801,6 +824,14 @@ void ShooterController::Tick(uintptr_t ui) {
     tick_=frameTime;
     DWORD foregroundPid = 0; GetWindowThreadProcessId(GetForegroundWindow(), &foregroundPid);
     if (bombs_.Tick(audio_) && Visible()) hits_.Record();
+    // Native timers continue after holstering/RTS return and freeze with Warcraft's simulation pause.
+    GrenadePoint grenadeEye{},grenadeDirection{};wc3::Handle grenadeViewer=Visible() ? unit_ : 0;
+    if(grenadeViewer) {
+        grenadeEye={wc3::Real(wc3::GetCameraEyePositionX()),wc3::Real(wc3::GetCameraEyePositionY()),wc3::Real(wc3::GetCameraEyePositionZ())};
+        float cy=std::cos(yaw_*radians),sy=std::sin(yaw_*radians),cp=std::cos(pitch_*radians);
+        grenadeDirection={cy*cp,sy*cp,std::sin(pitch_*radians)};
+    }
+    if(grenades_.Tick(audio_,grenadeViewer,grenadeEye,grenadeDirection) && Visible())hits_.Record();
     bool requireForeground=true;
 #ifdef WCS_GAMEPLAY_TEST
     requireForeground=!BackgroundGameplay::Enabled();
@@ -1023,6 +1054,8 @@ void ShooterController::Tick(uintptr_t ui) {
         unitHudTick_=now;unitHud_=unitHudReader_.Read(unit_,settings_.showInventory || InventoryOpen() || ItemControls().Numbers());
     }
     UpdateStatus();
+    if(grenadeThrow_.Active() && (ThirdPerson() || UnitFirstPerson() || status_.incapacitated || status_.disarmed ||
+        status_.contained || status_.hidden || Casting() || suppressFire_ || InventoryInputOpen() || Buying()))CancelPlant();
     if(weapon_!=WeaponSlots::Glock || ThirdPerson() || UnitFirstPerson() || status_.incapacitated || status_.disarmed ||
         status_.contained || status_.hidden || Casting() || suppressFire_ || InventoryInputOpen())glockBurst_.Cancel();
     // Apply queued Y toggles before RMB dispatch. Held buttons cannot turn a mode change into an accidental scope/stab.
@@ -1203,7 +1236,8 @@ void ShooterController::Tick(uintptr_t ui) {
             aimTarget_=heroAttack_.Preview(unit_,yaw_,movement_.FeetZ()+wc3::Real(wc3::GetUnitFlyHeight(unit_)),origin,direction,
                 settings_,hitboxes_,destructableHitboxes_);
         }
-    } else if (!Casting() && !suppressFire_ && weapon_ == WeaponSlots::C4) PlantC4(dt);
+    } else if(WeaponSlots::Grenade(weapon_))ThrowGrenade(firePressed);
+    else if (!Casting() && !suppressFire_ && weapon_ == WeaponSlots::C4) PlantC4(dt);
     else if(weapon_==WeaponSlots::Glock) {
         if(!Casting() && !suppressFire_ && !status_.disarmed)FireGlock(firePressed,secondaryPressed,GetTickCount());
         else glockBurst_.Cancel();

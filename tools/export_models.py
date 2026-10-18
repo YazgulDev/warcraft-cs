@@ -218,7 +218,7 @@ def main():
     args.output.mkdir(parents=True, exist_ok=True)
     manifest = []
     weapon_sounds = set()
-    for weapon in ("ak47", "m4a1", "usp", "awp", "knife", "c4", "deagle", "glock18", "mp5", "p90", "m249", "m3", "xm1014"):
+    for weapon in ("ak47", "m4a1", "usp", "awp", "knife", "c4", "deagle", "glock18", "mp5", "p90", "m249", "m3", "xm1014", "hegrenade", "flashbang", "smokegrenade"):
         model = StudioModel(args.cstrike / "models" / f"v_{weapon}.mdl")
         # Both silencer-capable weapons are permanently unsilenced in this mod, including their geometry.
         excluded = ("silencer.bmp",) if weapon in ("m4a1", "usp") else ()
@@ -245,6 +245,8 @@ def main():
                           "c4_explode1.wav", "c4_beep1.wav", "c4_beep3.wav", "c4_beep4.wav", "c4_beep5.wav"}
     # Engine-driven shell sounds are needed even when an owned shotgun model has no sound event.
     required_sounds.update({"m3_insertshell.wav", "m3_pump.wav"})
+    # Grenade flight/impact effects use the owner's stock CS samples, never bundled retail audio.
+    required_sounds.update({"grenade_hit1.wav","grenade_hit2.wav","grenade_hit3.wav","hegrenade-1.wav","flashbang-1.wav","sg_explode.wav"})
     weapon_sounds.update(required_sounds)
     for name in sorted(weapon_sounds):
         source = args.cstrike / "sound" / "weapons" / name

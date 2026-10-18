@@ -18,6 +18,8 @@ bool GameAudio::LoadClip(const std::string& path, Clip& clip) {
         if (size > bytes.size() - at - 8) return false;
         if (!memcmp(bytes.data() + at, "fmt ", 4) && size >= 16) memcpy(&format, bytes.data() + at + 8, 16);
         if (!memcmp(bytes.data() + at, "data", 4)) clip.data.assign(bytes.begin() + at + 8, bytes.begin() + at + 8 + size);
+        // Stock pinpull.wav omits padding before trailing LIST metadata. Complete PCM does not need that metadata.
+        if(format.wFormatTag==WAVE_FORMAT_PCM && format.nBlockAlign && !clip.data.empty())break;
         at += 8 + size + (size & 1);
     }
     if (format.wFormatTag != WAVE_FORMAT_PCM || !format.nBlockAlign || clip.data.empty()) return false;

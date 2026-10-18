@@ -852,3 +852,9 @@ and write-mask restoration, and no depth writes. Settings and repeated migration
 checks cover bounded defaults, F8 snapshots and preservation of visual preferences.
 Native appearance still requires an authorized private Warcraft scene on the
 target driver; the standalone tests do not establish cross-driver compatibility.
+
+### Grenade verification
+
+`tools/test-grenades.ps1` exercises held pins, early release, one-shot launch, cancellation, swept thin-wall bounce, 30/144 Hz trajectory tolerance, fuse limits, falloff and facing. Synthetic native targets verify one detonation, fixed damage, friendly protection, cover/gates, immutable launch tuning, pause-aware clocks, pre-paused-unit preservation, disorientation release, active limits and smoke expiry. Actual hidden-WGL readback checks flight visibility, cloud depth occlusion, near-eye density, full-screen flash and inherited write-mask/logic-state restoration. INI and migration checks verify bounds, malformed/default/custom F8 values and idempotent updates. A real private Warcraft scene is still required for native appearance and input/animation/audio integration on the target driver.
+
+The CS audio regression also queues a project-authored odd-length 8-bit PCM sample followed by unpadded LIST metadata. The mixer accepts complete PCM before optional trailing metadata, matching the owned pinpull.wav layout without weakening data-chunk bounds checks.

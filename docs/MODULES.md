@@ -322,3 +322,7 @@ The controller snapshots reload policy and uses a fresh, fireable LMB edge to in
 `BurstFire` in combat owns bounded Glock secondary scheduling, cooldown, cancellation
 and late-frame spacing. The controller debits actual ammo and dispatches individual
 contacts, while the presentation starts the burst clip only once.
+
+### Grenades
+
+`GrenadeThrow` owns pin/release/launch/recovery transitions; `GrenadeProjectile` calculates portable swept-hull flight, falloff and exposure. `NativeGrenades` adapts native pause-aware timers, collision snapshots, damage, gates and timed flash disorientation leases. `GrenadeVisual` is a read-only snapshot, and `GrenadeView` draws flights/clouds against native world depth before held-weapon depth clearing, then flash blindness after the HUD. No renderer modifies native targets. Map unload forgets native handles. Tests use synthetic clocks/targets and actual hidden-WGL pixels, without retail assets.

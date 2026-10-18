@@ -26,6 +26,7 @@ foreach ($name in @('window-input','fog-of-war','diagnostic-log','native-frame-r
 & (Join-Path $PSScriptRoot 'test-shotgun-reload.ps1')
 & (Join-Path $PSScriptRoot 'test-glock-fire.ps1')
 & (Join-Path $PSScriptRoot 'test-viewmodel.ps1')
+& (Join-Path $PSScriptRoot 'test-grenades.ps1')
 # Buying/sky decoding are independent of Warcraft and use only synthetic/private-free test inputs.
 & (Join-Path $PSScriptRoot 'test-buy-menu.ps1')
 Write-Output 'All native-independent regression suites passed.'

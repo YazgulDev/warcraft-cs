@@ -88,6 +88,52 @@ model's barrel attachments; older WCG2 caches use a geometry-derived fallback.
 | MuzzleFlashMilliseconds | 65 | 10–200 milliseconds from first presentation |
 | MuzzleFlashScale | 1 | 0–3, flash size multiplier |
 
+## CS 1.6 grenades
+
+Equipment keys **4 HE, 5 Flashbang, 6 Smoke** append stable slots 15–17. Original
+number keys remain unchanged. Each purchase buys one grenade, including quick
+ammo on a carried grenade. Defaults: HE 300 gold/capacity 1, flash 200/capacity 2,
+smoke 300/capacity 1. Full inventory never charges gold. Fresh standard kits have
+no grenades; all-weapons grants them and free refill restores carried stacks.
+Grenades have no reserve, magazine reload, hitscan bullet or muzzle flash.
+
+In armed F6, hold LMB to pull/hold the pin, then release to throw. Releasing early
+waits for the pin animation. Holstering, menus, casting or lost control cancels an
+unlaunched throw without spending inventory. The native simulation fuse starts
+at launch; flights/effects persist across weapon changes and RTS returns, freeze
+with Warcraft pause and reset on map unload. The final grenade returns to USP
+(or knife). F7/F9 retain native unit attacks.
+
+Flights inherit movement and bounce against terrain, units and buildings using
+swept hulls. HE has fixed peak damage, linear 3D falloff, cover checks and the
+existing friendly-fire percentage; neutral buildings and destructable gates
+retain native quest immunity. Flash blinds the controlled view according to
+distance, facing and cover. As a Warcraft adaptation, nearby hostile mobile
+units briefly pause; already paused units and the controlled actor are excluded,
+and only pauses acquired by this feature are released. Set UnitStunSeconds=0 to
+disable that adaptation. Smoke is a visual volume with depth-tested soft puffs,
+near-eye density and fade; it does not block bullets or alter native AI sight.
+Flight bodies/clouds use original geometry, while held models/previews and
+impact/explosion sounds come from the owner's installed CS files.
+
+All settings merge without overwriting custom values. F8 applies prices/carry
+limits and tuning to subsequent launches; live flights/clouds keep their snapshot.
+
+| Section / keys | Default | Bounds / units |
+| --- | --- | --- |
+| Grenades: Enabled | true | true/false |
+| ThrowSpeed / Gravity | 750 / 800 | 50–2000 world units/s and units/s² |
+| Bounce / InheritedVelocity | .45 / 1 | 0–.9 restitution / 0–2 multiplier |
+| FuseSeconds | 1.5 | .2–10 seconds after launch |
+| ReleaseDelay / RecoverySeconds | .25 / .8 | 0–1 / .1–3 seconds of throw animation |
+| MaxActive | 32 | 1–128 simultaneous flights/clouds |
+| Each grenade: Capacity | 1 / 2 / 1 | 1–100 charges |
+| Price / AmmoPrice | above / above | 0–1000000 gold; one grenade per purchase |
+| MoveSpeed / ModelScale | 250 / .9 | 50–500 CS units/s / .25–2 model FOV scale |
+| HEGrenade: Damage / Radius | 100 / 350 | 0–1000000 fixed damage / 32–2000 world units |
+| Flashbang: Radius / BlindSeconds / UnitStunSeconds | 1000 / 3 / 2 | 32–3000 units / 0–10 s / 0–10 s |
+| SmokeGrenade: Radius / DurationSeconds / Opacity | 300 / 18 / .85 | 32–1000 units / 1–60 s / 0–1 |
+
 ## Native shops in F6/F7
 
 Look at a friendly/neutral shop within **450 world units** and press **E**. Its

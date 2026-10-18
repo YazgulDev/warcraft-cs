@@ -224,6 +224,11 @@ barrel muzzle flash. F8 applies the editable `[Viewmodel]` settings; see the
 
 ## Configuration
 
+CS grenades: **B → 8 Equipment → 4 HE / 5 Flashbang / 6 Smoke**. Select a carried
+grenade with the wheel. Hold LMB to pull the pin, release to throw; the fuse starts
+at launch. Defaults carry one HE, two flashes and one smoke. See
+[grenade settings](docs/ARSENAL-SHOPS-AI.md#cs-16-grenades).
+
 The local third-person prototype adds **F7** to enter directly with a selected owned mobile unit.
 WASD runs and Shift+WASD walks using that unit's authored model animations. F7/F6 return to RTS;
 T switches FPS/third person. The reticle, native melee/ranged primary attacks and Z/X/C/V spells remain available.

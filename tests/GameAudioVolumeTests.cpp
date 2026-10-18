@@ -39,6 +39,14 @@ int main(int count,char** arguments) {
         file.write(reinterpret_cast<const char*>(header),sizeof(header));file.write(silence.data(),silence.size());
     }
     GameAudio audio;
+    // Odd-length PCM followed by unpadded LIST metadata must still reach a real XAudio2 voice.
+    {
+        const unsigned char odd[]={
+            'R','I','F','F',51,0,0,0,'W','A','V','E','f','m','t',' ',16,0,0,0,
+            1,0,1,0,0x22,0x56,0,0,0x22,0x56,0,0,1,0,8,0,'d','a','t','a',3,0,0,0,
+            128,128,128,'L','I','S','T',4,0,0,0,'I','N','F','O'};
+        std::ofstream file(sounds/"odd-pin.wav",std::ios::binary);file.write(reinterpret_cast<const char*>(odd),sizeof(odd));
+    }
     for(auto name:{"m3_insertshell.wav","m3_pump.wav"})std::filesystem::copy_file(sounds/"volume-test.wav",sounds/name);
     // An incompatible COM apartment forces optional audio setup to fail; model timing must still load.
     {
@@ -62,6 +70,7 @@ int main(int count,char** arguments) {
     // Failed/uninitialized audio remains safe; configured tests query the actual XAudio2 master gain.
     audio.SetVolumePercent(50);RequireVolume(audio,0);
     audio.Configure(root.string());RequireVolume(audio,100);
+    audio.Play("odd-pin.wav",0);assert(SoundCount("odd-pin.wav")==1);
     // Both authored M3 audio and the missing-event XM fallback play exactly one real source voice per insert.
     size_t before=SoundCount("m3_insertshell.wav");DWORD now=GetTickCount();
     audio.BeginAnimation(WeaponSlots::M3,"insert",now);audio.Tick(now+1000);

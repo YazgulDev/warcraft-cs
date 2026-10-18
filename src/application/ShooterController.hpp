@@ -2,6 +2,8 @@
 #include "../combat/ShotgunReload.hpp"
 #include "../combat/BurstFire.hpp"
 #include "../presentation/ViewmodelMotion.hpp"
+#include "../combat/GrenadeThrow.hpp"
+#include "../platform/NativeGrenades.hpp"
 #include "../combat/Weapon.hpp"
 #include "../combat/WeaponSlots.hpp"
 #include "../platform/WarcraftApi.hpp"
@@ -156,6 +158,8 @@ public:
     float AnimationTime() const;
     const ViewmodelPose& WeaponPose() const {return viewmodelMotion_.Pose();}
     unsigned ShotSerial() const {return shotSerial_;}
+    const std::vector<GrenadeVisual>& GrenadeVisuals() const {return grenades_.Visuals();}
+    float FlashOpacity() const {return grenades_.FlashOpacity();}
     bool ShowMuzzleFlash() const {
         return flashWeapon_==weapon_ && WeaponSlots::Firearm(weapon_) && settings_.viewmodel.muzzleFlash &&
             Visible() && !ThirdPerson() && !UnitFirstPerson() && !settings_.warcraftOnly && !Buying() && !InventoryOpen();
@@ -247,6 +251,10 @@ private:
     bool shotgunReloadPerShell_=true,shotgunReloadInterrupt_=true;
     void SwitchWeapon(int slot);
     void PlantC4(float dt);
+    void ThrowGrenade(bool pressed);
+    GrenadeThrow grenadeThrow_;
+    NativeGrenades grenades_;
+    float grenadePullSeconds_=1;
     void CancelPlant();
     void RefillAmmo(bool grantAll=false);
     void PickupItem();

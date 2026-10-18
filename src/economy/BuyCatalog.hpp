@@ -20,7 +20,10 @@ inline constexpr std::array<Entry,WeaponSlots::Count> Entries={{
     {WeaponSlots::P90,2,Category::SMGs,"FN P90","p90","5.7 MM"},
     {WeaponSlots::M249,1,Category::Machineguns,"M249 PARA","m249","5.56 MM"},
     {WeaponSlots::M3,1,Category::Shotguns,"BENELLI M3","m3","12 GAUGE"},
-    {WeaponSlots::XM1014,2,Category::Shotguns,"BENELLI XM1014","xm1014","12 GAUGE"}
+    {WeaponSlots::XM1014,2,Category::Shotguns,"BENELLI XM1014","xm1014","12 GAUGE"},
+    {WeaponSlots::HE,4,Category::Equipment,"HE GRENADE","hegrenade","EXPLOSIVE"},
+    {WeaponSlots::Flashbang,5,Category::Equipment,"FLASHBANG","flashbang","FLASH"},
+    {WeaponSlots::Smoke,6,Category::Equipment,"SMOKE GRENADE","smokegrenade","SMOKE"}
 }};
 inline const Entry* Find(Category category,int key) {
     for (const auto& item : Entries) if (item.category==category && item.key==key) return &item;
