@@ -370,7 +370,7 @@ $grenades=Join-Path $folder 'custom-grenades.ini'
 @('[Grenades]','Enabled=false','FuseSeconds=2.25','WorldModelScale=1.25','WorldSpinDegrees=180','[HEGrenade]','Price=777','Capacity=4','[Flashbang]','UnitStunSeconds=0','[SmokeGrenade]','DurationSeconds=7') | Set-Content -LiteralPath $grenades -Encoding ascii
 Update-GameplayConfig $template $grenades
 $grenadeText=Get-Content -LiteralPath $grenades -Raw
-foreach($setting in @('Enabled=false','FuseSeconds=2.25','WorldModelScale=1.25','WorldSpinDegrees=180','Price=777','Capacity=4','UnitStunSeconds=0','DurationSeconds=7','ThrowSpeed=750','AmmoPrice=300','BlindSeconds=3','Opacity=0.85')) {
+foreach($setting in @('Enabled=false','FuseSeconds=2.25','WorldModelScale=1.25','WorldSpinDegrees=180','Price=777','Capacity=4','UnitStunSeconds=0','DurationSeconds=7','ThrowSpeed=1125','AmmoPrice=300','BlindSeconds=3','Opacity=0.85')) {
     if(!$grenadeText.Contains($setting)){throw "Grenade migration lost preference/default: $setting"}
 }
 foreach($section in @('Grenades','HEGrenade','Flashbang','SmokeGrenade')) {
@@ -406,4 +406,17 @@ foreach($custom in @($false,$true)) {
     $selectorHash=(Get-FileHash $selectorConfig).Hash
     Update-GameplayConfig $template $selectorConfig
     if((Get-FileHash $selectorConfig).Hash -ne $selectorHash){throw 'Weapon selector migration is not idempotent.'}
+}
+
+# Migrate only the complete old stock grenade pair; custom trajectories and versioned pairs are preserved.
+foreach($case in @(@('750','800','','1125','660'),@('750.0','800.0','1','1125','660'),@('1000','800','','1000','800'),@('750','500','','750','500'),@('750','800','2','750','800'))) {
+    $trajectoryConfig=Join-Path $folder ('trajectory-'+[guid]::NewGuid().ToString()+'.ini')
+    @('[Grenades]',('ThrowSpeed='+$case[0]),('Gravity='+$case[1]),$(if($case[2]){'TrajectoryVersion='+$case[2]}),'InheritedVelocity=0.5','[Flashbang]','Capacity=4') | Set-Content -LiteralPath $trajectoryConfig -Encoding ascii
+    Update-GameplayConfig $template $trajectoryConfig
+    $trajectoryText=Get-Content -LiteralPath $trajectoryConfig -Raw
+    foreach($expected in @(('ThrowSpeed='+$case[3]),('Gravity='+$case[4]),'TrajectoryVersion=2','LightGravityScale=0.9090909','InheritedVelocity=0.5','Capacity=4')) {
+        if(!$trajectoryText.Contains($expected)){throw ('Trajectory migration lost '+$expected)}
+    }
+    $trajectoryHash=(Get-FileHash $trajectoryConfig).Hash;Update-GameplayConfig $template $trajectoryConfig
+    if((Get-FileHash $trajectoryConfig).Hash -ne $trajectoryHash){throw 'Trajectory migration must be idempotent.'}
 }

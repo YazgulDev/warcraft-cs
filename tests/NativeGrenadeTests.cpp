@@ -63,6 +63,18 @@ int main() {
     clockSeconds=30;field.Tick(audio,1,{0,0,100},{1,0,0});assert(field.Visuals().empty());
     field.Reset();Scene();cover={Bounds3{{12,-30,0},{14,30,200}}};
     assert(field.Throw(1,WeaponSlots::HE,{0,0,100},{1,0,0},{},settings));clockSeconds=.3f;field.Tick(audio,1,{0,0,100},{1,0,0});assert(hp[2]==1000 && hp[10]==1000);
+    GameplaySettings stock;
+    for(int slot:{WeaponSlots::HE,WeaponSlots::Flashbang,WeaponSlots::Smoke}) {
+        field.Reset();Scene();
+        assert(field.Throw(1,slot,{0,0,96},{1,0,0},{},stock));
+        clockSeconds=.1f;field.Tick(audio,1,{0,0,96},{1,0,0});
+        // Native routing must use the scaled CS speed and the distinct HE/flash/smoke gravity.
+        assert(field.Visuals().size()==1 && field.Visuals()[0].position[0]>100);
+        GrenadeProjectile expected;expected.position={23.63539f,0,100.16756f};expected.velocity={886.32697f,0,156.28336f};
+        expected.settings.gravity=slot==WeaponSlots::HE ? 660.f : 600.f;
+        expected.Advance(clockSeconds,{},[](float,float){return 0.f;});
+        assert(std::abs(field.Visuals()[0].position[2]-expected.position[2])<.01f);
+    }
     field.Reset();assert(field.Visuals().empty() && field.FlashOpacity()==0);
     std::puts("PASS native clock, single detonation, damage/friendly/cover/gate policy, F8 snapshots, flash leases and smoke expiry.");
 }

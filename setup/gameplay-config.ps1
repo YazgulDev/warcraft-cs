@@ -13,6 +13,29 @@ function Update-GameplayConfig([string]$Template,[string]$Destination) {
     $lines=[Collections.Generic.List[string]]::new()
     $lines.AddRange([string[]]@(Get-Content -LiteralPath $Destination))
     $changed=$false
+    # Upgrade the complete old stock trajectory once; every custom speed/gravity pair remains intact.
+    $grenadeSection=$false;$throwIndex=-1;$gravityIndex=-1;$trajectoryIndex=-1;$trajectoryVersion='1'
+    for($i=0;$i -lt $lines.Count;$i++) {
+        if($lines[$i] -match '^\s*\[([^\]]+)\]\s*$'){$grenadeSection=$Matches[1] -eq 'Grenades';continue}
+        if($grenadeSection -and $lines[$i] -match '^\s*(ThrowSpeed|Gravity|TrajectoryVersion)\s*=\s*(.*?)\s*$') {
+            switch($Matches[1]) {
+                'ThrowSpeed' {$throwIndex=$i}
+                'Gravity' {$gravityIndex=$i}
+                'TrajectoryVersion' {$trajectoryIndex=$i;$trajectoryVersion=$Matches[2].Trim()}
+            }
+        }
+    }
+    if($trajectoryVersion -in @('','1')) {
+        if($throwIndex -ge 0 -and $gravityIndex -ge 0) {
+            [double]$oldThrow=0;[double]$oldGravity=0
+            $parseThrow=[double]::TryParse(($lines[$throwIndex] -split '=',2)[1].Trim(),[Globalization.NumberStyles]::Float,[Globalization.CultureInfo]::InvariantCulture,[ref]$oldThrow)
+            $parseGravity=[double]::TryParse(($lines[$gravityIndex] -split '=',2)[1].Trim(),[Globalization.NumberStyles]::Float,[Globalization.CultureInfo]::InvariantCulture,[ref]$oldGravity)
+            if($parseThrow -and $parseGravity -and $oldThrow -eq 750 -and $oldGravity -eq 800) {
+                $lines[$throwIndex]='ThrowSpeed=1125';$lines[$gravityIndex]='Gravity=660';$changed=$true
+            }
+        }
+        if($trajectoryIndex -ge 0){$lines[$trajectoryIndex]='TrajectoryVersion=2';$changed=$true}
+    }
     $oldSection='';$customStride=$false
     foreach($existing in $lines) {
         if($existing -match '^\s*\[([^\]]+)\]\s*$'){$oldSection=$Matches[1];continue}

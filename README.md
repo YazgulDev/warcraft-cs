@@ -230,6 +230,9 @@ CS grenades: **B → 8 Equipment → 4 HE / 5 Flashbang / 6 Smoke**. Select a ca
 grenade with group 4 or the wheel, then click to confirm. Hold LMB again to pull the pin, release to throw; the fuse starts
 at launch. Defaults carry one HE, two flashes and one smoke. See
 [grenade settings](docs/ARSENAL-SHOPS-AI.md#cs-16-grenades).
+Throw reach uses CS 1.6 pitch/speed and gravity at the Warcraft world scale, including
+running/jumping momentum. Updates replace only the former stock trajectory pair;
+custom values survive and F8 applies tuning to new throws.
 Thrown grenades use the original CS `w_` models and textures; setup converts these
 separately from the held `v_` models. World scale/spin are editable with F8.
 

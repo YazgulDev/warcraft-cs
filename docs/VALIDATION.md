@@ -1,5 +1,17 @@
 # Validation
 
+## CS grenade throw reach (2026-10-19)
+
+A native-adapter regression first reproduces the short level throw (less than 100 world
+units after .1 s). Production launch tests cover CS pitch remapping in both directions,
+speed cap, 1.5 world scale, yaw symmetry, running/jumping momentum, forward release and
+near-wall/raised-terrain clipping. A level HE first landing falls between 750 and 780
+world units on flat ground. The native adapter verifies distinct HE/flash/smoke gravity.
+Existing fuse, pause, collision, effects and immutable-launch regressions remain in place.
+Settings and installer migration checks cover bounded/default/non-finite tuning, the old
+stock pair, custom pairs, explicit versioned opt-outs and repeated update idempotence.
+
+
 ## Sequential weapon wheel follow-up (2026-10-19)
 
 The selector regression first reproduces M4-to-USP traversal despite AWP being the next visible

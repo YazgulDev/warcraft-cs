@@ -32,8 +32,14 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     // Throw snapshots isolate live projectiles/clouds from later F8 tuning changes.
     auto& grenades=result.grenades;
     grenades.enabled=enabled("Grenades","Enabled");
-    grenades.throwSpeed=std::max(50.f,number("Grenades","ThrowSpeed",750,2000));
-    grenades.gravity=std::max(50.f,number("Grenades","Gravity",800,2000));
+    grenades.throwSpeed=std::max(50.f,number("Grenades","ThrowSpeed",1125,2000));
+    grenades.gravity=std::max(50.f,number("Grenades","Gravity",660,2000));
+    // Upgrade only the complete former stock pair, including old configs reloaded directly with F8.
+    auto trajectory=text("Grenades","TrajectoryVersion","1");
+    if((trajectory=="1" || trajectory.empty()) && grenades.throwSpeed==750 && grenades.gravity==800) {
+        grenades.throwSpeed=1125;grenades.gravity=660;
+    }
+    grenades.lightGravityScale=std::max(.1f,number("Grenades","LightGravityScale",10.f/11,2));
     grenades.bounce=number("Grenades","Bounce",.45f,.9f);
     grenades.inheritedVelocity=number("Grenades","InheritedVelocity",1,2);
     grenades.fuse=std::max(.2f,number("Grenades","FuseSeconds",1.5f,10));

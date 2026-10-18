@@ -1,5 +1,6 @@
 #include "NativeGrenades.hpp"
 #include "../combat/CombatDamage.hpp"
+#include "../combat/GrenadeLaunch.hpp"
 #include <algorithm>
 #include <cmath>
 
@@ -16,12 +17,15 @@ bool NativeGrenades::Throw(wc3::Handle actor,int slot,const GrenadePoint& eye,co
     if(!settings.grenades.enabled || !WeaponSlots::Grenade(slot) || charges_.size()>=settings.grenades.maxActive || !wc3::GetUnitTypeId(actor))return false;
     if(!timer_) {timer_=wc3::CreateTimer();if(!timer_)return false;float duration=360000;wc3::TimerStart(timer_,&duration,FALSE,0);}
     Charge charge;charge.slot=slot;charge.actor=actor;charge.type=wc3::GetUnitTypeId(actor);charge.born=Time();charge.damage=settings.damage[slot];charge.friendly=settings.friendlyFirePercent;
-    charge.flight.settings=settings.grenades;charge.flight.position=eye;
-    // A slight upward release and inherited physical velocity reproduce a hand-thrown arc without moving the camera.
-    auto aim=direction;aim[2]+=.18f;float length=std::sqrt(aim[0]*aim[0]+aim[1]*aim[1]+aim[2]*aim[2]);
-    for(int i=0;i<3;++i)charge.flight.velocity[i]=aim[i]/length*settings.grenades.throwSpeed+motion[i]*settings.grenades.inheritedVelocity;
+    charge.flight.settings=settings.grenades;
+    if(slot!=WeaponSlots::HE)charge.flight.settings.gravity*=settings.grenades.lightGravityScale;
+    if(!GrenadeLaunch::Prepare(charge.flight,eye,direction,motion))return false;
+    auto releaseObstacles=obstacles_.Snapshot(actor,eye[0],eye[1],64,true);
+    GrenadeLaunch::ClipRelease(charge.flight,eye,releaseObstacles,[](float x,float y){return wc3::AttackSurface(x,y,false);});
     charges_.push_back(charge);
-    wc3::Log("grenade launched slot=%d at=%.1f,%.1f,%.1f fuse=%.2f damage=%.1f",slot,eye[0],eye[1],eye[2],charge.flight.settings.fuse,charge.damage);return true;
+    wc3::Log("grenade launched slot=%d at=%.1f,%.1f,%.1f velocity=%.1f,%.1f,%.1f gravity=%.1f fuse=%.2f damage=%.1f",slot,
+        charge.flight.position[0],charge.flight.position[1],charge.flight.position[2],charge.flight.velocity[0],charge.flight.velocity[1],charge.flight.velocity[2],
+        charge.flight.settings.gravity,charge.flight.settings.fuse,charge.damage);return true;
 }
 bool NativeGrenades::Covered(const GrenadePoint& from,const GrenadePoint& to,const std::vector<Bounds3>& obstacles) const {
     GrenadePoint direction{};for(int i=0;i<3;++i)direction[i]=to[i]-from[i];

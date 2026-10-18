@@ -503,7 +503,7 @@ int main() {
         assert(g.flashSeconds>=0 && g.flashSeconds<=10 && g.flashUnitStunSeconds>=0 && g.flashUnitStunSeconds<=10 && g.smokeSeconds>=1 && g.smokeSeconds<=60 && g.smokeOpacity>=0 && g.smokeOpacity<=1);
         assert(profile.weapons[WeaponSlots::HE].magazine>=1 && profile.weapons[WeaponSlots::HE].magazine<=100);
         assert(profile.ContactDamage(WeaponSlots::HE,false,999)==profile.damage[WeaponSlots::HE]);
-        if(!strcmp(value,"nan") || !strcmp(value,"inf") || !strcmp(value,"bad") || !*value)assert(g.fuse==1.5f && g.throwSpeed==750 && g.smokeSeconds==18);
+        if(!strcmp(value,"nan") || !strcmp(value,"inf") || !strcmp(value,"bad") || !*value)assert(g.fuse==1.5f && g.throwSpeed==1125 && g.gravity==660 && g.smokeSeconds==18);
     }
     {std::ofstream f(path);f<<"[Grenades]\nEnabled=false\nFuseSeconds=2.25\n[Flashbang]\nCapacity=3\nUnitStunSeconds=0\n[SmokeGrenade]\nDurationSeconds=7\n";}
     const auto grenades=GameplaySettings::Load(path);assert(!grenades.grenades.enabled && grenades.grenades.fuse==2.25f && grenades.weapons[WeaponSlots::Flashbang].magazine==3 && grenades.grenades.flashUnitStunSeconds==0 && grenades.grenades.smokeSeconds==7);
@@ -524,6 +524,21 @@ int main() {
     for(const char* value:{"false","0","FALSE"}) {
         {std::ofstream file(path);file<<"[WeaponSelection]\nEnabled="<<value<<"\nTimeoutSeconds=3\n";}
         auto menu=GameplaySettings::Load(path);assert(!menu.weaponSelectionMenu && menu.weaponSelectionTimeout==3);
+    }
+    // Old stock defaults upgrade both on startup/F8; partial customizations and versioned settings survive.
+    for(const char* config:{"[Grenades]\nThrowSpeed=750\nGravity=800\n", "[Grenades]\nThrowSpeed=750\nGravity=800\nTrajectoryVersion=1\n"}) {
+        {std::ofstream file(path);file<<config;}
+        auto g=GameplaySettings::Load(path).grenades;assert(g.throwSpeed==1125 && g.gravity==660);
+    }
+    for(const char* config:{"[Grenades]\nThrowSpeed=1000\nGravity=800\n", "[Grenades]\nThrowSpeed=750\nGravity=800\nTrajectoryVersion=2\n"}) {
+        {std::ofstream file(path);file<<config;}
+        auto g=GameplaySettings::Load(path).grenades;assert(g.gravity==800 && g.throwSpeed==(!strstr(config,"1000") ? 750 : 1000));
+    }
+    for(const char* value:{"-1","9999","nan","inf","bad","","0.75"}) {
+        {std::ofstream file(path);file<<"[Grenades]\nLightGravityScale="<<value<<"\n";}
+        auto scale=GameplaySettings::Load(path).grenades.lightGravityScale;
+        assert(scale>=.1f && scale<=2);
+        if(!strcmp(value,"nan") || !strcmp(value,"inf") || !strcmp(value,"bad") || !*value)assert(std::abs(scale-10.f/11)<.00001f);
     }
     DeleteFileA(path.c_str());return 0;
 }

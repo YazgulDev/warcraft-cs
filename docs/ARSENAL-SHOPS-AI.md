@@ -105,8 +105,13 @@ at launch; flights/effects persist across weapon changes and RTS returns, freeze
 with Warcraft pause and reset on map unload. The final grenade returns to USP
 (or knife). F7/F9 retain native unit attacks.
 
-Flights inherit movement and bounce against terrain, units and buildings using
-swept hulls. HE has fixed peak damage, linear 3D falloff, cover checks and the
+Launch pitch and angle-dependent speed follow CS 1.6 at the project's 1.5 world
+scale: a level throw leaves at ten degrees upward and 900 world units/s, reaching
+1125 when aimed upward. The release starts 24 world units ahead of the eye,
+clipped against nearby geometry. Running/jumping velocity is inherited. HE uses
+660 world units/s² gravity; flash/smoke use 600. Flights bounce against terrain,
+units and buildings using swept hulls. This calibrates launch reach; Warcraft
+collision responses and the existing detonation/effect rules remain adaptations. HE has fixed peak damage, linear 3D falloff, cover checks and the
 existing friendly-fire percentage; neutral buildings and destructable gates
 retain native quest immunity. Flash blinds the controlled view according to
 distance, facing and cover. As a Warcraft adaptation, nearby hostile mobile
@@ -120,13 +125,17 @@ Clouds use original soft puffs. Held models/previews and impact/explosion sounds
 also come from the owner's installed CS files. Rerun setup/update to convert the
 three world models into private `assets/world` caches.
 
-All settings merge without overwriting custom values. F8 applies prices/carry
+Updates migrate the former stock ThrowSpeed=750 / Gravity=800 pair to the new
+defaults once. Other custom pairs survive. `TrajectoryVersion=2` marks this upgrade;
+keep it when deliberately choosing the old pair. F8 also recognizes unversioned
+old stock values. F8 applies prices/carry
 limits and tuning to subsequent launches; live flights/clouds keep their snapshot.
 
 | Section / keys | Default | Bounds / units |
 | --- | --- | --- |
 | Grenades: Enabled | true | true/false |
-| ThrowSpeed / Gravity | 750 / 800 | 50–2000 world units/s and units/s² |
+| ThrowSpeed / Gravity | 1125 / 660 | 50–2000 world units/s (speed cap) and units/s² (HE) |
+| LightGravityScale | .9090909 | .1–2 multiplier applied to flash/smoke gravity |
 | Bounce / InheritedVelocity | .45 / 1 | 0–.9 restitution / 0–2 multiplier |
 | FuseSeconds | 1.5 | .2–10 seconds after launch |
 | ReleaseDelay / RecoverySeconds | .25 / .8 | 0–1 / .1–3 seconds of throw animation |
