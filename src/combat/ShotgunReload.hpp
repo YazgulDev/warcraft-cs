@@ -2,16 +2,18 @@
 #include <algorithm>
 #include <cmath>
 
-// One fitted timeline owns start, one insertion per missing shell, and the closing action.
+// Full-magazine timing sets a constant insertion rate; partial reloads finish proportionally sooner.
 class ShotgunReload {
 public:
     struct Pose { const char* name; int phase; float elapsed; };
-    void Configure(int shells,float seconds,float start,float insert,float finish) {
-        shells_=std::max(1,shells);seconds_=std::max(.1f,seconds);
+    void Configure(int shells,int capacity,float fullSeconds,float start,float insert,float finish) {
+        capacity=std::max(1,capacity);shells_=std::clamp(shells,1,capacity);
         start_=Duration(start);insert_=Duration(insert);finish_=Duration(finish);
-        rate_=(start_+shells_*insert_+finish_)/seconds_;
+        rate_=(start_+capacity*insert_+finish_)/std::max(.1f,fullSeconds);
+        seconds_=(start_+shells_*insert_+finish_)/rate_;
     }
     float Rate() const { return rate_; }
+    float Seconds() const { return seconds_; }
     Pose At(float elapsed) const {
         float time=std::clamp(elapsed,0.f,seconds_)*rate_;
         if(time<start_)return {"start_reload",0,time/rate_};

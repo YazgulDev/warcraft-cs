@@ -459,5 +459,20 @@ int main() {
     assert(GameplaySettings::Load(path).FirearmRange(WeaponSlots::M3)==49000);
     WritePrivateProfileStringA("M3","Range","999999",path.c_str());
     assert(GameplaySettings::Load(path).weapons[WeaponSlots::M3].range==50000);
+    // Both fresh and F8 snapshots validate the new secondary mode without changing the ordinary single-shot interval.
+    DeleteFileA(path.c_str());
+    for(auto value:{"-2","999","nan","bad","","0.2"}) {
+        {std::ofstream f(path);f<<"[Glock]\nSecondaryBurstRounds="<<value<<"\nSecondaryBurstInterval="<<value<<"\nSecondaryCooldown="<<value<<"\n";}
+        auto glock=GameplaySettings::Load(path);
+        assert(glock.glockBurstRounds>=1 && glock.glockBurstRounds<=5);
+        assert(glock.glockBurstInterval>=.025f && glock.glockBurstInterval<=1);
+        assert(glock.glockSecondaryCooldown>=.1f && glock.glockSecondaryCooldown<=5);
+        assert(glock.weapons[WeaponSlots::Glock].interval==.15f);
+        if(!strcmp(value,"nan") || !strcmp(value,"bad") || !*value)
+            assert(glock.glockBurstRounds==3 && glock.glockBurstInterval==.1f && glock.glockSecondaryCooldown==.5f);
+    }
+    WritePrivateProfileStringA("Glock","SecondaryBurstRounds","4",path.c_str());
+    WritePrivateProfileStringA("Glock","SecondaryBurstInterval","0.08",path.c_str());
+    auto glock=GameplaySettings::Load(path);assert(glock.glockBurstRounds==4 && glock.glockBurstInterval==.08f);
     DeleteFileA(path.c_str());return 0;
 }

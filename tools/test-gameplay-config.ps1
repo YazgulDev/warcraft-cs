@@ -342,10 +342,10 @@ foreach($setting in @('Refill=F12','AllWeapons=F5','ToggleThirdPerson=F7','Toggl
 }
 # New arsenal/AI keys merge into custom profiles without moving a saved U action or replacing paid values.
 $arsenal=Join-Path $folder 'custom-arsenal.ini'
-@('[Shortcuts]','Pickup=U','[Deagle]','Price=777','Magazine=13','[ArmyAI]','Workers=9') | Set-Content -LiteralPath $arsenal -Encoding ascii
+@('[Shortcuts]','Pickup=U','[Deagle]','Price=777','Magazine=13','[Glock]','SecondaryBurstRounds=2','SecondaryBurstInterval=0.08','[ArmyAI]','Workers=9') | Set-Content -LiteralPath $arsenal -Encoding ascii
 Update-GameplayConfig $template $arsenal
 $arsenalText=Get-Content -LiteralPath $arsenal -Raw
-foreach($setting in @('Pickup=U','ArmyAI=NONE','Price=777','Magazine=13','Workers=9','[M249]','[XM1014]','SpreadDegrees=5','[Shops]','Radius=450')) {
+foreach($setting in @('Pickup=U','ArmyAI=NONE','Price=777','Magazine=13','Workers=9','[M249]','[XM1014]','SpreadDegrees=5','[Shops]','Radius=450','SecondaryBurstRounds=2','SecondaryBurstInterval=0.08','SecondaryCooldown=0.5')) {
     if(!$arsenalText.Contains($setting)){throw "Arsenal/AI upgrade lost preference/default: $setting"}
 }
 $arsenalHash=(Get-FileHash -LiteralPath $arsenal).Hash

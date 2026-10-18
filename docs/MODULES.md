@@ -307,3 +307,7 @@ survive Warcraft's zero-current-order reports and pause/background gaps.
 phases. The controller coordinates transitions; `WeaponAnimation` in presentation holds
 terminal reload bones until the next phase, while ordinary firing/draw actions still settle
 to idle. `GameAudio` reads private timeline metadata independently of optional audio setup.
+Its full-magazine reference keeps the same insertion speed for partial reloads.
+`BurstFire` in combat owns bounded Glock secondary scheduling, cooldown, cancellation
+and late-frame spacing. The controller debits actual ammo and dispatches individual
+contacts, while the presentation starts the burst clip only once.

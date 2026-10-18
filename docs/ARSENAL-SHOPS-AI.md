@@ -17,15 +17,20 @@ The new INI sections `[Deagle]`, `[Glock]`, `[MP5]`, `[P90]`, `[M249]`, `[M3]`,
 is a shell total, divided across `[Shotguns] Pellets=8` (1–16), with
 `SpreadDegrees=5` cone radius (0–15 degrees). Targets intercept pellets independently.
 
-`FireInterval` is seconds between shots (.025–10), `ReloadSeconds` seconds per full
+`FireInterval` is seconds between shots (.025–10), `ReloadSeconds` seconds per full-magazine
 reload (.1–30), `Range` world units (100–50000), `MoveSpeed` CS units/second
 (50–500), `ModelScale` viewmodel projection scale (.25–2), `Kick` vertical impulse
 (0–10 degrees, new firearms). F8 reloads settings; tighter capacities clamp surplus
 without granting ammo. Existing reloads finish their current deadline; the next
-reload uses the new duration. M3/XM1014 fit start, one insertion per missing/reserved
-shell, and finish into that duration. They hold the current clip's terminal pose
+reload uses the new duration. M3/XM1014 calibrate start, insertion and finish speed
+against a completely empty magazine. Partial reloads keep the same insertion speed
+and finish sooner, with one insertion per missing/reserved shell. They hold the current clip's terminal pose
 between updates, without idle flashes; the magazine is granted only at completion.
 Model timing remains available when the optional audio device fails to initialize.
+Shell-loading sound is supplied when the private model lacks an event (including
+the retail XM1014); authored M3 events are retained without double playback.
+Reload samples are required during private conversion. `[Audio] CSVolumePercent`
+continues to control shots and reloads together, including mute.
 
 All firearms now use `[Combat] MinimumFirearmRange=30000` world units (0–50000).
 Positive values extend each gun to at least that distance and twice
@@ -35,6 +40,21 @@ ranges. F8 applies the shared and individual ranges immediately; upgrades preser
 custom values and insert missing settings once. Spread/recoil, target visibility,
 terrain and intervening bodies still determine hits. Knife/sword reach and C4 splash
 retain their physical rules. Empty firearm rays skip unnecessary long terrain walks.
+
+## Glock mouse actions
+
+**LMB** fires one round with the ordinary single-shot animation. **RMB** fires one
+three-round burst per deliberate press, with one round, shot sound and damage
+contact per bullet. A short magazine limits the burst to the rounds available.
+The burst animation starts once. Holding either button cannot repeat its action.
+**Y** still assigns RMB to squad commands in F6; then RMB cannot start a Glock burst.
+Reloading, switching weapons/views, inventory/shops, menus, spells, losing attack
+control or focus cancel remaining queued bullets.
+
+`[Glock] SecondaryBurstRounds=3` (1–5), `SecondaryBurstInterval=0.1` seconds
+(.025–1) and `SecondaryCooldown=0.5` seconds (.1–5, from first shot) are editable.
+F8 applies them to the next burst; a running burst retains its spacing. The existing
+attack-speed scaling option also scales that spacing. Ordinary LMB uses `FireInterval`.
 
 ## Native shops in F6/F7
 

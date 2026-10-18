@@ -75,6 +75,12 @@ void GameAudio::LoadTimelines(const std::string& root) {
                 sequence.events.push_back(std::move(event));
             }
             if (!file) break;
+            // Retail XM1014 insert clips contain no sound events; supply their shell-loading sound explicitly.
+            // Fill only absent events, preserving authored M3 events and avoiding doubled shell sounds.
+            if(sequence.events.empty() && (weapon==WeaponSlots::M3 || weapon==WeaponSlots::XM1014) && !strcmp(name,"insert"))
+                sequence.events.push_back({0,"m3_insertshell.wav"});
+            if(sequence.events.empty() && weapon==WeaponSlots::M3 && !strcmp(name,"after_reload"))
+                sequence.events.push_back({0,"m3_pump.wav"});
             timelines_[weapon].emplace(name, std::move(sequence));
         }
     }

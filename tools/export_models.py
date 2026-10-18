@@ -223,6 +223,8 @@ def main():
     sounds.mkdir(exist_ok=True)
     required_sounds={"deagle-1.wav", "glock18-2.wav", "mp5-1.wav", "p90-1.wav", "m249-1.wav", "m3-1.wav", "xm1014-1.wav", "ak47-1.wav", "m4a1_unsil-1.wav", "usp_unsil-1.wav", "awp1.wav", "knife_slash1.wav", "knife_hit1.wav", "knife_hit2.wav", "knife_hit3.wav", "knife_hit4.wav", "knife_stab.wav", "knife_hitwall1.wav", "c4_plant.wav", "c4_click.wav",
                           "c4_explode1.wav", "c4_beep1.wav", "c4_beep3.wav", "c4_beep4.wav", "c4_beep5.wav"}
+    # Engine-driven shell sounds are needed even when an owned shotgun model has no sound event.
+    required_sounds.update({"m3_insertshell.wav", "m3_pump.wav"})
     weapon_sounds.update(required_sounds)
     for name in sorted(weapon_sounds):
         source = args.cstrike / "sound" / "weapons" / name

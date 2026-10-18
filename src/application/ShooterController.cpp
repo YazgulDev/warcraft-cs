@@ -111,7 +111,8 @@ bool ShooterController::Down(int key) const {
 }
 bool ShooterController::Pressed(int key) { if(key<=0 || key>=256)return false;bool down = Down(key), rising = down && !keys_[key]; keys_[key] = down; return rising; }
 const char* ShooterController::Sequence(const char* name) const {
-    if(weapon_==WeaponSlots::Glock && !strcmp(name,"shoot1"))return "shoot";
+    // The owned Glock model's shoot/shoot2 animate three kicks; shoot3 is its ordinary single shot.
+    if(weapon_==WeaponSlots::Glock && !strcmp(name,"shoot1"))return "shoot3";
     if((weapon_==WeaponSlots::Deagle || weapon_==WeaponSlots::Glock || weapon_==WeaponSlots::MP5 || weapon_==WeaponSlots::M249) && !strcmp(name,"idle"))return "idle1";
     // The exported M4/USP body is unsilenced, so pose and shot sound must agree.
     if (weapon_ == 1 || weapon_ == 2) {
@@ -177,7 +178,7 @@ void ShooterController::Disable(bool restoreCamera) {
         ownCameraRequest_ = false;
     }
     CancelPlant();
-    active_ = false; scopeLevel_ = 0; reloadEnd_ = 0;
+    active_ = false; scopeLevel_ = 0; reloadEnd_ = 0;glockBurst_.Cancel();
     nativeSky_.Update(ui_,false,mapTileset_);
     meleeContact_ = meleeReady_ = 0; recoil_.Reset();
     audio_.Stop(); stepDistance_ = 0;
@@ -190,6 +191,7 @@ void ShooterController::Disable(bool restoreCamera) {
     wc3::Log("FPS disabled");
 }
 void ShooterController::ResetMap() {
+    glockBurst_={}; // A new map has neither queued rounds nor a cooldown inherited from the previous actor.
     shop_=0;shopCloseRequested_=false; // Forget native selection handles after unload.
     armyAI_.Reset();armyToggleRequested_=false;
     thirdPersonDistance_=settings_.thirdPerson.distance; // Each new map begins with its configured zoom.
@@ -260,7 +262,7 @@ void ShooterController::SelectView(ControlView next) {
     }
     // Inventory and physical position stay intact; no queued gunshot or delayed swing crosses the transition.
     unitLocomotion_.Release();unitLocomotion_.Reset();
-    CancelCasting();heroAttack_.Cancel();CancelPlant();meleeContact_=0;reloadEnd_=0;scopeLevel_=0;
+    CancelCasting();heroAttack_.Cancel();CancelPlant();glockBurst_.Cancel();meleeContact_=0;reloadEnd_=0;scopeLevel_=0;
     buyMenu_.Close();itemInventory_.ClearInput();recoil_.Reset();audio_.Stop();mouseLook_.Reset();weaponWheel_.Reset();cameraWheel_.Reset();suppressFire_=true;
     // Pending combat/UI mailboxes cannot execute after entering the unarmed view.
     refillRequested_=allWeaponsRequested_=itemRequested_=buyToggleRequested_=buyAmmoRequested_=false;
@@ -406,17 +408,20 @@ void ShooterController::Camera() {
 void ShooterController::Reload() {
     const Weapon& w = settings_.weapons[weapon_];
     if (WeaponSlots::Melee(weapon_) || weapon_ == WeaponSlots::C4 || reloadEnd_ || ammo_[weapon_] == w.magazine || reserve_[weapon_] <= 0) return;
-    // Fit start + exactly the missing shell insertions + finish to the configured full reload duration.
+    // Calibrate against a full magazine so one or two missing shells cannot slow the whole animation down.
     bool shells=weapon_==WeaponSlots::M3 || weapon_==WeaponSlots::XM1014;
-    if(shells)shotgunReload_.Configure(std::min(w.magazine-ammo_[weapon_],reserve_[weapon_]),w.reload,
+    if(shells)shotgunReload_.Configure(std::min(w.magazine-ammo_[weapon_],reserve_[weapon_]),w.magazine,w.reload,
         audio_.Duration(weapon_,"start_reload"),audio_.Duration(weapon_,"insert"),audio_.Duration(weapon_,"after_reload"));
     float duration = Play(shells ? "start_reload" : "reload",shells ? shotgunReload_.Rate() : 1);
     shotgunReloadStart_=animationTick_;shotgunReloadPhase_=0;
     recoil_.ResetBurst(); // Native CS reload resets burst accuracy, without snapping the camera punch away.
-    reloadEnd_ = animationTick_ + DWORD((shells ? w.reload : duration > 0 ? duration : w.reload) * 1000);
+    glockBurst_.Cancel();
+    reloadEnd_ = animationTick_ + DWORD((shells ? shotgunReload_.Seconds() : duration > 0 ? duration : w.reload) * 1000);
+    wc3::Log("reload started weapon=%s seconds=%.3f rate=%.3f",w.name,(reloadEnd_-animationTick_)*.001f,animationRate_);
 }
 void ShooterController::RefillAmmo(bool grantAll) {
     if(settings_.warcraftOnly)return;
+    glockBurst_.Cancel(); // Free refills must not preserve a partially spent burst queue.
     // F11 restores carried ammo and grants C4; F12 additionally unlocks every weapon without spending gold.
     int magazines[WeaponSlots::Count],reserves[WeaponSlots::Count];
     for (int i=0;i<WeaponSlots::Count;++i) { magazines[i]=settings_.weapons[i].magazine;reserves[i]=settings_.maxReserve[i]; }
@@ -431,7 +436,7 @@ void ShooterController::SwitchWeapon(int slot) {
     if (slot<0 || slot>=WeaponSlots::Count || !inventory_.owned[slot] || weapon_ == slot) return;
     // Number keys and the wheel share deployment: cancel reload, scope, planting and pending melee cues.
     CancelPlant(); audio_.CancelAnimation(); meleeContact_ = meleeReady_ = 0;
-    recoil_.ResetBurst(); weapon_ = slot; reloadEnd_ = 0; scopeLevel_ = 0; Play("draw");
+    recoil_.ResetBurst(); glockBurst_.Cancel();weapon_ = slot; reloadEnd_ = 0; scopeLevel_ = 0; Play("draw");
     wc3::Log("weapon selected=%s slot=%d", settings_.weapons[slot].name, slot + 1);
 }
 void ShooterController::ToggleHealthBars() {
@@ -554,7 +559,7 @@ bool ShooterController::OpenShop() {
     if(!ShopAccess::Nearby(unit_,aim.target,settings_.shopInteractionRadius))return false;
     CancelCasting();heroAttack_.Cancel();CancelPlant();unitLocomotion_.Release();
     buyMenu_.Close();itemInventory_.ClearInput();movement_.Stop();audio_.Stop();mouseLook_.Reset();squadOrderMode_.ClearInput();
-    shop_=aim.target;shopCloseRequested_=false;suppressFire_=true;reloadEnd_=0;meleeContact_=0;
+    shop_=aim.target;shopCloseRequested_=false;suppressFire_=true;reloadEnd_=0;meleeContact_=0;glockBurst_.Cancel();
     // Yield rendering/input to the native command card so stock, prices, buyer selection and map limits remain authoritative.
     wc3::ClearSelection();wc3::SelectUnit(shop_,TRUE);
     float duration=.15f;ownCameraRequest_=true;wc3::ResetToGameCamera(&duration);ownCameraRequest_=false;
@@ -570,26 +575,27 @@ void ShooterController::CloseShop() {
     std::fill(std::begin(keys_),std::end(keys_),false);
     wc3::Log("shop closed actor=%08X view=%d",unit_,int(view_));
 }
-void ShooterController::Fire(bool secondary) {
-    if(settings_.warcraftOnly)return;
+bool ShooterController::Fire(bool secondary,bool burstRound) {
+    if(settings_.warcraftOnly)return false;
     const Weapon& w = settings_.weapons[weapon_]; DWORD now = GetTickCount();
     // Keep CS's fractional firing interval: truncating 87.5ms would permit an early M4 shot.
     // IAS changes firearm cadence only; planting and authored melee recovery keep their existing timing.
     float interval=UnitScaling::FireInterval(w.interval,WeaponSlots::Firearm(weapon_) && settings_.scaleFireRateFromAttackSpeed,status_.attackSpeed);
-    if (reloadEnd_ || now < meleeReady_ || float(now - lastShot_) < interval * 1000) return;
-    if (!WeaponSlots::Melee(weapon_) && ammo_[weapon_] <= 0) { Reload(); return; }
+    if (reloadEnd_ || now < meleeReady_ || (!burstRound && float(now - lastShot_) < interval * 1000)) return false;
+    if (!WeaponSlots::Melee(weapon_) && ammo_[weapon_] <= 0) { Reload(); return false; }
     lastShot_ = now; if (!WeaponSlots::Melee(weapon_)) --ammo_[weapon_];
-    wc3::Log("fire weapon=%s ammo=%d mode=%s", w.name, ammo_[weapon_], secondary ? "secondary" : "primary");
     // slash1/slash2 in this retail knife contain only two frames; mid-slashes contain the swing.
     // Secondary melee uses each model's authored stab, sharing cooldown with primary slashes.
-    const char* action = WeaponSlots::Melee(weapon_) ? (secondary ? "stab" : (knifeSwing_++ % 2 ? "midslash2" : "midslash1")) : "shoot1";
-    float duration = Play(action); Sound(w.sound);
+    const char* action = WeaponSlots::Melee(weapon_) ? (secondary ? "stab" : (knifeSwing_++ % 2 ? "midslash2" : "midslash1")) : weapon_==WeaponSlots::Glock && secondary ? "shoot" : "shoot1";
+    wc3::Log("fire weapon=%s ammo=%d mode=%s animation=%s animationStarted=%d",w.name,ammo_[weapon_],secondary ? "secondary" : "primary",Sequence(action),!burstRound);
+    // The burst clip already contains its three kicks; following rounds add sound/damage without restarting the mesh.
+    float duration = burstRound ? 0 : Play(action); Sound(w.sound);
     if (WeaponSlots::Melee(weapon_)) {
         // Delay damage and the contact sample until the blade reaches the target, never at button-down.
         meleeAttack_ = MeleeAttack::Select(weapon_, secondary);
         meleeContact_ = now + DWORD(meleeAttack_.contactSeconds * 1000);
         meleeReady_ = now + DWORD(std::max(meleeAttack_.recoverySeconds, duration / animationRate_) * 1000);
-        return;
+        return true;
     }
     // GoldSrc fires with the existing punch angle, then applies the next kick to camera and later bullets.
     if(weapon_==WeaponSlots::M3 || weapon_==WeaponSlots::XM1014) {
@@ -604,6 +610,24 @@ void ShooterController::Fire(bool secondary) {
     // Record the sampled pose with the angular kick so native stance tests can distinguish input from terrain.
     wc3::Log("recoil weapon=%s pitch=%.3f yaw=%.3f shots=%u speed=%.3f grounded=%d duck=%.2f", w.name,
         recoil_.Pitch(), recoil_.Yaw(), recoil_.Shots(),movement_.Speed(),movement_.Grounded(),movement_.Duck());
+    return true;
+}
+void ShooterController::FireGlock(bool primaryPressed,bool secondaryPressed,DWORD now) {
+    if(glockBurst_.Active()) {
+        if(glockBurst_.Due(now)) {
+            if(ammo_[weapon_]>0 && Fire(true,true))glockBurst_.Fired(GetTickCount());
+            else glockBurst_.Cancel();
+        }
+        return;
+    }
+    if(!glockBurst_.Ready(now))return;
+    if(secondaryPressed) {
+        if(Fire(true)) {
+            float interval=UnitScaling::FireInterval(settings_.glockBurstInterval,settings_.scaleFireRateFromAttackSpeed,status_.attackSpeed);
+            glockBurst_.Begin(GetTickCount(),std::min(settings_.glockBurstRounds-1,ammo_[weapon_]),
+                DWORD(interval*1000),DWORD(settings_.glockSecondaryCooldown*1000));
+        }
+    } else if(primaryPressed)Fire();
 }
 void ShooterController::Strike(float yawOffset,float pitchOffset,float damageScale) {
     if(UnitFirstPerson() || settings_.warcraftOnly)return; // Queued contacts cannot bypass the installation profile.
@@ -767,6 +791,7 @@ void ShooterController::Tick(uintptr_t ui) {
     requireForeground=!BackgroundGameplay::Enabled();
 #endif
     if (requireForeground && foregroundPid != GetCurrentProcessId()) {
+        glockBurst_.Cancel(); // Focus loss cancels the rest of a burst instead of resuming it on return.
         thirdPersonRequested_=unitViewRequested_=false; // A background tap cannot acquire native control on refocus.
         unitLocomotion_.Release();
         // Drop background packets; refocusing establishes a fresh cursor anchor without a view jump.
@@ -789,6 +814,7 @@ void ShooterController::Tick(uintptr_t ui) {
         wc3::Log("FPS %s for campaign/UI", suspended ? "suspended" : "resumed");
     }
     suspended_ = suspended;
+    if(!active_ || suspended_)glockBurst_.Cancel(); // Menus/cinematics cannot resume queued bullets later.
     if (suspended_) { unitLocomotion_.Release();heroAttack_.Cancel();viewToggleRequested_=false;CancelCasting();spellRequested_=-1;spellCancelRequested_=false;CancelPlant(); meleeContact_ = 0;buyMenu_.Close();itemInventory_.ClearInput();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1; }
     if(Shopping()) {
         if(shopCloseRequested_ || wc3::GetOwningPlayer(unit_)!=wc3::GetLocalPlayer() || !ShopAccess::Nearby(unit_,shop_,settings_.shopInteractionRadius))CloseShop();
@@ -980,6 +1006,8 @@ void ShooterController::Tick(uintptr_t ui) {
         unitHudTick_=now;unitHud_=unitHudReader_.Read(unit_,settings_.showInventory || InventoryOpen() || ItemControls().Numbers());
     }
     UpdateStatus();
+    if(weapon_!=WeaponSlots::Glock || ThirdPerson() || UnitFirstPerson() || status_.incapacitated || status_.disarmed ||
+        status_.contained || status_.hidden || Casting() || suppressFire_ || InventoryInputOpen())glockBurst_.Cancel();
     // Apply queued Y toggles before RMB dispatch. Held buttons cannot turn a mode change into an accidental scope/stab.
     if(squadOrderMode_.Apply(settings_.squadReticleAttack && !ThirdPerson() && !UnitFirstPerson() && !Buying() &&
         !InventoryInputOpen() && !status_.incapacitated && !status_.contained && !status_.hidden)) {
@@ -1047,6 +1075,7 @@ void ShooterController::Tick(uintptr_t ui) {
     UpdateBuyMenu();
     if (!Down(VK_LBUTTON) && !Down(VK_RBUTTON)) suppressFire_=false;
     if (Buying()) {
+        glockBurst_.Cancel();
         unitLocomotion_.Release();
         heroAttack_.Cancel();
         CancelCasting();spellRequested_=-1;spellCancelRequested_=false;
@@ -1058,6 +1087,7 @@ void ShooterController::Tick(uintptr_t ui) {
         movement_.Stop();weaponWheel_.Reset();cameraWheel_.Reset();AimAndMove(dt);Camera();audio_.Tick(now);return;
     }
     if(InventoryOpen()) {
+        glockBurst_.Cancel();
         // Native item channels continue while the panel owns pointer/movement; clicks cannot become attacks.
         spellRequested_=-1;spellCancelRequested_=false;itemRequested_=false;squadRequested_=0;
         if(!Casting())FpsCombatGuard::CancelOrders(unit_);
@@ -1152,6 +1182,10 @@ void ShooterController::Tick(uintptr_t ui) {
                 settings_,hitboxes_,destructableHitboxes_);
         }
     } else if (!Casting() && !suppressFire_ && weapon_ == WeaponSlots::C4) PlantC4(dt);
+    else if(weapon_==WeaponSlots::Glock) {
+        if(!Casting() && !suppressFire_ && !status_.disarmed)FireGlock(firePressed,secondaryPressed,GetTickCount());
+        else glockBurst_.Cancel();
+    }
     else if (!Casting() && !suppressFire_ && !status_.disarmed && WeaponSlots::Melee(weapon_) && secondaryPressed) Fire(true);
     else if (!Casting() && !suppressFire_ && !status_.disarmed && ((settings_.weapons[weapon_].automatic && Down(VK_LBUTTON)) || firePressed)) Fire();
     // Sample after any newly started animation: an older tick would wrap unsigned elapsed time.

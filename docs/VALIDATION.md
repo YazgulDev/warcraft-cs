@@ -1,6 +1,16 @@
 # Validation
 
-## Current feature follow-up: firearm reach and shotgun reloads
+## Current follow-up: partial shotgun reloads and Glock actions
+
+Portable tests verify constant insertion speed and shorter partial reloads, unchanged
+full-magazine duration, terminal-pose holding, bounded burst rounds, partial ammo,
+cooldown, cancellation, uneven frames and millisecond clock wraparound. Real INI
+tests cover bounds, fallbacks, F8 snapshots and preservation of custom Glock values
+through repeated upgrades. XAudio2 tests submit a real silent source voice for both
+authored M3 and missing-event XM1014 inserts, asserting exactly one event per shell;
+the incompatible-COM test continues to cover timing without optional audio setup.
+
+## Firearm reach and previous shotgun timeline (5783ba4)
 
 The native build and affected settings, migration, buying, recoil, native attack,
 hitbox, melee and shotgun timeline suites pass. Shared reach covers all eleven

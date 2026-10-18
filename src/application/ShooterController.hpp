@@ -1,5 +1,6 @@
 #pragma once
 #include "../combat/ShotgunReload.hpp"
+#include "../combat/BurstFire.hpp"
 #include "../combat/Weapon.hpp"
 #include "../combat/WeaponSlots.hpp"
 #include "../platform/WarcraftApi.hpp"
@@ -228,7 +229,9 @@ private:
     void CancelCasting() {spells_.Cancel();itemInventory_.CancelCasting();}
     void Disable(bool restoreCamera);
     void AimAndMove(float dt);
-    void Fire(bool secondary = false);
+    bool Fire(bool secondary = false,bool burstRound=false);
+    void FireGlock(bool primaryPressed,bool secondaryPressed,DWORD now);
+    BurstFire glockBurst_;
     void Strike(float yawOffset=0,float pitchOffset=0,float damageScale=1);
     void Reload();
     ShotgunReload shotgunReload_;
