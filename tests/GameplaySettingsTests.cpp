@@ -474,5 +474,11 @@ int main() {
     WritePrivateProfileStringA("Glock","SecondaryBurstRounds","4",path.c_str());
     WritePrivateProfileStringA("Glock","SecondaryBurstInterval","0.08",path.c_str());
     auto glock=GameplaySettings::Load(path);assert(glock.glockBurstRounds==4 && glock.glockBurstInterval==.08f);
+    // Fresh installs and F8 snapshots enable shell transfers/interrupts; explicit legacy preferences survive.
+    for(auto value:{"true","1","false","0","bad",""}) {
+        {std::ofstream f(path);f<<"[Shotguns]\nShellByShellReload="<<value<<"\nInterruptReloadOnFire="<<value<<"\n";}
+        auto shells=GameplaySettings::Load(path);bool enabled=strcmp(value,"false") && strcmp(value,"0");
+        assert(shells.shotgunShellReload==enabled && shells.shotgunInterruptReload==enabled);
+    }
     DeleteFileA(path.c_str());return 0;
 }

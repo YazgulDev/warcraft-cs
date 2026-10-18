@@ -28,6 +28,7 @@ struct GameplaySettings {
     float shopInteractionRadius=450;
     int shotgunPellets=8;
     float shotgunSpreadDegrees=5;
+    bool shotgunShellReload=true,shotgunInterruptReload=true;
     int glockBurstRounds=3;
     float glockBurstInterval=.1f,glockSecondaryCooldown=.5f;
     // Zero restores individual gun ranges; the default also covers the visible camera volume.

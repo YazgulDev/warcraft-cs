@@ -308,6 +308,9 @@ phases. The controller coordinates transitions; `WeaponAnimation` in presentatio
 terminal reload bones until the next phase, while ordinary firing/draw actions still settle
 to idle. `GameAudio` reads private timeline metadata independently of optional audio setup.
 Its full-magazine reference keeps the same insertion speed for partial reloads.
+It also credits each completed insertion once, bounded by actual reserve/capacity;
+interruption preserves those transfers and discards the unfinished insertion.
+The controller snapshots reload policy and uses a fresh, fireable LMB edge to interrupt.
 `BurstFire` in combat owns bounded Glock secondary scheduling, cooldown, cancellation
 and late-frame spacing. The controller debits actual ammo and dispatches individual
 contacts, while the presentation starts the burst clip only once.

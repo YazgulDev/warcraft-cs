@@ -11,9 +11,21 @@ public:
         start_=Duration(start);insert_=Duration(insert);finish_=Duration(finish);
         rate_=(start_+capacity*insert_+finish_)/std::max(.1f,fullSeconds);
         seconds_=(start_+shells_*insert_+finish_)/rate_;
+        credited_=0;
     }
     float Rate() const { return rate_; }
     float Seconds() const { return seconds_; }
+    int Completed(float elapsed) const {
+        // A shell belongs to the magazine only after its whole insertion clip has completed.
+        float inserted=(std::clamp(elapsed,0.f,seconds_)*rate_-start_)/insert_;
+        return std::clamp(int(std::floor(inserted+1e-5f)),0,shells_);
+    }
+    int LoadCompleted(float elapsed,int capacity,int& magazine,int& reserve) {
+        int complete=Completed(elapsed),due=std::max(0,complete-credited_);credited_=std::max(credited_,complete);
+        // Credit each completed insertion once, bounded by current space and actual reserve rounds.
+        int amount=std::min({due,std::max(0,capacity-magazine),std::max(0,reserve)});
+        magazine+=amount;reserve-=amount;return amount;
+    }
     Pose At(float elapsed) const {
         float time=std::clamp(elapsed,0.f,seconds_)*rate_;
         if(time<start_)return {"start_reload",0,time/rate_};
@@ -27,6 +39,6 @@ public:
 private:
     // Missing optional metadata must not restart an insertion every frame.
     static float Duration(float value) { return std::isfinite(value) && value>0 ? value : .5f; }
-    int shells_=1;
+    int shells_=1,credited_=0;
     float seconds_=1,start_=.5f,insert_=.5f,finish_=.5f,rate_=1.5f;
 };

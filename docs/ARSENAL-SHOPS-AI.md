@@ -25,12 +25,23 @@ without granting ammo. Existing reloads finish their current deadline; the next
 reload uses the new duration. M3/XM1014 calibrate start, insertion and finish speed
 against a completely empty magazine. Partial reloads keep the same insertion speed
 and finish sooner, with one insertion per missing/reserved shell. They hold the current clip's terminal pose
-between updates, without idle flashes; the magazine is granted only at completion.
+between updates, without idle flashes. Each completed insertion transfers **one**
+round from reserve into the magazine immediately, so the HUD updates shell by shell.
+Press **LMB** to interrupt and fire a loaded round when the weapon's firing cooldown
+is ready. An unfinished insertion consumes no ammo; completed shells are retained.
+With an empty magazine, the reload continues until a shell is available to fire.
+Holding LMB from before an automatic reload does not repeatedly cancel it.
 Model timing remains available when the optional audio device fails to initialize.
 Shell-loading sound is supplied when the private model lacks an event (including
 the retail XM1014); authored M3 events are retained without double playback.
 Reload samples are required during private conversion. `[Audio] CSVolumePercent`
 continues to control shots and reloads together, including mute.
+
+`[Shotguns] ShellByShellReload=true` and `InterruptReloadOnFire=true` accept
+true/false or 1/0. F8 applies these policies to the **next** reload, preserving
+the running reload's accounting. Set the first to false for magazine-at-completion
+transfer, or the second to false to disable interruption by firing. Updates preserve
+explicit custom preferences. Existing `ReloadSeconds` still sets full-magazine timing.
 
 All firearms now use `[Combat] MinimumFirearmRange=30000` world units (0–50000).
 Positive values extend each gun to at least that distance and twice

@@ -41,4 +41,24 @@ int main() {
     assert(WeaponAnimation::Frame(16,30,.25f,false)==7.5f);
     assert(WeaponAnimation::Frame(16,30,1,true)==14);
     assert(WeaponAnimation::Frame(16,30,-1,false)==0);
+    // A partial insertion grants nothing; completed shells transfer one real reserve round exactly once.
+    ShotgunReload incremental;incremental.Configure(3,8,4.5f,.5f,.4f,.8f);
+    int magazine=5,reserve=10;
+    assert(incremental.LoadCompleted(.899f,8,magazine,reserve)==0 && magazine==5 && reserve==10);
+    assert(incremental.LoadCompleted(.9f,8,magazine,reserve)==1 && magazine==6 && reserve==9);
+    assert(incremental.LoadCompleted(1.2f,8,magazine,reserve)==0 && magazine==6);
+    // Firing now interrupts the second insertion: only the completed first shell remains spent.
+    --magazine;assert(magazine==5 && reserve==9);
+    incremental.Configure(3,8,4.5f,.5f,.4f,.8f);
+    assert(incremental.LoadCompleted(1.31f,8,magazine,reserve)==2 && magazine==7 && reserve==7);
+    assert(incremental.LoadCompleted(1.31f,8,magazine,reserve)==0);
+    assert(incremental.LoadCompleted(.9f,8,magazine,reserve)==0);
+    assert(incremental.LoadCompleted(1.31f,8,magazine,reserve)==0);
+    assert(incremental.LoadCompleted(9,8,magazine,reserve)==1 && magazine==8 && reserve==6);
+    assert(incremental.LoadCompleted(9,8,magazine,reserve)==0); // No second magazine at completion.
+    // Current capacity and supplies remain authoritative after live edits or external ammunition changes.
+    incremental.Configure(3,8,4.5f,.5f,.4f,.8f);magazine=7;reserve=1;
+    assert(incremental.LoadCompleted(9,8,magazine,reserve)==1 && magazine==8 && reserve==0);
+    incremental.Configure(3,8,4.5f,.5f,.4f,.8f);magazine=4;reserve=0;
+    assert(incremental.LoadCompleted(9,6,magazine,reserve)==0 && magazine==4 && reserve==0);
 }

@@ -1,6 +1,14 @@
 # Validation
 
-## Current follow-up: partial shotgun reloads and Glock actions
+## Current follow-up: per-shell ammunition and firing interruption
+
+Portable reload tests cover delayed shell credit, single transfer per completed
+insertion, resume after interruption, late frames, repeated/backward observations,
+reserve/capacity bounds and absence of a second magazine award on completion.
+INI and upgrade tests cover enabled defaults, opt-outs, malformed values and
+preservation of custom reload policies. Policy is snapshotted at reload start.
+
+## Partial shotgun reloads and Glock actions (809eb4e)
 
 Portable tests verify constant insertion speed and shorter partial reloads, unchanged
 full-magazine duration, terminal-pose holding, bounded burst rounds, partial ammo,

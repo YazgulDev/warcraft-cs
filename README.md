@@ -28,6 +28,7 @@ See [arsenal, shops and AI controls/configuration](docs/ARSENAL-SHOPS-AI.md).
 Firearms reach at least 30000 world units by default, covering visible aimed targets;
 M3/XM1014 reloads use a continuous fitted shell timeline without idle flashes.
 Partial shotgun reloads finish sooner at a constant insertion speed, with shell sounds.
+Each completed insertion loads one real shell; a fresh LMB press interrupts to fire a loaded round.
 Glock LMB fires one ordinary shot; RMB fires one three-round burst unless Y enables squad orders.
 
 ## Features

@@ -25,6 +25,9 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.shopInteractionRadius=std::max(100.f,number("Shops","Radius",450,1200));
     result.shotgunPellets=int(std::max(1.f,number("Shotguns","Pellets",8,16)));
     result.shotgunSpreadDegrees=number("Shotguns","SpreadDegrees",5,15);
+    // Reload policy is snapshotted when R starts, so F8 cannot award a second magazine mid-reload.
+    result.shotgunShellReload=enabled("Shotguns","ShellByShellReload");
+    result.shotgunInterruptReload=enabled("Shotguns","InterruptReloadOnFire");
     // Secondary Glock bursts debit real rounds; timing is validated before it reaches the shot scheduler.
     result.glockBurstRounds=int(std::max(1.f,number("Glock","SecondaryBurstRounds",3,5)));
     result.glockBurstInterval=std::max(.025f,number("Glock","SecondaryBurstInterval",.1f,1));

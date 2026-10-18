@@ -229,7 +229,7 @@ private:
     void CancelCasting() {spells_.Cancel();itemInventory_.CancelCasting();}
     void Disable(bool restoreCamera);
     void AimAndMove(float dt);
-    bool Fire(bool secondary = false,bool burstRound=false);
+    bool Fire(bool secondary = false,bool burstRound=false,bool interruptReload=false);
     void FireGlock(bool primaryPressed,bool secondaryPressed,DWORD now);
     BurstFire glockBurst_;
     void Strike(float yawOffset=0,float pitchOffset=0,float damageScale=1);
@@ -237,6 +237,7 @@ private:
     ShotgunReload shotgunReload_;
     DWORD shotgunReloadStart_=0;
     int shotgunReloadPhase_=0;
+    bool shotgunReloadPerShell_=true,shotgunReloadInterrupt_=true;
     void SwitchWeapon(int slot);
     void PlantC4(float dt);
     void CancelPlant();

@@ -414,6 +414,7 @@ void ShooterController::Reload() {
         audio_.Duration(weapon_,"start_reload"),audio_.Duration(weapon_,"insert"),audio_.Duration(weapon_,"after_reload"));
     float duration = Play(shells ? "start_reload" : "reload",shells ? shotgunReload_.Rate() : 1);
     shotgunReloadStart_=animationTick_;shotgunReloadPhase_=0;
+    shotgunReloadPerShell_=settings_.shotgunShellReload;shotgunReloadInterrupt_=settings_.shotgunInterruptReload;
     recoil_.ResetBurst(); // Native CS reload resets burst accuracy, without snapping the camera punch away.
     glockBurst_.Cancel();
     reloadEnd_ = animationTick_ + DWORD((shells ? shotgunReload_.Seconds() : duration > 0 ? duration : w.reload) * 1000);
@@ -575,13 +576,20 @@ void ShooterController::CloseShop() {
     std::fill(std::begin(keys_),std::end(keys_),false);
     wc3::Log("shop closed actor=%08X view=%d",unit_,int(view_));
 }
-bool ShooterController::Fire(bool secondary,bool burstRound) {
+bool ShooterController::Fire(bool secondary,bool burstRound,bool interruptReload) {
     if(settings_.warcraftOnly)return false;
     const Weapon& w = settings_.weapons[weapon_]; DWORD now = GetTickCount();
     // Keep CS's fractional firing interval: truncating 87.5ms would permit an early M4 shot.
     // IAS changes firearm cadence only; planting and authored melee recovery keep their existing timing.
     float interval=UnitScaling::FireInterval(w.interval,WeaponSlots::Firearm(weapon_) && settings_.scaleFireRateFromAttackSpeed,status_.attackSpeed);
-    if (reloadEnd_ || now < meleeReady_ || (!burstRound && float(now - lastShot_) < interval * 1000)) return false;
+    if (now < meleeReady_ || (!burstRound && float(now - lastShot_) < interval * 1000)) return false;
+    if(reloadEnd_) {
+        bool shotgun=weapon_==WeaponSlots::M3 || weapon_==WeaponSlots::XM1014;
+        if(!shotgun || !interruptReload || !shotgunReloadInterrupt_ || ammo_[weapon_]<=0)return false;
+        // Only a fresh, fireable press interrupts; preserve completed shells and discard the unfinished insertion.
+        reloadEnd_=0;audio_.CancelAnimation();
+        wc3::Log("shotgun reload interrupted weapon=%s ammo=%d reserve=%d",w.name,ammo_[weapon_],reserve_[weapon_]);
+    }
     if (!WeaponSlots::Melee(weapon_) && ammo_[weapon_] <= 0) { Reload(); return false; }
     lastShot_ = now; if (!WeaponSlots::Melee(weapon_)) --ammo_[weapon_];
     // slash1/slash2 in this retail knife contain only two frames; mid-slashes contain the swing.
@@ -1120,6 +1128,10 @@ void ShooterController::Tick(uintptr_t ui) {
     // Sample after input may have started a reload; every phase shares one absolute clock, without drift/idle gaps.
     now=GetTickCount();
     bool shells=weapon_==WeaponSlots::M3 || weapon_==WeaponSlots::XM1014;
+    if(reloadEnd_ && shells && shotgunReloadPerShell_) {
+        int amount=shotgunReload_.LoadCompleted((now-shotgunReloadStart_)*.001f,settings_.weapons[weapon_].magazine,ammo_[weapon_],reserve_[weapon_]);
+        if(amount)wc3::Log("shotgun shell loaded weapon=%s count=%d ammo=%d reserve=%d",settings_.weapons[weapon_].name,amount,ammo_[weapon_],reserve_[weapon_]);
+    }
     if(reloadEnd_ && now<reloadEnd_ && shells) {
         auto pose=shotgunReload_.At((now-shotgunReloadStart_)*.001f);
         if(pose.phase!=shotgunReloadPhase_) {
@@ -1128,7 +1140,8 @@ void ShooterController::Tick(uintptr_t ui) {
         }
     }
     if (reloadEnd_ && now >= reloadEnd_) {
-        int amount = std::min(settings_.weapons[weapon_].magazine - ammo_[weapon_], reserve_[weapon_]);
+        // Per-shell reloads have already moved their rounds; other weapons retain the magazine-at-end policy.
+        int amount = shells && shotgunReloadPerShell_ ? 0 : std::min(settings_.weapons[weapon_].magazine - ammo_[weapon_], reserve_[weapon_]);
         ammo_[weapon_] += amount; reserve_[weapon_] -= amount; reloadEnd_ = 0;
         Play("idle"); // The shotgun closing action has already finished inside the locked reload interval.
         wc3::Log("reload complete: weapon=%s ammo=%d reserve=%d", settings_.weapons[weapon_].name, ammo_[weapon_], reserve_[weapon_]);
@@ -1187,7 +1200,7 @@ void ShooterController::Tick(uintptr_t ui) {
         else glockBurst_.Cancel();
     }
     else if (!Casting() && !suppressFire_ && !status_.disarmed && WeaponSlots::Melee(weapon_) && secondaryPressed) Fire(true);
-    else if (!Casting() && !suppressFire_ && !status_.disarmed && ((settings_.weapons[weapon_].automatic && Down(VK_LBUTTON)) || firePressed)) Fire();
+    else if (!Casting() && !suppressFire_ && !status_.disarmed && ((settings_.weapons[weapon_].automatic && Down(VK_LBUTTON)) || firePressed)) Fire(false,false,firePressed);
     // Sample after any newly started animation: an older tick would wrap unsigned elapsed time.
     Camera(); audio_.Tick(GetTickCount());
     // A configurable summary observes physics/camera without writing every simulation frame.
