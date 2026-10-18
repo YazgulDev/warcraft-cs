@@ -25,6 +25,8 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.shopInteractionRadius=std::max(100.f,number("Shops","Radius",450,1200));
     result.shotgunPellets=int(std::max(1.f,number("Shotguns","Pellets",8,16)));
     result.shotgunSpreadDegrees=number("Shotguns","SpreadDegrees",5,15);
+    // The shared reach upgrades saved short gun ranges without rewriting the player's per-weapon choices.
+    result.minimumFirearmRange=number("Combat","MinimumFirearmRange",30000,50000);
     auto& ai=result.armyAI;ai.enabled=enabled("ArmyAI","Enabled");
     ai.intervalMs=unsigned(std::max(500.f,number("ArmyAI","IntervalMs",1500,10000)));
     ai.productionRetrySeconds=unsigned(std::max(30.f,number("ArmyAI","ProductionRetrySeconds",180,3600)));
@@ -353,7 +355,7 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
             weapon.magazine=int(std::max(1.f,number(sections[slot],"Magazine",float(weapon.magazine),1000)));
             weapon.interval=std::max(.025f,number(sections[slot],"FireInterval",weapon.interval,10));
             weapon.reload=std::max(.1f,number(sections[slot],"ReloadSeconds",weapon.reload,30));
-            weapon.range=std::max(100.f,number(sections[slot],"Range",weapon.range,15000));
+            weapon.range=std::max(100.f,number(sections[slot],"Range",weapon.range,50000));
             result.weaponKick[slot]=number(sections[slot],"Kick",result.weaponKick[slot],10);
         }
         result.weaponMoveSpeed[slot]=std::max(50.f,number(sections[slot],"MoveSpeed",result.weaponMoveSpeed[slot],500));

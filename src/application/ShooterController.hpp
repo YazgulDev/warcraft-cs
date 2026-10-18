@@ -1,4 +1,5 @@
 #pragma once
+#include "../combat/ShotgunReload.hpp"
 #include "../combat/Weapon.hpp"
 #include "../combat/WeaponSlots.hpp"
 #include "../platform/WarcraftApi.hpp"
@@ -230,7 +231,9 @@ private:
     void Fire(bool secondary = false);
     void Strike(float yawOffset=0,float pitchOffset=0,float damageScale=1);
     void Reload();
-    DWORD shellNext_=0;
+    ShotgunReload shotgunReload_;
+    DWORD shotgunReloadStart_=0;
+    int shotgunReloadPhase_=0;
     void SwitchWeapon(int slot);
     void PlantC4(float dt);
     void CancelPlant();
@@ -246,7 +249,7 @@ private:
     void Buy(int slot,bool ammunition);
     void UpdateBuyMenu();
     void Notice(const char* message);
-    float Play(const char* name);
+    float Play(const char* name,float rate=1,float elapsed=0);
     void Camera();
     ThirdPersonSettings CameraSettings() const;
     void Sound(const char* name);

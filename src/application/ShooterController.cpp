@@ -123,11 +123,12 @@ const char* ShooterController::Sequence(const char* name) const {
     if ((weapon_ == 0 || weapon_ == 3 || weapon_ == WeaponSlots::C4) && !strcmp(name, "idle")) return "idle1";
     return name;
 }
-float ShooterController::Play(const char* name) {
+float ShooterController::Play(const char* name,float rate,float elapsed) {
     if(settings_.warcraftOnly)return 0;
-    animation_ = Sequence(name); animationTick_ = GetTickCount();
+    // Backdate a new reload phase by frame overshoot so a late frame never restarts its pose at zero.
+    animation_ = Sequence(name); animationTick_ = GetTickCount()-DWORD(std::max(0.f,elapsed)*1000);
     // The supplied sword keeps its authored frame rate; only the retail knife is fitted to its cadence.
-    animationRate_ = WeaponSlots::Melee(weapon_) && animation_.find("midslash") == 0 ? (weapon_ == WeaponSlots::Sword ? 1.0f : 2.5f) : 1.0f;
+    animationRate_ = WeaponSlots::Melee(weapon_) && animation_.find("midslash") == 0 ? (weapon_ == WeaponSlots::Sword ? 1.0f : 2.5f) : rate;
     float duration=audio_.Duration(weapon_,animation_.c_str());
     // Configured magazine reloads scale both the authored mesh timeline and its sound-event clock.
     if(WeaponSlots::Firearm(weapon_) && !strcmp(name,"reload") && duration>0)animationRate_=duration/settings_.weapons[weapon_].reload;
@@ -405,10 +406,12 @@ void ShooterController::Camera() {
 void ShooterController::Reload() {
     const Weapon& w = settings_.weapons[weapon_];
     if (WeaponSlots::Melee(weapon_) || weapon_ == WeaponSlots::C4 || reloadEnd_ || ammo_[weapon_] == w.magazine || reserve_[weapon_] <= 0) return;
-    // Complete the reload with the model; magazine/bolt sounds are its frame events.
+    // Fit start + exactly the missing shell insertions + finish to the configured full reload duration.
     bool shells=weapon_==WeaponSlots::M3 || weapon_==WeaponSlots::XM1014;
-    float duration = Play(shells ? "start_reload" : "reload");
-    shellNext_=animationTick_+DWORD(std::max(.1f,duration)*1000);
+    if(shells)shotgunReload_.Configure(std::min(w.magazine-ammo_[weapon_],reserve_[weapon_]),w.reload,
+        audio_.Duration(weapon_,"start_reload"),audio_.Duration(weapon_,"insert"),audio_.Duration(weapon_,"after_reload"));
+    float duration = Play(shells ? "start_reload" : "reload",shells ? shotgunReload_.Rate() : 1);
+    shotgunReloadStart_=animationTick_;shotgunReloadPhase_=0;
     recoil_.ResetBurst(); // Native CS reload resets burst accuracy, without snapping the camera punch away.
     reloadEnd_ = animationTick_ + DWORD((shells ? w.reload : duration > 0 ? duration : w.reload) * 1000);
 }
@@ -611,12 +614,8 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
     float z = movement_.EyeZ() + wc3::Real(wc3::GetUnitFlyHeight(unit_));
     float yaw = (yaw_ + recoil_.Yaw()+yawOffset) * radians, pitch = std::clamp(pitch_ + recoil_.Pitch()+pitchOffset, -65.0f, 65.0f) * radians;
     float vx = std::cos(pitch) * std::cos(yaw), vy = std::cos(pitch) * std::sin(yaw), vz = std::sin(pitch);
-    float attackRange = WeaponSlots::Melee(weapon_) ? meleeAttack_.range : w.range;
+    float attackRange = WeaponSlots::Melee(weapon_) ? meleeAttack_.range : settings_.FirearmRange(weapon_);
     float nearest = attackRange;
-    // Solid terrain/decks stop shots; liquid alone must not shield the visible submerged part of a unit.
-    for (float t = 48; t < nearest; t += 48) {
-        if (wc3::AttackSurface(x + vx * t, y + vy * t,settings_.waterBlocksAttacks) > z + vz * t) { nearest = t; break; }
-    }
     wc3::Handle group = wc3::CreateGroup(), target = 0, candidate = 0, local = wc3::GetLocalPlayer();
     // Include models whose surface enters range before their center.
     float radius = attackRange + 512; wc3::GroupEnumUnitsInRange(group, &x, &y, &radius, 0);
@@ -648,6 +647,11 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
         if (destructableHitboxes_.Intersect(object,origin,direction,nearest,entry)) {
             nearest=entry; target=object; destructable=true;
         }
+    }
+    // Trace only as far as the nearest contact. Empty long-range firearm rays need no terrain sampling.
+    // Solid terrain/decks still stop hits; melee misses retain their hard-surface contact sound.
+    if(target || WeaponSlots::Melee(weapon_))for(float t=48;t<nearest;t+=48) {
+        if(wc3::AttackSurface(x+vx*t,y+vy*t,settings_.waterBlocksAttacks)>z+vz*t) {nearest=t;target=0;break;}
     }
     if (target) {
         if(!destructable && !settings_.targetAllies && AttackTargetPolicy::Allied(target,wc3::GetOwningPlayer(unit_)))return;
@@ -682,7 +686,7 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
             }
             wc3::Log("hit feedback=marker");
         }
-        wc3::Log("shot weapon=%s target=%08X damage=%.1f hpBefore=%.1f hpAfter=%.1f allied=%d destructable=%d finishing=%d effects=%d", w.name, target, damage, before, after,allied,destructable,lethal,effects);
+        wc3::Log("shot weapon=%s target=%08X damage=%.1f hpBefore=%.1f hpAfter=%.1f allied=%d destructable=%d finishing=%d effects=%d distance=%.1f range=%.1f", w.name, target, damage, before, after,allied,destructable,lethal,effects,nearest,attackRange);
     } else if (WeaponSlots::Melee(weapon_) && nearest < attackRange) {
         // Terrain contact uses the original hard-surface sample; misses keep only the swing sound.
         Sound("knife_hitwall1.wav");
@@ -1083,13 +1087,20 @@ void ShooterController::Tick(uintptr_t ui) {
         scopeLevel_ = (scopeLevel_ + 1) % 3;
         wc3::Log("AWP scope level=%d fov=%.0f", scopeLevel_, scopeLevel_ == 2 ? 10.0f : Scoped() ? 40.0f : 85.0f);
     }
-    if(reloadEnd_ && now<reloadEnd_ && now>=shellNext_ && (weapon_==WeaponSlots::M3 || weapon_==WeaponSlots::XM1014)) {
-        float duration=Play("insert");shellNext_=now+DWORD(std::max(.1f,duration)*1000);
+    // Sample after input may have started a reload; every phase shares one absolute clock, without drift/idle gaps.
+    now=GetTickCount();
+    bool shells=weapon_==WeaponSlots::M3 || weapon_==WeaponSlots::XM1014;
+    if(reloadEnd_ && now<reloadEnd_ && shells) {
+        auto pose=shotgunReload_.At((now-shotgunReloadStart_)*.001f);
+        if(pose.phase!=shotgunReloadPhase_) {
+            shotgunReloadPhase_=pose.phase;Play(pose.name,shotgunReload_.Rate(),pose.elapsed);
+            wc3::Log("shotgun reload weapon=%s phase=%d animation=%s rate=%.3f",settings_.weapons[weapon_].name,pose.phase,pose.name,shotgunReload_.Rate());
+        }
     }
     if (reloadEnd_ && now >= reloadEnd_) {
         int amount = std::min(settings_.weapons[weapon_].magazine - ammo_[weapon_], reserve_[weapon_]);
         ammo_[weapon_] += amount; reserve_[weapon_] -= amount; reloadEnd_ = 0;
-        Play(weapon_==WeaponSlots::M3 || weapon_==WeaponSlots::XM1014 ? "after_reload" : "idle");
+        Play("idle"); // The shotgun closing action has already finished inside the locked reload interval.
         wc3::Log("reload complete: weapon=%s ammo=%d reserve=%d", settings_.weapons[weapon_].name, ammo_[weapon_], reserve_[weapon_]);
     }
     // Preserve only our explicit native spell order; normal AI cancellation resumes when it ends.

@@ -351,3 +351,17 @@ foreach($setting in @('Pickup=U','ArmyAI=NONE','Price=777','Magazine=13','Worker
 $arsenalHash=(Get-FileHash -LiteralPath $arsenal).Hash
 Update-GameplayConfig $template $arsenal
 if((Get-FileHash -LiteralPath $arsenal).Hash -ne $arsenalHash){throw 'Arsenal/AI config migration is not idempotent.'}
+
+# Shared reach upgrades old firearm ranges without rewriting their saved values; an explicit opt-out survives.
+foreach($saved in @('', 'MinimumFirearmRange=0', 'MinimumFirearmRange=42000')) {
+    $reachConfig=Join-Path $folder 'custom-firearm-range.ini'
+    @('[Combat]',$saved,'[M3]','Range=1200') | Set-Content -LiteralPath $reachConfig -Encoding ascii
+    Update-GameplayConfig $template $reachConfig
+    $reachText=Get-Content -LiteralPath $reachConfig -Raw
+    $expected=if($saved){$saved}else{'MinimumFirearmRange=30000'}
+    if(!$reachText.Contains($expected) -or !$reachText.Contains('Range=1200') -or
+        [regex]::Matches($reachText,'(?m)^MinimumFirearmRange=').Count -ne 1){throw 'Firearm reach migration lost/duplicated a preference.'}
+    $reachHash=(Get-FileHash -LiteralPath $reachConfig).Hash
+    Update-GameplayConfig $template $reachConfig
+    if((Get-FileHash -LiteralPath $reachConfig).Hash -ne $reachHash){throw 'Firearm reach migration is not idempotent.'}
+}

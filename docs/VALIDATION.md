@@ -1,5 +1,27 @@
 # Validation
 
+## Current feature follow-up: firearm reach and shotgun reloads
+
+The native build and affected settings, migration, buying, recoil, native attack,
+hitbox, melee and shotgun timeline suites pass. Shared reach covers all eleven
+firearms, saved short per-gun ranges, maximum draw distance, F8 opt-out/restore,
+malformed values and custom-value preservation during repeated updates. Reload
+tests cover one/two/full magazines, 30/144 FPS and uneven frame intervals, phase
+overshoot and terminal-pose holding. A real COM initialization failure confirms
+that private animation metadata loads before optional audio setup.
+
+An ordinary Player run in a separate offline copy confirmed native HP loss from
+all eleven firearms against a visible castle 4500 world units away (4328.5 to
+its surface). The same AK shot missed with the shared extension disabled on F8.
+M3 and XM1014 each played exactly two required insertions followed by their
+closing action; both completed at the configured deadline. The recorded reloads
+were visually inspected. A second scene confirmed that an invulnerable foreground
+castle intercepts the extended ray at 2024.5 units without damaging the castle
+behind it. The first scene's chat-driven obstruction action did not run while
+FPS owned keyboard input; the independent scene placed the obstruction at startup.
+Both owned test processes stopped, module/config/assets were restored byte-for-byte,
+and the save snapshot remained unchanged. No campaign coverage is claimed.
+
 ## Current feature branch: arsenal, native shops and army AI
 
 The native-independent regression suite and affected buy/config/settings/recoil/spell/army

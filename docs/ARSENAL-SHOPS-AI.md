@@ -18,12 +18,23 @@ is a shell total, divided across `[Shotguns] Pellets=8` (1–16), with
 `SpreadDegrees=5` cone radius (0–15 degrees). Targets intercept pellets independently.
 
 `FireInterval` is seconds between shots (.025–10), `ReloadSeconds` seconds per full
-reload (.1–30), `Range` world units (100–15000), `MoveSpeed` CS units/second
+reload (.1–30), `Range` world units (100–50000), `MoveSpeed` CS units/second
 (50–500), `ModelScale` viewmodel projection scale (.25–2), `Kick` vertical impulse
 (0–10 degrees, new firearms). F8 reloads settings; tighter capacities clamp surplus
 without granting ammo. Existing reloads finish their current deadline; the next
-reload uses the new duration. M3/XM1014 play start/insertion/finish clips, granting
-the magazine at completion.
+reload uses the new duration. M3/XM1014 fit start, one insertion per missing/reserved
+shell, and finish into that duration. They hold the current clip's terminal pose
+between updates, without idle flashes; the magazine is granted only at completion.
+Model timing remains available when the optional audio device fails to initialize.
+
+All firearms now use `[Combat] MinimumFirearmRange=30000` world units (0–50000).
+Positive values extend each gun to at least that distance and twice
+`[Rendering] DrawDistance`, covering the visible camera volume. This applies to
+old saved short `Range` values too. Set it to **0** to restore individual weapon
+ranges. F8 applies the shared and individual ranges immediately; upgrades preserve
+custom values and insert missing settings once. Spread/recoil, target visibility,
+terrain and intervening bodies still determine hits. Knife/sword reach and C4 splash
+retain their physical rules. Empty firearm rays skip unnecessary long terrain walks.
 
 ## Native shops in F6/F7
 

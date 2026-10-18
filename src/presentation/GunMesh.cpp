@@ -1,4 +1,5 @@
 #include "GunMesh.hpp"
+#include "WeaponAnimation.hpp"
 #include "../platform/WarcraftApi.hpp"
 #include <algorithm>
 #include <cmath>
@@ -78,10 +79,10 @@ void GunMesh::Draw(const char* animation, float seconds) {
     if (sequences_.empty()) return;
     const Sequence* sequence = &sequences_.front();
     for (const auto& item : sequences_) if (item.name == animation) { sequence = &item; break; }
-    float frame = seconds * sequence->fps;
+    float frame = WeaponAnimation::Frame(sequence->frames,sequence->fps,seconds,false);
     // One-shot actions settle into idle; idle itself loops smoothly.
-    if (sequence->name.find("idle") == 0) frame = std::fmod(frame, float(sequence->frames));
-    else if (frame >= sequence->frames - 1) {
+    if (sequence->name.find("idle") == 0) frame = WeaponAnimation::Frame(sequence->frames,sequence->fps,seconds,true);
+    else if (!WeaponAnimation::HoldLastFrame(sequence->name) && frame >= sequence->frames - 1) {
         for (const auto& item : sequences_) if (item.name.find("idle") == 0) { sequence = &item; break; }
         frame = std::fmod(seconds * sequence->fps, float(sequence->frames));
     }

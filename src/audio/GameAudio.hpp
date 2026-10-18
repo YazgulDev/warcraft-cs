@@ -30,6 +30,7 @@ private:
     struct Event { float time; std::string sound; };
     struct Sequence { float duration; std::vector<Event> events; };
     bool LoadClip(const std::string& path, Clip& clip);
+    void LoadTimelines(const std::string& root);
     IXAudio2* engine_ = nullptr;
     IXAudio2MasteringVoice* master_ = nullptr;
     std::map<std::string, std::unique_ptr<Clip>> clips_;

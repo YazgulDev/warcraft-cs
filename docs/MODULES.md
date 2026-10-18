@@ -302,3 +302,8 @@ Build orders can create birth models immediately; issuing them from the earlier 
 draw those models before native skinning initializes their matrices. The next frame now performs
 its normal model update before drawing newly constructed objects. Training reservations also
 survive Warcraft's zero-current-order reports and pause/background gaps.
+
+`ShotgunReload` in combat maps one absolute reload clock to fitted start/insertion/finish
+phases. The controller coordinates transitions; `WeaponAnimation` in presentation holds
+terminal reload bones until the next phase, while ordinary firing/draw actions still settle
+to idle. `GameAudio` reads private timeline metadata independently of optional audio setup.

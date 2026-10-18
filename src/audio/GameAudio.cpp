@@ -28,6 +28,7 @@ bool GameAudio::LoadClip(const std::string& path, Clip& clip) {
     return true;
 }
 void GameAudio::Configure(const std::string& root) {
+    LoadTimelines(root); // Pose timing is required even when the optional audio device cannot initialize.
     // Load the system runtime explicitly; audio failure never prevents Warcraft from starting.
     HRESULT com = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
     if (FAILED(com)) { wc3::Log("CS audio COM initialization failed: %08X", com); return; }
@@ -54,6 +55,10 @@ void GameAudio::Configure(const std::string& root) {
         } while (FindNextFileA(search, &entry));
         FindClose(search);
     }
+    wc3::Log("CS audio ready: %zu cached samples; Warcraft audio retained", clips_.size());
+    CoUninitialize();
+}
+void GameAudio::LoadTimelines(const std::string& root) {
     const auto& weapons=WeaponSlots::Caches;
     for (int weapon = 0; weapon < WeaponSlots::Count; ++weapon) {
         std::ifstream file(root + "\\assets\\" + weapons[weapon] + ".wca", std::ios::binary);
@@ -73,8 +78,6 @@ void GameAudio::Configure(const std::string& root) {
             timelines_[weapon].emplace(name, std::move(sequence));
         }
     }
-    wc3::Log("CS audio ready: %zu cached samples; Warcraft audio retained", clips_.size());
-    CoUninitialize();
 }
 void GameAudio::SetVolumePercent(float percent) {
     // Audio initialization is optional; changing settings must remain safe when its device is unavailable.

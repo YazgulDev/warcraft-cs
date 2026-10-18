@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <fstream>
 #include <limits>
+#include <objbase.h>
 
 namespace wc3 {
     void Log(const char* format,...) {
@@ -32,6 +33,18 @@ int main(int count,char** arguments) {
         file.write(reinterpret_cast<const char*>(header),sizeof(header));file.write(silence.data(),silence.size());
     }
     GameAudio audio;
+    // An incompatible COM apartment forces optional audio setup to fail; model timing must still load.
+    {
+        std::ofstream timeline(root/"assets"/"m3.wca",std::ios::binary);
+        uint32_t sequences=1,events=0;float duration=.75f;char name[32]="insert";
+        timeline.write("WCA1",4);timeline.write(reinterpret_cast<const char*>(&sequences),4);
+        timeline.write(name,32);timeline.write(reinterpret_cast<const char*>(&duration),4);
+        timeline.write(reinterpret_cast<const char*>(&events),4);
+    }
+    assert(SUCCEEDED(CoInitializeEx(nullptr,COINIT_APARTMENTTHREADED)));
+    GameAudio withoutDevice;withoutDevice.Configure(root.string());RequireVolume(withoutDevice,0);
+    assert(withoutDevice.Duration(WeaponSlots::M3,"insert")==.75f);
+    CoUninitialize();
     // Failed/uninitialized audio remains safe; configured tests query the actual XAudio2 master gain.
     audio.SetVolumePercent(50);RequireVolume(audio,0);
     audio.Configure(root.string());RequireVolume(audio,100);

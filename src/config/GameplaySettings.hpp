@@ -11,6 +11,7 @@
 
 #include "../movement/MovementSettings.hpp"
 #include <array>
+#include <algorithm>
 #include <string>
 
 // Editable combat defaults and live settings are replaced as one complete snapshot on F8.
@@ -27,6 +28,8 @@ struct GameplaySettings {
     float shopInteractionRadius=450;
     int shotgunPellets=8;
     float shotgunSpreadDegrees=5;
+    // Zero restores individual gun ranges; the default also covers the visible camera volume.
+    float minimumFirearmRange=30000;
     std::array<Weapon,WeaponSlots::Count> weapons=WeaponDefaults::Weapons;
     std::array<float,WeaponSlots::Count> weaponMoveSpeed={221,230,250,210,250,250,220,250,250,250,245,220,230,240};
     std::array<float,WeaponSlots::Count> weaponModelScale={.72f,.78f,.94f,.73f,1,.95f,.85f,.9f,.94f,.8f,.8f,.75f,.8f,.8f};
@@ -111,6 +114,9 @@ struct GameplaySettings {
     std::array<float, WeaponSlots::Count> heroMultiplier = {1,1,1,3,1,1,3,1.6f,.75f,.8f,.65f,1,3,2.4f};
     float knifeSecondaryDamage = 65, swordSecondaryDamage = 240;
     static GameplaySettings Load(const std::string& filename);
+    float FirearmRange(int slot) const {
+        return minimumFirearmRange>0 ? std::max({weapons[slot].range,minimumFirearmRange,render.drawDistance*2}) : weapons[slot].range;
+    }
     float ContactDamage(int slot, bool secondary, float heroAttack) const;
     bool FinishingAWP(int slot) const { return slot == 3 && !heroDamage && awpOneShot; }
 };

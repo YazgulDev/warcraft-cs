@@ -25,6 +25,8 @@ for every change, new setting, upgrade steps and validation limits.
 The current feature branch expands the paid arsenal with Deagle, Glock, MP5, P90,
 M249, M3 and XM1014; adds native shop interaction on E in F6/F7 and army AI on U.
 See [arsenal, shops and AI controls/configuration](docs/ARSENAL-SHOPS-AI.md).
+Firearms reach at least 30000 world units by default, covering visible aimed targets;
+M3/XM1014 reloads use a continuous fitted shell timeline without idle flashes.
 
 ## Features
 

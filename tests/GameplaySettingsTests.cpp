@@ -10,6 +10,8 @@
 namespace wc3 { void Log(const char*,...) {} }
 int main() {
     GameplaySettings settings;
+    // Every firearm reaches visible distant targets, even when an older INI retains a short individual range.
+    for(int slot=0;slot<WeaponSlots::Count;++slot)if(WeaponSlots::Firearm(slot))assert(settings.FirearmRange(slot)==30000);
     assert(settings.movement.useNativeUnitCollision);
     // Exercise the actual INI reload boundary; malformed values retain the enabled movement fix.
     char collisionFolder[MAX_PATH]={};GetCurrentDirectoryA(MAX_PATH,collisionFolder);
@@ -441,5 +443,21 @@ int main() {
     assert(added.weapons[WeaponSlots::Deagle].magazine==1000 && added.weapons[WeaponSlots::Deagle].interval==.025f);
     assert(added.weapons[WeaponSlots::Deagle].reload==2.2f && added.weaponPrice[WeaponSlots::Deagle]==777);
     assert(added.shortcuts.Key(ShortcutAction::Pickup)=='U' && added.shortcuts.Key(ShortcutAction::ArmyAI)==0);
+    DeleteFileA(path.c_str());
+    {std::ofstream f(path);f<<"[Combat]\nMinimumFirearmRange=30000\n[M3]\nRange=1200\n[Rendering]\nDrawDistance=20000\n";}
+    auto reach=GameplaySettings::Load(path);
+    assert(reach.weapons[WeaponSlots::M3].range==1200 && reach.FirearmRange(WeaponSlots::M3)==40000);
+    for(auto value:{"0","-1","nan","inf","","bad","999999","16000"}) {
+        WritePrivateProfileStringA("Combat","MinimumFirearmRange",value,path.c_str());
+        reach=GameplaySettings::Load(path);
+        float expected=(!strcmp(value,"0") || !strcmp(value,"-1")) ? 0 : !strcmp(value,"999999") ? 50000 : !strcmp(value,"16000") ? 16000 : 30000;
+        assert(reach.minimumFirearmRange==expected);
+        assert(reach.FirearmRange(WeaponSlots::M3)==(expected>0 ? std::max(expected,40000.f) : 1200));
+    }
+    // F8 takes the whole new snapshot; explicit long per-gun settings also survive the shared extension.
+    WritePrivateProfileStringA("M3","Range","49000",path.c_str());
+    assert(GameplaySettings::Load(path).FirearmRange(WeaponSlots::M3)==49000);
+    WritePrivateProfileStringA("M3","Range","999999",path.c_str());
+    assert(GameplaySettings::Load(path).weapons[WeaponSlots::M3].range==50000);
     DeleteFileA(path.c_str());return 0;
 }
