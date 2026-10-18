@@ -69,6 +69,7 @@ has its own header and implementation. There is no global header search path mas
 | `src/application` | FPS lifecycle and coordination of gameplay systems |
 | `src/config` | Validated configuration snapshots |
 | `src/movement` | Independent movement physics and validated movement tuning contract |
+| `src/input/WeaponSelection.hpp` | Portable pending selection, catalog-derived groups, owned-only cycling and expiry |
 | `src/combat` | Weapon/damage/recoil/melee rules, hitboxes, C4 and status effects |
 | `src/economy` | Buy catalog, navigation, inventory transactions and shop access |
 | `src/inventory` | Item/rune pickup and ammunition recovery |
@@ -332,3 +333,11 @@ contacts, while the presentation starts the burst clip only once.
 `GrenadeThrow` owns pin/release/launch/recovery transitions; `GrenadeProjectile` calculates portable swept-hull flight, falloff and exposure. `NativeGrenades` adapts native pause-aware timers, collision snapshots, damage, gates and timed flash disorientation leases. `GrenadeVisual` is a read-only snapshot, and `GrenadeView` draws flights/clouds against native world depth before held-weapon depth clearing, then flash blindness after the HUD. No renderer modifies native targets. Map unload forgets native handles. Tests use synthetic clocks/targets and actual hidden-WGL pixels, without retail assets.
 
 `GrenadeWorldView` owns the three private w_ prop caches and context lifecycle. It reconstructs the native camera projection before weapon depth clearing, preserves original xyz axes and textured geometry, and centers authored offsets on projectile positions. GunMesh shares geometry submission between held and world models. GrenadeView now owns clouds/blindness only.
+
+
+`WeaponSelection` keeps a pending candidate distinct from equipped combat state. It derives groups
+from `BuyCatalog`, accepts the controller's owned/charge availability snapshot and never issues attacks.
+`WeaponSelectionView` renders its category strip and owned stack, sharing Overlay's private buy-preview
+cache. Window input queues confirm/cancel before weapon fire or squad RMB; the controller consumes that
+mailbox, commits through the existing deployment path and suppresses the confirmation trigger until release.
+Context transitions discard preview/input state; the ordinary aim and movement adapters remain active.

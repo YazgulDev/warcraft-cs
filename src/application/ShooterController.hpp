@@ -28,6 +28,7 @@
 #include "../combat/MeleeAttack.hpp"
 #include "../input/MouseLook.hpp"
 #include "../input/WeaponWheel.hpp"
+#include "../input/WeaponSelection.hpp"
 #include "../input/CameraWheel.hpp"
 #include "../config/GameplaySettings.hpp"
 #include "../inventory/AmmoRecovery.hpp"
@@ -53,7 +54,7 @@ public:
     // Native window input feeds the dedicated relative-look collector on the same game thread.
     void AttachWindow(HWND window) { mouseLook_.Attach(window); }
     void MouseInput(LPARAM packet,bool accept) { mouseLook_.Input(packet,accept); }
-    void ResetMouse() { mouseLook_.Reset(); weaponWheel_.Reset();cameraWheel_.Reset();squadOrderMode_.ClearInput();armyToggleRequested_=false; }
+    void ResetMouse() { mouseLook_.Reset(); weaponWheel_.Reset();cameraWheel_.Reset();squadOrderMode_.ClearInput();armyToggleRequested_=false;weaponMenuCancelRequested_=true; }
     // Zoom is presentation-only: it must not cancel channeling or switch a carried CS weapon in TPS.
     void RequestMouseWheel(int delta) {
         if(!Visible() || Buying() || InventoryOpen() || UnitFirstPerson())return;
@@ -107,7 +108,7 @@ public:
     // Queue allied targeting changes; Windows key repeat must not flip the mode every frame.
     void RequestAllyTargetToggle() {allyTargetToggleRequested_=true;}
     // Spell and interruption taps are executed on the game thread, never inside WindowProc.
-    void RequestSpell(int slot) { spellRequested_=slot; }
+    void RequestSpell(int slot) { spellRequested_=slot;weaponMenuCancelRequested_=true; }
     void RequestSpellCancel() { spellCancelRequested_=true; }
     std::string Shortcut(ShortcutAction action) const {return ShortcutBindings::Label(settings_.shortcuts.Key(action));}
     bool SpeedVisible() const { return showSpeed_; }
@@ -120,7 +121,7 @@ public:
     bool InventoryOpen() const {return itemInventory_.State().Open();}
     bool InventoryInputOpen() const {return itemInventory_.State().RoutingOpen();}
     bool CursorMode() const {return Buying() || InventoryOpen();}
-    void RequestInventory(InventoryControls::Event e) {itemInventory_.Input(e);}
+    void RequestInventory(InventoryControls::Event e) {itemInventory_.Input(e);weaponMenuCancelRequested_=true;}
     void RequestInventoryClose() {inventoryEscape_=true;itemInventory_.Input({InventoryControls::Kind::Close});}
     void InventoryProjection(float verticalFov) {inventoryVerticalFov_=verticalFov;}
     wc3::Handle HudActor() const {return Visible() && !UnitFirstPerson() ? unit_ : 0;}
@@ -134,6 +135,12 @@ public:
     BuyMenu::Page BuyPage() const { return buyMenu_.Current(); }
     const GameplaySettings& Settings() const { return settings_; }
     bool OwnsWeapon(int slot) const { return slot>=0 && slot<WeaponSlots::Count && inventory_.owned[slot]; }
+    // Window events queue confirmation/cancel; only the game thread changes the equipped weapon.
+    void RequestWeaponConfirm() {weaponMenuConfirmRequested_=true;}
+    void RequestWeaponCancel() {weaponMenuCancelRequested_=true;}
+    bool SelectingWeapon() const {return Visible() && !ThirdPerson() && !UnitFirstPerson() && !Buying() && !InventoryInputOpen() && weaponSelection_.Open();}
+    const WeaponSelection& WeaponChoice() const {return weaponSelection_;}
+    WeaponSelection::Available AvailableWeapons() const;
     int Gold() const { return gold_; }
     float ViewYaw() const { return yaw_+(ThirdPerson() ? 0 : recoil_.Yaw()); }
     float ViewPitch() const { return pitch_+(ThirdPerson() ? 0 : recoil_.Pitch()); }
@@ -267,6 +274,8 @@ private:
     void ResetLoadout();
     void Buy(int slot,bool ammunition);
     void UpdateBuyMenu();
+    void UpdateWeaponSelection(DWORD now);
+    void CloseWeaponSelection();
     void Notice(const char* message);
     float Play(const char* name,float rate=1,float elapsed=0);
     void Camera();
@@ -328,6 +337,8 @@ private:
     NativeFogOfWar nativeFog_;
     MouseLook mouseLook_;
     WeaponWheel weaponWheel_;
+    WeaponSelection weaponSelection_;
+    bool weaponMenuConfirmRequested_=false,weaponMenuCancelRequested_=false;
     CameraWheel cameraWheel_;
     float thirdPersonDistance_=500;
     GameplaySettings settings_;

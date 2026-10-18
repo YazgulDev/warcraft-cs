@@ -59,7 +59,7 @@ Glock LMB fires one ordinary shot; RMB fires one three-round burst unless Y enab
 - E picks up items/runes through the real inventory; a successful rune restores 40% ammunition by default.
 - H recruits your own units to follow and fight, O makes them follow without attacking, J releases them.
 - INI settings for ammunition recovery, damage and squad behavior, reloaded with F8.
-- Mouse-wheel weapon cycling through all seven slots, with high-resolution wheel support.
+- CS-style owned-weapon selection menu with five groups, mouse-wheel browsing and click confirmation.
 - B opens a CS-style buy menu using Warcraft gold; configurable prices, starting kits and shop/building access.
 - No starting C4 by default; unlimited paid C4 purchases and configurable reserve ammunition caps.
 - Multiple planted C4 charges with independent fuses; F11 refills carried equipment and F12 grants every weapon for free.
@@ -202,8 +202,10 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 | B | Open/close the buy menu; number keys or mouse select categories and purchases |
 | . | Buy one ammo pack for the weapon currently held |
 | Esc / 0 in buy menu | Close / back to previous menu (0 closes the main menu) |
-| 1 / 2 / 3 / 4 / 5 / 6 / 7 | AK47 / M4A1 / USP / AWP / knife / C4 / original greatsword |
-| Mouse wheel up / down | Previous / next owned weapon |
+| 1 / 2 / 3 / 4 / 5 (F6, Tab items off) | Open primary / pistols / melee / grenades / C4; repeat to browse the group |
+| Mouse wheel up / down (F6) | Preview previous / next carried weapon; LMB confirms without firing |
+| RMB / 0 / Esc in weapon menu | Cancel the pending selection; timeout also cancels |
+| 6 / 7 (when not routed to items) | Legacy direct C4 / original greatsword shortcuts |
 | Hold left mouse button with C4 | Plant for 3 seconds while standing on the ground; multiple charges are allowed |
 | E | Open a nearby looked-at native shop in F6/F7; otherwise pick up an item/rune. E/Escape returns from a shop |
 | U | Toggle army AI for free owned workers/buildings/troops; H/O members and explicit targets take priority |
@@ -225,7 +227,7 @@ barrel muzzle flash. F8 applies the editable `[Viewmodel]` settings; see the
 ## Configuration
 
 CS grenades: **B → 8 Equipment → 4 HE / 5 Flashbang / 6 Smoke**. Select a carried
-grenade with the wheel. Hold LMB to pull the pin, release to throw; the fuse starts
+grenade with group 4 or the wheel, then click to confirm. Hold LMB again to pull the pin, release to throw; the fuse starts
 at launch. Defaults carry one HE, two flashes and one smoke. See
 [grenade settings](docs/ARSENAL-SHOPS-AI.md#cs-16-grenades).
 Thrown grenades use the original CS `w_` models and textures; setup converts these
@@ -306,6 +308,10 @@ Edit it and press F8 in FPS.
   Landing catches ledge/low-prop tops under the full footprint; cliff rims no longer trap a landed foot.
   Walking/jumping off a cliff starts a gravity-driven fall. Tune these [movement settings](docs/MOVEMENT.md);
   all apply on F8 without resetting the current jump. Default speed cap: 1000 CS units/s; configurable up to 2000.
+
+- `[WeaponSelection] Enabled=true` shows a CS-style owned-weapon menu in F6. Group keys or the wheel
+  preview a choice; LMB confirms without firing. `TimeoutSeconds=5` (.5–15 seconds) cancels idle choices.
+  Both apply at startup/F8, and false restores legacy immediate selection. See [selection controls](docs/WEAPON-SELECTION.md).
 
 - `[Audio] CSVolumePercent=100` controls all CS sounds independently of Warcraft audio. Range: **0вЂ“100**;
   **0** mutes CS, **100** retains the previous levels, and fractional values are accepted.

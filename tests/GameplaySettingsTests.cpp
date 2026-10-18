@@ -513,5 +513,17 @@ int main() {
         auto world=GameplaySettings::Load(path).grenades;assert(world.worldModelScale>=.25f && world.worldModelScale<=4 && world.worldSpin>=0 && world.worldSpin<=1440);
         if(!strcmp(value,"nan") || !strcmp(value,"bad") || !*value)assert(world.worldModelScale==1 && world.worldSpin==360);
     }
+    // Startup/F8 menu preferences use bounded defaults, including malformed and non-finite text.
+    for(const char* value:{"", "bad", "nan", "inf", "-1", "99", "2.5"}) {
+        {std::ofstream file(path);file<<"[WeaponSelection]\nEnabled="<<value<<"\nTimeoutSeconds="<<value<<"\n";}
+        auto menu=GameplaySettings::Load(path);
+        assert(menu.weaponSelectionMenu);
+        float timeout=!strcmp(value,"-1") ? .5f : !strcmp(value,"99") ? 15.f : !strcmp(value,"2.5") ? 2.5f : 5.f;
+        assert(menu.weaponSelectionTimeout==timeout);
+    }
+    for(const char* value:{"false","0","FALSE"}) {
+        {std::ofstream file(path);file<<"[WeaponSelection]\nEnabled="<<value<<"\nTimeoutSeconds=3\n";}
+        auto menu=GameplaySettings::Load(path);assert(!menu.weaponSelectionMenu && menu.weaponSelectionTimeout==3);
+    }
     DeleteFileA(path.c_str());return 0;
 }

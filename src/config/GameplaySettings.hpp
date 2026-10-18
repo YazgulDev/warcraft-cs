@@ -23,6 +23,8 @@ struct GameplaySettings {
     RenderSettings render;
     ViewmodelSettings viewmodel;
     GrenadeSettings grenades;
+    bool weaponSelectionMenu=true; // F6 category preview; false restores immediate legacy shortcuts/wheel.
+    float weaponSelectionTimeout=5;
     HealthBarSettings healthBars;
     ShortcutBindings shortcuts;
     SpellSettings spells;

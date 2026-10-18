@@ -5,8 +5,9 @@ P90 (2350), M249 (5750), M3 (1700), and XM1014 (3000). Open **B**: 1 pistols,
 2 shotguns, 3 SMGs, 4 rifles, 5 machine guns, 6 primary ammo, 7 pistol ammo,
 8 equipment. Number keys and mouse rows select the same catalog entries.
 Buying grants a loaded magazine; reserve packs cost extra. Duplicates, insufficient
-funds and full packs do not charge gold. Existing slots **1–7** keep their meanings;
-select additional owned weapons with the wheel. Tab toggles item-number routing.
+funds and full packs do not charge gold. Inventory slot IDs remain stable. The
+[carried weapon menu](WEAPON-SELECTION.md) uses groups **1–5**, repeated category keys or the wheel
+to highlight a weapon, then LMB to equip it. Tab toggles item-number routing.
 F11 refills owned weapons; F12 grants all weapons. The initial kit is unchanged.
 Models, sounds and hand-free previews are converted privately from owned CS files.
 

@@ -303,6 +303,9 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     // These HUD panels reload with F8; the separate clean F9 view always omits them.
     result.showUnitHud=enabledHud("ShowUnitHud");result.showInventory=enabledHud("ShowInventory");
     result.inventoryControls=enabledHud("InventoryControls");
+    // Missing/malformed menu preferences keep CS-style preview; F8 replaces the complete snapshot.
+    result.weaponSelectionMenu=enabled("WeaponSelection","Enabled");
+    result.weaponSelectionTimeout=std::max(.5f,number("WeaponSelection","TimeoutSeconds",5,15));
     result.inventoryDropDistance=std::max(16.f,number("Inventory","DropDistance",80,128));
     // Startup/F8 default to item numbers; an explicit false/0 preserves a weapon-first preference.
     auto itemNumbers=text("Inventory","NumbersByDefault","true");

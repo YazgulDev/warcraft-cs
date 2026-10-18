@@ -393,3 +393,17 @@ foreach($saved in @('', 'MinimumFirearmRange=0', 'MinimumFirearmRange=42000')) {
     Update-GameplayConfig $template $reachConfig
     if((Get-FileHash -LiteralPath $reachConfig).Hash -ne $reachHash){throw 'Firearm reach migration is not idempotent.'}
 }
+
+# New selector defaults fill older installs; custom opt-outs/timeouts survive repeated upgrades.
+foreach($custom in @($false,$true)) {
+    $selectorConfig=Join-Path $folder ('weapon-selector-'+$custom+'.ini')
+    @('[WeaponSelection]',$(if($custom){'Enabled=false';'TimeoutSeconds=9'}),'[Inventory]','NumbersByDefault=false') | Set-Content -LiteralPath $selectorConfig -Encoding ascii
+    Update-GameplayConfig $template $selectorConfig
+    $selectorText=Get-Content -LiteralPath $selectorConfig -Raw
+    $enabled=if($custom){'Enabled=false'}else{'Enabled=true'}
+    $timeout=if($custom){'TimeoutSeconds=9'}else{'TimeoutSeconds=5'}
+    if(!$selectorText.Contains($enabled) -or !$selectorText.Contains($timeout) -or !$selectorText.Contains('NumbersByDefault=false')){throw 'Weapon selector migration lost defaults/custom controls.'}
+    $selectorHash=(Get-FileHash $selectorConfig).Hash
+    Update-GameplayConfig $template $selectorConfig
+    if((Get-FileHash $selectorConfig).Hash -ne $selectorHash){throw 'Weapon selector migration is not idempotent.'}
+}

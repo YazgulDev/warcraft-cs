@@ -70,6 +70,7 @@ $sources += '"' + (Join-Path $modRoot 'src/platform/MovementObstacles.cpp') + '"
 $sources += '"' + (Join-Path $modRoot 'src/platform/NativeGrenades.cpp') + '"'
 $sources += '"' + (Join-Path $modRoot 'src/presentation/GrenadeView.cpp') + '"'
 $sources += '"' + (Join-Path $modRoot 'src/presentation/GrenadeWorldView.cpp') + '"'
+$sources += '"' + (Join-Path $modRoot 'src/presentation/WeaponSelectionView.cpp') + '"' # Owned-weapon selector shares private buy previews.
 $sources += '"' + (Join-Path $modRoot 'src/platform/UnitCollisionProfile.cpp') + '"' # Live movement collision is independent of weapon geometry.
 # Third-person presentation and native melee coordination retain separate ownership from FPS weapons.
 $sources += @('presentation/ThirdPersonCamera.cpp','platform/UnitAttack.cpp','platform/UnitLocomotion.cpp','platform/ActorJumpView.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }

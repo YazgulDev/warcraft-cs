@@ -68,23 +68,23 @@ void ShooterController::Buy(int slot,bool ammunition) {
         wc3::Log("buy weapon=%s ammunition=%d gold=%d ammo=%d reserve=%d",settings_.weapons[slot].name,ammunition,gold,ammo_[slot],reserve_[slot]);
         if (!ammunition) SwitchWeapon(slot);
         // Successful CS purchases return directly to play; rejected purchases leave the menu open.
-        buyMenu_.Close();
+        buyMenu_.Close();CloseWeaponSelection();
     } else Notice(result==BuyInventory::Result::NoGold ? "NOT ENOUGH GOLD" : result==BuyInventory::Result::Full ? "AMMUNITION FULL" :
         result==BuyInventory::Result::AlreadyOwned ? "ALREADY OWNED" : "NO AMMUNITION FOR THIS WEAPON");
 }
 void ShooterController::UpdateBuyMenu() {
     bool wasBuying=Buying();
     gold_=wc3::GetPlayerState(wc3::GetOwningPlayer(unit_),1);
-    if (status_.contained || status_.hidden) { buyMenu_.Close();itemInventory_.ClearInput();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1;suppressFire_=true;return; }
+    if (status_.contained || status_.hidden) { buyMenu_.Close();CloseWeaponSelection();itemInventory_.ClearInput();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1;suppressFire_=true;return; }
     if (buyToggleRequested_) {
         itemInventory_.ClearInput(); // The weapon catalog and mouse inventory have exclusive cursor ownership.
         if (Buying() || BuyAccess::Allowed(unit_,settings_)) {
-            buyMenu_.Toggle();mouseLook_.Reset();weaponWheel_.Reset();cameraWheel_.Reset();suppressFire_=true;CancelPlant();meleeContact_=0;
+            CloseWeaponSelection();buyMenu_.Toggle();mouseLook_.Reset();weaponWheel_.Reset();cameraWheel_.Reset();suppressFire_=true;CancelPlant();meleeContact_=0;
             reloadEnd_=0;audio_.CancelAnimation();Play("idle");
         } else Notice("OUTSIDE BUY ZONE");
     }
     if (buyAmmoRequested_) Buy(weapon_,true);
-    if (Buying() && !BuyAccess::Allowed(unit_,settings_)) { buyMenu_.Close();Notice("LEFT BUY ZONE"); }
+    if (Buying() && !BuyAccess::Allowed(unit_,settings_)) { buyMenu_.Close();CloseWeaponSelection();Notice("LEFT BUY ZONE"); }
     if (Buying() && buyKeyRequested_>=0) {
         auto action=buyMenu_.Select(buyKeyRequested_,weapon_);
         // Original CS splits primary (rifles) and secondary (pistols) ammunition.
@@ -170,7 +170,7 @@ void ShooterController::Disable(bool restoreCamera) {
     allyTargetToggleRequested_=false;
     // Restore the current map before native RTS/menu input takes over.
     nativeFog_.Update(false);fogToggleRequested_=false;
-    buyMenu_.Close();itemInventory_.ClearInput();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1;suppressFire_=true;
+    buyMenu_.Close();CloseWeaponSelection();itemInventory_.ClearInput();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1;suppressFire_=true;
     mouseLook_.Reset();
     squadOrderMode_.ClearInput();squad_.Release(); // Native RTS regains followers and their ordinary attack policy on F6/F10.
     if (restoreCamera) {
@@ -214,7 +214,7 @@ void ShooterController::ResetMap() {
     squad_.Reset();squadOrderMode_.Configure(settings_.squadReticleAttackInFPS); // New maps restore the configured initial F6 mode.
     // Never dereference a unit handle after a map unload: campaign transitions reuse IDs.
     hitboxes_.Reset(); destructableHitboxes_.Reset(); bombs_.Reset();grenades_.Reset();grenadeThrow_.Reset(); plantProgress_ = 0;
-    buyMenu_.Close();itemInventory_.ClearInput();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1;suppressFire_=true;
+    buyMenu_.Close();CloseWeaponSelection();itemInventory_.ClearInput();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1;suppressFire_=true;
     fixtureGate_ = 0;
     unit_ = 0; active_ = false; suspended_ = false; paused_ = false; ui_ = 0; tick_ = {};
     scopeLevel_ = 0; cinematicRequested_ = false; toggleRequested_ = false; ownCameraRequest_ = false;
@@ -266,7 +266,7 @@ void ShooterController::SelectView(ControlView next) {
     // Inventory and physical position stay intact; no queued gunshot or delayed swing crosses the transition.
     unitLocomotion_.Release();unitLocomotion_.Reset();
     CancelCasting();heroAttack_.Cancel();CancelPlant();glockBurst_.Cancel();meleeContact_=0;reloadEnd_=0;scopeLevel_=0;flashWeapon_=-1;viewmodelMotion_.Reset();
-    buyMenu_.Close();itemInventory_.ClearInput();recoil_.Reset();audio_.Stop();mouseLook_.Reset();weaponWheel_.Reset();cameraWheel_.Reset();suppressFire_=true;
+    buyMenu_.Close();CloseWeaponSelection();itemInventory_.ClearInput();recoil_.Reset();audio_.Stop();mouseLook_.Reset();weaponWheel_.Reset();cameraWheel_.Reset();suppressFire_=true;
     // Pending combat/UI mailboxes cannot execute after entering the unarmed view.
     refillRequested_=allWeaponsRequested_=itemRequested_=buyToggleRequested_=buyAmmoRequested_=false;
     buyKeyRequested_=spellRequested_=-1;spellCancelRequested_=false;
@@ -447,6 +447,49 @@ void ShooterController::SwitchWeapon(int slot) {
     recoil_.ResetBurst(); glockBurst_.Cancel();flashWeapon_=-1;weapon_ = slot; reloadEnd_ = 0; scopeLevel_ = 0; Play("draw");
     wc3::Log("weapon selected=%s slot=%d", settings_.weapons[slot].name, slot + 1);
 }
+WeaponSelection::Available ShooterController::AvailableWeapons() const {
+    WeaponSelection::Available available={};
+    for(int i=0;i<WeaponSlots::Count;++i)
+        available[i]=inventory_.owned[i] && (!WeaponSlots::Grenade(i) || settings_.grenades.enabled) &&
+            ((i!=WeaponSlots::C4 && !WeaponSlots::Grenade(i)) || ammo_[i]>0);
+    return available;
+}
+void ShooterController::CloseWeaponSelection() {
+    // Context changes discard both the preview and short mouse taps queued for its former owner.
+    weaponSelection_.Close();weaponWheel_.Reset();weaponMenuConfirmRequested_=weaponMenuCancelRequested_=false;
+}
+void ShooterController::UpdateWeaponSelection(DWORD now) {
+    auto available=AvailableWeapons();int previous=weaponSelection_.Pending();
+    weaponSelection_.Expire(now*.001,settings_.weaponSelectionTimeout,available);
+    if(weaponMenuCancelRequested_) {
+        CloseWeaponSelection();weaponWheel_.Reset();suppressFire_=true;
+        Pressed(VK_LBUTTON);Pressed(VK_RBUTTON);return;
+    }
+    int base=settings_.weaponSelectionMenu && weaponSelection_.Open() ? weaponSelection_.Pending() : weapon_;
+    int wheel=weaponWheel_.Take(base),steps=(wheel-base+WeaponSlots::Count)%WeaponSlots::Count;
+    if(steps>WeaponSlots::Count/2)steps-=WeaponSlots::Count;
+    if(!ThirdPerson()) {
+        if(settings_.weaponSelectionMenu)weaponSelection_.Cycle(steps,weapon_,available,now*.001);
+        else SwitchWeapon(inventory_.Next(weapon_,steps));
+    }
+    for(int i=0;i<WeaponSlots::ShortcutCount;++i)if(Pressed(ShortcutAction(int(ShortcutAction::Weapon1)+i)) && !ThirdPerson() &&
+        InventoryControls::NumberSlot(settings_.shortcuts.Key(ShortcutAction(int(ShortcutAction::Weapon1)+i)),ItemControls().Numbers(),false)<0) {
+        if(settings_.weaponSelectionMenu && i<5) {
+            if(!weaponSelection_.Category(i+1,weapon_,available,now*.001))Notice("NO CARRIED WEAPONS IN THIS GROUP");
+        } else {CloseWeaponSelection();SwitchWeapon(i);}
+    }
+    if(weaponMenuConfirmRequested_) {
+        int slot=weaponSelection_.Confirm(available);weaponMenuConfirmRequested_=false;
+        if(slot>=0){SwitchWeapon(slot);wc3::Log("weapon menu confirmed slot=%d",slot+1);}
+        // Confirming is never a shot, even for a short click or a held automatic trigger.
+        suppressFire_=true;Pressed(VK_LBUTTON);Pressed(VK_RBUTTON);
+    }
+    if(weaponSelection_.Open()) {
+        suppressFire_=true;glockBurst_.Cancel();CancelPlant();
+        if(previous!=weaponSelection_.Pending())wc3::Log("weapon menu pending=%s slot=%d group=%d",settings_.weapons[weaponSelection_.Pending()].name,
+            weaponSelection_.Pending()+1,WeaponSelection::Group(weaponSelection_.Pending()));
+    } else if(previous>=0)wc3::Log("weapon menu closed");
+}
 void ShooterController::ToggleHealthBars() {
     settings_.healthBars.ToggleAll();
     // Write both compatible keys even if one save fails; leave unrelated preferences intact.
@@ -459,6 +502,7 @@ void ShooterController::ToggleHealthBars() {
     Notice(saved ? (settings_.healthBars.allies ? "HEALTH BARS ON" : "HEALTH BARS OFF") : "HEALTH BAR SETTINGS COULD NOT BE SAVED");
 }
 void ShooterController::ReloadSettings() {
+    CloseWeaponSelection(); // F8 cannot retain a choice under the previous controls/configuration.
     // Replace one complete snapshot; stale fractional credit must not survive a percentage/scope change.
     settings_=GameplaySettings::Load(root_+"\\WarcraftCS.ini");
     if(!settings_.armyAI.enabled)armyAI_.Reset();
@@ -495,7 +539,7 @@ void ShooterController::ReloadSettings() {
             if(settings_.thirdPerson.enabled)SelectView(ControlView::ThirdPerson);
             else Disable(true);
         }
-        buyMenu_.Close();
+        buyMenu_.Close();CloseWeaponSelection();
     }
     wc3::Log("Third person configured enabled=%d distance=%.1f range=%.1f arc=%.1f interval=%.2f delay=%.2f multiplier=%.2f",
         settings_.thirdPerson.enabled,settings_.thirdPerson.distance,settings_.thirdPerson.attackRange,settings_.thirdPerson.attackArc,
@@ -566,7 +610,7 @@ bool ShooterController::OpenShop() {
     auto aim=SpellAim::Pick(unit_,origin,direction,settings_.spells.aimDistance,hitboxes_,destructableHitboxes_);
     if(!ShopAccess::Nearby(unit_,aim.target,settings_.shopInteractionRadius))return false;
     CancelCasting();heroAttack_.Cancel();CancelPlant();unitLocomotion_.Release();
-    buyMenu_.Close();itemInventory_.ClearInput();movement_.Stop();audio_.Stop();mouseLook_.Reset();squadOrderMode_.ClearInput();
+    buyMenu_.Close();CloseWeaponSelection();itemInventory_.ClearInput();movement_.Stop();audio_.Stop();mouseLook_.Reset();squadOrderMode_.ClearInput();
     shop_=aim.target;shopCloseRequested_=false;suppressFire_=true;reloadEnd_=0;meleeContact_=0;glockBurst_.Cancel();flashWeapon_=-1;
     // Yield rendering/input to the native command card so stock, prices, buyer selection and map limits remain authoritative.
     wc3::ClearSelection();wc3::SelectUnit(shop_,TRUE);
@@ -845,7 +889,7 @@ void ShooterController::Tick(uintptr_t ui) {
         mouseLook_.Reset();
         weaponWheel_.Reset();cameraWheel_.Reset();
         itemRequested_=false;squadRequested_=0;squadOrderMode_.ClearInput();armyToggleRequested_=false; // Commands pressed before losing focus must not execute on return.
-        buyMenu_.Close();itemInventory_.ClearInput();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1;suppressFire_=true;
+        buyMenu_.Close();CloseWeaponSelection();itemInventory_.ClearInput();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1;suppressFire_=true;
         CancelPlant(); meleeContact_ = 0;
         // Cancel queued animation events rather than releasing delayed reload sounds on return.
         audio_.CancelAnimation(); return;
@@ -863,7 +907,7 @@ void ShooterController::Tick(uintptr_t ui) {
     suspended_ = suspended;
     if(suspended_) {flashWeapon_=-1;viewmodelMotion_.Reset();}
     if(!active_ || suspended_)glockBurst_.Cancel(); // Menus/cinematics cannot resume queued bullets later.
-    if (suspended_) { unitLocomotion_.Release();heroAttack_.Cancel();viewToggleRequested_=false;CancelCasting();spellRequested_=-1;spellCancelRequested_=false;CancelPlant(); meleeContact_ = 0;buyMenu_.Close();itemInventory_.ClearInput();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1; }
+    if (suspended_) { unitLocomotion_.Release();heroAttack_.Cancel();viewToggleRequested_=false;CancelCasting();spellRequested_=-1;spellCancelRequested_=false;CancelPlant(); meleeContact_ = 0;buyMenu_.Close();CloseWeaponSelection();itemInventory_.ClearInput();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1; }
     if(Shopping()) {
         if(shopCloseRequested_ || wc3::GetOwningPlayer(unit_)!=wc3::GetLocalPlayer() || !ShopAccess::Nearby(unit_,shop_,settings_.shopInteractionRadius))CloseShop();
         return;
@@ -905,7 +949,7 @@ void ShooterController::Tick(uintptr_t ui) {
     nativeSky_.Update(ui_,Visible() && settings_.nativeSky && !settings_.csSky,mapTileset_);
     nativeFog_.Update(Visible() && fogOfWarDisabled_);
     // A queued display tap cannot take effect after FPS is suspended or left.
-    if (!active_ || suspended_) { itemInventory_.ClearInput();squadOrderMode_.ClearInput();mouseLook_.Reset();weaponWheel_.Reset();cameraWheel_.Reset();itemRequested_=false;squadRequested_=0;speedToggleRequested_=fogToggleRequested_=minimapToggleRequested_=healthBarToggleRequested_=allyTargetToggleRequested_=false;spellRequested_=-1;spellCancelRequested_=false;return; }
+    if (!active_ || suspended_) { CloseWeaponSelection();itemInventory_.ClearInput();squadOrderMode_.ClearInput();mouseLook_.Reset();weaponWheel_.Reset();cameraWheel_.Reset();itemRequested_=false;squadRequested_=0;speedToggleRequested_=fogToggleRequested_=minimapToggleRequested_=healthBarToggleRequested_=allyTargetToggleRequested_=false;spellRequested_=-1;spellCancelRequested_=false;return; }
     if (settingsRequested_) { settingsRequested_=false;ReloadSettings();if(!Visible())return; } // Unit-view opt-out may return to RTS.
     if(armyToggleRequested_) {
         armyToggleRequested_=false;
@@ -1044,9 +1088,14 @@ void ShooterController::Tick(uintptr_t ui) {
         }
     }
     bool escape=Pressed(VK_ESCAPE);
+    if(ThirdPerson() || UnitFirstPerson() || settings_.warcraftOnly)CloseWeaponSelection();
+    if(weaponSelection_.Open() && (escape || weaponMenuCancelRequested_)) {
+        CloseWeaponSelection();weaponWheel_.Reset();suppressFire_=true;escape=false;
+        Pressed(VK_LBUTTON);Pressed(VK_RBUTTON);wc3::Log("weapon menu canceled");
+    }
     if(inventoryEscape_) {escape=false;inventoryEscape_=false;}
     if(escape && InventoryOpen()) {itemInventory_.ClearInput();mouseLook_.Reset();suppressFire_=true;escape=false;}
-    if (escape && Buying()) { buyMenu_.Close();mouseLook_.Reset();suppressFire_=true;escape=false; }
+    if (escape && Buying()) { buyMenu_.Close();CloseWeaponSelection();mouseLook_.Reset();suppressFire_=true;escape=false; }
     if (escape || !wc3::GetUnitTypeId(unit_) || wc3::Real(wc3::GetUnitState(unit_, 0)) <= 0.405f) { Disable(true); return; }
     health_ = wc3::Real(wc3::GetUnitState(unit_, 0));
     // Copy HUD state on the simulation thread; no native unit/item queries occur during GL presentation.
@@ -1076,6 +1125,7 @@ void ShooterController::Tick(uintptr_t ui) {
     if(wasInventory!=InventoryOpen()) {
         mouseLook_.Reset();weaponWheel_.Reset();cameraWheel_.Reset();suppressFire_=true;
         if(InventoryOpen())buyMenu_.Close();
+        CloseWeaponSelection();
     }
     // HUD sampling runs on the game thread and never stores native pointers for the GL overlay.
     if(settings_.showSpellIcons && now-spellHudTick_>=100) {
@@ -1094,7 +1144,7 @@ void ShooterController::Tick(uintptr_t ui) {
     if (status_.incapacitated) {
         unitLocomotion_.Release(); // Early disabled-state returns must not retain the running time scale.
         CancelCasting();spellRequested_=-1;spellCancelRequested_=false;
-        buyMenu_.Close();itemInventory_.ClearInput();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1;suppressFire_=true;
+        buyMenu_.Close();CloseWeaponSelection();itemInventory_.ClearInput();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1;suppressFire_=true;
         // Discard scrolling during disabled states rather than replaying a switch after recovery.
         weaponWheel_.Reset();cameraWheel_.Reset();
         // Disabled leaders cannot queue pickup/recruitment for later; existing followers retain their chosen policy.
@@ -1111,14 +1161,14 @@ void ShooterController::Tick(uintptr_t ui) {
         // The view grants movement only, without changing vulnerability or modifying native attack statistics.
         CancelCasting();heroAttack_.Cancel();CancelPlant();meleeContact_=0;reloadEnd_=0;
         refillRequested_=allWeaponsRequested_=itemRequested_=buyToggleRequested_=buyAmmoRequested_=false;
-        buyKeyRequested_=spellRequested_=-1;spellCancelRequested_=false;buyMenu_.Close();
+        buyKeyRequested_=spellRequested_=-1;spellCancelRequested_=false;buyMenu_.Close();CloseWeaponSelection();
         FpsCombatGuard::CancelOrders(unit_);UpdateSquad(now);
         AimAndMove(dt);Camera();audio_.Tick(now);return;
     }
     // Drop CS input mailboxes before the shared TPS attack/spell path in reduced installations.
     if(settings_.warcraftOnly) {
         refillRequested_=allWeaponsRequested_=buyToggleRequested_=buyAmmoRequested_=false;
-        buyKeyRequested_=-1;buyMenu_.Close();
+        buyKeyRequested_=-1;buyMenu_.Close();CloseWeaponSelection();
     }
     if (allWeaponsRequested_) { allWeaponsRequested_=false;refillRequested_=false;RefillAmmo(true); }
     if (refillRequested_) { refillRequested_ = false; RefillAmmo(); }
@@ -1152,13 +1202,8 @@ void ShooterController::Tick(uintptr_t ui) {
         if(distance!=thirdPersonDistance_)wc3::Log("Third-person camera distance=%.1f",distance);
         thirdPersonDistance_=distance;
     }
-    int wheel=weaponWheel_.Take(weapon_);
-    int steps=(wheel-weapon_+WeaponSlots::Count)%WeaponSlots::Count;
-    if (steps>WeaponSlots::Count/2) steps-=WeaponSlots::Count;
-    if(!ThirdPerson())SwitchWeapon(inventory_.Next(weapon_,steps));
-    for (int i = 0; i < WeaponSlots::ShortcutCount; ++i) if (Pressed(ShortcutAction(int(ShortcutAction::Weapon1)+i)) && !ThirdPerson() &&
-        InventoryControls::NumberSlot(settings_.shortcuts.Key(ShortcutAction(int(ShortcutAction::Weapon1)+i)),ItemControls().Numbers(),false)<0) SwitchWeapon(i);
-    if (Pressed(ShortcutAction::Reload) && !ThirdPerson()) Reload();
+    UpdateWeaponSelection(now);
+    if (Pressed(ShortcutAction::Reload) && !ThirdPerson()) {CloseWeaponSelection();Reload();}
     // Consume the right-click edge for every weapon so holding it across a switch never scopes or stabs.
     // Consume the physical edge even when RMB belongs to the squad, preventing a deferred scope/stab.
     bool secondaryPressed = Pressed(VK_RBUTTON) && !SquadReticleOrdersEnabled();

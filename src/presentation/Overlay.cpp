@@ -5,6 +5,7 @@
 #include "TargetMarkerView.hpp"
 #include "ReticleDiagnostics.hpp"
 #include "BuyMenuView.hpp"
+#include "WeaponSelectionView.hpp"
 #include "HudHints.hpp"
 #include "InventoryHudView.hpp"
 #include "../platform/NativeMinimap.hpp"
@@ -265,17 +266,18 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
             sprintf_s(effect, "%s  %.0f%% SPEED", controller.Status().Label(), controller.Status().speedScale * 100);
         Text(statusPad, statusY - (statusSize + 16) * (controller.RefillNotice() ? 2 : 1), effect, &statusFont_);
     }
+    // Both menus share one lazy preview cache; missing art keeps the text selection usable.
+    auto weaponPreview=[&](int slot,float x,float y,float w,float h) {
+        auto item=BuyCatalog::Slot(slot);if(!item)return;
+        if(!previewAttempted_[slot]) {
+            previewAttempted_[slot]=true;
+            previewLoaded_[slot]=buyPreviews_[slot].Load(root_+"\\assets\\buy\\"+item->cache+".wcg");
+        }
+        if(previewLoaded_[slot])buyPreviews_[slot].DrawPreview(x,y,w,h);
+    };
     BuyMenuView::Draw(controller,width,height,window,[&](float x,float y,const char* text){Text(x,y,text);},
-        [&](float x,float y,const char* title){Text(x,y,title,&statusFont_);},
-        [&](int slot,float x,float y,float w,float h) {
-            auto item=BuyCatalog::Slot(slot);if (!item) return;
-            // Private previews load lazily; absent optional art never prevents a purchase.
-            if (!previewAttempted_[slot]) {
-                previewAttempted_[slot]=true;
-                previewLoaded_[slot]=buyPreviews_[slot].Load(root_+"\\assets\\buy\\"+item->cache+".wcg");
-            }
-            if (previewLoaded_[slot]) buyPreviews_[slot].DrawPreview(x,y,w,h);
-        });
+        [&](float x,float y,const char* title){Text(x,y,title,&statusFont_);},weaponPreview);
+    WeaponSelectionView::Draw(controller,width,height,[&](float x,float y,const char* text){Text(x,y,text);},weaponPreview);
     InventoryHudView::Cursor(window,controller.UnitHud(),InventoryHudLayout::Calculate(width,height,controller.Settings().spellIconSizePercent,controller.Settings().showSpellIcons,true),inventoryIcons_,controller.ItemControls());
     GrenadeView::Flash(controller.FlashOpacity(),width,height); // Blindness covers hands, scope and HUD together.
     glPopMatrix(); glMatrixMode(GL_PROJECTION); glPopMatrix();

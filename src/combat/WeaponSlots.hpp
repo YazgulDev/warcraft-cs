@@ -1,9 +1,9 @@
 #pragma once
 
-// Stable number keys keep the original five weapons while extending every cache together.
+// Stable inventory/cache IDs survive category selection and the optional legacy shortcut layout.
 namespace WeaponSlots {
 constexpr int Count = 17;
-constexpr int ShortcutCount = 7; // Extra purchases use the wheel; existing 1..7 bindings keep their IDs.
+constexpr int ShortcutCount = 7; // Menu groups reuse bindings 1..5; legacy direct IDs remain available.
 constexpr int Pistol = 2;
 constexpr int AWP = 3;
 constexpr int Knife = 4;

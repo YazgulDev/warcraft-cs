@@ -1,5 +1,23 @@
 # Validation
 
+## CS-style carried weapon selector (2026-10-19)
+
+`tools/test-weapon-selection.ps1` exercises the production portable pending-choice state, all catalog
+entries across five groups, owned-only cycles, wheel wrap, confirmation, empty groups, expiry,
+depletion and a backwards clock. Settings and migration regressions cover malformed/default/bounded
+timeouts, opt-outs, saved Tab routing and idempotent upgrades. Existing buy transactions/previews
+and actual-WGL firearm presentation regressions pass.
+
+An ordinary Player module in a separate owned offline 1.26a map verifies the normal starting kit,
+Tab item priority, empty primary groups, all-weapons grant, repeated categories, original private
+previews, wheel selection, held-LMB confirmation without fire, subsequent Deagle fire/flash,
+M249/M3 access, RMB/0/Escape/timeout cancellation, inventory/view precedence, F8, remapped G and
+legacy immediate-selection opt-out. Screenshots inspect primary/pistol/grenade/melee stacks and
+F7/F9 exclusion. The selector has no pointer rows: as in CS, LMB anywhere confirms the highlighted
+weapon while aiming stays live. Native assets, DLL and INI are restored byte-for-byte afterwards.
+The first fixture attempt incorrectly enabled the all-weapons starting kit and was discarded.
+The final panel is placed below existing command hints; packaged-module appearance is checked separately.
+
 ## Ledge landing and lower-bank traversal follow-up (2026-10-18)
 
 The real movement/collision regression reproduces a foot landing on a lip while its center remains
