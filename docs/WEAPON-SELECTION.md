@@ -14,7 +14,10 @@ With Tab item-number mode off, the first five weapon bindings open these categor
 | 5 | C4 |
 
 Press the same category again to highlight the next carried weapon in that group. Wheel up/down
-browses all carried weapons and opens the same menu. Left-click confirms the highlight; that click
+browses all carried weapons in displayed group order (1 through 5), top to bottom in each list,
+and opens the same menu. Wheel up retraces that order. One detent advances one available weapon;
+fast batches retain their direction and every detent, skipping unowned/depleted entries.
+Left-click confirms the highlight; that click
 does not fire, throw or plant, including when held. Release and click again to use the equipped weapon.
 Right-click, 0 or Escape cancels without changing weapons. A second Escape after closing returns
 to RTS as usual. A category containing the equipped weapon starts on that weapon.

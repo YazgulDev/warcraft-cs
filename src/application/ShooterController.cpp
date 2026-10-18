@@ -465,12 +465,14 @@ void ShooterController::UpdateWeaponSelection(DWORD now) {
         CloseWeaponSelection();weaponWheel_.Reset();suppressFire_=true;
         Pressed(VK_LBUTTON);Pressed(VK_RBUTTON);return;
     }
-    int base=settings_.weaponSelectionMenu && weaponSelection_.Open() ? weaponSelection_.Pending() : weapon_;
-    int wheel=weaponWheel_.Take(base),steps=(wheel-base+WeaponSlots::Count)%WeaponSlots::Count;
-    if(steps>WeaponSlots::Count/2)steps-=WeaponSlots::Count;
+    // Consume signed detents directly; reconstructing a shortest slot difference reverses fast scrolling.
+    long long steps=weaponWheel_.TakeSteps();
     if(!ThirdPerson()) {
         if(settings_.weaponSelectionMenu)weaponSelection_.Cycle(steps,weapon_,available,now*.001);
-        else SwitchWeapon(inventory_.Next(weapon_,steps));
+        else {
+            int carried=int(std::count(inventory_.owned.begin(),inventory_.owned.end(),true));
+            if(carried)SwitchWeapon(inventory_.Next(weapon_,int(steps%carried)));
+        }
     }
     for(int i=0;i<WeaponSlots::ShortcutCount;++i)if(Pressed(ShortcutAction(int(ShortcutAction::Weapon1)+i)) && !ThirdPerson() &&
         InventoryControls::NumberSlot(settings_.shortcuts.Key(ShortcutAction(int(ShortcutAction::Weapon1)+i)),ItemControls().Numbers(),false)<0) {

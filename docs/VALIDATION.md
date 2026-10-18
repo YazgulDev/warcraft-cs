@@ -1,5 +1,15 @@
 # Validation
 
+## Sequential weapon wheel follow-up (2026-10-19)
+
+The selector regression first reproduces M4-to-USP traversal despite AWP being the next visible
+primary row. Selection now follows the same group/row order used by the overlay. Full forward and
+reverse cycles check every boundary; raw wheel batches check both directions at 1/9/17/40 detents,
+sparse inventories, depleted anchors, fractional packets and single consumption. Signed detents
+reach the controller directly: no shortest-distance slot reconstruction can reverse a fast batch.
+Legacy immediate switching also reduces complete laps by its actual carried count. Existing
+confirmation, cancellation, expiry and tree/wheel regressions still pass; no tuning keys change.
+
 ## CS-style carried weapon selector (2026-10-19)
 
 `tools/test-weapon-selection.ps1` exercises the production portable pending-choice state, all catalog

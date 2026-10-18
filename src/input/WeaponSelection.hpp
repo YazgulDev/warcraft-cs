@@ -37,18 +37,28 @@ public:
         }
         pending_=selected;touched_=now;return true;
     }
-    void Cycle(int steps,int equipped,const Available& available,double now) {
+    void Cycle(long long steps,int equipped,const Available& available,double now) {
         if(!steps)return;
-        int next=Open() ? pending_ : equipped;
-        for(int n=0;n<(steps<0 ? -steps : steps);++n) {
-            bool found=false;
-            for(int i=0;i<WeaponSlots::Count;++i) {
-                next=(next+(steps<0 ? -1 : 1)+WeaponSlots::Count)%WeaponSlots::Count;
-                if(available[next]){found=true;break;}
-            }
-            if(!found){Close();return;}
+        Available all;all.fill(true);std::vector<int> order;
+        // Follow the displayed groups and their row order, rather than unrelated persistent slot IDs.
+        for(int group=1;group<=5;++group) {
+            auto items=Items(group,all);order.insert(order.end(),items.begin(),items.end());
         }
-        pending_=next;touched_=now;
+        int base=Open() ? pending_ : equipped,index=-1,count=0;
+        for(size_t i=0;i<order.size();++i) {
+            if(order[i]==base)index=int(i);
+            if(available[order[i]])++count;
+        }
+        if(!count){Close();return;}
+        int direction=steps<0 ? -1 : 1;
+        if(index<0)index=direction>0 ? int(order.size())-1 : 0;
+        // Reduce complete laps by the actual available count. Keep the first move even when the
+        // equipped consumable is depleted, so its position still anchors the next/previous choice.
+        int moves=1+int((steps>0 ? steps-1 : -(steps+1))%count);
+        for(int move=0;move<moves;++move)do {
+            index=(index+direction+int(order.size()))%int(order.size());
+        } while(!available[order[index]]);
+        pending_=order[index];touched_=now;
     }
     void Expire(double now,double seconds,const Available& available) {
         // Focus/time changes and inventory depletion must never leave a stale selectable consumable.
