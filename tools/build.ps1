@@ -31,6 +31,7 @@ $sources += '"' + (Join-Path $modRoot 'src/platform/WeaponTargetFilter.cpp') + '
 $sources += '"' + (Join-Path $modRoot 'src/geometry/TreeTrunkMesh.cpp') + '"'
 # Shared filled aiming geometry is compiled into both ordinary Player builds and scope rendering.
 $sources += '"' + (Join-Path $modRoot 'src/presentation/ReticleView.cpp') + '"'
+$sources += '"' + (Join-Path $modRoot 'src/presentation/MuzzleFlashView.cpp') + '"' # Procedural flashes share the animated barrel/bob transform.
 $sources += '"' + (Join-Path $modRoot 'src/presentation/TargetMarkerView.cpp') + '"' # Read-only TPS contact presentation.
 $sources += '"' + (Join-Path $modRoot 'src/presentation/HudFont.cpp') + '"' # Driver-independent HUD glyph coverage.
 # Unit state, native portrait redirection and reusable icon textures keep separate ownership.

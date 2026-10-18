@@ -303,6 +303,14 @@ draw those models before native skinning initializes their matrices. The next fr
 its normal model update before drawing newly constructed objects. Training reservations also
 survive Warcraft's zero-current-order reports and pause/background gaps.
 
+`ViewmodelMotion` owns the visual-only speed/stance bob; `ViewmodelPose` crosses
+the controller/presentation boundary without changing camera or aim. `MuzzleFlashPulse`
+consumes accepted-shot serials once and starts their lifetime on presentation.
+`GunMesh` samples optional WCM1 muzzle anchors with its animation bones, retaining
+legacy geometry fallback. `MuzzleFlashView` draws additive original geometry with
+read-only depth and scoped GL state. `tools/test-viewmodel.ps1` verifies the portable
+clock/motion, synthetic format conversion and actual hidden-WGL pixels/state.
+
 `ShotgunReload` in combat maps one absolute reload clock to fitted start/insertion/finish
 phases. The controller coordinates transitions; `WeaponAnimation` in presentation holds
 terminal reload bones until the next phase, while ordinary firing/draw actions still settle

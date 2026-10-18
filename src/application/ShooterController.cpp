@@ -178,7 +178,7 @@ void ShooterController::Disable(bool restoreCamera) {
         ownCameraRequest_ = false;
     }
     CancelPlant();
-    active_ = false; scopeLevel_ = 0; reloadEnd_ = 0;glockBurst_.Cancel();
+    active_ = false; scopeLevel_ = 0; reloadEnd_ = 0;glockBurst_.Cancel();flashWeapon_=-1;viewmodelMotion_.Reset();
     nativeSky_.Update(ui_,false,mapTileset_);
     meleeContact_ = meleeReady_ = 0; recoil_.Reset();
     audio_.Stop(); stepDistance_ = 0;
@@ -191,6 +191,7 @@ void ShooterController::Disable(bool restoreCamera) {
     wc3::Log("FPS disabled");
 }
 void ShooterController::ResetMap() {
+    flashWeapon_=-1;viewmodelMotion_.Reset(); // No viewmodel offset or unpresented flash crosses a map boundary.
     glockBurst_={}; // A new map has neither queued rounds nor a cooldown inherited from the previous actor.
     shop_=0;shopCloseRequested_=false; // Forget native selection handles after unload.
     armyAI_.Reset();armyToggleRequested_=false;
@@ -262,7 +263,7 @@ void ShooterController::SelectView(ControlView next) {
     }
     // Inventory and physical position stay intact; no queued gunshot or delayed swing crosses the transition.
     unitLocomotion_.Release();unitLocomotion_.Reset();
-    CancelCasting();heroAttack_.Cancel();CancelPlant();glockBurst_.Cancel();meleeContact_=0;reloadEnd_=0;scopeLevel_=0;
+    CancelCasting();heroAttack_.Cancel();CancelPlant();glockBurst_.Cancel();meleeContact_=0;reloadEnd_=0;scopeLevel_=0;flashWeapon_=-1;viewmodelMotion_.Reset();
     buyMenu_.Close();itemInventory_.ClearInput();recoil_.Reset();audio_.Stop();mouseLook_.Reset();weaponWheel_.Reset();cameraWheel_.Reset();suppressFire_=true;
     // Pending combat/UI mailboxes cannot execute after entering the unarmed view.
     refillRequested_=allWeaponsRequested_=itemRequested_=buyToggleRequested_=buyAmmoRequested_=false;
@@ -295,7 +296,7 @@ SpellAim ShooterController::InventoryAim(int x,int y,int width,int height) {
 }
 void ShooterController::AimAndMove(float dt) {
     // A contained unit belongs to native cargo: changing XY/stance would fake an escape without releasing it.
-    if (status_.contained || status_.hidden) { mouseLook_.Reset();movement_.Stop(); stepDistance_ = 0; return; }
+    if (status_.contained || status_.hidden) { mouseLook_.Reset();movement_.Stop();viewmodelMotion_.Reset(); stepDistance_ = 0; return; }
     // Mouse capture occurs only in the foreground and only after the player enables FPS.
     float dx=0,dy=0;
     bool sampleMouse=!CursorMode();
@@ -361,6 +362,9 @@ void ShooterController::AimAndMove(float dt) {
     if (!status_.incapacitated && !Casting()) {
         float facing = LookAngles::Normalize(yaw_); wc3::SetUnitFacing(unit_, &facing);
     }
+    // Only hands/weapons receive this pose: the physical camera and every aiming ray remain unchanged.
+    bool bob=Visible() && !ThirdPerson() && !UnitFirstPerson() && !CursorMode() && !Casting() && !Scoped() && !status_.incapacitated;
+    viewmodelMotion_.Step(dt,bob ? DisplaySpeed() : 0,bob && movement_.Grounded(),movement_.Duck(),settings_.viewmodel);
 }
 void ShooterController::UpdateStatus() {
     UnitStatus current = UnitStatus::Read(unit_, gameBase_);
@@ -408,6 +412,7 @@ void ShooterController::Camera() {
 void ShooterController::Reload() {
     const Weapon& w = settings_.weapons[weapon_];
     if (WeaponSlots::Melee(weapon_) || weapon_ == WeaponSlots::C4 || reloadEnd_ || ammo_[weapon_] == w.magazine || reserve_[weapon_] <= 0) return;
+    flashWeapon_=-1;
     // Calibrate against a full magazine so one or two missing shells cannot slow the whole animation down.
     bool shells=weapon_==WeaponSlots::M3 || weapon_==WeaponSlots::XM1014;
     if(shells)shotgunReload_.Configure(std::min(w.magazine-ammo_[weapon_],reserve_[weapon_]),w.magazine,w.reload,
@@ -437,7 +442,7 @@ void ShooterController::SwitchWeapon(int slot) {
     if (slot<0 || slot>=WeaponSlots::Count || !inventory_.owned[slot] || weapon_ == slot) return;
     // Number keys and the wheel share deployment: cancel reload, scope, planting and pending melee cues.
     CancelPlant(); audio_.CancelAnimation(); meleeContact_ = meleeReady_ = 0;
-    recoil_.ResetBurst(); glockBurst_.Cancel();weapon_ = slot; reloadEnd_ = 0; scopeLevel_ = 0; Play("draw");
+    recoil_.ResetBurst(); glockBurst_.Cancel();flashWeapon_=-1;weapon_ = slot; reloadEnd_ = 0; scopeLevel_ = 0; Play("draw");
     wc3::Log("weapon selected=%s slot=%d", settings_.weapons[slot].name, slot + 1);
 }
 void ShooterController::ToggleHealthBars() {
@@ -560,7 +565,7 @@ bool ShooterController::OpenShop() {
     if(!ShopAccess::Nearby(unit_,aim.target,settings_.shopInteractionRadius))return false;
     CancelCasting();heroAttack_.Cancel();CancelPlant();unitLocomotion_.Release();
     buyMenu_.Close();itemInventory_.ClearInput();movement_.Stop();audio_.Stop();mouseLook_.Reset();squadOrderMode_.ClearInput();
-    shop_=aim.target;shopCloseRequested_=false;suppressFire_=true;reloadEnd_=0;meleeContact_=0;glockBurst_.Cancel();
+    shop_=aim.target;shopCloseRequested_=false;suppressFire_=true;reloadEnd_=0;meleeContact_=0;glockBurst_.Cancel();flashWeapon_=-1;
     // Yield rendering/input to the native command card so stock, prices, buyer selection and map limits remain authoritative.
     wc3::ClearSelection();wc3::SelectUnit(shop_,TRUE);
     float duration=.15f;ownCameraRequest_=true;wc3::ResetToGameCamera(&duration);ownCameraRequest_=false;
@@ -592,6 +597,8 @@ bool ShooterController::Fire(bool secondary,bool burstRound,bool interruptReload
     }
     if (!WeaponSlots::Melee(weapon_) && ammo_[weapon_] <= 0) { Reload(); return false; }
     lastShot_ = now; if (!WeaponSlots::Melee(weapon_)) --ammo_[weapon_];
+    // One accepted physical round emits one flash, including each scheduled Glock burst round.
+    if(WeaponSlots::Firearm(weapon_)){++shotSerial_;flashWeapon_=weapon_;}
     // slash1/slash2 in this retail knife contain only two frames; mid-slashes contain the swing.
     // Secondary melee uses each model's authored stab, sharing cooldown with primary slashes.
     const char* action = WeaponSlots::Melee(weapon_) ? (secondary ? "stab" : (knifeSwing_++ % 2 ? "midslash2" : "midslash1")) : weapon_==WeaponSlots::Glock && secondary ? "shoot" : "shoot1";
@@ -799,6 +806,7 @@ void ShooterController::Tick(uintptr_t ui) {
     requireForeground=!BackgroundGameplay::Enabled();
 #endif
     if (requireForeground && foregroundPid != GetCurrentProcessId()) {
+        flashWeapon_=-1;viewmodelMotion_.Reset();
         glockBurst_.Cancel(); // Focus loss cancels the rest of a burst instead of resuming it on return.
         thirdPersonRequested_=unitViewRequested_=false; // A background tap cannot acquire native control on refocus.
         unitLocomotion_.Release();
@@ -822,6 +830,7 @@ void ShooterController::Tick(uintptr_t ui) {
         wc3::Log("FPS %s for campaign/UI", suspended ? "suspended" : "resumed");
     }
     suspended_ = suspended;
+    if(suspended_) {flashWeapon_=-1;viewmodelMotion_.Reset();}
     if(!active_ || suspended_)glockBurst_.Cancel(); // Menus/cinematics cannot resume queued bullets later.
     if (suspended_) { unitLocomotion_.Release();heroAttack_.Cancel();viewToggleRequested_=false;CancelCasting();spellRequested_=-1;spellCancelRequested_=false;CancelPlant(); meleeContact_ = 0;buyMenu_.Close();itemInventory_.ClearInput();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1; }
     if(Shopping()) {
@@ -1206,6 +1215,8 @@ void ShooterController::Tick(uintptr_t ui) {
     // A configurable summary observes physics/camera without writing every simulation frame.
     static DWORD lastState = 0;
     if (DiagnosticLog::Due(lastState)) {
+        const auto& pose=viewmodelMotion_.Pose();
+        wc3::Trace("viewmodel pose bob=%d speed=%.1f offset=%.4f,%.4f,%.4f roll=%.4f",settings_.viewmodel.bob,DisplaySpeed(),pose.x,pose.y,pose.z,pose.roll);
         wc3::Trace("movement x=%.1f y=%.1f ground=%.1f feet=%.1f eye=%.1f speed=%.1f duck=%.2f grounded=%d cameraEye=%.1f cameraX=%.1f cameraY=%.1f pitch=%.1f distance=%.1f fly=%.1f yaw=%.3f cameraYaw=%.3f rawMouse=%d",
             wc3::Real(wc3::GetUnitX(unit_)), wc3::Real(wc3::GetUnitY(unit_)),
             wc3::Ground(wc3::Real(wc3::GetUnitX(unit_)), wc3::Real(wc3::GetUnitY(unit_))),

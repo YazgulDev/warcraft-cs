@@ -7,6 +7,7 @@
 #include "SpellHudView.hpp"
 #include "HudFont.hpp"
 #include "UnitHudView.hpp"
+#include "MuzzleFlashPulse.hpp"
 class NativeMinimap;
 class NativePortrait;
 
@@ -35,5 +36,6 @@ private:
     HGLRC context_ = nullptr;
     bool refreshPending_ = false;
     DWORD lastDiagnostic_ = 0;
+    MuzzleFlashPulse muzzleFlash_;
     SkyView sky_;
 };

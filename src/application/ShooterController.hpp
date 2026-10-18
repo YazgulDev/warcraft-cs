@@ -1,6 +1,7 @@
 #pragma once
 #include "../combat/ShotgunReload.hpp"
 #include "../combat/BurstFire.hpp"
+#include "../presentation/ViewmodelMotion.hpp"
 #include "../combat/Weapon.hpp"
 #include "../combat/WeaponSlots.hpp"
 #include "../platform/WarcraftApi.hpp"
@@ -153,6 +154,12 @@ public:
     int WeaponIndex() const { return weapon_; }
     const char* Animation() const;
     float AnimationTime() const;
+    const ViewmodelPose& WeaponPose() const {return viewmodelMotion_.Pose();}
+    unsigned ShotSerial() const {return shotSerial_;}
+    bool ShowMuzzleFlash() const {
+        return flashWeapon_==weapon_ && WeaponSlots::Firearm(weapon_) && settings_.viewmodel.muzzleFlash &&
+            Visible() && !ThirdPerson() && !UnitFirstPerson() && !settings_.warcraftOnly && !Buying() && !InventoryOpen();
+    }
     float Health() const { return health_; }
     float Recoil() const { return recoil_.Magnitude(); }
     bool Scoped() const { return scopeLevel_ != 0; }
@@ -293,6 +300,9 @@ private:
     // Movement needs a finer clock than GetTickCount's ~16ms steps once rendering exceeds 64 FPS.
     std::chrono::steady_clock::time_point tick_{};
     DWORD lastShot_ = 0, reloadEnd_ = 0, animationTick_ = 0;
+    ViewmodelMotion viewmodelMotion_;
+    unsigned shotSerial_=0;
+    int flashWeapon_=-1;
     std::string root_, animation_ = "idle";
     MeleeAttack meleeAttack_ = MeleeAttack::Select(WeaponSlots::Knife, false);
     WeaponRecoil recoil_;

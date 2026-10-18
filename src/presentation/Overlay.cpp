@@ -117,12 +117,17 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         const auto& names=WeaponSlots::Caches;
         loaded_[index] = guns_[index].Load(root_ + "\\assets\\" + names[index] + ".wcg");
     }
-    if (!controller.ThirdPerson() && loaded_[index] && !controller.Status().contained && !controller.Status().hidden && !controller.Scoped() && (index != WeaponSlots::C4 || controller.Ammo() > 0)) {
+    bool heldModel=!controller.ThirdPerson() && loaded_[index] && !controller.Status().contained && !controller.Status().hidden && (index!=WeaponSlots::C4 || controller.Ammo()>0);
+    const auto& visuals=controller.Settings().viewmodel;
+    float flash=muzzleFlash_.Sample(controller.ShotSerial(),heldModel && controller.ShowMuzzleFlash(),GetTickCount(),visuals.flashMilliseconds);
+    if (heldModel && (!controller.Scoped() || flash>0)) {
         // Give the weapon its own depth pass: back faces must not paint over the skin.
         glDepthMask(GL_TRUE); glClearDepth(1); glClear(GL_DEPTH_BUFFER_BIT);
         glEnable(GL_DEPTH_TEST); glDepthFunc(GL_LEQUAL); glDepthRange(0, 1);
         // Preserve each model's original arm origin instead of exposing detached elbow ends.
-        guns_[index].Draw(controller.Animation(), controller.AnimationTime());
+        const auto& pose=controller.WeaponPose();
+        glTranslatef(pose.x,pose.y,pose.z);glRotatef(pose.roll,0,0,1);
+        guns_[index].Draw(controller.Animation(),controller.AnimationTime(),flash,visuals.flashScale,controller.ShotSerial(),!controller.Scoped());
         glDisable(GL_DEPTH_TEST);
     }
     glMatrixMode(GL_PROJECTION); glLoadIdentity(); glOrtho(0, width, height, 0, -1, 1);

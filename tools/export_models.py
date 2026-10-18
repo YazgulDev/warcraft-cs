@@ -92,7 +92,7 @@ class StudioModel:
             sequences.append((name, float(fps), frames, np.asarray(matrices, dtype="<f4").tobytes()))
         return sequences
 
-    def export(self, destination: Path, excluded_textures: tuple[str, ...] = ()) -> dict:
+    def export(self, destination: Path, excluded_textures: tuple[str, ...] = (), muzzle_attachments: tuple[int, ...] = (0,)) -> dict:
         textures = []
         texture_names = []
         excluded = {name.casefold() for name in excluded_textures}
@@ -153,6 +153,24 @@ class StudioModel:
                 output.write(struct.pack("<2I", texture, len(packed) // 24) + packed)
             for name, fps, frames, matrices in sequences:
                 output.write(struct.pack("<32sfI", name, fps, frames) + matrices)
+            # Optional WCG2 footer retains model-local muzzle anchors and their animated bones.
+            # Older readers ignore the footer; models without attachments keep a geometry-derived fallback.
+            count, attachments = self.integer(212), self.integer(216)
+            if not 0 <= count <= 32:
+                raise ValueError("Unsafe studio attachment count")
+            selected = muzzle_attachments if count else ()
+            if len(selected) > 8:
+                raise ValueError("Unsafe selected muzzle count")
+            output.write(struct.pack("<4sI", b"WCM1", len(selected)))
+            for index in selected:
+                if not 0 <= index < count:
+                    raise ValueError("Missing selected muzzle attachment")
+                at = attachments + index * 88
+                bone = self.integer(at + 36)
+                point = self.floats(at + 40, 3)
+                if not 0 <= bone < len(self.bones) or not np.isfinite(point).all():
+                    raise ValueError("Invalid muzzle attachment")
+                output.write(struct.pack("<I3f", bone, *point))
         return {"model": self.path.name, "sha256": hashlib.sha256(self.data).hexdigest(),
                 "textures": len(textures), "triangles": sum(len(m[1]) // 72 for m in meshes),
                 "bones": len(self.bones), "sequences": [s[0].decode("ascii") for s in sequences],
@@ -204,7 +222,9 @@ def main():
         model = StudioModel(args.cstrike / "models" / f"v_{weapon}.mdl")
         # Both silencer-capable weapons are permanently unsilenced in this mod, including their geometry.
         excluded = ("silencer.bmp",) if weapon in ("m4a1", "usp") else ()
-        manifest.append(model.export(args.output / f"{weapon}.wcg", excluded))
+        # Retail M4/USP attachment 2 belongs to the unsilenced barrel; attachment 0 includes the suppressor.
+        muzzle = (2,) if excluded and model.integer(212) >= 3 else (0,)
+        manifest.append(model.export(args.output / f"{weapon}.wcg", excluded, muzzle))
         weapon_sounds.update(model.audio_timeline(args.output / f"{weapon}.wca"))
         export_preview(args.output / f"{weapon}.wcg", args.output / "buy" / f"{weapon}.wcg", model.texture_names())
     # Import only an explicitly selected/private model; public packages contain no external sword asset.

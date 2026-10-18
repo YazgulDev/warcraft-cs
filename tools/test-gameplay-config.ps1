@@ -352,6 +352,19 @@ $arsenalHash=(Get-FileHash -LiteralPath $arsenal).Hash
 Update-GameplayConfig $template $arsenal
 if((Get-FileHash -LiteralPath $arsenal).Hash -ne $arsenalHash){throw 'Arsenal/AI config migration is not idempotent.'}
 
+# Visual preferences survive upgrades while new siblings are inserted only once.
+$viewmodel=Join-Path $folder 'custom-viewmodel.ini'
+@('[Viewmodel]','BobEnabled=false','BobAmount=0.7','MuzzleFlash=false','MuzzleFlashMilliseconds=90') | Set-Content -LiteralPath $viewmodel -Encoding ascii
+Update-GameplayConfig $template $viewmodel
+$visualText=Get-Content -LiteralPath $viewmodel -Raw
+foreach($setting in @('BobEnabled=false','BobAmount=0.7','MuzzleFlash=false','MuzzleFlashMilliseconds=90','BobFrequency=1.8','BobResponse=12','MuzzleFlashScale=1')) {
+    if(!$visualText.Contains($setting)){throw "Viewmodel migration lost preference/default: $setting"}
+}
+if([regex]::Matches($visualText,'(?m)^\[Viewmodel\]').Count -ne 1){throw 'Duplicate viewmodel section.'}
+$visualHash=(Get-FileHash -LiteralPath $viewmodel).Hash
+Update-GameplayConfig $template $viewmodel
+if((Get-FileHash -LiteralPath $viewmodel).Hash -ne $visualHash){throw 'Viewmodel migration is not idempotent.'}
+
 # Shared reach upgrades old firearm ranges without rewriting their saved values; an explicit opt-out survives.
 foreach($saved in @('', 'MinimumFirearmRange=0', 'MinimumFirearmRange=42000')) {
     $reachConfig=Join-Path $folder 'custom-firearm-range.ini'

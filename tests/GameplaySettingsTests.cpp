@@ -480,5 +480,19 @@ int main() {
         auto shells=GameplaySettings::Load(path);bool enabled=strcmp(value,"false") && strcmp(value,"0");
         assert(shells.shotgunShellReload==enabled && shells.shotgunInterruptReload==enabled);
     }
+    // Startup/F8 bounds and fallbacks protect the viewmodel clocks and GL transforms.
+    for(auto value:{"false","0","true","1","nan","bad","","-1","999"}) {
+        {std::ofstream f(path);f<<"[Viewmodel]\nBobEnabled="<<value<<"\nMuzzleFlash="<<value<<"\nBobAmount="<<value<<"\nBobFrequency="<<value<<"\nBobResponse="<<value<<"\nMuzzleFlashMilliseconds="<<value<<"\nMuzzleFlashScale="<<value<<"\n";}
+        const auto visual=GameplaySettings::Load(path).viewmodel;
+        bool enabled=strcmp(value,"false") && strcmp(value,"0");assert(visual.bob==enabled && visual.muzzleFlash==enabled);
+        assert(visual.bobAmount>=0 && visual.bobAmount<=3 && visual.bobFrequency>=.5f && visual.bobFrequency<=4);
+        assert(visual.bobResponse>=1 && visual.bobResponse<=30 && visual.flashMilliseconds>=10 && visual.flashMilliseconds<=200);
+        assert(visual.flashScale>=0 && visual.flashScale<=3);
+        if(!strcmp(value,"nan") || !strcmp(value,"bad") || !*value)
+            assert(visual.bobAmount==1 && visual.bobFrequency==1.8f && visual.bobResponse==12 && visual.flashMilliseconds==65 && visual.flashScale==1);
+    }
+    WritePrivateProfileStringA("Viewmodel","BobAmount","0.7",path.c_str());
+    WritePrivateProfileStringA("Viewmodel","MuzzleFlashMilliseconds","90",path.c_str());
+    assert(GameplaySettings::Load(path).viewmodel.bobAmount==.7f && GameplaySettings::Load(path).viewmodel.flashMilliseconds==90);
     DeleteFileA(path.c_str());return 0;
 }

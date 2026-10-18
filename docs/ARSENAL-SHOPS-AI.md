@@ -67,6 +67,27 @@ control or focus cancel remaining queued bullets.
 F8 applies them to the next burst; a running burst retains its spacing. The existing
 attack-speed scaling option also scales that spacing. Ordinary LMB uses `FireInterval`.
 
+## First-person hands and muzzle flashes
+
+F6 hands and held weapons sway with actual movement speed, soften while crouching
+and settle after stopping or becoming airborne. The decorative pose does not change
+the camera or aim. All eleven firearms show an additive flash at the animated barrel,
+including each Glock burst round and scoped AWP shots. Knife, sword and C4 do not
+emit gunfire flashes. Regenerate owned CS assets through setup to obtain the original
+model's barrel attachments; older WCG2 caches use a geometry-derived fallback.
+
+`[Viewmodel]` settings apply with F8 and preserve saved values during updates:
+
+| Key | Default | Range / meaning |
+| --- | --- | --- |
+| BobEnabled | true | Enables movement of hands and held weapon |
+| BobAmount | 1 | 0–3, movement amplitude multiplier |
+| BobFrequency | 1.8 | .5–4 cycles/second at 250 CS units/second |
+| BobResponse | 12 | 1–30, smoothing response per second |
+| MuzzleFlash | true | Enables firearm muzzle flashes |
+| MuzzleFlashMilliseconds | 65 | 10–200 milliseconds from first presentation |
+| MuzzleFlashScale | 1 | 0–3, flash size multiplier |
+
 ## Native shops in F6/F7
 
 Look at a friendly/neutral shop within **450 world units** and press **E**. Its

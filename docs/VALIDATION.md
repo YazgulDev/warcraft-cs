@@ -840,3 +840,15 @@ summary resolution and Player/Developer dialog previews. Source snapshots and pu
 are linted/hashed and compared with the immutable tag. Public latest-release lookup/download
 is verified after publication without installing dependencies or changing an existing client.
 This is not a complete campaign/custom-map or cross-driver compatibility claim.
+
+### First-person weapon presentation
+
+`tools/test-viewmodel.ps1` checks speed/stance motion, stopping/airborne fade,
+30/144 Hz equivalence and accepted-shot pulse lifetime including clock wrap.
+Synthetic GoldSrc fixtures verify selected and dual attachment export without
+game assets. Actual hidden-WGL readback verifies visible flash pixels at animated
+and legacy geometry anchors, shared model transforms, inherited wireframe/logic
+and write-mask restoration, and no depth writes. Settings and repeated migration
+checks cover bounded defaults, F8 snapshots and preservation of visual preferences.
+Native appearance still requires an authorized private Warcraft scene on the
+target driver; the standalone tests do not establish cross-driver compatibility.

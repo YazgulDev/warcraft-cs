@@ -218,6 +218,10 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 | Z / X / C / V | Cast hero spell slots 1вЂ“4; target the visible unit or world surface under the reticle |
 | Alt + spell key | Target yourself when the spell allows it |
 
+F6 hands and weapons now sway while moving, and every firearm has an animated
+barrel muzzle flash. F8 applies the editable `[Viewmodel]` settings; see the
+[visual settings table](docs/ARSENAL-SHOPS-AI.md#first-person-hands-and-muzzle-flashes).
+
 ## Configuration
 
 The local third-person prototype adds **F7** to enter directly with a selected owned mobile unit.

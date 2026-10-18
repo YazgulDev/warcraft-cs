@@ -2,6 +2,7 @@
 #include "../combat/WeaponSlots.hpp"
 #include "LoggingSettings.hpp"
 #include "RenderSettings.hpp"
+#include "ViewmodelSettings.hpp"
 #include "HealthBarSettings.hpp"
 #include "SpellSettings.hpp"
 #include "ArmyAISettings.hpp"
@@ -19,6 +20,7 @@ struct GameplaySettings {
     bool warcraftOnly=false; // Installation profile excludes CS weapons, assets, economy and samples.
     LoggingSettings logging;
     RenderSettings render;
+    ViewmodelSettings viewmodel;
     HealthBarSettings healthBars;
     ShortcutBindings shortcuts;
     SpellSettings spells;

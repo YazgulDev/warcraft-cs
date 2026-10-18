@@ -21,6 +21,14 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     };
     // New session controls reload with F8; malformed toggles preserve their documented defaults.
     auto enabled=[&](const char* section,const char* key) {auto value=text(section,key,"true");return _stricmp(value.c_str(),"false") && value!="0";};
+    // Visual-only settings share the real startup/F8 snapshot and bounded migration path.
+    result.viewmodel.bob=enabled("Viewmodel","BobEnabled");
+    result.viewmodel.bobAmount=number("Viewmodel","BobAmount",1,3);
+    result.viewmodel.bobFrequency=std::max(.5f,number("Viewmodel","BobFrequency",1.8f,4));
+    result.viewmodel.bobResponse=std::max(1.f,number("Viewmodel","BobResponse",12,30));
+    result.viewmodel.muzzleFlash=enabled("Viewmodel","MuzzleFlash");
+    result.viewmodel.flashMilliseconds=unsigned(std::max(10.f,number("Viewmodel","MuzzleFlashMilliseconds",65,200)));
+    result.viewmodel.flashScale=number("Viewmodel","MuzzleFlashScale",1,3);
     result.shopInteraction=enabled("Shops","Enabled");
     result.shopInteractionRadius=std::max(100.f,number("Shops","Radius",450,1200));
     result.shotgunPellets=int(std::max(1.f,number("Shotguns","Pellets",8,16)));

@@ -1,5 +1,6 @@
 #include "GunMesh.hpp"
 #include "WeaponAnimation.hpp"
+#include "MuzzleFlashView.hpp"
 #include "../platform/WarcraftApi.hpp"
 #include <algorithm>
 #include <cmath>
@@ -61,21 +62,46 @@ bool GunMesh::Load(const std::string& path) {
             if (!file) throw std::runtime_error("truncated animation");
             sequences_.push_back(std::move(sequence));
         }
-        wc3::Log("viewmodel loaded %s: %u skins, %u meshes, %u sequences", path.c_str(), textures, meshes, sequences);
+        // New private caches carry animated barrel anchors; old WCG2 caches remain supported.
+        if(file.peek()!=std::char_traits<char>::eof()) {
+            unsigned footer=0;Read(file,footer);
+            if(footer==0x314D4357) {
+                unsigned count=0;Read(file,count);if(count>8)throw std::runtime_error("unsafe muzzle count");
+                for(unsigned i=0;i<count;++i) {
+                    Muzzle muzzle;Read(file,muzzle.bone);Read(file,muzzle.x);Read(file,muzzle.y);Read(file,muzzle.z);
+                    if(muzzle.bone>=boneCount_ || !std::isfinite(muzzle.x) || !std::isfinite(muzzle.y) || !std::isfinite(muzzle.z))throw std::runtime_error("invalid muzzle anchor");
+                    muzzles_.push_back(muzzle);
+                }
+            }
+        }
+        bool authored=!muzzles_.empty();
+        if(!authored && !sequences_.empty()) {
+            // Fit legacy/procedural caches from their actual forward-most idle vertex, never a per-gun screen coordinate.
+            const Sequence* idle=&sequences_.front();
+            for(const auto& item:sequences_)if(item.name.find("idle")==0){idle=&item;break;}
+            float forward=-1e30f;Muzzle muzzle={};
+            for(const auto& mesh:meshes_)for(const auto& v:mesh.vertices) {
+                const float* m=&idle->bones[v.bone*12];float x=m[0]*v.x+m[1]*v.y+m[2]*v.z+m[3];
+                if(x>forward){forward=x;muzzle={v.bone,v.x,v.y,v.z};}
+            }
+            if(forward>-1e29f)muzzles_.push_back(muzzle);
+        }
+        label_=path.substr(path.find_last_of("/\\")+1);
+        wc3::Log("viewmodel loaded %s: %u skins, %u meshes, %u sequences; muzzle=%s count=%u",path.c_str(),textures,meshes,sequences,authored ? "attachment" : "geometry",unsigned(muzzles_.size()));
         return true;
     } catch (const std::exception& e) { wc3::Log("viewmodel failed: %s", e.what()); return false; }
 }
 void GunMesh::Reset(bool deleteTextures) {
     // Deleted contexts own no valid names; never delete recycled names from a new context.
     if (deleteTextures && !textures_.empty()) glDeleteTextures(GLsizei(textures_.size()), textures_.data());
-    textures_.clear(); meshes_.clear(); sequences_.clear(); boneCount_ = 0;
+    textures_.clear(); meshes_.clear(); sequences_.clear();muzzles_.clear();label_.clear();lastFlashSerial_=0;boneCount_ = 0;
 }
 bool GunMesh::TexturesValid() const {
     // A focus change alone does not invalidate textures in a surviving OpenGL context.
     return !textures_.empty() && std::all_of(textures_.begin(), textures_.end(),
         [](GLuint texture) { return glIsTexture(texture)==GL_TRUE; });
 }
-void GunMesh::Draw(const char* animation, float seconds) {
+void GunMesh::Draw(const char* animation,float seconds,float flash,float flashScale,unsigned serial,bool geometry) {
     if (sequences_.empty()) return;
     const Sequence* sequence = &sequences_.front();
     for (const auto& item : sequences_) if (item.name == animation) { sequence = &item; break; }
@@ -94,7 +120,7 @@ void GunMesh::Draw(const char* animation, float seconds) {
         bones[i] = a + (b - a) * weight;
     }
     glEnable(GL_TEXTURE_2D); glColor4f(1, 1, 1, 1);
-    for (const auto& mesh : meshes_) {
+    if(geometry)for (const auto& mesh : meshes_) {
         glBindTexture(GL_TEXTURE_2D, textures_[mesh.texture]); glBegin(GL_TRIANGLES);
         for (const auto& v : mesh.vertices) {
             const float* m = &bones[v.bone * 12];
@@ -105,6 +131,14 @@ void GunMesh::Draw(const char* animation, float seconds) {
             glTexCoord2f(v.u, v.v); glVertex3f(y, z, -x);
         }
         glEnd();
+    }
+    if(flash>0 && !muzzles_.empty()) {
+        const auto& muzzle=muzzles_[(serial ? serial-1 : 0)%muzzles_.size()];const float* m=&bones[muzzle.bone*12];
+        float x=m[0]*muzzle.x+m[1]*muzzle.y+m[2]*muzzle.z+m[3];
+        float y=m[4]*muzzle.x+m[5]*muzzle.y+m[6]*muzzle.z+m[7];
+        float z=m[8]*muzzle.x+m[9]*muzzle.y+m[10]*muzzle.z+m[11];
+        MuzzleFlashView::Draw(y,z,-x,flash,flashScale,serial);
+        if(serial!=lastFlashSerial_) {lastFlashSerial_=serial;wc3::Log("muzzle flash model=%s serial=%u point=%.2f,%.2f,%.2f",label_.c_str(),serial,y,z,-x);}
     }
 }
 
