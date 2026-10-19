@@ -45,6 +45,8 @@ foreach($mode in @('Player','Developer')) {
         ConvertTo-Json | Set-Content -LiteralPath $request -Encoding utf8
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $source 'launcher/install-client.ps1') -RequestFile $request -DownloadConsent
     if($LASTEXITCODE){throw "Unit-only $mode setup failed"}
+    # A failed remote setup report must still identify the selected profile and execution mode.
+    if(!(Get-Content -LiteralPath (Join-Path $install 'install.log') -Raw).Contains("Installation request: mode=$mode warcraftOnly=True")){throw 'Install profile diagnostic missing'}
     $config=Join-Path $install 'Game/WarcraftCS/WarcraftCS.ini'
     if(!(Get-Content -LiteralPath $config -Raw).Contains('WarcraftOnly=true')){throw 'Runtime profile missing'}
     if(Test-Path -LiteralPath (Join-Path $install 'Game/WarcraftCS/assets')){throw 'CS cache created'}

@@ -13,6 +13,8 @@ public:
     void Draw(float x, float baseline, const char* text) const;
     void Reset(bool deleteObjects);
     bool Valid() const { return !texture_ || glIsTexture(texture_) == GL_TRUE; }
+    // An unallocated font is valid during lazy creation, but cannot render text yet.
+    bool Ready() const { return texture_ && glIsTexture(texture_) == GL_TRUE; }
     int Advance() const { return advance_; }
 private:
     struct Glyph {

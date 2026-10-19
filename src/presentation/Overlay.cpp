@@ -7,6 +7,7 @@
 #include "BuyMenuView.hpp"
 #include "WeaponSelectionView.hpp"
 #include "HudHints.hpp"
+#include "HudRenderState.hpp"
 #include "InventoryHudView.hpp"
 #include "../platform/NativeMinimap.hpp"
 #include "../platform/DiagnosticLog.hpp"
@@ -148,10 +149,13 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         guns_[index].Draw(controller.Animation(),controller.AnimationTime(),flash,visuals.flashScale,controller.ShotSerial(),!controller.Scoped(),controller.IdleAnimation());
         glDisable(GL_DEPTH_TEST);
     }
+    bool unavailableView = controller.Status().contained || controller.Status().hidden;
+    {
+    // Re-establish all flat-HUD state after the world/weapon passes; restore it before the outer host scope.
+    HudRenderState hudState;
     glMatrixMode(GL_PROJECTION); glLoadIdentity(); glOrtho(0, width, height, 0, -1, 1);
     glMatrixMode(GL_MODELVIEW); glLoadIdentity(); glDisable(GL_TEXTURE_2D);
     // A swallowed/transported unit has no world viewpoint: hide equipment and retain the health/status HUD.
-    bool unavailableView = controller.Status().contained || controller.Status().hidden;
     if (unavailableView) {
         ReticleDiagnostics::Skip(controller.Status().contained ? "unit-contained" : "unit-hidden", width, height);
         glColor4f(0.015f, 0.015f, 0.015f, 1);
@@ -282,6 +286,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     WeaponSelectionView::Draw(controller,width,height,[&](float x,float y,const char* text){Text(x,y,text);},weaponPreview);
     InventoryHudView::Cursor(window,controller.UnitHud(),InventoryHudLayout::Calculate(width,height,controller.Settings().spellIconSizePercent,controller.Settings().showSpellIcons,true),inventoryIcons_,controller.ItemControls());
     GrenadeView::Flash(controller.FlashOpacity(),width,height); // Blindness covers hands, scope and HUD together.
+    }
     glPopMatrix(); glMatrixMode(GL_PROJECTION); glPopMatrix();
     glMatrixMode(GL_TEXTURE); glPopMatrix();
     glMatrixMode(oldMode); glPopAttrib();
@@ -292,6 +297,11 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
             controller.Settings().healthBars.allies,controller.Settings().healthBars.enemies,unsigned(bars.size()),barCount,controller.Settings().healthBars.distance);
         // Sample display submission with the same bounded cadence as existing overlay diagnostics.
         wc3::Trace("overlay speed visible=%d speedCS=%.1f",controller.SpeedVisible(),controller.DisplaySpeed());
+        // Submission without GL errors cannot establish that a font atlas or native HUD snapshot exists.
+        GLint drawBuffer=0;glGetIntegerv(GL_DRAW_BUFFER,&drawBuffer);
+        wc3::Trace("HUD ready hintFont=%d statusFont=%d unitFont=%d spellFont=%d inventoryFont=%d actor=%08X enabled=%d warcraftOnly=%d drawBuffer=%04X",
+            font_.Ready(),statusFont_.Ready(),unitFont_.Ready(),spellFont_.Ready(),inventoryFont_.Ready(),
+            controller.UnitHud().actor,controller.Settings().showUnitHud,controller.Settings().warcraftOnly,drawBuffer);
         GLint viewport[4] = {}; GLboolean mask[4] = {};
         glGetIntegerv(GL_VIEWPORT, viewport); glGetBooleanv(GL_COLOR_WRITEMASK, mask);
         GLenum observedError = glGetError();

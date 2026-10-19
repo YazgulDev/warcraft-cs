@@ -38,6 +38,8 @@ void ShooterController::Configure(const char* root, uintptr_t gameBase) {
     unitHudReader_.Configure(gameBase); // Verify map-resolved XP and item art before sampling the actor.
     // Native-only clients do not need a CS mixer or any converted cache to initialize.
     settings_=GameplaySettings::Load(root_+"\\WarcraftCS.ini");
+    // Reports must distinguish the active native-only profile from retained CS caches after reinstalling.
+    wc3::Log("Installation profile warcraftOnly=%d unitHud=%d spellIcons=%d inventory=%d",settings_.warcraftOnly,settings_.showUnitHud,settings_.showSpellIcons,settings_.showInventory);
     if(!settings_.warcraftOnly)audio_.Configure(root_);
     if (!nativeSky_.Configure(gameBase)) wc3::Log("Native sky signature mismatch; preview disabled");
     ReloadSettings();

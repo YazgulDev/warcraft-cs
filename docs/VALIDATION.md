@@ -1,5 +1,23 @@
 # Validation
 
+## Whole-HUD raster state recovery (2026-10-19)
+
+The supplied AMD RX Vega 10 log records successful overlay/reticle submissions and
+zero sampled GL errors, but cannot establish pixel visibility or the exact remote
+state that hid the HUD. The supplied installation transcript describes Developer
+mode and ends during preparation; it does not contain the bundled-launcher error.
+
+`test-hud-font.ps1` now reproduces a blank complete 2D HUD under a legal subtract
+blend equation using production health/mana/XP panels, labels and glyphs. The new
+`HudRenderState` scope produces the same pixels as a clean context and restores
+blend equations, texture stages/targets, masks, stencil/depth/scissor, wireframe,
+smoothing, coverage flags and texture matrices. It repeats on three actual hidden
+WGL contexts. This establishes the controlled state regression, not a reproduction
+on the reporter's AMD driver. Bounded runtime diagnostics distinguish missing font
+atlases, missing actor snapshots, disabled HUD, active install profile and draw
+buffer. Setup transcripts also record the requested profile and installation mode.
+
+
 ## Optional Half-Life RPG (2026-10-19)
 
 `tools/test-rpg.ps1` checks production launch/boost/coast, projected movement,

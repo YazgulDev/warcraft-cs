@@ -1,5 +1,10 @@
 # Source modules
 
+`HudRenderState` owns a scoped raster/texture reset for the flat HUD after the 3D
+world/weapon passes. It resets blend equations and MSAA coverage as well as fixed
+function masks/texture targets, then restores the caller state before the outer
+overlay scope returns to Warcraft. It does not change gameplay or frame timing.
+
 `HudFont` owns the HUD's GDI glyph rasterization and OpenGL alpha atlas in presentation. It uses
 a separate memory DC and textured quads, avoiding driver-generated WGL bitmap display lists.
 Each font retains its glyph bearings and advances; upload/draw state is restored after use.
