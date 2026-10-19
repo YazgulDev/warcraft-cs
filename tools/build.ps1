@@ -22,6 +22,7 @@ $sources = @('platform/WarcraftApi.cpp', 'input/MouseLook.cpp', 'movement/Moveme
 # Item pickup and temporary native squad policies remain independent of shooter input/rendering.
 $sources += @('config/GameplaySettings.cpp','inventory/ItemPickup.cpp','squad/SquadController.cpp','platform/FpsCombatGuard.cpp') | ForEach-Object { '"' + (Join-Path $modRoot "src/$_") + '"' }
 $sources += '"'+(Join-Path $modRoot 'src/squad/SquadFocusFire.cpp')+'"' # Temporary all-unit targeting stays separate from formation AI.
+$sources += '"'+(Join-Path $modRoot 'src/squad/ArmyAI.cpp')+'"' # Resource spending and support orders use only unreserved owned units.
 $sources += '"' + (Join-Path $modRoot 'src/platform/NativeMovementGuard.cpp') + '"'
 # Attack-effect dispatch is isolated from controller input and native pursuit suppression.
 $sources += '"' + (Join-Path $modRoot 'src/platform/NativeWeaponAttack.cpp') + '"'
@@ -30,8 +31,10 @@ $sources += '"' + (Join-Path $modRoot 'src/platform/WeaponTargetFilter.cpp') + '
 $sources += '"' + (Join-Path $modRoot 'src/geometry/TreeTrunkMesh.cpp') + '"'
 # Shared filled aiming geometry is compiled into both ordinary Player builds and scope rendering.
 $sources += '"' + (Join-Path $modRoot 'src/presentation/ReticleView.cpp') + '"'
+$sources += '"' + (Join-Path $modRoot 'src/presentation/MuzzleFlashView.cpp') + '"' # Procedural flashes share the animated barrel/bob transform.
 $sources += '"' + (Join-Path $modRoot 'src/presentation/TargetMarkerView.cpp') + '"' # Read-only TPS contact presentation.
 $sources += '"' + (Join-Path $modRoot 'src/presentation/HudFont.cpp') + '"' # Driver-independent HUD glyph coverage.
+$sources += '"' + (Join-Path $modRoot 'src/presentation/HudDiagnostics.cpp') + '"' # Bounded phase/font diagnostics, separate from drawing.
 # Unit state, native portrait redirection and reusable icon textures keep separate ownership.
 $sources += @('platform/NativeUnitHud.cpp','platform/NativePortrait.cpp','presentation/HudIconCache.cpp','presentation/UnitHudView.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 # Interactive inventory owns its gestures, native command adapter, lifecycle and presentation independently.
@@ -65,6 +68,12 @@ $sources += '"' + (Join-Path $modRoot 'src/platform/NativeCommandCard.cpp') + '"
 # Keyboard metadata and native spell targeting/order ownership are separate from the application coordinator.
 $sources += @('input/ShortcutBindings.cpp','config/HeroSpellSlots.cpp','platform/NativeSpellSlots.cpp','platform/SpellAim.cpp','platform/SpellCaster.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 $sources += '"' + (Join-Path $modRoot 'src/platform/MovementObstacles.cpp') + '"'
+$sources += '"' + (Join-Path $modRoot 'src/platform/NativeGrenades.cpp') + '"'
+# RPG flight/damage and rendering remain independent of the gameplay controller.
+$sources += @('platform/NativeBlast.cpp','platform/NativeRockets.cpp','presentation/RocketView.cpp') | ForEach-Object { '"' + (Join-Path $modRoot "src/$_") + '"' }
+$sources += '"' + (Join-Path $modRoot 'src/presentation/GrenadeView.cpp') + '"'
+$sources += '"' + (Join-Path $modRoot 'src/presentation/GrenadeWorldView.cpp') + '"'
+$sources += '"' + (Join-Path $modRoot 'src/presentation/WeaponSelectionView.cpp') + '"' # Owned-weapon selector shares private buy previews.
 $sources += '"' + (Join-Path $modRoot 'src/platform/UnitCollisionProfile.cpp') + '"' # Live movement collision is independent of weapon geometry.
 # Third-person presentation and native melee coordination retain separate ownership from FPS weapons.
 $sources += @('presentation/ThirdPersonCamera.cpp','platform/UnitAttack.cpp','platform/UnitLocomotion.cpp','platform/ActorJumpView.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }

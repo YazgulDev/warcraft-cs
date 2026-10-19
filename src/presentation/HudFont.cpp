@@ -1,4 +1,6 @@
 #include "HudFont.hpp"
+#include "HudDiagnostics.hpp"
+#include <cstring>
 #include <algorithm>
 #include <vector>
 
@@ -10,18 +12,29 @@ int PowerOfTwo(int value) {
 }
 }
 
+bool HudFont::Report(const char* phase,int requested,int width,int height,unsigned texture,unsigned long error,int glyph,int coverage) {
+    // Persistent creation failures are bounded per font; a changed failure or recovery is reported immediately.
+    DWORD now=GetTickCount();auto context=wglGetCurrentContext();
+    bool changed=std::strcmp(lastPhase_,phase)!=0 || context!=lastReportContext_;
+    if(changed || !lastReport_ || now-lastReport_>=1000) {
+        lastPhase_=phase;lastReport_=now;lastReportContext_=context;HudDiagnostics::Font(role_,phase,requested,width,height,texture,error,glyph,coverage);
+    }
+    return !std::strcmp(phase,"ready");
+}
+
 bool HudFont::Ensure(int height) {
     if(texture_ && height_==height)return true;
-    if(height<1 || height>128)return false;
+    if(height<1 || height>128)return Report("invalid-size",height);
     // A memory DC avoids GDI calls on Warcraft's double-buffered OpenGL window.
     HDC dc=CreateCompatibleDC(nullptr);
-    if(!dc)return false;
+    if(!dc)return Report("create-dc",height,0,0,0,GetLastError());
     HFONT font=CreateFontA(height,0,0,0,FW_BOLD,FALSE,FALSE,FALSE,ANSI_CHARSET,
         OUT_TT_PRECIS,CLIP_DEFAULT_PRECIS,ANTIALIASED_QUALITY,FIXED_PITCH,"Consolas");
-    if(!font) {DeleteDC(dc);return false;}
+    if(!font) {DWORD error=GetLastError();DeleteDC(dc);return Report("create-font",height,0,0,0,error);}
     HGDIOBJ previous=SelectObject(dc,font);
     TEXTMETRICA metrics={};
     bool valid=previous && previous!=HGDI_ERROR && GetTextMetricsA(dc,&metrics);
+    DWORD error=valid ? 0 : GetLastError();int failedGlyph=-1;
     MAT2 transform={};transform.eM11.value=transform.eM22.value=1;
     std::array<Glyph,95> glyphs{};
     std::array<std::vector<unsigned char>,95> bitmaps;
@@ -29,7 +42,7 @@ bool HudFont::Ensure(int height) {
     for(unsigned i=0;valid && i<glyphs.size();++i) {
         GLYPHMETRICS shape={};
         DWORD bytes=GetGlyphOutlineA(dc,i+32,GGO_GRAY8_BITMAP,&shape,0,nullptr,&transform);
-        if(bytes==GDI_ERROR) {valid=false;break;}
+        if(bytes==GDI_ERROR) {valid=false;error=GetLastError();failedGlyph=int(i+32);break;}
         auto& glyph=glyphs[i];
         glyph.width=int(shape.gmBlackBoxX);glyph.height=int(shape.gmBlackBoxY);
         glyph.left=shape.gmptGlyphOrigin.x;glyph.top=shape.gmptGlyphOrigin.y;
@@ -38,14 +51,15 @@ bool HudFont::Ensure(int height) {
         if(bytes) {
             bitmaps[i].resize(bytes);
             valid=GetGlyphOutlineA(dc,i+32,GGO_GRAY8_BITMAP,&shape,bytes,bitmaps[i].data(),&transform)!=GDI_ERROR;
+            if(!valid){error=GetLastError();failedGlyph=int(i+32);}
         }
     }
     if(previous && previous!=HGDI_ERROR)SelectObject(dc,previous);
     DeleteObject(font);DeleteDC(dc);
-    if(!valid)return false;
+    if(!valid)return Report(failedGlyph>=0 ? "glyph-outline" : "font-metrics",height,0,0,0,error,failedGlyph);
     int width=PowerOfTwo(cellWidth*16),atlasHeight=PowerOfTwo(cellHeight*6);
     GLint maximum=0;glGetIntegerv(GL_MAX_TEXTURE_SIZE,&maximum);
-    if(width>maximum || atlasHeight>maximum)return false;
+    if(width>maximum || atlasHeight>maximum)return Report("atlas-too-large",height,width,atlasHeight);
     std::vector<unsigned char> alpha(size_t(width)*atlasHeight,0);
     for(size_t i=0;i<glyphs.size();++i) {
         auto& glyph=glyphs[i];
@@ -75,8 +89,11 @@ bool HudFont::Ensure(int height) {
     glTexImage2D(GL_TEXTURE_2D,0,GL_ALPHA,width,atlasHeight,0,GL_ALPHA,GL_UNSIGNED_BYTE,alpha.data());
     GLint uploaded=0;glGetTexLevelParameteriv(GL_TEXTURE_2D,0,GL_TEXTURE_WIDTH,&uploaded);
     glPopClientAttrib();glPopAttrib();
-    if(!texture || uploaded!=width) {if(texture)glDeleteTextures(1,&texture);return false;}
+    if(!texture || uploaded!=width) {if(texture)glDeleteTextures(1,&texture);return Report("texture-upload",height,width,atlasHeight,texture);}
     Reset(true);texture_=texture;height_=height;glyphs_=glyphs;advance_=std::max(1,int(metrics.tmAveCharWidth));
+    // Coverage distinguishes a valid texture name from an atlas containing no readable glyph pixels.
+    int ink=int(std::count_if(alpha.begin(),alpha.end(),[](unsigned char value){return value!=0;}));
+    Report(ink ? "ready" : "empty-coverage",height,width,atlasHeight,texture_,0,-1,ink);
     return true;
 }
 

@@ -1,4 +1,5 @@
 #include "WeaponRecoil.hpp"
+#include "WeaponSlots.hpp"
 #include <algorithm>
 #include <cmath>
 
@@ -39,11 +40,16 @@ void WeaponRecoil::Step(float seconds, bool triggerHeld, int weapon) {
     // Classic ItemPostFrame caps a released rifle burst at 15 and starts its 400ms recovery timer.
     if (delayFire_) { delayFire_ = false; shots_ = std::min(shots_, 15); recovery_ = .4f; }
     else recovery_ -= seconds;
-    if (weapon == 2) { shots_ = 0; return; } // CS pistols reset their shot count on release.
+    if (weapon == 2 || weapon==WeaponSlots::Deagle || weapon==WeaponSlots::Glock) { shots_ = 0; return; }
     // ItemPostFrame sheds at most one shot per command; a low frame rate must not catch up extra shots.
     if (shots_ > 0 && recovery_ < 0) { --shots_; recovery_ = .0225f; }
 }
-void WeaponRecoil::Shot(int weapon, float speed, bool grounded, bool ducked) {
+void WeaponRecoil::Shot(int weapon, float speed, bool grounded, bool ducked,float impulse) {
+    if(weapon>=WeaponSlots::Deagle && WeaponSlots::Firearm(weapon)) {
+        // New firearms retain punch recovery; heavier shells and the Deagle have a stronger vertical impulse.
+        ++shots_;pitch_+=impulse;
+        pitch_=std::min(pitch_,9.f);return;
+    }
     if (weapon < 0 || weapon > 3) return;
     // AWP has no rifle burst counter; USP adds punch but resets its count on trigger release.
     if (weapon != 3) ++shots_;

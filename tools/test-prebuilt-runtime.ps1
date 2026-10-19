@@ -34,6 +34,12 @@ Expand-LauncherRuntime $Launcher $source $destination
 foreach ($name in @('WarcraftCS.mix','Mss32.dll')) {
     if ((Get-FileHash -LiteralPath (Join-Path $destination $name) -Algorithm SHA256).Hash.ToLowerInvariant() -ne (Get-RuntimeHash $files[$name])) { throw 'Embedded runtime differs from packaged module.' }
 }
+# A DLL-install failure must identify both host fingerprints in the captured backend output/error.
+$badHost=Join-Path $work 'different-host';New-Item -ItemType Directory -Path $badHost -Force | Out-Null
+Set-Content -LiteralPath (Join-Path $badHost 'Mss32.dll') -Value 'synthetic incompatible host'
+$actual=(Get-FileHash -LiteralPath (Join-Path $badHost 'Mss32.dll') -Algorithm SHA256).Hash.ToLowerInvariant()
+try { Assert-PrebuiltHost $destination $badHost | Out-Null;throw 'Unexpectedly accepted incompatible host.' }
+catch {if(!$_.Exception.Message.Contains($actual) -or !$_.Exception.Message.Contains('Expected')){throw 'Host rejection omitted diagnostic fingerprints.'}}
 Require-Rejected { Expand-LauncherRuntime $Launcher (Join-Path $work ('b'*64)) (Join-Path $work 'wrong') } 'Launcher/source mismatch accepted.'
 if (Test-Path -LiteralPath (Join-Path $work 'wrong')) { throw 'Invalid runtime wrote files.' }
 Write-Output 'PASS Player payload: embedded modules, source/version binding, hashes, x86 DLLs, fixed layout, traversal and corrupt-package rejection.'

@@ -18,6 +18,8 @@ bool GameAudio::LoadClip(const std::string& path, Clip& clip) {
         if (size > bytes.size() - at - 8) return false;
         if (!memcmp(bytes.data() + at, "fmt ", 4) && size >= 16) memcpy(&format, bytes.data() + at + 8, 16);
         if (!memcmp(bytes.data() + at, "data", 4)) clip.data.assign(bytes.begin() + at + 8, bytes.begin() + at + 8 + size);
+        // Stock pinpull.wav omits padding before trailing LIST metadata. Complete PCM does not need that metadata.
+        if(format.wFormatTag==WAVE_FORMAT_PCM && format.nBlockAlign && !clip.data.empty())break;
         at += 8 + size + (size & 1);
     }
     if (format.wFormatTag != WAVE_FORMAT_PCM || !format.nBlockAlign || clip.data.empty()) return false;
@@ -28,6 +30,7 @@ bool GameAudio::LoadClip(const std::string& path, Clip& clip) {
     return true;
 }
 void GameAudio::Configure(const std::string& root) {
+    LoadTimelines(root); // Pose timing is required even when the optional audio device cannot initialize.
     // Load the system runtime explicitly; audio failure never prevents Warcraft from starting.
     HRESULT com = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
     if (FAILED(com)) { wc3::Log("CS audio COM initialization failed: %08X", com); return; }
@@ -54,7 +57,11 @@ void GameAudio::Configure(const std::string& root) {
         } while (FindNextFileA(search, &entry));
         FindClose(search);
     }
-    static const char* weapons[] = {"ak47", "m4a1", "usp", "awp", "knife", "c4", "sword"};
+    wc3::Log("CS audio ready: %zu cached samples; Warcraft audio retained", clips_.size());
+    CoUninitialize();
+}
+void GameAudio::LoadTimelines(const std::string& root) {
+    const auto& weapons=WeaponSlots::Caches;
     for (int weapon = 0; weapon < WeaponSlots::Count; ++weapon) {
         std::ifstream file(root + "\\assets\\" + weapons[weapon] + ".wca", std::ios::binary);
         char magic[4]; uint32_t count = 0;
@@ -70,11 +77,15 @@ void GameAudio::Configure(const std::string& root) {
                 sequence.events.push_back(std::move(event));
             }
             if (!file) break;
+            // Retail XM1014 insert clips contain no sound events; supply their shell-loading sound explicitly.
+            // Fill only absent events, preserving authored M3 events and avoiding doubled shell sounds.
+            if(sequence.events.empty() && (weapon==WeaponSlots::M3 || weapon==WeaponSlots::XM1014) && !strcmp(name,"insert"))
+                sequence.events.push_back({0,"m3_insertshell.wav"});
+            if(sequence.events.empty() && weapon==WeaponSlots::M3 && !strcmp(name,"after_reload"))
+                sequence.events.push_back({0,"m3_pump.wav"});
             timelines_[weapon].emplace(name, std::move(sequence));
         }
     }
-    wc3::Log("CS audio ready: %zu cached samples; Warcraft audio retained", clips_.size());
-    CoUninitialize();
 }
 void GameAudio::SetVolumePercent(float percent) {
     // Audio initialization is optional; changing settings must remain safe when its device is unavailable.
@@ -96,12 +107,13 @@ void GameAudio::Play(const char* name, float volume) {
     Clip& clip = *found->second;
     // Reuse an idle voice rather than queuing behind an old shot or interrupting footsteps.
     IXAudio2SourceVoice* voice = nullptr; unsigned occupied = 0;
-    for (auto candidate : clip.voices) {
+    for (size_t i=0;i<clip.voices.size()-(clip.looping ? 1 : 0);++i) {
+        auto candidate=clip.voices[i];
         XAUDIO2_VOICE_STATE state{}; candidate->GetState(&state, XAUDIO2_VOICE_NOSAMPLESPLAYED);
         if (state.BuffersQueued) ++occupied; else if (!voice) voice = candidate;
     }
     if (!voice) {
-        voice = clip.voices[clip.next++ % clip.voices.size()];
+        voice = clip.voices[clip.next++ % (clip.voices.size()-(clip.looping ? 1 : 0))];
         voice->Stop(); voice->FlushSourceBuffers(); voice->Start();
     }
     XAUDIO2_BUFFER buffer{}; buffer.AudioBytes = UINT32(clip.data.size()); buffer.pAudioData = clip.data.data();
@@ -109,16 +121,32 @@ void GameAudio::Play(const char* name, float volume) {
     HRESULT result = voice->SubmitSourceBuffer(&buffer);
     wc3::Log("CS sound=%s volume=%.2f overlapping=%u queued=%08X", name, volume, occupied, result);
 }
-float GameAudio::BeginAnimation(int weapon, const char* name, DWORD start) {
+void GameAudio::SetLoop(const char* name,bool playing,float volume) {
+    auto found=clips_.find(name);if(found==clips_.end())return;auto& clip=*found->second;
+    if(clip.looping==playing)return;
+    auto voice=clip.voices.back();if(!voice)return;
+    // The motor owns one reserved voice and cannot queue another loop on every rendered frame.
+    voice->Stop();voice->FlushSourceBuffers();clip.looping=false;
+    if(playing) {
+        XAUDIO2_BUFFER buffer{};buffer.AudioBytes=UINT32(clip.data.size());buffer.pAudioData=clip.data.data();
+        buffer.Flags=XAUDIO2_END_OF_STREAM;buffer.LoopCount=XAUDIO2_LOOP_INFINITE;voice->SetVolume(volume);
+        clip.looping=SUCCEEDED(voice->SubmitSourceBuffer(&buffer));
+    }
+    voice->Start();wc3::Log("CS loop=%s playing=%d",name,clip.looping);
+}
+float GameAudio::Duration(int weapon,const char* name) const {
+    auto found=timelines_[weapon].find(name);return found==timelines_[weapon].end() ? 0 : found->second.duration;
+}
+float GameAudio::BeginAnimation(int weapon, const char* name, DWORD start,float rate) {
     auto found = timelines_[weapon].find(name);
     current_ = found == timelines_[weapon].end() ? nullptr : &found->second;
-    event_ = 0; start_ = start;
+    event_ = 0; start_ = start;rate_=rate;
     Tick(start);
     return current_ ? current_->duration : 0;
 }
 void GameAudio::Tick(DWORD now) {
     // Both the mesh and sound events use the controller's same animation start clock.
-    float elapsed = (now - start_) * 0.001f;
+    float elapsed = (now - start_) * 0.001f*rate_;
     while (current_ && event_ < current_->events.size() && current_->events[event_].time <= elapsed) {
         const Event& event = current_->events[event_++]; Play(event.sound.c_str());
         wc3::Log("animation audio expected=%.3f actual=%.3f", event.time, elapsed);
@@ -128,7 +156,7 @@ void GameAudio::CancelAnimation() { current_ = nullptr; event_ = 0; }
 void GameAudio::Stop() {
     // Only our voices stop on mode exit; ambient sounds and Warcraft music keep playing.
     CancelAnimation();
-    for (auto& pair : clips_) for (auto voice : pair.second->voices) {
+    for (auto& pair : clips_) {pair.second->looping=false;for (auto voice : pair.second->voices) {
         voice->Stop(); voice->FlushSourceBuffers(); voice->Start();
-    }
+    }}
 }

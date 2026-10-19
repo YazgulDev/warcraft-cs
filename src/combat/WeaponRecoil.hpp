@@ -7,7 +7,7 @@ public:
     void Reset();
     void ResetBurst();
     void Step(float seconds, bool triggerHeld, int weapon);
-    void Shot(int weapon, float speed, bool grounded, bool ducked);
+    void Shot(int weapon, float speed, bool grounded, bool ducked,float kick=0);
     float Pitch() const { return pitch_; }
     float Yaw() const { return yaw_; }
     float Magnitude() const;

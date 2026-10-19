@@ -153,6 +153,14 @@ static void SafeTick(uintptr_t ui) {
         __except (EXCEPTION_EXECUTE_HANDLER) { wc3::LogError("Native view restoration failed; input remains released"); }
     }
 }
+static void SafeArmyTick() {
+    __try {controller.TickArmyAI();}
+    __except(EXCEPTION_EXECUTE_HANDLER) {
+        healthy=false;wc3::LogError("Army AI fault %08X; disabled",GetExceptionCode());
+        __try {controller.RecoverFault();}
+        __except(EXCEPTION_EXECUTE_HANDLER) {wc3::LogError("Army AI recovery failed; input released");}
+    }
+}
 static int __fastcall WorldHook(uintptr_t ui, uintptr_t unused) {
     DWORD now = GetTickCount();
     lastWorld = now;
@@ -294,6 +302,9 @@ static void FinishFrame(HDC dc,const char* route) {
     if (healthy && worldReady) overlay.Draw(dc,controller,minimap,portrait,healthBars.Items(),healthBarView,healthNear,healthFar);
     else ReticleDiagnostics::Skip(healthy ? "world-frame-absent" : "controller-fault", 0, 0, GetTickCount() - lastWorld);
     overlayPass = false; nativeUIPhase = false;
+    // Creation during RenderWorld follows this frame's native skin update and can expose an unskinned birth model.
+    // Execute economy/support orders after world AND UI submission, before the next frame's native animation update.
+    if(healthy && worldReady)SafeArmyTick();
     // Observe skipped frames too: a valid context alone does not establish an active FPS overlay.
     if (DiagnosticLog::Due(previous)) {
         RECT client = {}; if (window) GetClientRect(window, &client);

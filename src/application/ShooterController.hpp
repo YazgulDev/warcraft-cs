@@ -1,4 +1,10 @@
 #pragma once
+#include "../combat/ShotgunReload.hpp"
+#include "../combat/BurstFire.hpp"
+#include "../presentation/ViewmodelMotion.hpp"
+#include "../combat/GrenadeThrow.hpp"
+#include "../platform/NativeGrenades.hpp"
+#include "../platform/NativeRockets.hpp"
 #include "../combat/Weapon.hpp"
 #include "../combat/WeaponSlots.hpp"
 #include "../platform/WarcraftApi.hpp"
@@ -23,11 +29,13 @@
 #include "../combat/MeleeAttack.hpp"
 #include "../input/MouseLook.hpp"
 #include "../input/WeaponWheel.hpp"
+#include "../input/WeaponSelection.hpp"
 #include "../input/CameraWheel.hpp"
 #include "../config/GameplaySettings.hpp"
 #include "../inventory/AmmoRecovery.hpp"
 #include "../inventory/ItemPickup.hpp"
 #include "../squad/SquadController.hpp"
+#include "../squad/ArmyAI.hpp"
 #include "../platform/SpellCaster.hpp"
 #include "../platform/NativeUnitHud.hpp"
 #include "InventoryController.hpp"
@@ -40,13 +48,14 @@
 class ShooterController {
 public:
     void Tick(uintptr_t ui);
+    void TickArmyAI(); // Construction may instantiate models: run only after the completed native frame.
     void ResetMap();
     // A caught extension fault must return camera/HUD ownership so native menus remain usable.
     void RecoverFault() { Disable(true); }
     // Native window input feeds the dedicated relative-look collector on the same game thread.
     void AttachWindow(HWND window) { mouseLook_.Attach(window); }
     void MouseInput(LPARAM packet,bool accept) { mouseLook_.Input(packet,accept); }
-    void ResetMouse() { mouseLook_.Reset(); weaponWheel_.Reset();cameraWheel_.Reset();squadOrderMode_.ClearInput(); }
+    void ResetMouse() { mouseLook_.Reset(); weaponWheel_.Reset();cameraWheel_.Reset();squadOrderMode_.ClearInput();armyToggleRequested_=false;weaponMenuCancelRequested_=true; }
     // Zoom is presentation-only: it must not cancel channeling or switch a carried CS weapon in TPS.
     void RequestMouseWheel(int delta) {
         if(!Visible() || Buying() || InventoryOpen() || UnitFirstPerson())return;
@@ -71,17 +80,21 @@ public:
     // All-weapons now uses F12; F9 owns the independent unarmed unit view.
     void RequestAllWeapons() { allWeaponsRequested_=true; }
     void RequestItemPickup() { itemRequested_=true; }
+    bool Shopping() const {return shop_!=0;}
+    void RequestShopClose() {shopCloseRequested_=true;}
     void RequestSquad(bool passive) { squadRequested_=passive ? 2 : 1; }
     // Release shares the command mailbox: the last H/O/J tap before a frame wins.
     void RequestSquadRelease() { squadRequested_=3; }
     void RequestSquadFocus() {squadRequested_=4;}
     void RequestSquadOrdersToggle() {if(!ThirdPerson() && !UnitFirstPerson())squadOrderMode_.QueueToggle();}
+    void RequestArmyAI() {armyToggleRequested_=!armyToggleRequested_;}
+    bool ArmyAIActive() const {return armyAI_.Active();}
     bool SquadOrdersInFPS() const {return squadOrderMode_.RoutingEnabled();}
     bool SquadReticleOrdersEnabled() const {
         return Visible() && settings_.squadReticleAttack && (ThirdPerson() || UnitFirstPerson() || SquadOrdersInFPS());
     }
-    bool BlocksPassiveUnit(uintptr_t object) const { return Visible() && squad_.BlocksUnit(object); }
-    bool BlocksPassiveAttack(uintptr_t attack) const { return Visible() && squad_.BlocksAttack(attack); }
+    bool BlocksPassiveUnit(uintptr_t object) const { return (Visible() || Shopping()) && squad_.BlocksUnit(object); }
+    bool BlocksPassiveAttack(uintptr_t attack) const { return (Visible() || Shopping()) && squad_.BlocksAttack(attack); }
     size_t SquadCount() const { return squad_.Count(); }
     bool SquadPassive() const { return squad_.Passive(); }
     // Explicit spell approach/channeling may use the native motor; idle FPS never does.
@@ -96,7 +109,7 @@ public:
     // Queue allied targeting changes; Windows key repeat must not flip the mode every frame.
     void RequestAllyTargetToggle() {allyTargetToggleRequested_=true;}
     // Spell and interruption taps are executed on the game thread, never inside WindowProc.
-    void RequestSpell(int slot) { spellRequested_=slot; }
+    void RequestSpell(int slot) { spellRequested_=slot;weaponMenuCancelRequested_=true; }
     void RequestSpellCancel() { spellCancelRequested_=true; }
     std::string Shortcut(ShortcutAction action) const {return ShortcutBindings::Label(settings_.shortcuts.Key(action));}
     bool SpeedVisible() const { return showSpeed_; }
@@ -109,7 +122,7 @@ public:
     bool InventoryOpen() const {return itemInventory_.State().Open();}
     bool InventoryInputOpen() const {return itemInventory_.State().RoutingOpen();}
     bool CursorMode() const {return Buying() || InventoryOpen();}
-    void RequestInventory(InventoryControls::Event e) {itemInventory_.Input(e);}
+    void RequestInventory(InventoryControls::Event e) {itemInventory_.Input(e);weaponMenuCancelRequested_=true;}
     void RequestInventoryClose() {inventoryEscape_=true;itemInventory_.Input({InventoryControls::Kind::Close});}
     void InventoryProjection(float verticalFov) {inventoryVerticalFov_=verticalFov;}
     wc3::Handle HudActor() const {return Visible() && !UnitFirstPerson() ? unit_ : 0;}
@@ -123,6 +136,12 @@ public:
     BuyMenu::Page BuyPage() const { return buyMenu_.Current(); }
     const GameplaySettings& Settings() const { return settings_; }
     bool OwnsWeapon(int slot) const { return slot>=0 && slot<WeaponSlots::Count && inventory_.owned[slot]; }
+    // Window events queue confirmation/cancel; only the game thread changes the equipped weapon.
+    void RequestWeaponConfirm() {weaponMenuConfirmRequested_=true;}
+    void RequestWeaponCancel() {weaponMenuCancelRequested_=true;}
+    bool SelectingWeapon() const {return Visible() && !ThirdPerson() && !UnitFirstPerson() && !Buying() && !InventoryInputOpen() && weaponSelection_.Open();}
+    const WeaponSelection& WeaponChoice() const {return weaponSelection_;}
+    WeaponSelection::Available AvailableWeapons() const;
     int Gold() const { return gold_; }
     float ViewYaw() const { return yaw_+(ThirdPerson() ? 0 : recoil_.Yaw()); }
     float ViewPitch() const { return pitch_+(ThirdPerson() ? 0 : recoil_.Pitch()); }
@@ -131,7 +150,7 @@ public:
         const auto& choice=settings_.tilesetSky[static_cast<unsigned char>(mapTileset_)];
         return choice.empty() ? settings_.defaultSky : choice;
     }
-    bool Visible() const { return active_ && !suspended_; }
+    bool Visible() const { return active_ && !suspended_ && !Shopping(); }
     // Presentation may identify the controlled actor only while the first-person view owns the screen.
     wc3::Handle ViewActor() const { return Visible() ? unit_ : 0; }
     // Actor visibility is separate from simulation ownership: TPS retains guards but shows the native body.
@@ -144,7 +163,19 @@ public:
     void SetPaused(bool value) { paused_ = value; }
     int WeaponIndex() const { return weapon_; }
     const char* Animation() const;
+    const char* IdleAnimation() const {return Sequence("idle");}
+    const std::vector<RocketVisual>& RocketVisuals() const {return rockets_.Visuals();}
+    bool LaserVisible() const {return rockets_.LaserVisible();}
+    const GrenadePoint& LaserPoint() const {return rockets_.Laser();}
     float AnimationTime() const;
+    const ViewmodelPose& WeaponPose() const {return viewmodelMotion_.Pose();}
+    unsigned ShotSerial() const {return shotSerial_;}
+    const std::vector<GrenadeVisual>& GrenadeVisuals() const {return grenades_.Visuals();}
+    float FlashOpacity() const {return grenades_.FlashOpacity();}
+    bool ShowMuzzleFlash() const {
+        return flashWeapon_==weapon_ && WeaponSlots::Firearm(weapon_) && settings_.viewmodel.muzzleFlash &&
+            Visible() && !ThirdPerson() && !UnitFirstPerson() && !settings_.warcraftOnly && !Buying() && !InventoryOpen();
+    }
     float Health() const { return health_; }
     float Recoil() const { return recoil_.Magnitude(); }
     bool Scoped() const { return scopeLevel_ != 0; }
@@ -201,7 +232,8 @@ public:
     float PlantProgress() const { return plantProgress_; }
     const HitFeedback& Hits() const { return hits_; }
     void Configure(const char* root, uintptr_t gameBase);
-    static const Weapon weapons[WeaponSlots::Count];
+    static const Weapon* const weapons; // Compatibility defaults for private fixtures.
+    const Weapon& WeaponData(int slot) const {return settings_.weapons[slot];}
 private:
 #ifdef WCS_GAMEPLAY_TEST
     int testWalkKey_=0;bool testWalking_=false;DWORD testWalkUntil_=0,testAttackUntil_=0;
@@ -220,21 +252,39 @@ private:
     void CancelCasting() {spells_.Cancel();itemInventory_.CancelCasting();}
     void Disable(bool restoreCamera);
     void AimAndMove(float dt);
-    void Fire(bool secondary = false);
-    void Strike();
+    bool Fire(bool secondary = false,bool burstRound=false,bool interruptReload=false);
+    void FireGlock(bool primaryPressed,bool secondaryPressed,DWORD now);
+    BurstFire glockBurst_;
+    void Strike(float yawOffset=0,float pitchOffset=0,float damageScale=1);
     void Reload();
+    ShotgunReload shotgunReload_;
+    DWORD shotgunReloadStart_=0;
+    int shotgunReloadPhase_=0;
+    bool shotgunReloadPerShell_=true,shotgunReloadInterrupt_=true;
     void SwitchWeapon(int slot);
     void PlantC4(float dt);
+    void ThrowGrenade(bool pressed);
+    GrenadeThrow grenadeThrow_;
+    NativeGrenades grenades_;
+    NativeRockets rockets_;
+    bool rpgLaser_=true;
+    float grenadePullSeconds_=1;
     void CancelPlant();
     void RefillAmmo(bool grantAll=false);
     void PickupItem();
+    bool OpenShop();
+    void CloseShop();
+    wc3::Handle shop_=0;
+    bool shopCloseRequested_=false;
     void ReloadSettings();
     void ToggleHealthBars();
     void ResetLoadout();
     void Buy(int slot,bool ammunition);
     void UpdateBuyMenu();
+    void UpdateWeaponSelection(DWORD now);
+    void CloseWeaponSelection();
     void Notice(const char* message);
-    float Play(const char* name);
+    float Play(const char* name,float rate=1,float elapsed=0);
     void Camera();
     ThirdPersonSettings CameraSettings() const;
     void Sound(const char* name);
@@ -274,6 +324,9 @@ private:
     // Movement needs a finer clock than GetTickCount's ~16ms steps once rendering exceeds 64 FPS.
     std::chrono::steady_clock::time_point tick_{};
     DWORD lastShot_ = 0, reloadEnd_ = 0, animationTick_ = 0;
+    ViewmodelMotion viewmodelMotion_;
+    unsigned shotSerial_=0;
+    int flashWeapon_=-1;
     std::string root_, animation_ = "idle";
     MeleeAttack meleeAttack_ = MeleeAttack::Select(WeaponSlots::Knife, false);
     WeaponRecoil recoil_;
@@ -291,6 +344,8 @@ private:
     NativeFogOfWar nativeFog_;
     MouseLook mouseLook_;
     WeaponWheel weaponWheel_;
+    WeaponSelection weaponSelection_;
+    bool weaponMenuConfirmRequested_=false,weaponMenuCancelRequested_=false;
     CameraWheel cameraWheel_;
     float thirdPersonDistance_=500;
     GameplaySettings settings_;
@@ -305,6 +360,8 @@ private:
     AmmoRecovery ammoRecovery_;
     ItemPickup itemPickup_;
     SquadController squad_;
+    ArmyAI armyAI_;
+    bool armyToggleRequested_=false;
     SquadOrderMode squadOrderMode_;
     std::string ammoMessage_;
     GameAudio audio_;

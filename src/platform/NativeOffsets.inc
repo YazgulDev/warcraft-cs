@@ -5,6 +5,10 @@ NATIVE(void, FogMaskEnable, (BOOL), 0x3BB210)
 NATIVE(BOOL, IsFogEnabled, (), 0x3BB200)
 NATIVE(BOOL, IsFogMaskEnabled, (), 0x3BB230)
 NATIVE(Handle, GetLocalPlayer, (), 0x3BBB60)
+// Owned 1.26a name/signature/function registration triples at 3D65E6/3D65FA/3D6B22.
+NATIVE(void, SelectUnit, (uint32_t,BOOL), 0x3C7910)
+NATIVE(void, ClearSelection, (), 0x3BBAA0)
+NATIVE(BOOL, IssueBuildOrderById, (uint32_t,int,float*,float*), 0x3C8BE0)
 // Owned 1.26a registration at 3D9719 verifies GetTerrainCliffLevel (RR)I.
 NATIVE(int, GetTerrainCliffLevel, (float*,float*), 0x3B4190)
 NATIVE(Handle, Player, (int), 0x3BBB30)

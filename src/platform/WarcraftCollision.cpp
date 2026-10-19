@@ -21,11 +21,11 @@ float ReachableHeight(const MovementPhysics& movement) {
 }
 bool CliffCell(float x, float y) {
     int level=wc3::GetTerrainCliffLevel(&x,&y);
-    // Cliff pathing extends across a 128-unit terrain cell, including diagonal shoreline corners.
-    // A half-cell probe misses the lower rim and traps the player immediately after landing.
-    for(int point=0;point<8;++point) {
+    // The interpolated face and its blocked lower-bank cell can occupy two terrain cells beyond
+    // the native level transition. Probe both rings, including diagonal shoreline corners.
+    for(float reach:{128.f,256.f})for(int point=0;point<8;++point) {
         float angle=point*.78539816339f;
-        float sx=x+std::round(std::cos(angle))*128,sy=y+std::round(std::sin(angle))*128;
+        float sx=x+std::round(std::cos(angle))*reach,sy=y+std::round(std::sin(angle))*reach;
         if(wc3::GetTerrainCliffLevel(&sx,&sy)!=level) return true;
     }
     return false;
@@ -49,9 +49,17 @@ float WarcraftCollision::Floor(float x, float y, const MovementPhysics& movement
         // is present, rather than lowering a Warcraft walker onto the submerged terrain mesh.
         floor=std::max(floor,wc3::Ground(x,y));
     }
-    // A low solid prop can support the feet after landing; moving off its top starts a real fall.
+    // Use the same footprint as the side sweep: landing with a foot over a lip must catch its top
+    // before the center crosses. Otherwise gravity sinks the feet below it and the next step hits its side.
+    // Only already-reachable terrain can support us; a tall cliff remains a wall during ascent.
+    for(int point=0;point<8;++point) {
+        float angle=point*.78539816339f;
+        float terrain=wc3::TerrainGround(x+std::cos(angle)*radius_,y+std::sin(angle)*radius_);
+        if(std::isfinite(terrain) && terrain<=reachable+.01f)floor=std::max(floor,terrain);
+    }
+    // A low solid prop supports the entire foot too; support ends only after its trailing edge clears.
     for (const auto& box : obstacles)
-        if (Overlaps(box, x, y, 0) && box.maximum[2] <= reachable + .01f)
+        if (Overlaps(box, x, y, radius_) && box.maximum[2] <= reachable + .01f)
             floor = std::max(floor, box.maximum[2]);
     return floor;
 }
@@ -135,7 +143,10 @@ void WarcraftCollision::Move(wc3::Handle unit, MovementPhysics& movement, float 
     if (std::hypot(x - originalX, y - originalY) > 0.001f) {
         bool raised = floor > wc3::TerrainGround(x, y) + .01f;
         float deck = 0;
-        bool checkedCliff = wc3::IsTerrainPathable(&x, &y, 1) && CliffCell(x,y) && !wc3::WalkableSurface(x, y, deck);
+        // Even a clear center can have its native hull on a blocked rim. Commit swept-valid XY
+        // throughout this cliff neighborhood rather than invoking nearest-cell placement there.
+        bool nearCliff=CliffCell(x,y) && !wc3::WalkableSurface(x,y,deck);
+        bool checkedCliff=nearCliff && wc3::IsTerrainPathable(&x,&y,1);
         // Swept collision already owns this local contact. Native nearest-cell placement can publish a
         // sideways sprite snap even when its logical coordinates are immediately rolled back afterward.
         // Preserve exact validated XY for approach, parallel sliding and retreat on either side of a solid.
@@ -143,7 +154,7 @@ void WarcraftCollision::Move(wc3::Handle unit, MovementPhysics& movement, float 
             return Overlaps(box,originalX,originalY,radius_*2) || Overlaps(box,x,y,radius_*2);
         });
         if(checkedCliff && floor<movement.FeetZ()-.01f) movement.BeginFall();
-        if (!movement.Grounded() || movement.FeetZ() - floor > movement.StepHeight() || raised || checkedCliff || nearSolid) {
+        if (!movement.Grounded() || movement.FeetZ() - floor > movement.StepHeight() || raised || nearCliff || nearSolid) {
             // XY-only setters preserve the checked path. Unknown blockers in open space retain native validation below.
             wc3::SetUnitX(unit, &x); wc3::SetUnitY(unit, &y);
         } else {

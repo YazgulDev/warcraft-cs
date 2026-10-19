@@ -9,7 +9,9 @@ Buildings, hidden and loaded units cannot be selected.
 Mouse wheel **up** moves the third-person camera closer; **down** moves it farther away.
 The session's chosen distance survives FPS/third-person switches within the same map. Native terrain
 and destructable collision still shorten the camera when necessary, then restore the requested distance
-when the view is clear. Building collision is opt-in with `CameraBuildingCollision=true`; false is
+when the view is clear. An enclosing model box already containing the pivot does not shorten the boom,
+including broad bridge/ladder volumes; separate solid gate/tree surfaces still do.
+Building collision is opt-in with `CameraBuildingCollision=true`; false is
 the stable-zoom default and permits passage through building visuals. Camera rays for manual attacks and spells use the same zoomed position.
 Scrolling in third person does not switch CS weapons or interrupt a spell. Buy menus, paused/disabled
 control and lost focus discard wheel input; partial notches cannot cross view transitions.

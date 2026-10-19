@@ -96,6 +96,10 @@ size_t SquadController::Focus(wc3::Handle leader,wc3::Handle target,const Gamepl
 bool SquadController::BlocksUnit(uintptr_t object) const {
     return passive_ && !focus_.Contains(object) && std::any_of(members_.begin(),members_.end(),[&](const Member& m) { return m.object==object; });
 }
+bool SquadController::Reserved(wc3::Handle unit) const {
+    auto object=wc3::UnitObject(unit);
+    return object && (focus_.Contains(object) || std::any_of(members_.begin(),members_.end(),[&](const Member& m){return m.unit==unit && m.object==object;}));
+}
 bool SquadController::BlocksAttack(uintptr_t attack) const {
     return passive_ && attack && std::any_of(members_.begin(),members_.end(),[&](const Member& m) { return m.attack==attack && !focus_.Contains(m.object); });
 }

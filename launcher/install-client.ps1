@@ -39,6 +39,8 @@ New-Item -ItemType Directory -Path $paths.install -Force | Out-Null
 $log=Join-Path $paths.install 'install.log'
 Start-Transcript -LiteralPath $log -Append | Out-Null
 try {
+    # Record the resolved request, including failed attempts whose compiler output is captured elsewhere.
+    Write-Output ("Installation request: mode={0} warcraftOnly={1} version={2}" -f $mode,([bool]$request.WarcraftOnly),(Get-Content -LiteralPath (Join-Path $source 'VERSION') -Raw).Trim())
     $ready=Join-Path $paths.install 'client-installed.json'
     $backup=Join-Path $paths.install 'client-installed.previous.json'
     # Source revisions live in separate folders: carry the owner's private sword choice into the new setup.

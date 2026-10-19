@@ -168,7 +168,8 @@ namespace WarcraftCSLauncher {
             // Install always uses this EXE's reviewed payload; only Update fetches a GitHub release.
             SetBusy(true); log.Clear(); status.Text="Installing... Progress and errors appear below.";
             var request=CurrentRequest(mode);
-            Report("Install started mode="+mode+" version="+CurrentVersion+" source="+SourcePayload.Revision+" destination="+destination.Text);
+            // Persist both launcher variant and profile even when setup stops before its transcript starts.
+            Report("Install started mode="+mode+" warcraftOnly="+request.WarcraftOnly+" includesRuntime="+includesRuntime+" version="+CurrentVersion+" source="+SourcePayload.Revision+" destination="+destination.Text);
             try {
                 await SetupRunner.Install(request, consent.Checked, Report);
                 Directory.CreateDirectory(Path.GetDirectoryName(Preferences)); request.Save(Preferences);

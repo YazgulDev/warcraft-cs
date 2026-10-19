@@ -17,9 +17,19 @@ This is an early prototype with known limitations.
 
 0.10.0 adds the animated F6/F7 unit HUD, interactive inventory and right-click squad commands.
 Tab starts with item numbers; I opens mouse inventory, and Y toggles squad orders in armed F6.
+
 It also fixes point-spell targeting, building zoom, side-contact snaps and neutral/gate attacks,
 including Kael's native ranged missiles. See the [complete release notes](docs/RELEASE-0.10.0.md)
 for every change, new setting, upgrade steps and validation limits.
+
+The current feature branch expands the paid arsenal with Deagle, Glock, MP5, P90,
+M249, M3 and XM1014; adds native shop interaction on E in F6/F7 and army AI on U.
+See [arsenal, shops and AI controls/configuration](docs/ARSENAL-SHOPS-AI.md).
+Firearms reach at least 30000 world units by default, covering visible aimed targets;
+M3/XM1014 reloads use a continuous fitted shell timeline without idle flashes.
+Partial shotgun reloads finish sooner at a constant insertion speed, with shell sounds.
+Each completed insertion loads one real shell; a fresh LMB press interrupts to fire a loaded round.
+Glock LMB fires one ordinary shot; RMB fires one three-round burst unless Y enables squad orders.
 
 ## Features
 
@@ -49,7 +59,7 @@ for every change, new setting, upgrade steps and validation limits.
 - E picks up items/runes through the real inventory; a successful rune restores 40% ammunition by default.
 - H recruits your own units to follow and fight, O makes them follow without attacking, J releases them.
 - INI settings for ammunition recovery, damage and squad behavior, reloaded with F8.
-- Mouse-wheel weapon cycling through all seven slots, with high-resolution wheel support.
+- CS-style owned-weapon selection menu with five groups, mouse-wheel browsing and click confirmation.
 - B opens a CS-style buy menu using Warcraft gold; configurable prices, starting kits and shop/building access.
 - No starting C4 by default; unlimited paid C4 purchases and configurable reserve ammunition caps.
 - Multiple planted C4 charges with independent fuses; F11 refills carried equipment and F12 grants every weapon for free.
@@ -192,10 +202,13 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 | B | Open/close the buy menu; number keys or mouse select categories and purchases |
 | . | Buy one ammo pack for the weapon currently held |
 | Esc / 0 in buy menu | Close / back to previous menu (0 closes the main menu) |
-| 1 / 2 / 3 / 4 / 5 / 6 / 7 | AK47 / M4A1 / USP / AWP / knife / C4 / original greatsword |
-| Mouse wheel up / down | Previous / next owned weapon |
+| 1 / 2 / 3 / 4 / 5 (F6, Tab items off) | Open primary / pistols / melee / grenades / C4; repeat to browse the group |
+| Mouse wheel up / down (F6) | Preview previous / next carried weapon; LMB confirms without firing |
+| RMB / 0 / Esc in weapon menu | Cancel the pending selection; timeout also cancels |
+| 6 / 7 (when not routed to items) | Legacy direct C4 / original greatsword shortcuts |
 | Hold left mouse button with C4 | Plant for 3 seconds while standing on the ground; multiple charges are allowed |
-| E | Pick up the nearest item/rune if the unit has an available inventory |
+| E | Open a nearby looked-at native shop in F6/F7; otherwise pick up an item/rune. E/Escape returns from a shop |
+| U | Toggle army AI for free owned workers/buildings/troops; H/O members and explicit targets take priority |
 | H / O / J | Your units: follow and fight / follow without attacking / release squad |
 | Right mouse button (F7/F9) | All available owned mobile units attack the unit/building or destructable gate under the reticle; empty aim cancels the common target |
 | Y (armed F6) | Toggle RMB between all-unit target orders and weapon action; switching off clears the common target |
@@ -207,7 +220,27 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 | Z / X / C / V | Cast hero spell slots 1вЂ“4; target the visible unit or world surface under the reticle |
 | Alt + spell key | Target yourself when the spell allows it |
 
+F6 hands and weapons now sway while moving, and every firearm has an animated
+barrel muzzle flash. F8 applies the editable `[Viewmodel]` settings; see the
+[visual settings table](docs/ARSENAL-SHOPS-AI.md#first-person-hands-and-muzzle-flashes).
+
 ## Configuration
+
+Optional **Half-Life RPG**: setup detects the owner's sibling `valve` files (loose or PAK)
+and converts them privately. If complete, buy with **B → 8 → 7**; carried RPG appears in
+primary group **1** and the wheel. LMB launches a physical rocket, RMB toggles laser guidance,
+R reloads one rocket. Turn the laser off to reload while a rocket is flying. Missing or
+changed resources hide RPG without affecting CS weapons. See [RPG settings](docs/HALF-LIFE-RPG.md).
+
+CS grenades: **B → 8 Equipment → 4 HE / 5 Flashbang / 6 Smoke**. Select a carried
+grenade with group 4 or the wheel, then click to confirm. Hold LMB again to pull the pin, release to throw; the fuse starts
+at launch. Defaults carry one HE, two flashes and one smoke. See
+[grenade settings](docs/ARSENAL-SHOPS-AI.md#cs-16-grenades).
+Throw reach uses CS 1.6 pitch/speed and gravity at the Warcraft world scale, including
+running/jumping momentum. Updates replace only the former stock trajectory pair;
+custom values survive and F8 applies tuning to new throws.
+Thrown grenades use the original CS `w_` models and textures; setup converts these
+separately from the held `v_` models. World scale/spin are editable with F8.
 
 The local third-person prototype adds **F7** to enter directly with a selected owned mobile unit.
 WASD runs and Shift+WASD walks using that unit's authored model animations. F7/F6 return to RTS;
@@ -219,7 +252,8 @@ F8 reloads these settings and resets zoom to `CameraDistance`; wheel choices oth
 The camera keeps this distance near buildings by default: their broad model boxes can include empty
 space and previously forced extreme close-ups from either side. `[ThirdPerson] CameraBuildingCollision=false`
 controls this policy (true restores building push-in; startup/F8). With false the camera may pass through
-building models; terrain and tree/gate collision still shorten the boom.
+building models; terrain and separate tree/gate surfaces still shorten the boom.
+Boxes already containing the camera pivot, including enclosing bridge/ladder volumes, do not force close-ups.
 Reachable targets have brackets and a ground circle: red for enemies, yellow for other contacts.
 `[ThirdPerson] ShowTargetIndicator` hides/shows both; `TargetCircleRadius=64` sets the circle radius
 in Warcraft units (16..256). Change them in `Game/WarcraftCS/WarcraftCS.ini` and press F8 to reload.
@@ -281,8 +315,13 @@ Edit it and press F8 in FPS.
   Side contact with known walls/units preserves swept-valid coordinates for approach, sliding and
   retreat, preventing native nearest-cell placement from snapping the model sideways. Terrain,
   solid volumes and unknown native blockers remain checked; existing collision settings still apply.
+  Landing catches ledge/low-prop tops under the full footprint; cliff rims no longer trap a landed foot.
   Walking/jumping off a cliff starts a gravity-driven fall. Tune these [movement settings](docs/MOVEMENT.md);
   all apply on F8 without resetting the current jump. Default speed cap: 1000 CS units/s; configurable up to 2000.
+
+- `[WeaponSelection] Enabled=true` shows a CS-style owned-weapon menu in F6. Group keys or the wheel
+  preview a choice; LMB confirms without firing. `TimeoutSeconds=5` (.5–15 seconds) cancels idle choices.
+  Both apply at startup/F8, and false restores legacy immediate selection. See [selection controls](docs/WEAPON-SELECTION.md).
 
 - `[Audio] CSVolumePercent=100` controls all CS sounds independently of Warcraft audio. Range: **0вЂ“100**;
   **0** mutes CS, **100** retains the previous levels, and fractional values are accepted.
@@ -487,6 +526,11 @@ Warcraft CS is a hobby project. Help is provided when time allows; replies and f
    Include the release version, Player/Developer mode, Windows version, GPU, steps to reproduce
    and the relevant log: `install.log` in your client folder for setup, or
    `Game/WarcraftCS/WarcraftCS.log` for in-game problems.
+   Early setup/DLL failures are also recorded in
+   `%LOCALAPPDATA%\WarcraftCSLauncher\launcher.log`. Missing-HUD reports should
+   include a fresh F6/F7 reproduction with `[Logging] Detailed=true`; phase snapshots
+   follow `IntervalMs` and existing log rotation. Font failure/recovery events remain
+   available with detailed frame tracing disabled. F9 logs its deliberate clean view.
 3. Remove personal information from logs before uploading them. Do not attach game files or saves.
 
 Working installations are useful feedback too: share your Windows/GPU details and whether you tested

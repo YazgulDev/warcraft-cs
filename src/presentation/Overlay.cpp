@@ -1,10 +1,13 @@
 #include "Overlay.hpp"
 #include "ScopeView.hpp"
+#include "GrenadeView.hpp"
 #include "ReticleView.hpp"
 #include "TargetMarkerView.hpp"
 #include "ReticleDiagnostics.hpp"
 #include "BuyMenuView.hpp"
+#include "WeaponSelectionView.hpp"
 #include "HudHints.hpp"
+#include "HudRenderState.hpp"
 #include "InventoryHudView.hpp"
 #include "../platform/NativeMinimap.hpp"
 #include "../platform/DiagnosticLog.hpp"
@@ -22,6 +25,7 @@ void Overlay::Text(float x, float y, const char* text, const HudFont* font) {
     (font ? *font : font_).Draw(x,y,text);
 }
 void Overlay::ResetGraphics(bool deleteObjects) {
+    grenadeWorld_.Reset(deleteObjects);rocketView_.Reset(deleteObjects);
     spellHud_.Reset(deleteObjects);
     inventoryIcons_.Reset(deleteObjects);unitFont_.Reset(deleteObjects);inventoryFont_.Reset(deleteObjects);
     sky_.Reset(deleteObjects);
@@ -40,8 +44,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     const WorldLabelView& barView,float nearPlane,float farPlane) {
     // Explain early returns as well as submitted geometry when investigating a missing aiming mark.
     if (!controller.Visible()) { ReticleDiagnostics::Skip("fps-inactive"); return; }
-    // Unit view contains no mod HUD, arms, reticle, menu or hit feedback; the native sky remains in the world.
-    if(controller.UnitFirstPerson())return;
+    // Clean unit view still receives physical grenade smoke/blindness; its HUD and arms stay hidden below.
     if (!wglGetCurrentContext()) { ReticleDiagnostics::Skip("no-gl-context"); return; }
     HGLRC current = wglGetCurrentContext();
     if (context_ != current) {
@@ -52,7 +55,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
             glGetString(GL_VENDOR), glGetString(GL_RENDERER), glGetString(GL_VERSION), glIsEnabled(GL_LINE_STIPPLE));
     } else if (refreshPending_) {
         // Keep surviving resources: blind deletion after Alt-Tab can touch IDs recycled by the game.
-        bool valid=font_.Valid() && statusFont_.Valid() && spellFont_.Valid();
+        bool valid=font_.Valid() && statusFont_.Valid() && spellFont_.Valid() && grenadeWorld_.Valid() && rocketView_.Valid();
         valid=valid && sky_.Valid() && spellHud_.Valid() && inventoryIcons_.Valid() && unitFont_.Valid() && inventoryFont_.Valid();
         for (int i=0;i<WeaponSlots::Count;++i) if (loaded_[i] && !guns_[i].TexturesValid()) valid=false;
         for (int i=0;i<WeaponSlots::Count;++i) if (previewLoaded_[i] && !buyPreviews_[i].TexturesValid()) valid=false;
@@ -72,6 +75,8 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     if (height <= 0 || width <= 0) {
         ReticleDiagnostics::Skip("empty-client-rect", width, height); glPopAttrib(); return;
     }
+    // One cadence covers raw host state, the post-weapon handoff and the prepared/completed flat HUD.
+    bool sampledHud=hudDiagnostics_.Begin(controller.UnitFirstPerson() ? "clean-unit-view" : controller.ThirdPerson() ? "third-person" : "weapon-first-person",width,height);
     glViewport(0, 0, width, height);
     // Warcraft uses multiple texture units; isolate the overlay on unit zero.
     using ActiveTexture = void (APIENTRY*)(GLenum);
@@ -100,13 +105,30 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     if (controller.Settings().csSky && !controller.Status().contained && !controller.Status().hidden)
         sky_.Draw(root_,controller.SkyName(),controller.ViewYaw(),controller.ViewPitch(),controller.ViewFov(),float(width)/height);
     // World depth still exists here; the first-person weapon clears it in the next pass.
+    if(controller.UnitFirstPerson()) {
+        HudDiagnostics::Omitted("clean-unit-view",sampledHud);
+        if(!controller.Status().contained && !controller.Status().hidden) {
+            grenadeWorld_.Draw(root_,controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
+            rocketView_.Draw(root_,controller.RocketVisuals(),controller.LaserVisible(),controller.LaserPoint(),barView,width,height,nearPlane,farPlane);
+            GrenadeView::Draw(controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
+            GrenadeView::Flash(controller.FlashOpacity(),width,height);
+        }
+        glMatrixMode(GL_TEXTURE);glPopMatrix();glMatrixMode(oldMode);glPopAttrib();
+        if(activeTexture)activeTexture(oldTexture);
+        return;
+    }
     unsigned barCount=0;
     if(!controller.Status().contained && !controller.Status().hidden && !controller.Buying())
         barCount=HealthBarRenderer::Draw(bars,barView,width,height,nearPlane,farPlane);
+    if(!controller.Status().contained && !controller.Status().hidden) {
+        grenadeWorld_.Draw(root_,controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
+        rocketView_.Draw(root_,controller.RocketVisuals(),controller.LaserVisible(),controller.LaserPoint(),barView,width,height,nearPlane,farPlane);
+        GrenadeView::Draw(controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
+    }
     glMatrixMode(GL_PROJECTION); glPushMatrix(); glLoadIdentity();
     int index = controller.WeaponIndex();
     // Slightly tighten USP/AWP framing while preserving the original lower-edge arm origins.
-    static constexpr float projectionScales[] = {0.72f, 0.78f, 0.94f, 0.73f, 1.0f, 0.95f, 0.85f};
+    const auto& projectionScales=controller.Settings().weaponModelScale;
     float projectionScale = projectionScales[index];
     float top = std::tan(45.0f * 0.01745329252f) * projectionScale; float side = top * width / height;
     glFrustum(-side, side, -top, top, 1, 200);
@@ -114,21 +136,31 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     // Unit-only installations never open even a retained cache from an earlier full install.
     if (!controller.Settings().warcraftOnly && !attempted_[index]) {
         attempted_[index] = true;
-        static const char* names[] = {"ak47", "m4a1", "usp", "awp", "knife", "c4", "sword"};
+        const auto& names=WeaponSlots::Caches;
         loaded_[index] = guns_[index].Load(root_ + "\\assets\\" + names[index] + ".wcg");
     }
-    if (!controller.ThirdPerson() && loaded_[index] && !controller.Status().contained && !controller.Status().hidden && !controller.Scoped() && (index != WeaponSlots::C4 || controller.Ammo() > 0)) {
+    bool heldModel=!controller.ThirdPerson() && loaded_[index] && !controller.Status().contained && !controller.Status().hidden && (index!=WeaponSlots::C4 || controller.Ammo()>0);
+    const auto& visuals=controller.Settings().viewmodel;
+    float flash=muzzleFlash_.Sample(controller.ShotSerial(),heldModel && controller.ShowMuzzleFlash(),GetTickCount(),visuals.flashMilliseconds);
+    if (heldModel && (!controller.Scoped() || flash>0)) {
         // Give the weapon its own depth pass: back faces must not paint over the skin.
         glDepthMask(GL_TRUE); glClearDepth(1); glClear(GL_DEPTH_BUFFER_BIT);
         glEnable(GL_DEPTH_TEST); glDepthFunc(GL_LEQUAL); glDepthRange(0, 1);
         // Preserve each model's original arm origin instead of exposing detached elbow ends.
-        guns_[index].Draw(controller.Animation(), controller.AnimationTime());
+        const auto& pose=controller.WeaponPose();
+        glTranslatef(pose.x,pose.y,pose.z);glRotatef(pose.roll,0,0,1);
+        guns_[index].Draw(controller.Animation(),controller.AnimationTime(),flash,visuals.flashScale,controller.ShotSerial(),!controller.Scoped(),controller.IdleAnimation());
         glDisable(GL_DEPTH_TEST);
     }
+    bool unavailableView = controller.Status().contained || controller.Status().hidden;
+    HudDiagnostics::State("after-weapon",sampledHud);
+    {
+    // Re-establish all flat-HUD state after the world/weapon passes; restore it before the outer host scope.
+    HudRenderState hudState;
     glMatrixMode(GL_PROJECTION); glLoadIdentity(); glOrtho(0, width, height, 0, -1, 1);
     glMatrixMode(GL_MODELVIEW); glLoadIdentity(); glDisable(GL_TEXTURE_2D);
+    HudDiagnostics::State("prepared",sampledHud);
     // A swallowed/transported unit has no world viewpoint: hide equipment and retain the health/status HUD.
-    bool unavailableView = controller.Status().contained || controller.Status().hidden;
     if (unavailableView) {
         ReticleDiagnostics::Skip(controller.Status().contained ? "unit-contained" : "unit-hidden", width, height);
         glColor4f(0.015f, 0.015f, 0.015f, 1);
@@ -151,9 +183,9 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     Font(statusSize);
     controller.Hits().Draw(float(width), float(height));
     char status[160]; sprintf_s(status, "HP %.0f   %s   %d / %d   GOLD %d", controller.Health(),
-        ShooterController::weapons[index].name, controller.Ammo(), controller.Reserve(),controller.Gold());
+        controller.WeaponData(index).name, controller.Ammo(), controller.Reserve(),controller.Gold());
     // Melee equipment has no magazine; show only its name instead of a misleading empty-ammo counter.
-    if (WeaponSlots::Melee(index)) sprintf_s(status, "HP %.0f   %s   GOLD %d", controller.Health(), ShooterController::weapons[index].name,controller.Gold());
+    if (WeaponSlots::Melee(index)) sprintf_s(status, "HP %.0f   %s   GOLD %d", controller.Health(), controller.WeaponData(index).name,controller.Gold());
     // Hero combat has no magazine or CS weapon label; expose the mode and live native attack instead.
     if(controller.ThirdPerson())sprintf_s(status,"HP %.0f   UNIT ATTACK %.0f   GOLD %d",controller.Health(),
         controller.Status().attackDamage*controller.Settings().thirdPerson.damageMultiplier,controller.Gold());
@@ -165,8 +197,8 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         unitFont_.Ensure(std::clamp(int(unitLayout.portrait*.19f),12,32));
         UnitHudView::Draw(controller.UnitHud(),unitLayout,portrait,[&](float x,float y,const char* label){Text(x,y,label,&unitFont_);});
         if(controller.ThirdPerson())sprintf_s(status,"UNIT ATTACK %.0f   GOLD %d",controller.Status().attackDamage*controller.Settings().thirdPerson.damageMultiplier,controller.Gold());
-        else if(WeaponSlots::Melee(index))sprintf_s(status,"%s   GOLD %d",ShooterController::weapons[index].name,controller.Gold());
-        else sprintf_s(status,"%s   %d / %d   GOLD %d",ShooterController::weapons[index].name,controller.Ammo(),controller.Reserve(),controller.Gold());
+        else if(WeaponSlots::Melee(index))sprintf_s(status,"%s   GOLD %d",controller.WeaponData(index).name,controller.Gold());
+        else sprintf_s(status,"%s   %d / %d   GOLD %d",controller.WeaponData(index).name,controller.Ammo(),controller.Reserve(),controller.Gold());
     }
     glColor4f(1.0f, 0.85f, 0.3f, 1); Text(statusPad, statusY, status, &statusFont_);
     // Installation progress and fuse are independent of which weapon is currently equipped.
@@ -189,9 +221,10 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     controls+=" | "+key(ShortcutAction::ToggleUnitView)+": UNIT VIEW";
     std::string equipment="WHEEL: WEAPONS | "+key(ShortcutAction::Weapon6)+": C4 | "+key(ShortcutAction::Pickup)+": ITEM | "+key(ShortcutAction::Buy)+": BUY | "+key(ShortcutAction::BuyAmmo)+": AMMO";
     // The same control now dispatches the unit's primary melee or ranged attack.
-    if(controller.ThirdPerson())equipment="LMB: UNIT ATTACK | WASD: MOVE | WHEEL: CAMERA | "+key(ShortcutAction::Pickup)+": ITEM";
-    if(controller.Settings().warcraftOnly)equipment="LMB: UNIT ATTACK | WASD: MOVE | WHEEL: CAMERA | "+key(ShortcutAction::Pickup)+": ITEM";
+    if(controller.ThirdPerson())equipment="LMB: UNIT ATTACK | WASD: MOVE | WHEEL: CAMERA | "+key(ShortcutAction::Pickup)+": ITEM / SHOP";
+    if(controller.Settings().warcraftOnly)equipment="LMB: UNIT ATTACK | WASD: MOVE | WHEEL: CAMERA | "+key(ShortcutAction::Pickup)+": ITEM / SHOP";
     // Show the shared direct-contact mode continuously, including after the transient Q notice disappears.
+    equipment+=" | "+key(ShortcutAction::ArmyAI)+": ARMY AI "+(controller.ArmyAIActive() ? "ON" : "OFF");
     equipment+=" | "+key(ShortcutAction::ToggleAllyTargeting)+": ALLIES "+(controller.Settings().targetAllies ? "ON" : "OFF");
     if(controller.Settings().inventoryControls)equipment+=" | "+key(ShortcutAction::InventoryNumbers)+": ITEMS "+(controller.ItemControls().Numbers() ? "ON" : "OFF")+" | "+key(ShortcutAction::InventoryPanel)+": INVENTORY";
     std::string abilities=key(ShortcutAction::HealthBars)+": HEALTH BARS | "+key(ShortcutAction::Spell1)+"/"+key(ShortcutAction::Spell2)+"/"+key(ShortcutAction::Spell3)+"/"+key(ShortcutAction::Spell4)+": SPELLS | "+key(ShortcutAction::SelfCast)+": SELF";
@@ -209,7 +242,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         equipment+=" | "+key(ShortcutAction::SquadOrders)+": RMB "+(controller.SquadOrdersInFPS() ? "ORDERS" : "WEAPON");
     int hintRight=controller.MinimapVisible() ? mapLayout.x-mapLayout.padding : width-25;
     int columns=std::max(1,(hintRight-25)/hintGlyphWidth_);float hintY=27;
-    for(const auto& group : {controls,equipment,abilities,std::string(squad)}) {
+    if(!controller.Buying())for(const auto& group : {controls,equipment,abilities,std::string(squad)}) {
         for(const auto& row : HudHints::Wrap(group,columns)) {Text(25,hintY,row.c_str());hintY+=23;}
     }
     if (controller.RefillNotice()) Text(statusPad, statusY - statusSize - 16, controller.AmmoMessage(), &statusFont_);
@@ -244,18 +277,22 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
             sprintf_s(effect, "%s  %.0f%% SPEED", controller.Status().Label(), controller.Status().speedScale * 100);
         Text(statusPad, statusY - (statusSize + 16) * (controller.RefillNotice() ? 2 : 1), effect, &statusFont_);
     }
+    // Both menus share one lazy preview cache; missing art keeps the text selection usable.
+    auto weaponPreview=[&](int slot,float x,float y,float w,float h) {
+        auto item=BuyCatalog::Slot(slot);if(!item)return;
+        if(!previewAttempted_[slot]) {
+            previewAttempted_[slot]=true;
+            previewLoaded_[slot]=buyPreviews_[slot].Load(root_+"\\assets\\buy\\"+item->cache+".wcg");
+        }
+        if(previewLoaded_[slot])buyPreviews_[slot].DrawPreview(x,y,w,h);
+    };
     BuyMenuView::Draw(controller,width,height,window,[&](float x,float y,const char* text){Text(x,y,text);},
-        [&](float x,float y,const char* title){Text(x,y,title,&statusFont_);},
-        [&](int slot,float x,float y,float w,float h) {
-            auto item=BuyCatalog::Slot(slot);if (!item) return;
-            // Private previews load lazily; absent optional art never prevents a purchase.
-            if (!previewAttempted_[slot]) {
-                previewAttempted_[slot]=true;
-                previewLoaded_[slot]=buyPreviews_[slot].Load(root_+"\\assets\\buy\\"+item->cache+".wcg");
-            }
-            if (previewLoaded_[slot]) buyPreviews_[slot].DrawPreview(x,y,w,h);
-        });
+        [&](float x,float y,const char* title){Text(x,y,title,&statusFont_);},weaponPreview);
+    WeaponSelectionView::Draw(controller,width,height,[&](float x,float y,const char* text){Text(x,y,text);},weaponPreview);
     InventoryHudView::Cursor(window,controller.UnitHud(),InventoryHudLayout::Calculate(width,height,controller.Settings().spellIconSizePercent,controller.Settings().showSpellIcons,true),inventoryIcons_,controller.ItemControls());
+    GrenadeView::Flash(controller.FlashOpacity(),width,height); // Blindness covers hands, scope and HUD together.
+    HudDiagnostics::State("completed",sampledHud);
+    }
     glPopMatrix(); glMatrixMode(GL_PROJECTION); glPopMatrix();
     glMatrixMode(GL_TEXTURE); glPopMatrix();
     glMatrixMode(oldMode); glPopAttrib();
@@ -266,6 +303,11 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
             controller.Settings().healthBars.allies,controller.Settings().healthBars.enemies,unsigned(bars.size()),barCount,controller.Settings().healthBars.distance);
         // Sample display submission with the same bounded cadence as existing overlay diagnostics.
         wc3::Trace("overlay speed visible=%d speedCS=%.1f",controller.SpeedVisible(),controller.DisplaySpeed());
+        // Submission without GL errors cannot establish that a font atlas or native HUD snapshot exists.
+        GLint drawBuffer=0;glGetIntegerv(GL_DRAW_BUFFER,&drawBuffer);
+        wc3::Trace("HUD ready hintFont=%d statusFont=%d unitFont=%d spellFont=%d inventoryFont=%d actor=%08X enabled=%d warcraftOnly=%d drawBuffer=%04X",
+            font_.Ready(),statusFont_.Ready(),unitFont_.Ready(),spellFont_.Ready(),inventoryFont_.Ready(),
+            controller.UnitHud().actor,controller.Settings().showUnitHud,controller.Settings().warcraftOnly,drawBuffer);
         GLint viewport[4] = {}; GLboolean mask[4] = {};
         glGetIntegerv(GL_VIEWPORT, viewport); glGetBooleanv(GL_COLOR_WRITEMASK, mask);
         GLenum observedError = glGetError();

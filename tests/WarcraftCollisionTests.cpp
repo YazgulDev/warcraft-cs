@@ -14,6 +14,10 @@ bool bridgeAlive=true,edge=false,nativeBlocked=false,cliff=false,invalidDeck=fal
 bool drop=false, prop=false, wall=false, slope=false, water=false;
 bool tree=false,canopyBounds=false;
 bool wideCliff=false;
+bool landingLedge=false;
+float ledgeYaw=0,cliffRim=144;
+float actorRadius=0;
+bool nativeCliffRim=false;
 float slopeGradient=.3f;
 bool narrowPassage=false;
 int sideContact=0,sideRelocations=0;bool sideUnit=false;
@@ -21,12 +25,13 @@ wc3::Bits Bits(float value) { wc3::Bits bits;std::memcpy(&bits,&value,4);return 
 wc3::Bits __cdecl X(wc3::Handle) {return Bits(unitX);}
 wc3::Bits __cdecl Y(wc3::Handle) {return Bits(unitY);}
 BOOL __cdecl Blocked(float* x,float* y,int) {
+    if(landingLedge)return FALSE;
     if(sideContact)return FALSE; // Unit collision/side volumes are independent of the terrain pathing grid.
     // Stock tree pathing retains its trunk footprint while the canopy above remains empty space.
     if(tree) return *x>=88 && *x<=152 && std::abs(*y)<=32;
     if(slope) return FALSE;
     if(narrowPassage)return std::abs(*y)>20;
-    if (drop) return *x >= 8 && *x <= (wideCliff ? 144 : 56);
+    if (drop) return *x >= 8 && *x <= (wideCliff ? cliffRim : 56);
     if (prop || wall) return *x >= 60 && *x <= 80;
     return *x>=32;
 }
@@ -38,6 +43,8 @@ wc3::Bits __cdecl Maximum(wc3::Handle) { return Bits(4096); }
 void __cdecl Remove(wc3::Handle) {}
 int __cdecl Level(float* x,float*) { return (drop || cliff) && *x>=32 ? (drop ? 1 : 3) : 2; }
 void __cdecl Position(wc3::Handle,float* x,float* y) {
+    // A clear center beside a cliff can still trigger native nearest-cell placement for its wider hull.
+    if(nativeCliffRim && *x>0 && *x<8){unitX=*x+80;unitY=*y;return;}
     // Native placement may briefly publish a sideways snap even if the caller later restores logical XY.
     if(sideContact && (!sideUnit || std::abs(*x)<96) && *y*sideContact>8) {
         unitX=*x;unitY=*y+sideContact*80;++sideRelocations;return;
@@ -70,7 +77,7 @@ Bits (__cdecl* GetRectMaxX)(Handle)=Maximum;
 Bits (__cdecl* GetRectMaxY)(Handle)=Maximum;
 void (__cdecl* RemoveRect)(Handle)=Remove;
 float Real(Bits bits){float f;std::memcpy(&f,&bits,4);return f;}
-float TerrainGround(float x,float){return slope ? 100.f+x*slopeGradient : drop && x>=32 ? 0.f : cliff && x>=32 ? 180.f : 100.f;}
+float TerrainGround(float x,float y){return landingLedge ? (x*std::cos(ledgeYaw)+y*std::sin(ledgeYaw)>=32 ? 140.f : 100.f) : slope ? 100.f+x*slopeGradient : drop && x>=32 ? 0.f : cliff && x>=32 ? 180.f : 100.f;}
 float Ground(float x,float y){return TerrainGround(x,y)+(water ? 22.f : 0.f);}
 bool WalkableSurface(float,float y,float& height){
     if(!bridgeAlive || (edge && std::abs(y)>16))return false;
@@ -90,6 +97,7 @@ std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,b
     return {};
 }
 UnitCollisionProfile UnitCollisionProfile::Read(wc3::Handle,uintptr_t) {
+    if(actorRadius>0)return {true,true,actorRadius};
     return narrowPassage ? UnitCollisionProfile{true,true,16} : UnitCollisionProfile{};
 }
 int main(){
@@ -111,6 +119,14 @@ int main(){
     wideCliff=true;unitX=unitY=0;falling.Reset(100);
     for(int frame=0;frame<100;++frame){falling.Step(forward,1.f/60,250);collision.Move(1,falling,1.f/60);}
     Require(unitX>300 && falling.Grounded() && falling.FeetZ()==0,"full-cell cliff pathing must not trap a player after landing");
+    // Native cliff-level lookup changes before the far end of the blocked lower-bank cell.
+    cliffRim=272;unitX=unitY=0;falling.Reset(100);
+    for(int frame=0;frame<100;++frame){falling.Step(forward,1.f/60,250);collision.Move(1,falling,1.f/60);}
+    Require(unitX>300 && falling.Grounded() && falling.FeetZ()==0,"the outer lower-bank pathing cell must not trap a landed footprint");
+    nativeCliffRim=true;unitX=unitY=0;falling.Reset(100);
+    for(int frame=0;frame<100;++frame){falling.Step(forward,1.f/60,250);collision.Move(1,falling,1.f/60);}
+    Require(unitX>300,"a clear cliff-side center must not invoke native hull relocation");
+    nativeCliffRim=false;
     wideCliff=false;
     drop=false;prop=true;unitX=-50;unitY=0;
     MovementPhysics jumper;jumper.Reset(100);MoveInput jumping=forward;jumping.jump=true;
@@ -195,5 +211,43 @@ int main(){
         Require(unitX>200,"holding forward against a side obstacle must retain tangential sliding");
     }
     sideContact=0;
+    // Land with only the leading foot on a ledge, then continue onto it without another jump.
+    // Center-only support lets the feet sink below the lip and blocks the next forward step.
+    landingLedge=true;
+    for(float radius:{0.f,16.f,32.f})for(int fps:{20,60,144})for(int heading=0;heading<8;++heading) {
+        actorRadius=radius; // Cover the legacy fallback and both common native actor footprints.
+        ledgeYaw=heading*.78539816339f;
+        float cx=std::cos(ledgeYaw),cy=std::sin(ledgeYaw),dt=1.f/fps;
+        unitX=20*cx;unitY=20*cy;jumper.Reset(100);
+        MoveInput vertical;vertical.jump=true;
+        bool above=false;
+        for(int frame=0;frame<fps*2;++frame) {
+            jumper.Step(vertical,dt,250);collision.Move(1,jumper,dt);
+            above=above || jumper.FeetZ()>140;
+            vertical.jump=false;
+            if(above && jumper.Grounded())break;
+        }
+        Require(above && jumper.Grounded() && jumper.FeetZ()==140,"a descending footprint lands on the ledge lip before its center crosses");
+        MoveInput toward=forward;toward.yaw=heading*45.f;
+        for(int frame=0;frame<fps;++frame){jumper.Step(toward,dt,250);collision.Move(1,jumper,dt);}
+        Require(unitX*cx+unitY*cy>200 && jumper.Grounded(),"landing on the lip must allow continuing onto the upper surface");
+        toward.forward=-1;bool fallingOff=false;
+        for(int frame=0;frame<fps*3;++frame) {
+            jumper.Step(toward,dt,250);collision.Move(1,jumper,dt);
+            fallingOff=fallingOff || (!jumper.Grounded() && jumper.FeetZ()>100);
+        }
+        Require(unitX*cx+unitY*cy<0 && fallingOff && jumper.Grounded() && jumper.FeetZ()==100,"leaving the lip falls and lands without hovering or sticking");
+    }
+    // Model-backed low props share the same rim support rule as terrain, including a partial landing.
+    actorRadius=0;landingLedge=false;prop=true;unitX=48;unitY=0;jumper.Reset(100);
+    MoveInput vertical;vertical.jump=true;bool above=false;
+    for(int frame=0;frame<120;++frame) {
+        jumper.Step(vertical,1.f/60,250);collision.Move(1,jumper,1.f/60);
+        above=above || jumper.FeetZ()>140;vertical.jump=false;
+        if(above && jumper.Grounded())break;
+    }
+    Require(above && jumper.Grounded() && jumper.FeetZ()==140,"the edge of a solid prop must catch a descending foot");
+    for(int frame=0;frame<90;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(unitX>200 && jumper.Grounded() && jumper.FeetZ()==100,"a partial prop landing permits traversal and a clean drop off its far edge");
     std::puts("Warcraft bridge/collision regressions passed.");
 }
