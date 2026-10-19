@@ -75,6 +75,8 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     if (height <= 0 || width <= 0) {
         ReticleDiagnostics::Skip("empty-client-rect", width, height); glPopAttrib(); return;
     }
+    // One cadence covers raw host state, the post-weapon handoff and the prepared/completed flat HUD.
+    bool sampledHud=hudDiagnostics_.Begin(controller.UnitFirstPerson() ? "clean-unit-view" : controller.ThirdPerson() ? "third-person" : "weapon-first-person",width,height);
     glViewport(0, 0, width, height);
     // Warcraft uses multiple texture units; isolate the overlay on unit zero.
     using ActiveTexture = void (APIENTRY*)(GLenum);
@@ -104,6 +106,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         sky_.Draw(root_,controller.SkyName(),controller.ViewYaw(),controller.ViewPitch(),controller.ViewFov(),float(width)/height);
     // World depth still exists here; the first-person weapon clears it in the next pass.
     if(controller.UnitFirstPerson()) {
+        HudDiagnostics::Omitted("clean-unit-view",sampledHud);
         if(!controller.Status().contained && !controller.Status().hidden) {
             grenadeWorld_.Draw(root_,controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
             rocketView_.Draw(root_,controller.RocketVisuals(),controller.LaserVisible(),controller.LaserPoint(),barView,width,height,nearPlane,farPlane);
@@ -150,11 +153,13 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         glDisable(GL_DEPTH_TEST);
     }
     bool unavailableView = controller.Status().contained || controller.Status().hidden;
+    HudDiagnostics::State("after-weapon",sampledHud);
     {
     // Re-establish all flat-HUD state after the world/weapon passes; restore it before the outer host scope.
     HudRenderState hudState;
     glMatrixMode(GL_PROJECTION); glLoadIdentity(); glOrtho(0, width, height, 0, -1, 1);
     glMatrixMode(GL_MODELVIEW); glLoadIdentity(); glDisable(GL_TEXTURE_2D);
+    HudDiagnostics::State("prepared",sampledHud);
     // A swallowed/transported unit has no world viewpoint: hide equipment and retain the health/status HUD.
     if (unavailableView) {
         ReticleDiagnostics::Skip(controller.Status().contained ? "unit-contained" : "unit-hidden", width, height);
@@ -286,6 +291,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     WeaponSelectionView::Draw(controller,width,height,[&](float x,float y,const char* text){Text(x,y,text);},weaponPreview);
     InventoryHudView::Cursor(window,controller.UnitHud(),InventoryHudLayout::Calculate(width,height,controller.Settings().spellIconSizePercent,controller.Settings().showSpellIcons,true),inventoryIcons_,controller.ItemControls());
     GrenadeView::Flash(controller.FlashOpacity(),width,height); // Blindness covers hands, scope and HUD together.
+    HudDiagnostics::State("completed",sampledHud);
     }
     glPopMatrix(); glMatrixMode(GL_PROJECTION); glPopMatrix();
     glMatrixMode(GL_TEXTURE); glPopMatrix();

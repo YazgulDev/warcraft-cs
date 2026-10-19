@@ -1,5 +1,25 @@
 # Validation
 
+## HUD and installer diagnostic coverage (2026-10-19)
+
+One sampled frame records `HUD state` / `HUD raster` / `HUD texture` / `HUD matrices`
+for host, after-weapon, prepared and completed phases. Records include draw/read
+buffers and framebuffer IDs, blend equations, shader/program flags, MSAA coverage,
+masks, clipping state and active texture stages. F9 explicitly records the deliberate
+clean-view omission. No framebuffer readback or automatic screenshots are performed.
+Sampling obeys `[Logging] Detailed` / `IntervalMs` and existing file-size/rotation
+limits. Mode/context changes produce an immediate snapshot. Font creation records
+role, failure stage, requested/atlas sizes, Win32 error, glyph or coverage and
+recovery; repeated identical failures are limited to one per second per font.
+
+The real hidden-WGL regression verifies diagnostic content, sample suppression,
+mode transitions, Detailed=false, original texture/mask/matrix state and preservation
+of a pending host GL error. Existing HUD pixel tests remain unchanged. Launcher
+records identify selected profile, embedded/source variant and backend stages even
+before install.log opens; incompatible Miles-host rejection includes expected and
+actual SHA-256 fingerprints. The prebuilt-package regression checks that rejection.
+
+
 ## Whole-HUD raster state recovery (2026-10-19)
 
 The supplied AMD RX Vega 10 log records successful overlay/reticle submissions and

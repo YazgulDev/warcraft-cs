@@ -1,5 +1,9 @@
 # Source modules
 
+`HudDiagnostics` samples phase-specific GL state independently of drawing, preserves
+queried texture state and the GL error queue, and records labelled font lifecycle
+events. The existing platform `DiagnosticLog` still owns serialization and rotation.
+
 `HudRenderState` owns a scoped raster/texture reset for the flat HUD after the 3D
 world/weapon passes. It resets blend equations and MSAA coverage as well as fixed
 function masks/texture targets, then restores the caller state before the outer

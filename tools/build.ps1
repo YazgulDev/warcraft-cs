@@ -34,6 +34,7 @@ $sources += '"' + (Join-Path $modRoot 'src/presentation/ReticleView.cpp') + '"'
 $sources += '"' + (Join-Path $modRoot 'src/presentation/MuzzleFlashView.cpp') + '"' # Procedural flashes share the animated barrel/bob transform.
 $sources += '"' + (Join-Path $modRoot 'src/presentation/TargetMarkerView.cpp') + '"' # Read-only TPS contact presentation.
 $sources += '"' + (Join-Path $modRoot 'src/presentation/HudFont.cpp') + '"' # Driver-independent HUD glyph coverage.
+$sources += '"' + (Join-Path $modRoot 'src/presentation/HudDiagnostics.cpp') + '"' # Bounded phase/font diagnostics, separate from drawing.
 # Unit state, native portrait redirection and reusable icon textures keep separate ownership.
 $sources += @('platform/NativeUnitHud.cpp','platform/NativePortrait.cpp','presentation/HudIconCache.cpp','presentation/UnitHudView.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 # Interactive inventory owns its gestures, native command adapter, lifecycle and presentation independently.

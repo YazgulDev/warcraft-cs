@@ -516,6 +516,8 @@ void ShooterController::ReloadSettings() {
     CloseWeaponSelection(); // F8 cannot retain a choice under the previous controls/configuration.
     // Replace one complete snapshot; stale fractional credit must not survive a percentage/scope change.
     settings_=GameplaySettings::Load(root_+"\\WarcraftCS.ini");
+    // Record the effective file/profile and HUD switches again on F8, including preserved custom preferences.
+    wc3::Log("Settings profile config=%s\\WarcraftCS.ini warcraftOnly=%d unitHud=%d spells=%d inventory=%d",root_.c_str(),settings_.warcraftOnly,settings_.showUnitHud,settings_.showSpellIcons,settings_.showInventory);
     // F8 restores the saved designator preference and cannot leave absent optional content equipped.
     rpgLaser_=settings_.rpg.guidance;
     wc3::Log("RPG configured available=%d enabled=%d laser=%d",settings_.rpg.available,settings_.rpg.enabled,rpgLaser_);

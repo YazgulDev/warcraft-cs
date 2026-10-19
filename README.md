@@ -526,6 +526,11 @@ Warcraft CS is a hobby project. Help is provided when time allows; replies and f
    Include the release version, Player/Developer mode, Windows version, GPU, steps to reproduce
    and the relevant log: `install.log` in your client folder for setup, or
    `Game/WarcraftCS/WarcraftCS.log` for in-game problems.
+   Early setup/DLL failures are also recorded in
+   `%LOCALAPPDATA%\WarcraftCSLauncher\launcher.log`. Missing-HUD reports should
+   include a fresh F6/F7 reproduction with `[Logging] Detailed=true`; phase snapshots
+   follow `IntervalMs` and existing log rotation. Font failure/recovery events remain
+   available with detailed frame tracing disabled. F9 logs its deliberate clean view.
 3. Remove personal information from logs before uploading them. Do not attach game files or saves.
 
 Working installations are useful feedback too: share your Windows/GPU details and whether you tested

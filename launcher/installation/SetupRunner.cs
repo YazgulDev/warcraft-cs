@@ -9,11 +9,15 @@ namespace WarcraftCSLauncher {
         public static Task Install(ClientRequest request, bool consent, Action<string> report) {
             // Defense in depth: a disabled button alone must never be the download permission gate.
             if (!consent) throw new InvalidOperationException("Agree to downloads and installation before continuing.");
+            // Capture the selected profile before validation/extraction can fail outside install.log.
+            report("Setup request mode="+request.InstallMode+" warcraftOnly="+request.WarcraftOnly+" includesRuntime="+LauncherVariant.IncludesRuntime);
             if (request.InstallMode=="Player" && !LauncherVariant.IncludesRuntime)
                 throw new InvalidOperationException("This source-only launcher builds locally. Use Install or download the DLL-included launcher for Player setup.");
             request.ValidateDestination();
             return Task.Run(() => {
+                report("Setup stage=idle-check");
                 ReleaseUpdater.RequireIdle(request.InstallDirectory);
+                report("Setup stage=extract-embedded-source");
                 var source = SourcePayload.Extract(request.InstallDirectory, consent);
                 InstallSource(request,source,consent,report);
             });
@@ -22,6 +26,7 @@ namespace WarcraftCSLauncher {
         public static void InstallSource(ClientRequest request, string source, bool consent, Action<string> report,string launcherFile=null) {
             // Both embedded setup and release updates share the same permission, idle-game and path checks.
             if (!consent) throw new InvalidOperationException("Download/install consent is required.");
+            report("Setup source="+source+" mode="+request.InstallMode+" warcraftOnly="+request.WarcraftOnly);
             request.ValidateDestination(); ReleaseUpdater.RequireIdle(request.InstallDirectory);
             // Older releases do not understand this profile and would demand CS or enable weapon mode.
             if (request.WarcraftOnly && !File.Exists(Path.Combine(source,"setup","installation-profile.ps1")))
@@ -30,6 +35,7 @@ namespace WarcraftCSLauncher {
             if (!Path.GetFullPath(source).StartsWith(allowed,StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("Invalid update source path.");
             // The Player installer reads embedded module data from this EXE or the verified update-cache EXE.
             request.LauncherExecutable=launcherFile ?? System.Reflection.Assembly.GetExecutingAssembly().Location;
+            report("Setup stage=backend launcher="+request.LauncherExecutable);
             var requestFile=Path.Combine(request.InstallDirectory,"install-request.json"); request.Save(requestFile);
             if (!File.Exists(Path.Combine(source,"setup","warcraft-runtime.ps1"))) {
                 // Older GitHub releases skip existing game files. Use the current embedded repair adapter
