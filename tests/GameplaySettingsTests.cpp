@@ -4,12 +4,15 @@
 #include "../src/combat/CombatDamage.hpp"
 #include "../src/combat/UnitScaling.hpp"
 #include <cassert>
+#include <filesystem>
 #include <cmath>
 #include <fstream>
 #include <windows.h>
 namespace wc3 { void Log(const char*,...) {} }
 int main() {
     GameplaySettings settings;
+    // Every firearm reaches visible distant targets, even when an older INI retains a short individual range.
+    for(int slot=0;slot<WeaponSlots::Count;++slot)if(WeaponSlots::Firearm(slot))assert(settings.FirearmRange(slot)==30000);
     assert(settings.movement.useNativeUnitCollision);
     // Exercise the actual INI reload boundary; malformed values retain the enabled movement fix.
     char collisionFolder[MAX_PATH]={};GetCurrentDirectoryA(MAX_PATH,collisionFolder);
@@ -431,5 +434,136 @@ int main() {
         float expected=!strcmp(value,"-1") ? 16.f : !strcmp(value,"nan") ? 80.f : 100.f;
         assert(GameplaySettings::Load(path).inventoryDropDistance==expected);
     }
+    // New options use the real loader, including malformed/range handling and a saved U action on upgrade.
+    {std::ofstream f(path);f<<"[ArmyAI]\nWorkers=99\nIntervalMs=nan\nProductionRetrySeconds=99999\nEnabled=false\nWorker=hpea\nHall=bad\n[Shops]\nRadius=-1\n[Shotguns]\nPellets=0\nSpreadDegrees=99\n[Deagle]\nMagazine=9999\nFireInterval=0\nReloadSeconds=nan\nPrice=777\n[Shortcuts]\nPickup=U\n";}
+    auto added=GameplaySettings::Load(path);
+    assert(!added.armyAI.enabled && added.armyAI.workers==30 && added.armyAI.intervalMs==1500);
+    assert(added.armyAI.productionRetrySeconds==3600);
+    assert(added.armyAI.worker=="hpea" && added.armyAI.hall.empty() && added.shopInteractionRadius==100);
+    assert(added.shotgunPellets==1 && added.shotgunSpreadDegrees==15);
+    assert(added.weapons[WeaponSlots::Deagle].magazine==1000 && added.weapons[WeaponSlots::Deagle].interval==.025f);
+    assert(added.weapons[WeaponSlots::Deagle].reload==2.2f && added.weaponPrice[WeaponSlots::Deagle]==777);
+    assert(added.shortcuts.Key(ShortcutAction::Pickup)=='U' && added.shortcuts.Key(ShortcutAction::ArmyAI)==0);
+    DeleteFileA(path.c_str());
+    {std::ofstream f(path);f<<"[Combat]\nMinimumFirearmRange=30000\n[M3]\nRange=1200\n[Rendering]\nDrawDistance=20000\n";}
+    auto reach=GameplaySettings::Load(path);
+    assert(reach.weapons[WeaponSlots::M3].range==1200 && reach.FirearmRange(WeaponSlots::M3)==40000);
+    for(auto value:{"0","-1","nan","inf","","bad","999999","16000"}) {
+        WritePrivateProfileStringA("Combat","MinimumFirearmRange",value,path.c_str());
+        reach=GameplaySettings::Load(path);
+        float expected=(!strcmp(value,"0") || !strcmp(value,"-1")) ? 0 : !strcmp(value,"999999") ? 50000 : !strcmp(value,"16000") ? 16000 : 30000;
+        assert(reach.minimumFirearmRange==expected);
+        assert(reach.FirearmRange(WeaponSlots::M3)==(expected>0 ? std::max(expected,40000.f) : 1200));
+    }
+    // F8 takes the whole new snapshot; explicit long per-gun settings also survive the shared extension.
+    WritePrivateProfileStringA("M3","Range","49000",path.c_str());
+    assert(GameplaySettings::Load(path).FirearmRange(WeaponSlots::M3)==49000);
+    WritePrivateProfileStringA("M3","Range","999999",path.c_str());
+    assert(GameplaySettings::Load(path).weapons[WeaponSlots::M3].range==50000);
+    // Both fresh and F8 snapshots validate the new secondary mode without changing the ordinary single-shot interval.
+    DeleteFileA(path.c_str());
+    for(auto value:{"-2","999","nan","bad","","0.2"}) {
+        {std::ofstream f(path);f<<"[Glock]\nSecondaryBurstRounds="<<value<<"\nSecondaryBurstInterval="<<value<<"\nSecondaryCooldown="<<value<<"\n";}
+        auto glock=GameplaySettings::Load(path);
+        assert(glock.glockBurstRounds>=1 && glock.glockBurstRounds<=5);
+        assert(glock.glockBurstInterval>=.025f && glock.glockBurstInterval<=1);
+        assert(glock.glockSecondaryCooldown>=.1f && glock.glockSecondaryCooldown<=5);
+        assert(glock.weapons[WeaponSlots::Glock].interval==.15f);
+        if(!strcmp(value,"nan") || !strcmp(value,"bad") || !*value)
+            assert(glock.glockBurstRounds==3 && glock.glockBurstInterval==.1f && glock.glockSecondaryCooldown==.5f);
+    }
+    WritePrivateProfileStringA("Glock","SecondaryBurstRounds","4",path.c_str());
+    WritePrivateProfileStringA("Glock","SecondaryBurstInterval","0.08",path.c_str());
+    auto glock=GameplaySettings::Load(path);assert(glock.glockBurstRounds==4 && glock.glockBurstInterval==.08f);
+    // Fresh installs and F8 snapshots enable shell transfers/interrupts; explicit legacy preferences survive.
+    for(auto value:{"true","1","false","0","bad",""}) {
+        {std::ofstream f(path);f<<"[Shotguns]\nShellByShellReload="<<value<<"\nInterruptReloadOnFire="<<value<<"\n";}
+        auto shells=GameplaySettings::Load(path);bool enabled=strcmp(value,"false") && strcmp(value,"0");
+        assert(shells.shotgunShellReload==enabled && shells.shotgunInterruptReload==enabled);
+    }
+    // Startup/F8 bounds and fallbacks protect the viewmodel clocks and GL transforms.
+    for(auto value:{"false","0","true","1","nan","bad","","-1","999"}) {
+        {std::ofstream f(path);f<<"[Viewmodel]\nBobEnabled="<<value<<"\nMuzzleFlash="<<value<<"\nBobAmount="<<value<<"\nBobFrequency="<<value<<"\nBobResponse="<<value<<"\nMuzzleFlashMilliseconds="<<value<<"\nMuzzleFlashScale="<<value<<"\n";}
+        const auto visual=GameplaySettings::Load(path).viewmodel;
+        bool enabled=strcmp(value,"false") && strcmp(value,"0");assert(visual.bob==enabled && visual.muzzleFlash==enabled);
+        assert(visual.bobAmount>=0 && visual.bobAmount<=3 && visual.bobFrequency>=.5f && visual.bobFrequency<=4);
+        assert(visual.bobResponse>=1 && visual.bobResponse<=30 && visual.flashMilliseconds>=10 && visual.flashMilliseconds<=200);
+        assert(visual.flashScale>=0 && visual.flashScale<=3);
+        if(!strcmp(value,"nan") || !strcmp(value,"bad") || !*value)
+            assert(visual.bobAmount==1 && visual.bobFrequency==1.8f && visual.bobResponse==12 && visual.flashMilliseconds==65 && visual.flashScale==1);
+    }
+    WritePrivateProfileStringA("Viewmodel","BobAmount","0.7",path.c_str());
+    WritePrivateProfileStringA("Viewmodel","MuzzleFlashMilliseconds","90",path.c_str());
+    assert(GameplaySettings::Load(path).viewmodel.bobAmount==.7f && GameplaySettings::Load(path).viewmodel.flashMilliseconds==90);
+    // Grenade limits and effect clocks come from the same validated startup/F8 snapshot as all weapons.
+    for(auto value:{"-1","99999","nan","inf","bad","","0.4"}) {
+        {std::ofstream f(path);f<<"[Grenades]\nFuseSeconds="<<value<<"\nThrowSpeed="<<value<<"\nGravity="<<value<<"\nBounce="<<value<<"\nMaxActive="<<value<<"\n[HEGrenade]\nCapacity="<<value<<"\nDamage="<<value<<"\nRadius="<<value<<"\n[Flashbang]\nBlindSeconds="<<value<<"\nUnitStunSeconds="<<value<<"\n[SmokeGrenade]\nDurationSeconds="<<value<<"\nOpacity="<<value<<"\n";}
+        const auto profile=GameplaySettings::Load(path);const auto& g=profile.grenades;
+        assert(g.fuse>=.2f && g.fuse<=10 && g.throwSpeed>=50 && g.throwSpeed<=2000 && g.gravity>=50 && g.gravity<=2000);
+        assert(g.bounce>=0 && g.bounce<=.9f && g.maxActive>=1 && g.maxActive<=128 && g.heRadius>=32 && g.heRadius<=2000);
+        assert(g.flashSeconds>=0 && g.flashSeconds<=10 && g.flashUnitStunSeconds>=0 && g.flashUnitStunSeconds<=10 && g.smokeSeconds>=1 && g.smokeSeconds<=60 && g.smokeOpacity>=0 && g.smokeOpacity<=1);
+        assert(profile.weapons[WeaponSlots::HE].magazine>=1 && profile.weapons[WeaponSlots::HE].magazine<=100);
+        assert(profile.ContactDamage(WeaponSlots::HE,false,999)==profile.damage[WeaponSlots::HE]);
+        if(!strcmp(value,"nan") || !strcmp(value,"inf") || !strcmp(value,"bad") || !*value)assert(g.fuse==1.5f && g.throwSpeed==1125 && g.gravity==660 && g.smokeSeconds==18);
+    }
+    {std::ofstream f(path);f<<"[Grenades]\nEnabled=false\nFuseSeconds=2.25\n[Flashbang]\nCapacity=3\nUnitStunSeconds=0\n[SmokeGrenade]\nDurationSeconds=7\n";}
+    const auto grenades=GameplaySettings::Load(path);assert(!grenades.grenades.enabled && grenades.grenades.fuse==2.25f && grenades.weapons[WeaponSlots::Flashbang].magazine==3 && grenades.grenades.flashUnitStunSeconds==0 && grenades.grenades.smokeSeconds==7);
+    // World geometry tuning uses the real F8 parser and never permits a zero/unsafe scale.
+    for(auto value:{"-1","99999","nan","bad","","0.5"}) {
+        WritePrivateProfileStringA("Grenades","WorldModelScale",value,path.c_str());WritePrivateProfileStringA("Grenades","WorldSpinDegrees",value,path.c_str());
+        auto world=GameplaySettings::Load(path).grenades;assert(world.worldModelScale>=.25f && world.worldModelScale<=4 && world.worldSpin>=0 && world.worldSpin<=1440);
+        if(!strcmp(value,"nan") || !strcmp(value,"bad") || !*value)assert(world.worldModelScale==1 && world.worldSpin==360);
+    }
+    // Startup/F8 menu preferences use bounded defaults, including malformed and non-finite text.
+    for(const char* value:{"", "bad", "nan", "inf", "-1", "99", "2.5"}) {
+        {std::ofstream file(path);file<<"[WeaponSelection]\nEnabled="<<value<<"\nTimeoutSeconds="<<value<<"\n";}
+        auto menu=GameplaySettings::Load(path);
+        assert(menu.weaponSelectionMenu);
+        float timeout=!strcmp(value,"-1") ? .5f : !strcmp(value,"99") ? 15.f : !strcmp(value,"2.5") ? 2.5f : 5.f;
+        assert(menu.weaponSelectionTimeout==timeout);
+    }
+    for(const char* value:{"false","0","FALSE"}) {
+        {std::ofstream file(path);file<<"[WeaponSelection]\nEnabled="<<value<<"\nTimeoutSeconds=3\n";}
+        auto menu=GameplaySettings::Load(path);assert(!menu.weaponSelectionMenu && menu.weaponSelectionTimeout==3);
+    }
+    // Old stock defaults upgrade both on startup/F8; partial customizations and versioned settings survive.
+    for(const char* config:{"[Grenades]\nThrowSpeed=750\nGravity=800\n", "[Grenades]\nThrowSpeed=750\nGravity=800\nTrajectoryVersion=1\n"}) {
+        {std::ofstream file(path);file<<config;}
+        auto g=GameplaySettings::Load(path).grenades;assert(g.throwSpeed==1125 && g.gravity==660);
+    }
+    for(const char* config:{"[Grenades]\nThrowSpeed=1000\nGravity=800\n", "[Grenades]\nThrowSpeed=750\nGravity=800\nTrajectoryVersion=2\n"}) {
+        {std::ofstream file(path);file<<config;}
+        auto g=GameplaySettings::Load(path).grenades;assert(g.gravity==800 && g.throwSpeed==(!strstr(config,"1000") ? 750 : 1000));
+    }
+    for(const char* value:{"-1","9999","nan","inf","bad","","0.75"}) {
+        {std::ofstream file(path);file<<"[Grenades]\nLightGravityScale="<<value<<"\n";}
+        auto scale=GameplaySettings::Load(path).grenades.lightGravityScale;
+        assert(scale>=.1f && scale<=2);
+        if(!strcmp(value,"nan") || !strcmp(value,"inf") || !strcmp(value,"bad") || !*value)assert(std::abs(scale-10.f/11)<.00001f);
+    }
+    // The optional resource seal is checked by the real startup/F8 parser, with no OpenGL dependency.
+    auto rpgRoot=std::filesystem::current_path()/("warcraft-rpg-test-"+std::to_string(GetCurrentProcessId()));
+    assert(std::filesystem::create_directory(rpgRoot));auto assets=rpgRoot/"assets";std::filesystem::create_directory(assets);
+    auto rpgPath=(rpgRoot/"WarcraftCS.ini").string();{std::ofstream f(rpgPath);f<<"[RPG]\nDamage=777\nMaximumSpeed=1234\n";}
+    assert(!GameplaySettings::Load(rpgPath).rpg.available);
+    const char* rpgFiles[]={"rpg.wcg","rpg.wca","buy/rpg.wcg","world/rpgrocket.wcg","sounds/hl_rpg_fire.wav","sounds/hl_rpg_motor.wav","sounds/hl_rpg_explode.wav"};
+    {
+        std::ofstream seal(assets/"rpg.ready",std::ios::binary);seal.write("WRP1",4);
+        for(auto name:rpgFiles) {
+            auto output=assets/name;std::filesystem::create_directories(output.parent_path());std::string bytes="synthetic optional asset";
+            {std::ofstream f(output,std::ios::binary);f<<bytes;}
+            uint64_t n=bytes.size(),hash=14695981039346656037ull;for(unsigned char c:bytes){hash^=c;hash*=1099511628211ull;}
+            seal.write(reinterpret_cast<char*>(&n),8);seal.write(reinterpret_cast<char*>(&hash),8);
+        }
+    }
+    auto optional=GameplaySettings::Load(rpgPath);assert(optional.rpg.available && optional.WeaponEnabled(WeaponSlots::RPG) && optional.damage[17]==777 && optional.rpg.maximumSpeed==1234);
+    {std::ofstream f(assets/"world/rpgrocket.wcg",std::ios::app);f<<"corrupt";}
+    assert(!GameplaySettings::Load(rpgPath).rpg.available);
+    for(auto key:{"Radius","LaunchSpeed","MaximumSpeed","Acceleration","IgnitionSeconds","BoostSeconds","LaunchGravity","LifetimeSeconds","InheritedVelocity","WorldModelScale","TrailSeconds","TrailSize","MaxActive"}) {
+        WritePrivateProfileStringA("RPG",key,"nan",rpgPath.c_str());auto g=GameplaySettings::Load(rpgPath).rpg;
+        assert(std::isfinite(g.maximumSpeed) && g.radius>=32 && g.lifetime>=1 && g.maxActive>=1);
+    }
+    // This test owns the freshly created temporary directory exclusively.
+    assert(rpgRoot.parent_path()==std::filesystem::current_path());std::filesystem::remove_all(rpgRoot);
     DeleteFileA(path.c_str());return 0;
 }

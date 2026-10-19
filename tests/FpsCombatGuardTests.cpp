@@ -21,6 +21,7 @@ uintptr_t __fastcall NativeTargetGetter(uintptr_t,uintptr_t) {return 123;}
 BOOL (__cdecl* targetOrder)(wc3::Handle,int,wc3::Handle)=nullptr;
 BOOL (__cdecl* pointOrder)(wc3::Handle,int,float*,float*)=nullptr;
 int scriptOrders=0;
+bool passiveUnitEnabled=false;
 BOOL __cdecl NativeTarget(wc3::Handle,int,wc3::Handle) {++scriptOrders;return TRUE;}
 BOOL __cdecl NativePoint(wc3::Handle,int,float* x,float*) {++scriptOrders;arguments[0]=uintptr_t(*x);return TRUE;}
 int __fastcall NativeCheck(uintptr_t,uintptr_t,uintptr_t a,uintptr_t b,uintptr_t c,uintptr_t d) {
@@ -58,7 +59,7 @@ int main() {
     // Read-only identity fails closed until the native target signature is verified.
     assert(FpsCombatGuard::AttackTargetObject(1)==0);
     std::vector<unsigned char> image(0x3D0000);base=uintptr_t(image.data());
-    auto actorGetter=[](){return actor;};auto unitPolicy=[](uintptr_t){return false;};
+    auto actorGetter=[](){return actor;};auto unitPolicy=[](uintptr_t at){return passiveUnitEnabled && at==uintptr_t(otherObject.data());};
     auto attackPolicy=[](uintptr_t at){return at==passiveAttack;};
     // A wrong host signature must not install new dispatch hooks.
     FpsCombatGuard::Install(base,actorGetter,unitPolicy,attackPolicy,Hook);assert(!checked && !started);
@@ -97,5 +98,11 @@ int main() {
     actor=0;assert(checked(actorAttack,0,1,2,3,4)==17 && checks==2);
     started(actorAttack,0,1,2,3,4,5,6,7,8,9,10);assert(starts==2);
     assert(targetOrder(1,851983,2) && pointOrder(1,851983,&x,&y) && scriptOrders==6);
+    // A native shop releases the hero to its buyer UI while O followers still retain their passive policy.
+    passiveUnitEnabled=true;
+    assert(checked(passiveAttack,0,1,2,3,4)==0xDD && checks==2);
+    started(passiveAttack,0,1,2,3,4,5,6,7,8,9,10);assert(starts==2);
+    assert(!targetOrder(2,851983,1) && !pointOrder(2,851983,&x,&y) && scriptOrders==6);
+    assert(targetOrder(1,851983,2) && scriptOrders==7);
     std::puts("PASS basic attack validation/retaliation blocked in FPS; spells, other units and RTS dispatch preserved.");
 }

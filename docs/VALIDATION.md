@@ -1,5 +1,215 @@
 # Validation
 
+## HUD and installer diagnostic coverage (2026-10-19)
+
+One sampled frame records `HUD state` / `HUD raster` / `HUD texture` / `HUD matrices`
+for host, after-weapon, prepared and completed phases. Records include draw/read
+buffers and framebuffer IDs, blend equations, shader/program flags, MSAA coverage,
+masks, clipping state and active texture stages. F9 explicitly records the deliberate
+clean-view omission. No framebuffer readback or automatic screenshots are performed.
+Sampling obeys `[Logging] Detailed` / `IntervalMs` and existing file-size/rotation
+limits. Mode/context changes produce an immediate snapshot. Font creation records
+role, failure stage, requested/atlas sizes, Win32 error, glyph or coverage and
+recovery; repeated identical failures are limited to one per second per font.
+
+The real hidden-WGL regression verifies diagnostic content, sample suppression,
+mode transitions, Detailed=false, original texture/mask/matrix state and preservation
+of a pending host GL error. Existing HUD pixel tests remain unchanged. Launcher
+records identify selected profile, embedded/source variant and backend stages even
+before install.log opens; incompatible Miles-host rejection includes expected and
+actual SHA-256 fingerprints. The prebuilt-package regression checks that rejection.
+
+
+## Whole-HUD raster state recovery (2026-10-19)
+
+The supplied AMD RX Vega 10 log records successful overlay/reticle submissions and
+zero sampled GL errors, but cannot establish pixel visibility or the exact remote
+state that hid the HUD. The supplied installation transcript describes Developer
+mode and ends during preparation; it does not contain the bundled-launcher error.
+
+`test-hud-font.ps1` now reproduces a blank complete 2D HUD under a legal subtract
+blend equation using production health/mana/XP panels, labels and glyphs. The new
+`HudRenderState` scope produces the same pixels as a clean context and restores
+blend equations, texture stages/targets, masks, stencil/depth/scissor, wireframe,
+smoothing, coverage flags and texture matrices. It repeats on three actual hidden
+WGL contexts. This establishes the controlled state regression, not a reproduction
+on the reporter's AMD driver. Bounded runtime diagnostics distinguish missing font
+atlases, missing actor snapshots, disabled HUD, active install profile and draw
+buffer. Setup transcripts also record the requested profile and installation mode.
+
+
+## Optional Half-Life RPG (2026-10-19)
+
+`tools/test-rpg.ps1` checks production launch/boost/coast, projected movement,
+frame-rate tolerance, guidance, close/thin-wall collision and range/lifetime bounds.
+Actual hidden-WGL readback checks rocket geometry, trail, laser, airburst, native
+depth occlusion, scale, inherited GL state and replacement contexts. Synthetic
+optional-conversion tests exercise loose/PAK discovery, missing/removed/malformed
+resources, hand-free previews and completion seals without any retail assets.
+
+The real startup/F8 parser verifies absence, complete seals, modified caches and
+bounded/malformed tuning. Catalog/layout/transaction tests cover hiding absent RPG,
+zero-cost bypass rejection, purchase/ammo/duplicate behavior and carried primary
+ordering. Migration preserves saved RPG values and disabled preferences across
+repeated updates. Shared native blast regressions preserve HE policies and cover
+RPG single impact, friendly protection, gates, active limits, pause and snapshots.
+Real XAudio2 tests check idempotent motor loops, stop-all, master gain and existing
+shotgun events. A disposable ordinary-Player Warcraft map verifies absent/present/
+disabled resources, the actual seventh equipment mouse row, 4000/500 gold charges,
+loaded/empty animation routing, motor start/stop, laser reload lock/off, guided
+redirection to a second building and continued rocket impacts through F7/F9. The
+three native impacts reduce neutral-building HP. Projectile/model queries retain
+pathing-texture buildings with zero native unit collision radius. Original test
+DLL/INI and all private asset files are restored byte-exact. Sound queue/motor
+state is observed; the silent capture does not establish a listening test or
+cross-driver compatibility.
+
+
+## Close-contact camera obstruction follow-up (2026-10-19)
+
+Production camera regressions reproduce a zero-distance boom inside a broad destructable
+proxy, then cover containing bridge/ladder volumes, separate gate/tree contacts and terrain.
+Only camera obstruction filtering changes; weapon intersections and physical movement
+retain their own collision contracts. Existing building opt-in and wheel distances remain.
+A private ordinary-Player map reproduces the previous bridge collapse from a 500-unit
+boom to zero with a nearby hostile. The corrected module retains 500 beside that
+hostile and inside the bridge proxy, still shortens for a separate gate, returns to
+500 after removing it, follows wheel zoom to 650 and reloads 500 with F8. The test
+restores its DLL/INI byte-exact; no campaign fixtures are used.
+
+
+## CS grenade throw reach (2026-10-19)
+
+A native-adapter regression first reproduces the short level throw (less than 100 world
+units after .1 s). Production launch tests cover CS pitch remapping in both directions,
+speed cap, 1.5 world scale, yaw symmetry, running/jumping momentum, forward release and
+near-wall/raised-terrain clipping. A level HE first landing falls between 750 and 780
+world units on flat ground. The native adapter verifies distinct HE/flash/smoke gravity.
+Existing fuse, pause, collision, effects and immutable-launch regressions remain in place.
+Settings and installer migration checks cover bounded/default/non-finite tuning, the old
+stock pair, custom pairs, explicit versioned opt-outs and repeated update idempotence.
+
+
+## Sequential weapon wheel follow-up (2026-10-19)
+
+The selector regression first reproduces M4-to-USP traversal despite AWP being the next visible
+primary row. Selection now follows the same group/row order used by the overlay. Full forward and
+reverse cycles check every boundary; raw wheel batches check both directions at 1/9/17/40 detents,
+sparse inventories, depleted anchors, fractional packets and single consumption. Signed detents
+reach the controller directly: no shortest-distance slot reconstruction can reverse a fast batch.
+Legacy immediate switching also reduces complete laps by its actual carried count. Existing
+confirmation, cancellation, expiry and tree/wheel regressions still pass; no tuning keys change.
+
+## CS-style carried weapon selector (2026-10-19)
+
+`tools/test-weapon-selection.ps1` exercises the production portable pending-choice state, all catalog
+entries across five groups, owned-only cycles, wheel wrap, confirmation, empty groups, expiry,
+depletion and a backwards clock. Settings and migration regressions cover malformed/default/bounded
+timeouts, opt-outs, saved Tab routing and idempotent upgrades. Existing buy transactions/previews
+and actual-WGL firearm presentation regressions pass.
+
+An ordinary Player module in a separate owned offline 1.26a map verifies the normal starting kit,
+Tab item priority, empty primary groups, all-weapons grant, repeated categories, original private
+previews, wheel selection, held-LMB confirmation without fire, subsequent Deagle fire/flash,
+M249/M3 access, RMB/0/Escape/timeout cancellation, inventory/view precedence, F8, remapped G and
+legacy immediate-selection opt-out. Screenshots inspect primary/pistol/grenade/melee stacks and
+F7/F9 exclusion. The selector has no pointer rows: as in CS, LMB anywhere confirms the highlighted
+weapon while aiming stays live. Native assets, DLL and INI are restored byte-for-byte afterwards.
+The first fixture attempt incorrectly enabled the all-weapons starting kit and was discarded.
+The final panel is placed below existing command hints; packaged-module appearance is checked separately.
+
+## Ledge landing and lower-bank traversal follow-up (2026-10-18)
+
+The real movement/collision regression reproduces a foot landing on a lip while its center remains
+outside: center-only support sinks below the top and blocks the next step. It now checks landing,
+immediate traversal and a subsequent gravity-driven drop at 20/60/144 Hz, eight approach directions,
+legacy radius 24 and native radii 16/32. A model-backed low prop covers the same partial landing.
+Additional regressions reproduce the outer blocked lower-bank cell and native hull relocation with
+a clear center beside a cliff. Existing bridges/destruction, water, tall and unknown blockers,
+maximum-speed thin walls, steep ramps, trunk retreat and left/right wall sliding still pass.
+
+Separate owned offline 1.26a maps compare ordinary Player modules: the previous module stops at
+x=289 on the lower bank; the fixed module passes x=614 and lands at z=0. Uphill jumps, retreat
+and diagonal movement also run on that terrain. A native scaled barricade catches the foot at
+z=33.7 with the center still outside its model, then permits traversal and falling to z=0 in F6
+and F7; the previous module instead falls to z=0 beside the lip. That map disables the test actor's
+native pathing before entry to preserve the deliberately overlapping spawn; production swept
+collision remains active. A first fixture attempt was discarded because native placement moved
+the actor away during loading. No campaign was opened; each owned process restored its lab DLL
+and INI byte-for-byte. These checks do not establish traversal for every custom-map obstruction.
+
+## Current follow-up: per-shell ammunition and firing interruption
+
+Portable reload tests cover delayed shell credit, single transfer per completed
+insertion, resume after interruption, late frames, repeated/backward observations,
+reserve/capacity bounds and absence of a second magazine award on completion.
+INI and upgrade tests cover enabled defaults, opt-outs, malformed values and
+preservation of custom reload policies. Policy is snapshotted at reload start.
+
+## Partial shotgun reloads and Glock actions (809eb4e)
+
+Portable tests verify constant insertion speed and shorter partial reloads, unchanged
+full-magazine duration, terminal-pose holding, bounded burst rounds, partial ammo,
+cooldown, cancellation, uneven frames and millisecond clock wraparound. Real INI
+tests cover bounds, fallbacks, F8 snapshots and preservation of custom Glock values
+through repeated upgrades. XAudio2 tests submit a real silent source voice for both
+authored M3 and missing-event XM1014 inserts, asserting exactly one event per shell;
+the incompatible-COM test continues to cover timing without optional audio setup.
+
+## Firearm reach and previous shotgun timeline (5783ba4)
+
+The native build and affected settings, migration, buying, recoil, native attack,
+hitbox, melee and shotgun timeline suites pass. Shared reach covers all eleven
+firearms, saved short per-gun ranges, maximum draw distance, F8 opt-out/restore,
+malformed values and custom-value preservation during repeated updates. Reload
+tests cover one/two/full magazines, 30/144 FPS and uneven frame intervals, phase
+overshoot and terminal-pose holding. A real COM initialization failure confirms
+that private animation metadata loads before optional audio setup.
+
+An ordinary Player run in a separate offline copy confirmed native HP loss from
+all eleven firearms against a visible castle 4500 world units away (4328.5 to
+its surface). The same AK shot missed with the shared extension disabled on F8.
+M3 and XM1014 each played exactly two required insertions followed by their
+closing action; both completed at the configured deadline. The recorded reloads
+were visually inspected. A second scene confirmed that an invulnerable foreground
+castle intercepts the extended ray at 2024.5 units without damaging the castle
+behind it. The first scene's chat-driven obstruction action did not run while
+FPS owned keyboard input; the independent scene placed the obstruction at startup.
+Both owned test processes stopped, module/config/assets were restored byte-for-byte,
+and the save snapshot remained unchanged. No campaign coverage is claimed.
+
+## Current feature branch: arsenal, native shops and army AI
+
+The native-independent regression suite and affected buy/config/settings/recoil/spell/army
+tests cover all 14 catalog slots, category/row reachability, paid ownership and reserves,
+U migration conflicts, F8 bounds, hidden mining workers, production reservations with an
+empty native building order, pause gaps, synchronous map ownership transfers, combat/manual
+exclusions, arrival stops, base defense and passive O policy while a native shop owns input.
+The verified native frame boundary regression remains the construction dispatch boundary.
+
+Private conversion of the owner's models produced 14 weapon caches and hand-free previews.
+An optional missing XM1014 animation sample is reported and remains silent; required firing
+samples remain mandatory. Ordinary Player verification purchased and fired Deagle, Glock,
+MP5, P90, M249, M3 and XM1014; paid ammunition and M249/shotgun reloads completed. The visible
+M249 mouse row purchased the same entry as keyboard navigation.
+
+In an isolated Kael scene, native shop purchases in F7/F6 charged exactly 350/175 gold and
+updated inventory/native hero stats. E restored the captured view. One O follower remained
+reserved while AI constructed farms/barracks, gathered resources, sent support and defended
+against a scripted raid. Four worker orders took the initial two workers to the configured
+six, without repeated queueing during zero-current-order training. U off stopped new decisions.
+Visible construction and combat survived more than 110 seconds after camera movement. An
+independent unchanged-module RTS control also exercised normal barracks construction.
+
+The initial pre-world build dispatch exposed a native uninitialized skin-matrix crash;
+AI orders now execute after completed world/UI/overlay submission. The subsequent long native
+run had no controller/native faults. Test modules/configs were restored byte-for-byte and the
+tests used a separate offline game copy. This validates the human build plan and the listed
+interactions; it does not claim full campaign coverage or native testing of every race/custom plan.
+
+Both launcher variants retain the normal source/version/native hash and setup/reinstall
+validation path. Model validation fixtures represent the complete expanded owned arsenal.
+
 ## FPS native pursuit rejection (test branch, 2026-10-11)
 
 The guard rejects the controlled basic-attack component at native validation/dispatch and intercepts
@@ -742,3 +952,49 @@ rebuild changes version/source metadata without changing the tested runtime logi
 validate both EXEs, source/version/native hashes, complete release-body and manifest summary
 resolution, native-free public archives and Player payload layout/tamper rejection. The public
 source archive is checked with the mod publication lint against the owned installation.
+
+
+### Release 0.10.0 verification (2026-10-18)
+
+Compared all feature commits and source/config changes against immutable v0.9.1. The merged
+runtime passes the complete independent wrapper and INI migration checks. Added coverage
+includes native HUD snapshots/layouts, inventory item identity and gestures, squad ownership,
+Y/legacy-key migration, native ranged widgets/callback reuse, protected-ally ray filtering and
+left/right side collision without transient native placement. Existing physics, bridge/cliff,
+rendering, spell, attack, target filtering, buy/sky and guarded native contracts remain covered.
+
+Disposable ordinary-Player scenes during feature development exercised real F6/F7 HUD and
+inventory, point spells, stable building zoom and item-number defaults, all-owned RMB native
+damage/cancel, Y and scope restoration, natural H combat priority, neutral/gate targeting,
+left/right wall/unit contact with stable idle, and Kael's native gate missiles. Recorded frames
+show native missile flight; gate launch HP remains unchanged until a later native impact.
+Native opt-outs and quest immunity pass. Private DLL/INI restoration is byte-exact, saves diffs
+are empty, and user campaign progress was not used. The final 0.10.0 module receives the same
+native gate/missile smoke check; the release rebuild changes version/source metadata.
+
+Both actual launchers are tested for source/version/native hash binding, native-free public
+ZIPs, installation/update contracts, complete GitHub release-body versus exact-version compact
+summary resolution and Player/Developer dialog previews. Source snapshots and published assets
+are linted/hashed and compared with the immutable tag. Public latest-release lookup/download
+is verified after publication without installing dependencies or changing an existing client.
+This is not a complete campaign/custom-map or cross-driver compatibility claim.
+
+### First-person weapon presentation
+
+`tools/test-viewmodel.ps1` checks speed/stance motion, stopping/airborne fade,
+30/144 Hz equivalence and accepted-shot pulse lifetime including clock wrap.
+Synthetic GoldSrc fixtures verify selected and dual attachment export without
+game assets. Actual hidden-WGL readback verifies visible flash pixels at animated
+and legacy geometry anchors, shared model transforms, inherited wireframe/logic
+and write-mask restoration, and no depth writes. Settings and repeated migration
+checks cover bounded defaults, F8 snapshots and preservation of visual preferences.
+Native appearance still requires an authorized private Warcraft scene on the
+target driver; the standalone tests do not establish cross-driver compatibility.
+
+### Grenade verification
+
+`tools/test-grenades.ps1` exercises held pins, early release, one-shot launch, cancellation, swept thin-wall bounce, 30/144 Hz trajectory tolerance, fuse limits, falloff and facing. Synthetic native targets verify one detonation, fixed damage, friendly protection, cover/gates, immutable launch tuning, pause-aware clocks, pre-paused-unit preservation, disorientation release, active limits and smoke expiry. Actual hidden-WGL readback checks flight visibility, cloud depth occlusion, near-eye density, full-screen flash and inherited write-mask/logic-state restoration. INI and migration checks verify bounds, malformed/default/custom F8 values and idempotent updates. A real private Warcraft scene is still required for native appearance and input/animation/audio integration on the target driver.
+
+The CS audio regression also queues a project-authored odd-length 8-bit PCM sample followed by unpadded LIST metadata. The mixer accepts complete PCM before optional trailing metadata, matching the owned pinpull.wav layout without weakening data-chunk bounds checks.
+
+World grenade regressions use project-authored textured cubes with offset model origins. Actual WGL pixels verify all three slots, centering, camera handedness, depth occlusion, scale/spin, inherited state and context replacement. Synthetic MDL conversion checks w_ source selection and separate world cache destinations. Config tests cover bounded appearance values, F8 launch snapshots and migration of saved scale/spin.

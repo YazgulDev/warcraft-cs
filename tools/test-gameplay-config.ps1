@@ -340,3 +340,94 @@ $bothText=Get-Content -LiteralPath $legacyBoth -Raw
 foreach($setting in @('Refill=F12','AllWeapons=F5','ToggleThirdPerson=F7','ToggleUnitView=F9','Speed=F11')) {
     if(!$bothText.Contains($setting)){throw "Combined shortcut migration lost preference/default: $setting"}
 }
+# New arsenal/AI keys merge into custom profiles without moving a saved U action or replacing paid values.
+$arsenal=Join-Path $folder 'custom-arsenal.ini'
+@('[Shortcuts]','Pickup=U','[Deagle]','Price=777','Magazine=13','[Glock]','SecondaryBurstRounds=2','SecondaryBurstInterval=0.08','[Shotguns]','ShellByShellReload=false','InterruptReloadOnFire=false','[ArmyAI]','Workers=9') | Set-Content -LiteralPath $arsenal -Encoding ascii
+Update-GameplayConfig $template $arsenal
+$arsenalText=Get-Content -LiteralPath $arsenal -Raw
+foreach($setting in @('Pickup=U','ArmyAI=NONE','Price=777','Magazine=13','Workers=9','[M249]','[XM1014]','SpreadDegrees=5','[Shops]','Radius=450','SecondaryBurstRounds=2','SecondaryBurstInterval=0.08','SecondaryCooldown=0.5','ShellByShellReload=false','InterruptReloadOnFire=false')) {
+    if(!$arsenalText.Contains($setting)){throw "Arsenal/AI upgrade lost preference/default: $setting"}
+}
+$arsenalHash=(Get-FileHash -LiteralPath $arsenal).Hash
+Update-GameplayConfig $template $arsenal
+if((Get-FileHash -LiteralPath $arsenal).Hash -ne $arsenalHash){throw 'Arsenal/AI config migration is not idempotent.'}
+
+# Visual preferences survive upgrades while new siblings are inserted only once.
+$viewmodel=Join-Path $folder 'custom-viewmodel.ini'
+@('[Viewmodel]','BobEnabled=false','BobAmount=0.7','MuzzleFlash=false','MuzzleFlashMilliseconds=90') | Set-Content -LiteralPath $viewmodel -Encoding ascii
+Update-GameplayConfig $template $viewmodel
+$visualText=Get-Content -LiteralPath $viewmodel -Raw
+foreach($setting in @('BobEnabled=false','BobAmount=0.7','MuzzleFlash=false','MuzzleFlashMilliseconds=90','BobFrequency=1.8','BobResponse=12','MuzzleFlashScale=1')) {
+    if(!$visualText.Contains($setting)){throw "Viewmodel migration lost preference/default: $setting"}
+}
+if([regex]::Matches($visualText,'(?m)^\[Viewmodel\]').Count -ne 1){throw 'Duplicate viewmodel section.'}
+$visualHash=(Get-FileHash -LiteralPath $viewmodel).Hash
+Update-GameplayConfig $template $viewmodel
+if((Get-FileHash -LiteralPath $viewmodel).Hash -ne $visualHash){throw 'Viewmodel migration is not idempotent.'}
+
+# Grenade updates preserve saved effect/carry/price preferences and insert every new sibling once.
+$grenades=Join-Path $folder 'custom-grenades.ini'
+@('[Grenades]','Enabled=false','FuseSeconds=2.25','WorldModelScale=1.25','WorldSpinDegrees=180','[HEGrenade]','Price=777','Capacity=4','[Flashbang]','UnitStunSeconds=0','[SmokeGrenade]','DurationSeconds=7') | Set-Content -LiteralPath $grenades -Encoding ascii
+Update-GameplayConfig $template $grenades
+$grenadeText=Get-Content -LiteralPath $grenades -Raw
+foreach($setting in @('Enabled=false','FuseSeconds=2.25','WorldModelScale=1.25','WorldSpinDegrees=180','Price=777','Capacity=4','UnitStunSeconds=0','DurationSeconds=7','ThrowSpeed=1125','AmmoPrice=300','BlindSeconds=3','Opacity=0.85')) {
+    if(!$grenadeText.Contains($setting)){throw "Grenade migration lost preference/default: $setting"}
+}
+foreach($section in @('Grenades','HEGrenade','Flashbang','SmokeGrenade')) {
+    if([regex]::Matches($grenadeText,'(?m)^\['+$section+'\]').Count -ne 1){throw 'Duplicate grenade section.'}
+}
+$grenadeHash=(Get-FileHash -LiteralPath $grenades).Hash
+Update-GameplayConfig $template $grenades
+if((Get-FileHash -LiteralPath $grenades).Hash -ne $grenadeHash){throw 'Grenade migration is not idempotent.'}
+
+# Shared reach upgrades old firearm ranges without rewriting their saved values; an explicit opt-out survives.
+foreach($saved in @('', 'MinimumFirearmRange=0', 'MinimumFirearmRange=42000')) {
+    $reachConfig=Join-Path $folder 'custom-firearm-range.ini'
+    @('[Combat]',$saved,'[M3]','Range=1200') | Set-Content -LiteralPath $reachConfig -Encoding ascii
+    Update-GameplayConfig $template $reachConfig
+    $reachText=Get-Content -LiteralPath $reachConfig -Raw
+    $expected=if($saved){$saved}else{'MinimumFirearmRange=30000'}
+    if(!$reachText.Contains($expected) -or !$reachText.Contains('Range=1200') -or
+        [regex]::Matches($reachText,'(?m)^MinimumFirearmRange=').Count -ne 1){throw 'Firearm reach migration lost/duplicated a preference.'}
+    $reachHash=(Get-FileHash -LiteralPath $reachConfig).Hash
+    Update-GameplayConfig $template $reachConfig
+    if((Get-FileHash -LiteralPath $reachConfig).Hash -ne $reachHash){throw 'Firearm reach migration is not idempotent.'}
+}
+
+# New selector defaults fill older installs; custom opt-outs/timeouts survive repeated upgrades.
+foreach($custom in @($false,$true)) {
+    $selectorConfig=Join-Path $folder ('weapon-selector-'+$custom+'.ini')
+    @('[WeaponSelection]',$(if($custom){'Enabled=false';'TimeoutSeconds=9'}),'[Inventory]','NumbersByDefault=false') | Set-Content -LiteralPath $selectorConfig -Encoding ascii
+    Update-GameplayConfig $template $selectorConfig
+    $selectorText=Get-Content -LiteralPath $selectorConfig -Raw
+    $enabled=if($custom){'Enabled=false'}else{'Enabled=true'}
+    $timeout=if($custom){'TimeoutSeconds=9'}else{'TimeoutSeconds=5'}
+    if(!$selectorText.Contains($enabled) -or !$selectorText.Contains($timeout) -or !$selectorText.Contains('NumbersByDefault=false')){throw 'Weapon selector migration lost defaults/custom controls.'}
+    $selectorHash=(Get-FileHash $selectorConfig).Hash
+    Update-GameplayConfig $template $selectorConfig
+    if((Get-FileHash $selectorConfig).Hash -ne $selectorHash){throw 'Weapon selector migration is not idempotent.'}
+}
+
+# Migrate only the complete old stock grenade pair; custom trajectories and versioned pairs are preserved.
+foreach($case in @(@('750','800','','1125','660'),@('750.0','800.0','1','1125','660'),@('1000','800','','1000','800'),@('750','500','','750','500'),@('750','800','2','750','800'))) {
+    $trajectoryConfig=Join-Path $folder ('trajectory-'+[guid]::NewGuid().ToString()+'.ini')
+    @('[Grenades]',('ThrowSpeed='+$case[0]),('Gravity='+$case[1]),$(if($case[2]){'TrajectoryVersion='+$case[2]}),'InheritedVelocity=0.5','[Flashbang]','Capacity=4') | Set-Content -LiteralPath $trajectoryConfig -Encoding ascii
+    Update-GameplayConfig $template $trajectoryConfig
+    $trajectoryText=Get-Content -LiteralPath $trajectoryConfig -Raw
+    foreach($expected in @(('ThrowSpeed='+$case[3]),('Gravity='+$case[4]),'TrajectoryVersion=2','LightGravityScale=0.9090909','InheritedVelocity=0.5','Capacity=4')) {
+        if(!$trajectoryText.Contains($expected)){throw ('Trajectory migration lost '+$expected)}
+    }
+    $trajectoryHash=(Get-FileHash $trajectoryConfig).Hash;Update-GameplayConfig $template $trajectoryConfig
+    if((Get-FileHash $trajectoryConfig).Hash -ne $trajectoryHash){throw 'Trajectory migration must be idempotent.'}
+}
+
+# An optional RPG section merges even when absent locally; saved opt-outs and tuning survive repeated updates.
+$rpgConfig=Join-Path $folder 'custom-optional-rpg.ini'
+@('[RPG]','Enabled=false','Damage=777','MaximumSpeed=1234','Price=2222') | Set-Content -LiteralPath $rpgConfig -Encoding ascii
+Update-GameplayConfig $template $rpgConfig
+$rpgText=Get-Content $rpgConfig -Raw
+foreach($expected in @('Enabled=false','Damage=777','MaximumSpeed=1234','Price=2222','GuidanceByDefault=true','TrailSeconds=1','MaxReserve=5')) {
+    if(!$rpgText.Contains($expected)){throw ('RPG update lost '+$expected)}
+}
+$rpgHash=(Get-FileHash $rpgConfig).Hash;Update-GameplayConfig $template $rpgConfig
+if((Get-FileHash $rpgConfig).Hash -ne $rpgHash){throw 'RPG migration is not idempotent.'}

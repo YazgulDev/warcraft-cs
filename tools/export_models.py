@@ -92,7 +92,7 @@ class StudioModel:
             sequences.append((name, float(fps), frames, np.asarray(matrices, dtype="<f4").tobytes()))
         return sequences
 
-    def export(self, destination: Path, excluded_textures: tuple[str, ...] = ()) -> dict:
+    def export(self, destination: Path, excluded_textures: tuple[str, ...] = (), muzzle_attachments: tuple[int, ...] = (0,)) -> dict:
         textures = []
         texture_names = []
         excluded = {name.casefold() for name in excluded_textures}
@@ -153,6 +153,24 @@ class StudioModel:
                 output.write(struct.pack("<2I", texture, len(packed) // 24) + packed)
             for name, fps, frames, matrices in sequences:
                 output.write(struct.pack("<32sfI", name, fps, frames) + matrices)
+            # Optional WCG2 footer retains model-local muzzle anchors and their animated bones.
+            # Older readers ignore the footer; models without attachments keep a geometry-derived fallback.
+            count, attachments = self.integer(212), self.integer(216)
+            if not 0 <= count <= 32:
+                raise ValueError("Unsafe studio attachment count")
+            selected = muzzle_attachments if count else ()
+            if len(selected) > 8:
+                raise ValueError("Unsafe selected muzzle count")
+            output.write(struct.pack("<4sI", b"WCM1", len(selected)))
+            for index in selected:
+                if not 0 <= index < count:
+                    raise ValueError("Missing selected muzzle attachment")
+                at = attachments + index * 88
+                bone = self.integer(at + 36)
+                point = self.floats(at + 40, 3)
+                if not 0 <= bone < len(self.bones) or not np.isfinite(point).all():
+                    raise ValueError("Invalid muzzle attachment")
+                output.write(struct.pack("<I3f", bone, *point))
         return {"model": self.path.name, "sha256": hashlib.sha256(self.data).hexdigest(),
                 "textures": len(textures), "triangles": sum(len(m[1]) // 72 for m in meshes),
                 "bones": len(self.bones), "sequences": [s[0].decode("ascii") for s in sequences],
@@ -186,6 +204,14 @@ class StudioModel:
         return sounds
 
 
+def export_world_grenades(cstrike: Path, output: Path) -> list[dict]:
+    # Thrown bodies are the owner's w_ models, never scaled viewmodels or generated billboard substitutes.
+    destination = output / "world"
+    destination.mkdir(parents=True, exist_ok=True)
+    return [StudioModel(cstrike / "models" / f"w_{name}.mdl").export(destination / f"{name}.wcg", muzzle_attachments=())
+            for name in ("hegrenade", "flashbang", "smokegrenade")]
+
+
 def main():
     from export_skies import export as export_skies
     parser = argparse.ArgumentParser(description=__doc__)
@@ -200,13 +226,16 @@ def main():
     args.output.mkdir(parents=True, exist_ok=True)
     manifest = []
     weapon_sounds = set()
-    for weapon in ("ak47", "m4a1", "usp", "awp", "knife", "c4"):
+    for weapon in ("ak47", "m4a1", "usp", "awp", "knife", "c4", "deagle", "glock18", "mp5", "p90", "m249", "m3", "xm1014", "hegrenade", "flashbang", "smokegrenade"):
         model = StudioModel(args.cstrike / "models" / f"v_{weapon}.mdl")
         # Both silencer-capable weapons are permanently unsilenced in this mod, including their geometry.
         excluded = ("silencer.bmp",) if weapon in ("m4a1", "usp") else ()
-        manifest.append(model.export(args.output / f"{weapon}.wcg", excluded))
+        # Retail M4/USP attachment 2 belongs to the unsilenced barrel; attachment 0 includes the suppressor.
+        muzzle = (2,) if excluded and model.integer(212) >= 3 else (0,)
+        manifest.append(model.export(args.output / f"{weapon}.wcg", excluded, muzzle))
         weapon_sounds.update(model.audio_timeline(args.output / f"{weapon}.wca"))
         export_preview(args.output / f"{weapon}.wcg", args.output / "buy" / f"{weapon}.wcg", model.texture_names())
+    manifest.extend(export_world_grenades(args.cstrike, args.output))
     # Import only an explicitly selected/private model; public packages contain no external sword asset.
     if args.sword_model:
         sword = StudioModel(args.sword_model)
@@ -221,10 +250,21 @@ def main():
     # Keep retail-derived files in the private lab, with their source fingerprints.
     sounds = args.output / "sounds"
     sounds.mkdir(exist_ok=True)
-    weapon_sounds.update(("ak47-1.wav", "m4a1_unsil-1.wav", "usp_unsil-1.wav", "awp1.wav", "knife_slash1.wav", "knife_hit1.wav", "knife_hit2.wav", "knife_hit3.wav", "knife_hit4.wav", "knife_stab.wav", "knife_hitwall1.wav", "c4_plant.wav", "c4_click.wav",
-                          "c4_explode1.wav", "c4_beep1.wav", "c4_beep3.wav", "c4_beep4.wav", "c4_beep5.wav"))
+    required_sounds={"deagle-1.wav", "glock18-2.wav", "mp5-1.wav", "p90-1.wav", "m249-1.wav", "m3-1.wav", "xm1014-1.wav", "ak47-1.wav", "m4a1_unsil-1.wav", "usp_unsil-1.wav", "awp1.wav", "knife_slash1.wav", "knife_hit1.wav", "knife_hit2.wav", "knife_hit3.wav", "knife_hit4.wav", "knife_stab.wav", "knife_hitwall1.wav", "c4_plant.wav", "c4_click.wav",
+                          "c4_explode1.wav", "c4_beep1.wav", "c4_beep3.wav", "c4_beep4.wav", "c4_beep5.wav"}
+    # Engine-driven shell sounds are needed even when an owned shotgun model has no sound event.
+    required_sounds.update({"m3_insertshell.wav", "m3_pump.wav"})
+    # Grenade flight/impact effects use the owner's stock CS samples, never bundled retail audio.
+    required_sounds.update({"grenade_hit1.wav","grenade_hit2.wav","grenade_hit3.wav","hegrenade-1.wav","flashbang-1.wav","sg_explode.wav"})
+    weapon_sounds.update(required_sounds)
     for name in sorted(weapon_sounds):
         source = args.cstrike / "sound" / "weapons" / name
+        # Some retail animation events reference absent samples (XM1014 cliprelease1); retain silence for that event.
+        if not source.is_file() and name not in required_sounds:
+            print(f"Optional animation sample absent in owned installation: {name}")
+            continue
+        if not source.is_file():
+            raise FileNotFoundError(f"Required owned weapon sample is missing: {source}")
         shutil.copy2(source, sounds / name)
     # Default concrete samples cover footsteps, jump push-off and landings independently of weapons.
     for step in range(1, 5):
@@ -232,6 +272,9 @@ def main():
     (args.output / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     # Sky faces remain private game-derived content, just like hands, skins and audio.
     export_skies(args.cstrike, args.output / "skies")
+    # Optional guest content never makes an otherwise complete Counter-Strike install fail.
+    from export_halflife_rpg import export as export_rpg
+    print(json.dumps(export_rpg(args.cstrike, args.output), indent=2))
     print(json.dumps(manifest, indent=2))
 
 

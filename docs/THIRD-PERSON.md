@@ -8,8 +8,11 @@ Buildings, hidden and loaded units cannot be selected.
 
 Mouse wheel **up** moves the third-person camera closer; **down** moves it farther away.
 The session's chosen distance survives FPS/third-person switches within the same map. Native terrain
-and building collision still shorten the camera when necessary, then restore the requested distance
-when the view is clear. Camera rays for manual attacks and spells use the same zoomed position.
+and destructable collision still shorten the camera when necessary, then restore the requested distance
+when the view is clear. An enclosing model box already containing the pivot does not shorten the boom,
+including broad bridge/ladder volumes; separate solid gate/tree surfaces still do.
+Building collision is opt-in with `CameraBuildingCollision=true`; false is
+the stable-zoom default and permits passage through building visuals. Camera rays for manual attacks and spells use the same zoomed position.
 Scrolling in third person does not switch CS weapons or interrupt a spell. Buy menus, paused/disabled
 control and lost focus discard wheel input; partial notches cannot cross view transitions.
 `[ThirdPerson] CameraZoomStep=50` sets Warcraft units per wheel notch (0..500; 0 disables zoom).
@@ -43,9 +46,10 @@ Casting, stun, disarm, hidden/cargo states and buy menus suppress the indicator.
   outside melee reach or behind terrain/solid objects cannot receive the contact.
 - Ranged attacks converge from the unit's body toward the reticle contact. A second trace prevents firing
   through a wall beside the body. Reach uses the unit's current native primary attack range by default.
-  Confirmed unit contacts dispatch the map's native missile and attack effects; empty attacks still play
+  Confirmed unit and destructable-gate contacts dispatch the map's native missile and attack effects; empty attacks still play
   their animation. Native homing, impact behavior and map triggers retain ownership after launch.
-  Disabling native attack effects, or attacking a destructable, uses an instant damage fallback.
+  Disabling native attack effects or native ranged projectiles uses an instant damage fallback.
+  Gate missiles keep native quest immunity and do not add instant duplicate damage.
 - Autoattack cancellation tracks retained targets per unit, so repeated Stop commands cannot continuously
   reset a manual attack. Automatic pursuit remains blocked; movement and aiming stay under player control.
   Native preparation/impact guards also reject attacks from lingering autonomous behavior; scoped manual
@@ -56,7 +60,7 @@ Casting, stun, disarm, hidden/cargo states and buy menus suppress the indicator.
 - Z/X/C/V and Alt self-casting retain learned slots, mana, native cooldowns and channel ownership.
   Spell targeting starts from the visible camera reticle. Starting an accepted spell cancels a pending swing.
 - The hero's native body is visible; first-person arms, recoil and scope are disabled in this mode.
-  The centered camera boom shortens against terrain, destructables and buildings. Moving allies do not push it.
+  The centered camera boom shortens against terrain/destructables; building collision is opt-in. Moving allies do not push it.
 - RTS menus/cinematics retain ownership. View transitions cancel pending contacts and keep inventory and position.
 
 `[Shortcuts] ToggleThirdPerson=F7` enters/exits TPS independently of F6.
@@ -169,3 +173,14 @@ Wheel-zoom regressions verify fractional/signed input, bounds, opt-out and real 
 An isolated DotA scene verified native camera displacement, unchanged TPS weapon, retained FPS weapon
 scrolling, discarded fractions across view changes, F8 distance/step/limits reload and collision shortening
 without losing the requested distance. The zoomed attack contact and captured native views were checked.
+
+
+## Unit HUD, inventory and squad controls (0.10.0)
+
+F7 displays the animated portrait, HP/mana/hero XP and item row above spells. Tab toggles
+1..6 item/weapon numbers (items initially); I opens native mouse use, targeting, drag-out
+dropping and slot rearrangement. F9 remains clean. RMB orders available owned mobile units
+to the aimed target; empty aim cancels. In armed F6, Y switches RMB orders/weapon action.
+Protected allies cannot intercept a squad command with allied targeting off. Active H combat
+and explicit target orders outrank yielding/leash movement; idle following still works.
+See [0.10.0 notes](RELEASE-0.10.0.md) for settings, migration, restrictions and validation.

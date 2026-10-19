@@ -77,8 +77,11 @@ function Assert-PrebuiltHost([string]$Directory,[string]$Warcraft) {
     # The generated Miles forwarders target the exact owned library used for this supported build.
     $original=Join-Path $Warcraft 'WarcraftOriginalMss.dll'
     if (!(Test-Path -LiteralPath $original)) { $original=Join-Path $Warcraft 'Mss32.dll' }
-    if ((Get-FileHash -LiteralPath $original -Algorithm SHA256).Hash.ToLowerInvariant() -cne $manifest.OriginalSoundSha256) {
-        throw 'Your Miles library differs from the Player package host. Use Developer mode to generate matching forwarders locally.'
+    # A valid game version can still have another Miles build; retain the exact reason in the launcher's backend journal.
+    $actualSound=(Get-FileHash -LiteralPath $original -Algorithm SHA256).Hash.ToLowerInvariant()
+    Write-Output ("Player host check: expectedSound={0} actualSound={1} source={2}" -f $manifest.OriginalSoundSha256,$actualSound,$manifest.SourceRevision)
+    if ($actualSound -cne $manifest.OriginalSoundSha256) {
+        throw ("Your Miles library differs from the Player package host. Expected {0}; found {1}. Use Developer mode to generate matching forwarders locally." -f $manifest.OriginalSoundSha256,$actualSound)
     }
     foreach ($name in @('WarcraftCS.mix','Mss32.dll')) {
         $bytes=[IO.File]::ReadAllBytes((Join-Path $Directory $name));Assert-X86Module $bytes

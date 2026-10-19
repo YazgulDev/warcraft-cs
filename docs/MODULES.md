@@ -1,5 +1,14 @@
 # Source modules
 
+`HudDiagnostics` samples phase-specific GL state independently of drawing, preserves
+queried texture state and the GL error queue, and records labelled font lifecycle
+events. The existing platform `DiagnosticLog` still owns serialization and rotation.
+
+`HudRenderState` owns a scoped raster/texture reset for the flat HUD after the 3D
+world/weapon passes. It resets blend equations and MSAA coverage as well as fixed
+function masks/texture targets, then restores the caller state before the outer
+overlay scope returns to Warcraft. It does not change gameplay or frame timing.
+
 `HudFont` owns the HUD's GDI glyph rasterization and OpenGL alpha atlas in presentation. It uses
 a separate memory DC and textured quads, avoiding driver-generated WGL bitmap display lists.
 Each font retains its glyph bearings and advances; upload/draw state is restored after use.
@@ -69,10 +78,11 @@ has its own header and implementation. There is no global header search path mas
 | `src/application` | FPS lifecycle and coordination of gameplay systems |
 | `src/config` | Validated configuration snapshots |
 | `src/movement` | Independent movement physics and validated movement tuning contract |
+| `src/input/WeaponSelection.hpp` | Portable pending selection, catalog-derived groups, owned-only cycling and expiry |
 | `src/combat` | Weapon/damage/recoil/melee rules, hitboxes, C4 and status effects |
 | `src/economy` | Buy catalog, navigation, inventory transactions and shop access |
 | `src/inventory` | Item/rune pickup and ammunition recovery |
-| `src/squad` | Recruitment and follow/fight/release policies |
+| `src/squad` | Recruitment, focus orders, follow/fight/release and unreserved army AI policies |
 | `src/geometry` | Model bounds, transformations, ray tests and tree meshes |
 | `src/audio` | CS sample loading/mixing and its configurable master gain, separate from Warcraft's audio |
 | `src/presentation` | FPS camera/HUD/menu/weapon/scope/sky rendering and world-label visibility |
@@ -113,8 +123,12 @@ sweeps the player footprint against terrain, native bridge decks and solid model
 `UnitCollisionProfile` reads live Warcraft collision radius/mask, converts native cell radii to world units
 and separates non-colliding map helpers from visual bodies. Movement consumes this profile independently
 of weapon target filtering; unknown profiles retain conservative geometry. Grounded support follows each sweep substep.
+Reachable terrain/solid tops under the swept footprint supply landing support, including partial lip
+contact. Native cliff classification probes both terrain-cell rings so its lower-bank pathing cell
+does not become an unknown blocker after landing. Bridge deck clearance retains its full-footprint checks.
 Position commit uses exact XY within the existing two-footprint contact neighborhood on either side
-of known solids. The sweep owns approach/slide/retreat there, so native nearest-cell placement never
+of known solids and beside verified cliff transitions, even when the center cell is clear.
+The sweep owns approach/slide/retreat there, so native nearest-cell placement never
 publishes a transient sprite relocation. Open-space unknown blockers retain native placement checks.
 `GameplaySettings` loads movement tuning; the controller applies that snapshot on startup and F8.
 
@@ -260,7 +274,8 @@ those orders movement ownership. `InventoryHudView` presents slot labels, gestur
 Windows messages never issue item natives; focus, reload and mode/map boundaries discard gestures.
 Gesture cleanup preserves the session Tab choice; `ApplySettings` and map reset restore the validated
 `NumbersByDefault` preference. `ThirdPersonCamera` keeps building proxy collision opt-in independently
-of terrain/destructable boom collision and combat hitboxes.
+of terrain/destructable boom collision and combat hitboxes. Zero-entry containing proxies, including bridge/ladder volumes,
+are excluded from camera obstruction: their enclosing boxes are not separate walls. Combat hitboxes and movement keep their own contracts.
 
 `SquadSpellPolicy` owns portable readiness/healing decisions. `SquadSpellcasting` adapts live
 ability slots and native orders to a bounded stock-order catalog, using shared native ability,
@@ -287,3 +302,68 @@ for direct contact filtering/damage; native eligibility and quest immunity remai
 The shared `SpellAim` ray picker accepts an optional action-owned unit filter before hit distance
 is shortened. Squad orders supply their allegiance policy so protected allies cannot hide enemies;
 spell/item callers retain unfiltered ally selection. Ground/destructable occlusion stays shared.
+
+`ArmyPlan` owns portable stock-race/custom build plans. `ArmyAI` runs a bounded game-thread
+decision loop through Warcraft's normal construction/training/resource orders. The controller
+supplies exact squad/focus exclusions, while the adapter rechecks local ownership and actor
+availability before enumerating any army. Construction leases and travel identities prevent
+duplicate sites and stale-handle commands. `ShopAccess` shares live merchant/proximity validation;
+the controller yields native selection, UI and camera during shop interaction and restores the
+captured actor/view on close. `WeaponDefaults` supplies one stable-slot tuning snapshot; validated
+config, buy catalog, audio/cache tables, wheel and presentation include every appended weapon.
+
+Army commands execute at the completed native frame boundary, after world/UI/overlay submission.
+Build orders can create birth models immediately; issuing them from the earlier world hook can
+draw those models before native skinning initializes their matrices. The next frame now performs
+its normal model update before drawing newly constructed objects. Training reservations also
+survive Warcraft's zero-current-order reports and pause/background gaps.
+
+`ViewmodelMotion` owns the visual-only speed/stance bob; `ViewmodelPose` crosses
+the controller/presentation boundary without changing camera or aim. `MuzzleFlashPulse`
+consumes accepted-shot serials once and starts their lifetime on presentation.
+`GunMesh` samples optional WCM1 muzzle anchors with its animation bones, retaining
+legacy geometry fallback. `MuzzleFlashView` draws additive original geometry with
+read-only depth and scoped GL state. `tools/test-viewmodel.ps1` verifies the portable
+clock/motion, synthetic format conversion and actual hidden-WGL pixels/state.
+
+`ShotgunReload` in combat maps one absolute reload clock to fitted start/insertion/finish
+phases. The controller coordinates transitions; `WeaponAnimation` in presentation holds
+terminal reload bones until the next phase, while ordinary firing/draw actions still settle
+to idle. `GameAudio` reads private timeline metadata independently of optional audio setup.
+Its full-magazine reference keeps the same insertion speed for partial reloads.
+It also credits each completed insertion once, bounded by actual reserve/capacity;
+interruption preserves those transfers and discards the unfinished insertion.
+The controller snapshots reload policy and uses a fresh, fireable LMB edge to interrupt.
+`BurstFire` in combat owns bounded Glock secondary scheduling, cooldown, cancellation
+and late-frame spacing. The controller debits actual ammo and dispatches individual
+contacts, while the presentation starts the burst clip only once.
+
+### Grenades
+
+`GrenadeThrow` owns pin/release/launch/recovery transitions; `GrenadeLaunch` maps CS pitch/speed into world coordinates, inherits motion and clips the forward release against geometry; `GrenadeProjectile` calculates portable swept-hull flight, falloff and exposure. `NativeGrenades` adapts native pause-aware timers, collision snapshots, damage, gates and timed flash disorientation leases. `GrenadeVisual` is a read-only snapshot, and `GrenadeView` draws flights/clouds against native world depth before held-weapon depth clearing, then flash blindness after the HUD. No renderer modifies native targets. Map unload forgets native handles. Tests use synthetic clocks/targets and actual hidden-WGL pixels, without retail assets.
+
+`GrenadeWorldView` owns the three private w_ prop caches and context lifecycle. It reconstructs the native camera projection before weapon depth clearing, preserves original xyz axes and textured geometry, and centers authored offsets on projectile positions. GunMesh shares geometry submission between held and world models. GrenadeView now owns clouds/blindness only.
+
+
+`WeaponSelection` keeps a pending candidate distinct from equipped combat state. It derives groups
+from `BuyCatalog`, accepts the controller's owned/charge availability snapshot and never issues attacks.
+`WeaponSelectionView` renders its category strip and owned stack, sharing Overlay's private buy-preview
+cache. Window input queues confirm/cancel before weapon fire or squad RMB; the controller consumes that
+mailbox, commits through the existing deployment path and suppresses the confirmation trigger until release.
+Context transitions discard preview/input state; the ordinary aim and movement adapters remain active.
+
+## Optional RPG ownership
+
+`OptionalWeaponAssets` validates the private conversion seal at startup/F8; the
+single `GameplaySettings::WeaponEnabled` predicate gates economy, free grants,
+carried menus, direct switching and fire. `export_halflife_rpg.py` discovers loose
+or PAK resources and publishes the seal last, independently of required CS conversion.
+No optional file becomes a required dependency of the CS-only install path.
+
+`RocketProjectile` owns portable swept launch, motor pulses and steering. `NativeRockets`
+adapts native clocks, immutable launches, laser raycasts, sounds and read-only visual
+snapshots. `NativeBlast` centralizes HE/RPG cover, native damage callbacks and gate
+immunity; flash leases remain in `NativeGrenades`. `RocketView` owns original trail,
+glow and airburst effects plus the private model, sharing `WorldEffectPass` with
+grenade world rendering. Overlay alone owns OpenGL context replacement. The controller
+coordinates accepted shots/reload/laser input rather than implementing projectile physics.

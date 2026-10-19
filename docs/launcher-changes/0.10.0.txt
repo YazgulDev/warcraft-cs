@@ -1,0 +1,8 @@
+- Added animated portraits, health, mana and hero experience to the F6/F7 HUD.
+- Added inventory icons, Tab item hotkeys and I mouse use, targeting, dropping and rearranging.
+- Added right-click squad target orders in F7/F9 and a Y toggle in armed F6.
+- Preserved active squad combat and fixed orders intercepted by protected allies.
+- Fixed neutral structure and gate attacks, including native ranged projectiles.
+- Fixed Blink and Flame Strike targeting near allies.
+- Fixed unstable third-person zoom near buildings and side collision near walls and units.
+- Enabled item numbers by default and preserved custom settings during upgrades.

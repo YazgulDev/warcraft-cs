@@ -47,6 +47,11 @@ int main() {
     settings.buildingCollision=true;buildingEntry=24;assert(distance()==8 && intersections==1);
     settings.buildingCollision=false;assert(distance()==500);
     // Gates/tree surfaces and terrain still protect the camera after the building policy changes.
-    obstacle=true;assert(distance()==184);obstacle=false;ground=125;assert(distance()==0);
+    obstacle=true;assert(distance()==184);
+    // A bridge/ladder's enclosing box and an already containing proxy are not walls behind the hero.
+    obstacleEntry=0;assert(distance()==500);
+    // An actual separate gate/tree surface and terrain still shorten the camera boom.
+    obstacleEntry=200;assert(distance()==184);
+    obstacle=false;ground=125;assert(distance()==0);
     ground=0;settings.distance=700;assert(distance()==700);
 }

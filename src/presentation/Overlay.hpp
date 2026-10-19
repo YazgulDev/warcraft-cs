@@ -1,4 +1,6 @@
 #pragma once
+#include "GrenadeWorldView.hpp"
+#include "RocketView.hpp"
 #include "../combat/WeaponSlots.hpp"
 #include "GunMesh.hpp"
 #include "../application/ShooterController.hpp"
@@ -6,7 +8,9 @@
 #include "HealthBarRenderer.hpp"
 #include "SpellHudView.hpp"
 #include "HudFont.hpp"
+#include "HudDiagnostics.hpp"
 #include "UnitHudView.hpp"
+#include "MuzzleFlashPulse.hpp"
 class NativeMinimap;
 class NativePortrait;
 
@@ -30,10 +34,14 @@ private:
     GunMesh buyPreviews_[WeaponSlots::Count];
     bool previewLoaded_[WeaponSlots::Count]={},previewAttempted_[WeaponSlots::Count]={};
     bool loaded_[WeaponSlots::Count] = {}, attempted_[WeaponSlots::Count] = {};
-    HudFont font_,statusFont_,spellFont_,unitFont_,inventoryFont_;
+    HudFont font_{"hints"},statusFont_{"status"},spellFont_{"spells"},unitFont_{"unit"},inventoryFont_{"inventory"};
+    HudDiagnostics hudDiagnostics_;
     int hintGlyphWidth_ = 12;
     HGLRC context_ = nullptr;
     bool refreshPending_ = false;
     DWORD lastDiagnostic_ = 0;
+    MuzzleFlashPulse muzzleFlash_;
     SkyView sky_;
+    GrenadeWorldView grenadeWorld_;
+    RocketView rocketView_;
 };

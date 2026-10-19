@@ -14,7 +14,8 @@ uintptr_t ActorObject() {
     return wc3::UnitObject(actor);
 }
 bool ControlledAttack(uintptr_t attack) {
-    uintptr_t actor=ActorObject();return actor && (*reinterpret_cast<uintptr_t*>(actor+0x1E8)==attack || (passiveAttack && passiveAttack(attack)));
+    // A native shop yields the actor while passive followers must retain their independent O policy.
+    uintptr_t actor=ActorObject();return (actor && *reinterpret_cast<uintptr_t*>(actor+0x1E8)==attack) || (passiveAttack && passiveAttack(attack));
 }
 using Range=float* (__thiscall*)(uintptr_t,float*);
 Range unitRange=nullptr,attackRange=nullptr;
@@ -50,7 +51,7 @@ void LogBlocked(const char* phase,uintptr_t attack) {
 }
 bool BlockScriptOrder(wc3::Handle unit,int order,wc3::Handle target=0) {
     uintptr_t object=wc3::UnitObject(unit),actor=ActorObject();
-    bool controlled=actor && object && (object==actor || (passiveUnit && passiveUnit(object)));
+    bool controlled=object && ((actor && object==actor) || (passiveUnit && passiveUnit(object)));
     // Reject attack/attack-ground and smart-unit pursuit before a map's order enters the simulation.
     // Smart item pickup remains native; hero spell IDs do not share these basic order IDs.
     bool attack=order==851983 || order==851984 || (order==851971 && target && wc3::UnitObject(target));
@@ -89,7 +90,7 @@ void __fastcall StartOrderHook(uintptr_t attack,uintptr_t,uintptr_t a,uintptr_t 
 }
 float* __fastcall UnitRangeHook(uintptr_t unit,uintptr_t,float* result) {
     uintptr_t actor=ActorObject();
-    if (actor && (unit==actor || (passiveUnit && passiveUnit(unit)))) { *result=0;return result; }return unitRange(unit,result);
+    if ((actor && unit==actor) || (passiveUnit && passiveUnit(unit))) { *result=0;return result; }return unitRange(unit,result);
 }
 float* __fastcall AttackRangeHook(uintptr_t attack,uintptr_t,float* result) {
     if (ControlledAttack(attack)) { *result=0;return result; }return attackRange(attack,result);

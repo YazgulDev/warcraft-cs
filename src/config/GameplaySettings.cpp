@@ -1,4 +1,5 @@
 #include "GameplaySettings.hpp"
+#include "../platform/OptionalWeaponAssets.hpp"
 #include "../platform/WarcraftApi.hpp"
 #include <algorithm>
 #include <cmath>
@@ -19,6 +20,66 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         if (end==value.c_str() || *end || !std::isfinite(parsed)) { wc3::Log("Invalid config %s.%s; using default",section,key);return fallback; }
         return std::clamp(parsed,0.0f,maximum);
     };
+    // New session controls reload with F8; malformed toggles preserve their documented defaults.
+    auto enabled=[&](const char* section,const char* key) {auto value=text(section,key,"true");return _stricmp(value.c_str(),"false") && value!="0";};
+    // Visual-only settings share the real startup/F8 snapshot and bounded migration path.
+    result.viewmodel.bob=enabled("Viewmodel","BobEnabled");
+    result.viewmodel.bobAmount=number("Viewmodel","BobAmount",1,3);
+    result.viewmodel.bobFrequency=std::max(.5f,number("Viewmodel","BobFrequency",1.8f,4));
+    result.viewmodel.bobResponse=std::max(1.f,number("Viewmodel","BobResponse",12,30));
+    result.viewmodel.muzzleFlash=enabled("Viewmodel","MuzzleFlash");
+    result.viewmodel.flashMilliseconds=unsigned(std::max(10.f,number("Viewmodel","MuzzleFlashMilliseconds",65,200)));
+    result.viewmodel.flashScale=number("Viewmodel","MuzzleFlashScale",1,3);
+    // Throw snapshots isolate live projectiles/clouds from later F8 tuning changes.
+    auto& grenades=result.grenades;
+    grenades.enabled=enabled("Grenades","Enabled");
+    grenades.throwSpeed=std::max(50.f,number("Grenades","ThrowSpeed",1125,2000));
+    grenades.gravity=std::max(50.f,number("Grenades","Gravity",660,2000));
+    // Upgrade only the complete former stock pair, including old configs reloaded directly with F8.
+    auto trajectory=text("Grenades","TrajectoryVersion","1");
+    if((trajectory=="1" || trajectory.empty()) && grenades.throwSpeed==750 && grenades.gravity==800) {
+        grenades.throwSpeed=1125;grenades.gravity=660;
+    }
+    grenades.lightGravityScale=std::max(.1f,number("Grenades","LightGravityScale",10.f/11,2));
+    grenades.bounce=number("Grenades","Bounce",.45f,.9f);
+    grenades.inheritedVelocity=number("Grenades","InheritedVelocity",1,2);
+    grenades.fuse=std::max(.2f,number("Grenades","FuseSeconds",1.5f,10));
+    grenades.releaseDelay=number("Grenades","ReleaseDelay",.25f,1);
+    grenades.recovery=std::max(.1f,number("Grenades","RecoverySeconds",.8f,3));
+    grenades.heRadius=std::max(32.f,number("HEGrenade","Radius",350,2000));
+    grenades.flashRadius=std::max(32.f,number("Flashbang","Radius",1000,3000));
+    grenades.flashSeconds=number("Flashbang","BlindSeconds",3,10);
+    grenades.flashUnitStunSeconds=number("Flashbang","UnitStunSeconds",2,10);
+    grenades.smokeRadius=std::max(32.f,number("SmokeGrenade","Radius",300,1000));
+    grenades.smokeSeconds=std::max(1.f,number("SmokeGrenade","DurationSeconds",18,60));
+    grenades.smokeOpacity=number("SmokeGrenade","Opacity",.85f,1);
+    grenades.maxActive=unsigned(std::max(1.f,number("Grenades","MaxActive",32,128)));
+    grenades.worldModelScale=std::max(.25f,number("Grenades","WorldModelScale",1,4));
+    grenades.worldSpin=number("Grenades","WorldSpinDegrees",360,1440);
+    result.shopInteraction=enabled("Shops","Enabled");
+    result.shopInteractionRadius=std::max(100.f,number("Shops","Radius",450,1200));
+    result.shotgunPellets=int(std::max(1.f,number("Shotguns","Pellets",8,16)));
+    result.shotgunSpreadDegrees=number("Shotguns","SpreadDegrees",5,15);
+    // Reload policy is snapshotted when R starts, so F8 cannot award a second magazine mid-reload.
+    result.shotgunShellReload=enabled("Shotguns","ShellByShellReload");
+    result.shotgunInterruptReload=enabled("Shotguns","InterruptReloadOnFire");
+    // Secondary Glock bursts debit real rounds; timing is validated before it reaches the shot scheduler.
+    result.glockBurstRounds=int(std::max(1.f,number("Glock","SecondaryBurstRounds",3,5)));
+    result.glockBurstInterval=std::max(.025f,number("Glock","SecondaryBurstInterval",.1f,1));
+    result.glockSecondaryCooldown=std::max(.1f,number("Glock","SecondaryCooldown",.5f,5));
+    // The shared reach upgrades saved short gun ranges without rewriting the player's per-weapon choices.
+    result.minimumFirearmRange=number("Combat","MinimumFirearmRange",30000,50000);
+    auto& ai=result.armyAI;ai.enabled=enabled("ArmyAI","Enabled");
+    ai.intervalMs=unsigned(std::max(500.f,number("ArmyAI","IntervalMs",1500,10000)));
+    ai.productionRetrySeconds=unsigned(std::max(30.f,number("ArmyAI","ProductionRetrySeconds",180,3600)));
+    ai.workers=int(number("ArmyAI","Workers",6,30));ai.soldiers=int(number("ArmyAI","Soldiers",24,100));
+    ai.defenders=int(number("ArmyAI","Defenders",3,100));ai.supplyBuildings=int(number("ArmyAI","SupplyBuildings",6,30));
+    ai.baseRadius=std::max(100.f,number("ArmyAI","BaseRadius",900,3000));
+    ai.supportDistance=std::max(100.f,number("ArmyAI","SupportDistance",350,1500));
+    ai.buildRadius=std::max(192.f,number("ArmyAI","BuildRadius",450,1500));
+    ai.resourceRadius=std::max(300.f,number("ArmyAI","ResourceRadius",1600,5000));
+    auto rawcode=[&](const char* key) {auto value=text("ArmyAI",key,"");return value.size()==4 && value.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")==std::string::npos ? value : std::string();};
+    ai.worker=rawcode("Worker");ai.hall=rawcode("Hall");ai.supply=rawcode("Supply");ai.barracks=rawcode("Barracks");ai.soldier=rawcode("Soldier");
     // Missing/malformed profile values preserve the full mod's backwards-compatible default.
     auto profile=text("Installation","WarcraftOnly","false");
     result.warcraftOnly=!_stricmp(profile.c_str(),"true") || profile=="1";
@@ -203,7 +264,7 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     bool oldSquadKey=result.shortcuts.Key(ShortcutAction::SquadOrders)==VK_OEM_1;
     if(oldSquadKey)result.shortcuts.Set(ShortcutAction::SquadOrders,'Y');
     // New Tab/I/Y defaults yield to an older customized action instead of resetting the whole layout.
-    for(auto action:{ShortcutAction::InventoryNumbers,ShortcutAction::InventoryPanel,ShortcutAction::SquadOrders}) {
+    for(auto action:{ShortcutAction::InventoryNumbers,ShortcutAction::InventoryPanel,ShortcutAction::SquadOrders,ShortcutAction::ArmyAI}) {
         if(!text("Shortcuts",ShortcutBindings::Name(action),"").empty() && !(action==ShortcutAction::SquadOrders && oldSquadKey))continue;
         for(size_t i=0;i<size_t(action);++i)if(result.shortcuts.Key(ShortcutAction(i))==result.shortcuts.Key(action)) {
             result.shortcuts.Set(action,0);break;
@@ -249,6 +310,9 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     // These HUD panels reload with F8; the separate clean F9 view always omits them.
     result.showUnitHud=enabledHud("ShowUnitHud");result.showInventory=enabledHud("ShowInventory");
     result.inventoryControls=enabledHud("InventoryControls");
+    // Missing/malformed menu preferences keep CS-style preview; F8 replaces the complete snapshot.
+    result.weaponSelectionMenu=enabled("WeaponSelection","Enabled");
+    result.weaponSelectionTimeout=std::max(.5f,number("WeaponSelection","TimeoutSeconds",5,15));
     result.inventoryDropDistance=std::max(16.f,number("Inventory","DropDistance",80,128));
     // Startup/F8 default to item numbers; an explicit false/0 preserves a weapon-first preference.
     auto itemNumbers=text("Inventory","NumbersByDefault","true");
@@ -328,14 +392,41 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         const char* fallback=strchr("NWIC",*code) ? "snow" : strchr("OD",*code) ? "DrkG" : strchr("AZJ",*code) ? "forest" : "Des";
         result.tilesetSky[static_cast<unsigned char>(*code)]=sky(key,fallback);
     }
-    const char* sections[]={"AK47","M4A1","USP","AWP","Knife","C4","Sword"};
+    // Optional RPG defaults use the same bounded F8 snapshot, while availability comes only from owned caches.
+    auto& rpg=result.rpg;rpg.enabled=enabled("RPG","Enabled");rpg.guidance=enabled("RPG","GuidanceByDefault");
+    rpg.available=!result.warcraftOnly && OptionalWeaponAssets::Rpg(std::filesystem::path(filename).parent_path());
+    rpg.radius=std::max(32.f,number("RPG","Radius",375,3000));
+    rpg.launchSpeed=std::max(50.f,number("RPG","LaunchSpeed",375,6000));
+    rpg.maximumSpeed=std::max(100.f,number("RPG","MaximumSpeed",3000,10000));
+    rpg.acceleration=number("RPG","Acceleration",6000,20000);
+    rpg.ignition=std::max(.01f,number("RPG","IgnitionSeconds",.4f,3));
+    rpg.boostSeconds=std::max(.1f,number("RPG","BoostSeconds",1,5));
+    rpg.gravity=number("RPG","LaunchGravity",600,2000);
+    rpg.lifetime=std::max(1.f,number("RPG","LifetimeSeconds",12,30));
+    rpg.inheritedVelocity=number("RPG","InheritedVelocity",1,2);
+    rpg.modelScale=std::max(.25f,number("RPG","WorldModelScale",1.5f,4));
+    rpg.trailSeconds=number("RPG","TrailSeconds",1,3);rpg.trailSize=number("RPG","TrailSize",10,40);
+    rpg.maxActive=unsigned(std::max(1.f,number("RPG","MaxActive",16,64)));
+    const auto& sections=WeaponSlots::Sections;
     for (int slot=0;slot<WeaponSlots::Count;++slot) {
+        auto& weapon=result.weapons[slot];
+        // Reloading can tighten capacities and change cadence without granting ammunition.
+        if(WeaponSlots::Firearm(slot)) {
+            weapon.magazine=int(std::max(1.f,number(sections[slot],"Magazine",float(weapon.magazine),1000)));
+            weapon.interval=std::max(.025f,number(sections[slot],"FireInterval",weapon.interval,10));
+            weapon.reload=std::max(.1f,number(sections[slot],"ReloadSeconds",weapon.reload,30));
+            weapon.range=std::max(100.f,number(sections[slot],"Range",weapon.range,50000));
+            result.weaponKick[slot]=number(sections[slot],"Kick",result.weaponKick[slot],10);
+        }
+        if(WeaponSlots::Grenade(slot))weapon.magazine=int(std::max(1.f,number(sections[slot],"Capacity",float(weapon.magazine),100)));
+        result.weaponMoveSpeed[slot]=std::max(50.f,number(sections[slot],"MoveSpeed",result.weaponMoveSpeed[slot],500));
+        result.weaponModelScale[slot]=std::max(.25f,number(sections[slot],"ModelScale",result.weaponModelScale[slot],2));
         result.damage[slot]=number(sections[slot],"Damage",result.damage[slot],1000000);
         result.heroMultiplier[slot]=number(sections[slot],"HeroMultiplier",result.heroMultiplier[slot],1000);
         result.weaponPrice[slot]=int(number(sections[slot],"Price",float(result.weaponPrice[slot]),1000000));
         result.ammoPrice[slot]=int(number(sections[slot],"AmmoPrice",float(result.ammoPrice[slot]),1000000));
         result.ammoPack[slot]=int(std::max(1.0f,number(sections[slot],"AmmoPack",float(std::max(1,result.ammoPack[slot])),1000)));
-        if(slot<4)result.maxReserve[slot]=int(number(sections[slot],"MaxReserve",float(result.maxReserve[slot]),100000));
+        if(WeaponSlots::Firearm(slot))result.maxReserve[slot]=int(number(sections[slot],"MaxReserve",float(result.maxReserve[slot]),100000));
     }
     result.knifeSecondaryDamage=number("Knife","SecondaryDamage",65,1000000);
     result.swordSecondaryDamage=number("Sword","SecondaryDamage",240,1000000);
@@ -345,7 +436,7 @@ float GameplaySettings::ContactDamage(int slot,bool secondary,float heroAttack) 
     if (slot<0 || slot>=WeaponSlots::Count) return 0;
     // Native average attack works for heroes and creeps, including their active bonuses; heavy melee keeps its ratio.
     float heavy=secondary ? (slot==WeaponSlots::Knife ? 65.0f/40 : slot==WeaponSlots::Sword ? 2.0f : 1.0f) : 1.0f;
-    if (heroDamage && slot!=WeaponSlots::C4) return std::max(0.0f,heroAttack)*heroMultiplier[slot]*heavy;
+    if (heroDamage && slot!=WeaponSlots::C4 && slot!=WeaponSlots::RPG && !WeaponSlots::Grenade(slot)) return std::max(0.0f,heroAttack)*heroMultiplier[slot]*heavy;
     return secondary && slot==WeaponSlots::Knife ? knifeSecondaryDamage :
         secondary && slot==WeaponSlots::Sword ? swordSecondaryDamage : damage[slot];
 }

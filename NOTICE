@@ -14,7 +14,9 @@ ADAPTED MECHANICS AND RESEARCH REFERENCES
    MIT; Copyright (c) 2015–2025 ReGameDLL_CS Contributors.
    Reference: classic AK47/M4A1 KickBack stance constants/growth/caps and lateral
    reversal rules, USP/AWP punch, rifle release counters/timers, PM_DropPunchAngle,
-   weapon timing and GoldSrc-style movement/surface-sound behavior.
+   weapon timing, grenade release pitch/speed/gravity and GoldSrc-style
+   movement/surface-sound behavior. GrenadeLaunch and NativeGrenades adapt the
+   wpn_hegrenade/wpn_flashbang/wpn_smokegrenade and ggrenade numerical behavior.
    Relevant project implementation: src/WeaponRecoil.cpp, src/MovementPhysics.cpp,
    src/ShooterController.cpp; numerical behavior is adapted for Warcraft coordinates
    and native ticks. No full CS engine or complete accuracy/spread implementation is
@@ -53,7 +55,10 @@ ADAPTED MECHANICS AND RESEARCH REFERENCES
 4. Valve Half-Life SDK — https://github.com/ValveSoftware/halflife
    Research reference for GoldSrc studio-model layout, animation/event encoding,
    movement and view behavior, including wish-direction projection in PM_AirAccelerate
-   and friction ordering around takeoff. The project independently applies these rules
+   and friction ordering around takeoff. The RPG reference also informs numerical
+   launch, motor and laser behavior in the project-owned RocketProjectile module;
+   its collision and blast integration are original Warcraft adapters. No RPG SDK
+   implementation or engine code is copied. The project independently applies movement rules
    in src/movement/MovementPhysics.cpp with configurable Warcraft-specific limits.
    The SDK has Valve's own noncommercial HL1-engine
    modification license, not MIT/Apache. No SDK code/header/runtime is bundled or

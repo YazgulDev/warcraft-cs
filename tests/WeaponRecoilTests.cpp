@@ -47,5 +47,9 @@ int main() {
     for(unsigned value:expected)Require(random.Uniform(2147483646u)==value,"GoldSrc shuffled RNG sequence");
     burst.Reset();burst.Shot(4,0,true,false);burst.Shot(5,0,true,false);burst.Shot(6,0,true,false);
     Require(burst.Magnitude()==0,"knife, C4 and sword must never kick the gun camera");
+    // New firearms consume their validated configured impulse and share the existing recovery clock.
+    burst.Shot(7,0,true,false,2.5f);Require(burst.Pitch()==2.5f,"Deagle configured impulse");
+    burst.Step(.1f,false,7);Require(burst.Pitch()<2.5f,"Deagle punch recovers");
+    burst.Reset();burst.Shot(11,0,true,false,.8f);Require(burst.Pitch()==.8f,"M249 configured impulse");
     std::puts("Classic CS recoil oracles passed: stance coefficients/precedence, growth/caps, discrete punch recovery, burst timers, reload, GoldSrc RNG, melee");
 }
