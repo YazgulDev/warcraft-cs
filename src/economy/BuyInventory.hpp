@@ -13,7 +13,7 @@ public:
             // C4 enters the starting kit only through an explicit bomb count or the all-weapons option.
             owned[i]=settings.startAllWeapons || WeaponSlots::Melee(i) || i==WeaponSlots::Pistol ||
                 (i==WeaponSlots::C4 && settings.startBombs>0);
-            if(WeaponSlots::Grenade(i) && !settings.grenades.enabled)owned[i]=false;
+            if(!settings.WeaponEnabled(i))owned[i]=false;
             ammo[i]=owned[i] ? (i==WeaponSlots::C4 ? settings.startBombs : magazines[i]) : 0;
             reserve[i]=owned[i] ? reserves[i] : 0;
         }
@@ -21,25 +21,27 @@ public:
     // Free refill grants/refills C4; all-weapons also unlocks other weapons. Neither changes gold or planted timers.
     void Refill(const GameplaySettings& settings,int* ammo,int* reserve,const int* magazines,const int* reserves,bool grantAll=false) {
         for (int i=0;i<WeaponSlots::Count;++i) {
-            if ((grantAll && (!WeaponSlots::Grenade(i) || settings.grenades.enabled)) || i==WeaponSlots::C4) owned[i]=true;
+            // Missing optional resources cannot be bypassed by all-weapons, refill or retained ownership.
+            if(!settings.WeaponEnabled(i))continue;
+            if (grantAll || i==WeaponSlots::C4) owned[i]=true;
             if (!owned[i]) continue;
             // Refilling must never discard paid bombs above the configured free-refill amount.
             ammo[i]=i==WeaponSlots::C4 ? std::max(ammo[i],settings.maxBombs) : magazines[i];reserve[i]=reserves[i];
         }
     }
-    int Next(int current,int steps) const {
+    int Next(int current,int steps,const GameplaySettings* settings=nullptr) const {
         int result=current;
         for (int n=0;n<std::abs(steps);++n) {
             for (int search=0;search<WeaponSlots::Count;++search) {
                 result=(result+(steps<0 ? -1 : 1)+WeaponSlots::Count)%WeaponSlots::Count;
-                if (owned[result]) break;
+                if (owned[result] && (!settings || settings->WeaponEnabled(result))) break;
             }
         }
         return result;
     }
     enum class Result { Bought, AlreadyOwned, NotOwned, Full, NoGold, Invalid };
     Result Buy(int slot,bool ammunition,const GameplaySettings& settings,int& gold,int& ammo,int& reserve,int magazine,int reserveCapacity) {
-        if (slot<0 || slot>=WeaponSlots::Count) return Result::Invalid;
+        if (!settings.WeaponEnabled(slot)) return Result::Invalid;
         bool bomb=slot==WeaponSlots::C4;
         if (ammunition && (WeaponSlots::Melee(slot) || !owned[slot])) return Result::NotOwned;
         bool grenade=WeaponSlots::Grenade(slot);

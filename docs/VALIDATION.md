@@ -1,11 +1,43 @@
 # Validation
 
+## Optional Half-Life RPG (2026-10-19)
+
+`tools/test-rpg.ps1` checks production launch/boost/coast, projected movement,
+frame-rate tolerance, guidance, close/thin-wall collision and range/lifetime bounds.
+Actual hidden-WGL readback checks rocket geometry, trail, laser, airburst, native
+depth occlusion, scale, inherited GL state and replacement contexts. Synthetic
+optional-conversion tests exercise loose/PAK discovery, missing/removed/malformed
+resources, hand-free previews and completion seals without any retail assets.
+
+The real startup/F8 parser verifies absence, complete seals, modified caches and
+bounded/malformed tuning. Catalog/layout/transaction tests cover hiding absent RPG,
+zero-cost bypass rejection, purchase/ammo/duplicate behavior and carried primary
+ordering. Migration preserves saved RPG values and disabled preferences across
+repeated updates. Shared native blast regressions preserve HE policies and cover
+RPG single impact, friendly protection, gates, active limits, pause and snapshots.
+Real XAudio2 tests check idempotent motor loops, stop-all, master gain and existing
+shotgun events. A disposable ordinary-Player Warcraft map verifies absent/present/
+disabled resources, the actual seventh equipment mouse row, 4000/500 gold charges,
+loaded/empty animation routing, motor start/stop, laser reload lock/off, guided
+redirection to a second building and continued rocket impacts through F7/F9. The
+three native impacts reduce neutral-building HP. Projectile/model queries retain
+pathing-texture buildings with zero native unit collision radius. Original test
+DLL/INI and all private asset files are restored byte-exact. Sound queue/motor
+state is observed; the silent capture does not establish a listening test or
+cross-driver compatibility.
+
+
 ## Close-contact camera obstruction follow-up (2026-10-19)
 
 Production camera regressions reproduce a zero-distance boom inside a broad destructable
-proxy, then cover walkable bridge/ladder proxies, separate gate/tree contacts and terrain.
+proxy, then cover containing bridge/ladder volumes, separate gate/tree contacts and terrain.
 Only camera obstruction filtering changes; weapon intersections and physical movement
 retain their own collision contracts. Existing building opt-in and wheel distances remain.
+A private ordinary-Player map reproduces the previous bridge collapse from a 500-unit
+boom to zero with a nearby hostile. The corrected module retains 500 beside that
+hostile and inside the bridge proxy, still shortens for a separate gate, returns to
+500 after removing it, follows wheel zoom to 650 and reloads 500 with F8. The test
+restores its DLL/INI byte-exact; no campaign fixtures are used.
 
 
 ## CS grenade throw reach (2026-10-19)

@@ -29,8 +29,9 @@ void Draw(const ShooterController& controller,int width,int height,HWND window,c
     // The category heading uses its own larger HUD font, like the original CS panel.
     titleText(box.listX,box.y+box.height*.078f,title);
     POINT cursor={};GetCursorPos(&cursor);ScreenToClient(window,&cursor);
-    int hover=BuyMenuLayout::Key(cursor.x,cursor.y,width,height,page);
-    auto keys=BuyMenuLayout::Keys(page);int previewSlot=-1;
+    // Optional-content rows and pointer hitboxes consume the same validated resource availability.
+    int hover=BuyMenuLayout::Key(cursor.x,cursor.y,width,height,page,&settings);
+    auto keys=BuyMenuLayout::Keys(page,&settings);int previewSlot=-1;
     for (size_t i=0;i<keys.size();++i) {
         int key=keys[i];float rowY=box.listY+float(i)*box.row;
         auto item=BuyCatalog::Find(BuyMenu::Category(page),key);

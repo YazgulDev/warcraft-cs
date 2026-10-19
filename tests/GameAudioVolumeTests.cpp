@@ -71,6 +71,10 @@ int main(int count,char** arguments) {
     audio.SetVolumePercent(50);RequireVolume(audio,0);
     audio.Configure(root.string());RequireVolume(audio,100);
     audio.Play("odd-pin.wav",0);assert(SoundCount("odd-pin.wav")==1);
+    // Motor loops start/stop once, including repeated render updates and the ordinary stop-all boundary.
+    auto loopEvents=[&]{return std::count_if(output.begin(),output.end(),[](const std::string& s){return s.find("CS loop=volume-test.wav")==0;});};
+    auto loopBefore=loopEvents();audio.SetLoop("volume-test.wav",true,0);audio.SetLoop("volume-test.wav",true,0);
+    assert(loopEvents()==loopBefore+1);audio.SetLoop("volume-test.wav",false);assert(loopEvents()==loopBefore+2);
     // Both authored M3 audio and the missing-event XM fallback play exactly one real source voice per insert.
     size_t before=SoundCount("m3_insertshell.wav");DWORD now=GetTickCount();
     audio.BeginAnimation(WeaponSlots::M3,"insert",now);audio.Tick(now+1000);

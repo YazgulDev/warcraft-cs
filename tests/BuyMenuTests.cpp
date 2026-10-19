@@ -14,7 +14,7 @@ int main() {
         gold=3000;assert(bombs.Buy(WeaponSlots::C4,quickAmmo,settings,gold,count,reserve,1,0)==BuyInventory::Result::Bought);
         assert(gold==0 && count==1);
     }
-    int ammo[WeaponSlots::Count]={},reserve[WeaponSlots::Count]={},magazines[WeaponSlots::Count]={30,30,12,10,0,1,0,7,20,30,50,100,8,7,1,2,1},reserves[WeaponSlots::Count]={90,90,100,30,0,0,0,35,120,120,100,200,32,32};
+    int ammo[WeaponSlots::Count]={},reserve[WeaponSlots::Count]={},magazines[WeaponSlots::Count]={30,30,12,10,0,1,0,7,20,30,50,100,8,7,1,2,1,1},reserves[WeaponSlots::Count]={90,90,100,30,0,0,0,35,120,120,100,200,32,32,0,0,0,5};
     inventory.Reset(settings,ammo,reserve,magazines,reserves);
     assert(!inventory.owned[0] && !inventory.owned[3] && inventory.owned[2] && inventory.owned[4] && !inventory.owned[5] && inventory.owned[6]);
     assert(ammo[2]==12 && reserve[2]==100 && ammo[5]==0 && ammo[0]==0 && reserve[0]==0);
@@ -57,8 +57,19 @@ int main() {
     inventory.Refill(settings,ammo,reserve,magazines,reserves);
     assert(ammo[2]==12 && reserve[2]==100 && ammo[5]==settings.maxBombs && inventory.owned[5] && !inventory.owned[0] && ammo[0]==0 && gold==83);
     inventory.Refill(settings,ammo,reserve,magazines,reserves,true);
-    for (int slot=0;slot<WeaponSlots::Count;++slot) assert(inventory.owned[slot]);
+    for (int slot=0;slot<WeaponSlots::Count;++slot) assert(inventory.owned[slot]==settings.WeaponEnabled(slot));
     assert(ammo[0]==30 && reserve[0]==90 && ammo[3]==10 && reserve[3]==30 && ammo[5]==settings.maxBombs && gold==83);
+    // Absent optional files cannot be bypassed by paid buying, all-weapons grants or pointer rows.
+    gold=10000;int saved=gold;
+    assert(!inventory.owned[WeaponSlots::RPG]);
+    assert(inventory.Buy(WeaponSlots::RPG,false,settings,gold,ammo[17],reserve[17],1,5)==BuyInventory::Result::Invalid && gold==saved);
+    auto hidden=BuyMenuLayout::Keys(BuyMenu::Page::Equipment,&settings);assert(std::find(hidden.begin(),hidden.end(),7)==hidden.end());
+    settings.rpg.available=true;assert(settings.WeaponEnabled(WeaponSlots::RPG));
+    auto shown=BuyMenuLayout::Keys(BuyMenu::Page::Equipment,&settings);assert(std::find(shown.begin(),shown.end(),7)!=shown.end());
+    assert(inventory.Buy(17,false,settings,gold,ammo[17],reserve[17],1,5)==BuyInventory::Result::Bought && gold==saved-4000 && ammo[17]==1 && reserve[17]==0);
+    assert(inventory.Buy(17,false,settings,gold,ammo[17],reserve[17],1,5)==BuyInventory::Result::AlreadyOwned);
+    assert(inventory.Buy(17,true,settings,gold,ammo[17],reserve[17],1,5)==BuyInventory::Result::Bought && reserve[17]==1);
+    settings.rpg.enabled=false;assert(!settings.WeaponEnabled(17));settings.rpg.enabled=true;
     // A custom capacity supports larger reserves and prevents charging gold when the configured cap is zero.
     settings.maxReserve[0]=250;reserves[0]=settings.maxReserve[0];
     inventory.Refill(settings,ammo,reserve,magazines,reserves);

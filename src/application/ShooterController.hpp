@@ -4,6 +4,7 @@
 #include "../presentation/ViewmodelMotion.hpp"
 #include "../combat/GrenadeThrow.hpp"
 #include "../platform/NativeGrenades.hpp"
+#include "../platform/NativeRockets.hpp"
 #include "../combat/Weapon.hpp"
 #include "../combat/WeaponSlots.hpp"
 #include "../platform/WarcraftApi.hpp"
@@ -162,6 +163,10 @@ public:
     void SetPaused(bool value) { paused_ = value; }
     int WeaponIndex() const { return weapon_; }
     const char* Animation() const;
+    const char* IdleAnimation() const {return Sequence("idle");}
+    const std::vector<RocketVisual>& RocketVisuals() const {return rockets_.Visuals();}
+    bool LaserVisible() const {return rockets_.LaserVisible();}
+    const GrenadePoint& LaserPoint() const {return rockets_.Laser();}
     float AnimationTime() const;
     const ViewmodelPose& WeaponPose() const {return viewmodelMotion_.Pose();}
     unsigned ShotSerial() const {return shotSerial_;}
@@ -261,6 +266,8 @@ private:
     void ThrowGrenade(bool pressed);
     GrenadeThrow grenadeThrow_;
     NativeGrenades grenades_;
+    NativeRockets rockets_;
+    bool rpgLaser_=true;
     float grenadePullSeconds_=1;
     void CancelPlant();
     void RefillAmmo(bool grantAll=false);

@@ -7,7 +7,7 @@ With Tab item-number mode off, the first five weapon bindings open these categor
 
 | Default key | Category |
 | --- | --- |
-| 1 | Primary: rifles, sniper rifles, SMGs, machine guns and shotguns |
+| 1 | Primary: rifles, sniper rifles, SMGs, machine guns, shotguns and available RPG |
 | 2 | Pistols |
 | 3 | Melee weapons |
 | 4 | Grenades |

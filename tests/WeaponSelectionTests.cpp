@@ -32,7 +32,7 @@ int main() {
     assert(menu.Confirm(available)==WeaponSlots::P90 && !menu.Open());
     // Expected visible rows, including every category boundary; reversing retraces each individual step.
     const int ordered[]={0,1,WeaponSlots::AWP,WeaponSlots::MP5,WeaponSlots::P90,WeaponSlots::M249,
-        WeaponSlots::M3,WeaponSlots::XM1014,WeaponSlots::Pistol,WeaponSlots::Deagle,WeaponSlots::Glock,
+        WeaponSlots::M3,WeaponSlots::XM1014,WeaponSlots::RPG,WeaponSlots::Pistol,WeaponSlots::Deagle,WeaponSlots::Glock,
         WeaponSlots::Knife,WeaponSlots::Sword,WeaponSlots::HE,WeaponSlots::Flashbang,WeaponSlots::Smoke,WeaponSlots::C4};
     for(int i=0;i<WeaponSlots::Count;++i) {
         menu.Close();menu.Cycle(1,ordered[i],available,23);
@@ -47,7 +47,7 @@ int main() {
         assert(wheel.TakeSteps()==0);
     }
     available.fill(false);available[0]=available[WeaponSlots::Pistol]=available[WeaponSlots::C4]=true;
-    menu.Close();wheel.Add(-120*WeaponSlots::Count);menu.Cycle(wheel.TakeSteps(),0,available,26);
+    menu.Close();wheel.Add(-120*17);menu.Cycle(wheel.TakeSteps(),0,available,26);
     assert(menu.Pending()==WeaponSlots::C4); // 17 clicks traverse five full three-weapon laps, then two steps.
     menu.Close();menu.Cycle(1,WeaponSlots::Smoke,available,27);assert(menu.Pending()==WeaponSlots::C4);
     menu.Close();menu.Cycle(-1,WeaponSlots::Smoke,available,27);assert(menu.Pending()==WeaponSlots::Pistol);

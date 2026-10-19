@@ -1,3 +1,4 @@
+#include "../src/platform/NativeRockets.hpp"
 #include "../src/platform/NativeGrenades.hpp"
 #include <cassert>
 #include <cstring>
@@ -7,6 +8,7 @@ namespace {
 float clockSeconds=0;std::vector<Bounds3> cover;std::vector<wc3::Handle> group;
 std::map<wc3::Handle,float> hp;std::map<wc3::Handle,bool> paused;
 unsigned damages=0,pauses=0,releases=0,sounds=0;
+std::vector<bool> collisionFilters;
 wc3::Bits Bits(float value){wc3::Bits result;std::memcpy(&result,&value,4);return result;}
 void Scene() {clockSeconds=0;cover.clear();hp={{1,1000},{2,1000},{3,1000},{10,1000}};paused={{1,false},{2,false},{3,true}};damages=pauses=releases=sounds=0;}
 }
@@ -18,11 +20,13 @@ float Real(Bits value){float result;std::memcpy(&result,&value,4);return result;
 float Ground(float,float){return 0;}
 float AttackSurface(float,float,bool){return 0;}
 void Log(const char*,...) {}
+void Trace(const char*,...) {}
 Handle Effect(const char*,float,float){return 42;}
 std::vector<Handle> NearbyDestructables(float,float,float){return {10};}
 }
 void GameAudio::Play(const char*,float){++sounds;}
-std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,bool){return cover;}
+void GameAudio::SetLoop(const char*,bool,float){}
+std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,bool nativeCollision){collisionFilters.push_back(nativeCollision);return cover;}
 int main() {
     wc3::CreateTimer=[]()->wc3::Handle{return 1;};wc3::TimerStart=[](wc3::Handle,float*,BOOL,wc3::Handle){};
     wc3::TimerGetElapsed=[](wc3::Handle){return Bits(clockSeconds);};
@@ -76,5 +80,19 @@ int main() {
         assert(std::abs(field.Visuals()[0].position[2]-expected.position[2])<.01f);
     }
     field.Reset();assert(field.Visuals().empty() && field.FlashOpacity()==0);
+    // RPG shares native blast policy but owns pause-aware swept flight and one impact event.
+    NativeRockets rockets;GameplaySettings rpg;rpg.rpg.available=true;rpg.friendlyFirePercent=0;rpg.rpg.maxActive=1;
+    Scene();collisionFilters.clear();cover={Bounds3{{60,-100,0},{62,100,300}}};
+    assert(rockets.Launch(1,{0,0,96},{1,0,0},{},rpg));assert(!rockets.Launch(1,{0,0,96},{1,0,0},{},rpg));
+    rpg.damage[WeaponSlots::RPG]=9999;clockSeconds=.3f;assert(rockets.Tick(audio,1,false,{0,0,96},{1,0,0},3000));
+    assert(hp[1]==1000 && hp[2]<1000 && hp[2]>900 && hp[10]<1000 && !rockets.Active(1));
+    // Pathing-texture buildings may have zero native unit radius; rocket queries must still retain their model.
+    assert(!collisionFilters.empty() && std::none_of(collisionFilters.begin(),collisionFilters.end(),[](bool value){return value;}));
+    saved=damages;clockSeconds=2;rockets.Tick(audio,1,false,{0,0,96},{1,0,0},3000);assert(damages==saved);
+    rockets.Reset();Scene();rpg.damage[WeaponSlots::RPG]=100;
+    assert(rockets.Launch(1,{0,0,96},{1,0,0},{},rpg));clockSeconds=.2f;rockets.Tick(audio,1,false,{0,0,96},{1,0,0},3000);
+    assert(rockets.Visuals().size()==1);auto pausedFlight=rockets.Visuals()[0].position;
+    rockets.Tick(audio,1,false,{0,0,96},{1,0,0},3000);assert(rockets.Visuals()[0].position==pausedFlight);
+    rockets.Reset();rpg.rpg.available=false;assert(!rockets.Launch(1,{0,0,96},{1,0,0},{},rpg));
     std::puts("PASS native clock, single detonation, damage/friendly/cover/gate policy, F8 snapshots, flash leases and smoke expiry.");
 }

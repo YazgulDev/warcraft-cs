@@ -265,9 +265,8 @@ those orders movement ownership. `InventoryHudView` presents slot labels, gestur
 Windows messages never issue item natives; focus, reload and mode/map boundaries discard gestures.
 Gesture cleanup preserves the session Tab choice; `ApplySettings` and map reset restore the validated
 `NumbersByDefault` preference. `ThirdPersonCamera` keeps building proxy collision opt-in independently
-of terrain/destructable boom collision and combat hitboxes. Walkable bridge/ladder decks
-and zero-entry containing proxies are excluded from camera obstruction: their enclosing
-boxes are not separate walls. Combat hitboxes and movement keep their own contracts.
+of terrain/destructable boom collision and combat hitboxes. Zero-entry containing proxies, including bridge/ladder volumes,
+are excluded from camera obstruction: their enclosing boxes are not separate walls. Combat hitboxes and movement keep their own contracts.
 
 `SquadSpellPolicy` owns portable readiness/healing decisions. `SquadSpellcasting` adapts live
 ability slots and native orders to a bounded stock-order catalog, using shared native ability,
@@ -343,3 +342,19 @@ from `BuyCatalog`, accepts the controller's owned/charge availability snapshot a
 cache. Window input queues confirm/cancel before weapon fire or squad RMB; the controller consumes that
 mailbox, commits through the existing deployment path and suppresses the confirmation trigger until release.
 Context transitions discard preview/input state; the ordinary aim and movement adapters remain active.
+
+## Optional RPG ownership
+
+`OptionalWeaponAssets` validates the private conversion seal at startup/F8; the
+single `GameplaySettings::WeaponEnabled` predicate gates economy, free grants,
+carried menus, direct switching and fire. `export_halflife_rpg.py` discovers loose
+or PAK resources and publishes the seal last, independently of required CS conversion.
+No optional file becomes a required dependency of the CS-only install path.
+
+`RocketProjectile` owns portable swept launch, motor pulses and steering. `NativeRockets`
+adapts native clocks, immutable launches, laser raycasts, sounds and read-only visual
+snapshots. `NativeBlast` centralizes HE/RPG cover, native damage callbacks and gate
+immunity; flash leases remain in `NativeGrenades`. `RocketView` owns original trail,
+glow and airburst effects plus the private model, sharing `WorldEffectPass` with
+grenade world rendering. Overlay alone owns OpenGL context replacement. The controller
+coordinates accepted shots/reload/laser input rather than implementing projectile physics.

@@ -68,6 +68,8 @@ $sources += '"' + (Join-Path $modRoot 'src/platform/NativeCommandCard.cpp') + '"
 $sources += @('input/ShortcutBindings.cpp','config/HeroSpellSlots.cpp','platform/NativeSpellSlots.cpp','platform/SpellAim.cpp','platform/SpellCaster.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 $sources += '"' + (Join-Path $modRoot 'src/platform/MovementObstacles.cpp') + '"'
 $sources += '"' + (Join-Path $modRoot 'src/platform/NativeGrenades.cpp') + '"'
+# RPG flight/damage and rendering remain independent of the gameplay controller.
+$sources += @('platform/NativeBlast.cpp','platform/NativeRockets.cpp','presentation/RocketView.cpp') | ForEach-Object { '"' + (Join-Path $modRoot "src/$_") + '"' }
 $sources += '"' + (Join-Path $modRoot 'src/presentation/GrenadeView.cpp') + '"'
 $sources += '"' + (Join-Path $modRoot 'src/presentation/GrenadeWorldView.cpp') + '"'
 $sources += '"' + (Join-Path $modRoot 'src/presentation/WeaponSelectionView.cpp') + '"' # Owned-weapon selector shares private buy previews.

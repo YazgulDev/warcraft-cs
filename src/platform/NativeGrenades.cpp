@@ -1,12 +1,11 @@
 #include "NativeGrenades.hpp"
-#include "../combat/CombatDamage.hpp"
+#include "NativeBlast.hpp"
 #include "../combat/GrenadeLaunch.hpp"
 #include <algorithm>
 #include <cmath>
 
 namespace {
 float Distance(const GrenadePoint& a,const GrenadePoint& b) {float n=0;for(int i=0;i<3;++i)n+=(a[i]-b[i])*(a[i]-b[i]);return std::sqrt(n);}
-bool Contains(const Bounds3& box,const GrenadePoint& p) {for(int i=0;i<3;++i)if(p[i]<box.minimum[i] || p[i]>box.maximum[i])return false;return true;}
 }
 float NativeGrenades::Time() const {return timer_ ? wc3::Real(wc3::TimerGetElapsed(timer_)) : 0;}
 void NativeGrenades::Reset() {
@@ -28,15 +27,7 @@ bool NativeGrenades::Throw(wc3::Handle actor,int slot,const GrenadePoint& eye,co
         charge.flight.settings.gravity,charge.flight.settings.fuse,charge.damage);return true;
 }
 bool NativeGrenades::Covered(const GrenadePoint& from,const GrenadePoint& to,const std::vector<Bounds3>& obstacles) const {
-    GrenadePoint direction{};for(int i=0;i<3;++i)direction[i]=to[i]-from[i];
-    for(const auto& box:obstacles) {
-        // Endpoints inside their own units do not make the target or planter an artificial shield.
-        if(Contains(box,from) || Contains(box,to))continue;
-        float entry=0;if(IntersectBounds(box,from.data(),direction.data(),1,entry))return true;
-    }
-    float distance=Distance(from,to);int steps=std::max(1,int(distance/24));
-    for(int i=1;i<steps;++i){float t=float(i)/steps;if(wc3::AttackSurface(from[0]+direction[0]*t,from[1]+direction[1]*t,false)>from[2]+direction[2]*t)return true;}
-    return false;
+    return NativeBlast::Covered(from,to,obstacles);
 }
 bool NativeGrenades::Detonate(const Charge& charge,float now,GameAudio& audio,wc3::Handle viewer,const GrenadePoint& eye,const GrenadePoint& direction) {
     const auto& settings=charge.flight.settings;auto from=charge.flight.position;from[2]+=8;
@@ -45,8 +36,12 @@ bool NativeGrenades::Detonate(const Charge& charge,float now,GameAudio& audio,wc
     if(charge.slot==WeaponSlots::Smoke)return false;
     if(charge.slot==WeaponSlots::HE) {
         auto effect=wc3::Effect("Objects\\Spawnmodels\\Other\\NeutralBuildingExplosion\\NeutralBuildingExplosion.mdl",from[0],from[1]);if(effect)wc3::DestroyEffect(effect);
+        // HE and RPG share native damage attribution, cover, gates and callback-safe map reset handling.
+        unsigned generation=generation_;auto obstacles=obstacles_.Snapshot(0,from[0],from[1],settings.heRadius+256,true);
+        return NativeBlast::Apply(charge.actor,charge.type,from,charge.damage,settings.heRadius,charge.friendly,obstacles,
+            [&]{return generation_==generation;},"grenade HE");
     }
-    float radius=charge.slot==WeaponSlots::HE ? settings.heRadius : settings.flashRadius;
+    float radius=settings.flashRadius;
     auto obstacles=obstacles_.Snapshot(0,from[0],from[1],radius+256,true);
     if(charge.slot==WeaponSlots::Flashbang && viewer && !Covered(from,eye,obstacles)) {
         float exposure=GrenadeProjectile::Exposure(from,eye,direction,radius);
@@ -67,32 +62,13 @@ bool NativeGrenades::Detonate(const Charge& charge,float now,GameAudio& audio,wc
         float before=wc3::Real(wc3::GetUnitState(target,0));if(before<=.405f)continue;
         GrenadePoint point={wc3::Real(wc3::GetUnitX(target)),wc3::Real(wc3::GetUnitY(target)),0};point[2]=wc3::Ground(point[0],point[1])+wc3::Real(wc3::GetUnitFlyHeight(target))+32;
         float falloff=GrenadeProjectile::Falloff(Distance(from,point),radius);if(falloff<=0 || Covered(from,point,obstacles))continue;
-        if(charge.slot==WeaponSlots::HE) {
-            if(wc3::GetUnitTypeId(charge.actor)!=charge.type)break;
-            float damage=CombatDamage::Amount(charge.damage*falloff,wc3::IsUnitAlly(target,owner)!=FALSE,false,before,charge.friendly);
-            if(damage>0)wc3::UnitDamageTarget(charge.actor,target,&damage,FALSE,TRUE,0,4,0);
-            if(generation_!=generation)return hit;
-            float after=wc3::GetUnitTypeId(target) ? wc3::Real(wc3::GetUnitState(target,0)) : 0;hit|=after<before;
-            wc3::Log("grenade HE target=%08X damage=%.1f hpBefore=%.1f hpAfter=%.1f",target,damage,before,after);
-        } else if(target!=viewer && settings.flashUnitStunSeconds>0 && wc3::IsUnitEnemy(target,owner) && !wc3::IsUnitType(target,2)) {
+        if(target!=viewer && settings.flashUnitStunSeconds>0 && wc3::IsUnitEnemy(target,owner) && !wc3::IsUnitType(target,2)) {
             auto found=std::find_if(stuns_.begin(),stuns_.end(),[&](const Stun& item){return item.unit==target;});
             float until=now+settings.flashUnitStunSeconds*falloff;
             if(found!=stuns_.end())found->until=std::max(found->until,until);
             else if(!wc3::IsUnitPaused(target)) {wc3::PauseUnit(target,TRUE);stuns_.push_back({target,wc3::GetUnitTypeId(target),until});wc3::Log("grenade flash disoriented target=%08X seconds=%.2f",target,until-now);}
         }
     }
-    // Gates are destructable widgets and retain their native quest immunity.
-    if(charge.slot==WeaponSlots::HE && generation_==generation && wc3::GetUnitTypeId(charge.actor)==charge.type)
-        for(auto target:wc3::NearbyDestructables(from[0],from[1],radius)) {
-            if(!wc3::GetDestructableTypeId(target) || wc3::IsDestructableInvulnerable(target))continue;
-            float before=wc3::Real(wc3::GetDestructableLife(target));if(before<=.405f)continue;
-            GrenadePoint point={wc3::Real(wc3::GetDestructableX(target)),wc3::Real(wc3::GetDestructableY(target)),0};point[2]=wc3::Ground(point[0],point[1])+32;
-            float damage=charge.damage*GrenadeProjectile::Falloff(Distance(from,point),radius);if(damage<=0 || Covered(from,point,obstacles))continue;
-            wc3::UnitDamageTarget(charge.actor,target,&damage,FALSE,TRUE,0,4,0);
-            if(generation_!=generation)return hit;
-            float after=wc3::GetDestructableTypeId(target) ? wc3::Real(wc3::GetDestructableLife(target)) : 0;hit|=after<before;
-            wc3::Log("grenade HE gate=%08X damage=%.1f hpBefore=%.1f hpAfter=%.1f",target,damage,before,after);
-        }
     return hit;
 }
 bool NativeGrenades::Tick(GameAudio& audio,wc3::Handle viewer,const GrenadePoint& eye,const GrenadePoint& direction) {

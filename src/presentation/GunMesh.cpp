@@ -101,7 +101,7 @@ bool GunMesh::TexturesValid() const {
     return !textures_.empty() && std::all_of(textures_.begin(), textures_.end(),
         [](GLuint texture) { return glIsTexture(texture)==GL_TRUE; });
 }
-void GunMesh::Draw(const char* animation,float seconds,float flash,float flashScale,unsigned serial,bool geometry) {
+void GunMesh::Draw(const char* animation,float seconds,float flash,float flashScale,unsigned serial,bool geometry,const char* idle) {
     if (sequences_.empty()) return;
     const Sequence* sequence = &sequences_.front();
     for (const auto& item : sequences_) if (item.name == animation) { sequence = &item; break; }
@@ -110,6 +110,8 @@ void GunMesh::Draw(const char* animation,float seconds,float flash,float flashSc
     if (sequence->name.find("idle") == 0) frame = WeaponAnimation::Frame(sequence->frames,sequence->fps,seconds,true);
     else if (!WeaponAnimation::HoldLastFrame(sequence->name) && frame >= sequence->frames - 1) {
         for (const auto& item : sequences_) if (item.name.find("idle") == 0) { sequence = &item; break; }
+        // The caller supplies loaded/empty idle intent; an empty RPG must not grow a rocket back visually.
+        if(idle)for(const auto& item:sequences_)if(item.name==idle){sequence=&item;break;}
         frame = std::fmod(seconds * sequence->fps, float(sequence->frames));
     }
     unsigned f0 = std::min(unsigned(frame), sequence->frames - 1), f1 = std::min(f0 + 1, sequence->frames - 1);

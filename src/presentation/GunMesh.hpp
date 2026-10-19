@@ -7,7 +7,7 @@
 class GunMesh {
 public:
     bool Load(const std::string& path);
-    void Draw(const char* animation,float seconds,float flash=0,float flashScale=1,unsigned serial=0,bool geometry=true);
+    void Draw(const char* animation,float seconds,float flash=0,float flashScale=1,unsigned serial=0,bool geometry=true,const char* idle=nullptr);
     // Hand-free private caches fit the complete weapon in the buy menu's preview rectangle.
     void DrawPreview(float x,float y,float width,float height);
     // World props retain GoldSrc axes and their authored idle pose, centered on the physical projectile.

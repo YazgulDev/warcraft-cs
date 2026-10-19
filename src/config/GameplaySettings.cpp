@@ -1,4 +1,5 @@
 #include "GameplaySettings.hpp"
+#include "../platform/OptionalWeaponAssets.hpp"
 #include "../platform/WarcraftApi.hpp"
 #include <algorithm>
 #include <cmath>
@@ -391,6 +392,21 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         const char* fallback=strchr("NWIC",*code) ? "snow" : strchr("OD",*code) ? "DrkG" : strchr("AZJ",*code) ? "forest" : "Des";
         result.tilesetSky[static_cast<unsigned char>(*code)]=sky(key,fallback);
     }
+    // Optional RPG defaults use the same bounded F8 snapshot, while availability comes only from owned caches.
+    auto& rpg=result.rpg;rpg.enabled=enabled("RPG","Enabled");rpg.guidance=enabled("RPG","GuidanceByDefault");
+    rpg.available=!result.warcraftOnly && OptionalWeaponAssets::Rpg(std::filesystem::path(filename).parent_path());
+    rpg.radius=std::max(32.f,number("RPG","Radius",375,3000));
+    rpg.launchSpeed=std::max(50.f,number("RPG","LaunchSpeed",375,6000));
+    rpg.maximumSpeed=std::max(100.f,number("RPG","MaximumSpeed",3000,10000));
+    rpg.acceleration=number("RPG","Acceleration",6000,20000);
+    rpg.ignition=std::max(.01f,number("RPG","IgnitionSeconds",.4f,3));
+    rpg.boostSeconds=std::max(.1f,number("RPG","BoostSeconds",1,5));
+    rpg.gravity=number("RPG","LaunchGravity",600,2000);
+    rpg.lifetime=std::max(1.f,number("RPG","LifetimeSeconds",12,30));
+    rpg.inheritedVelocity=number("RPG","InheritedVelocity",1,2);
+    rpg.modelScale=std::max(.25f,number("RPG","WorldModelScale",1.5f,4));
+    rpg.trailSeconds=number("RPG","TrailSeconds",1,3);rpg.trailSize=number("RPG","TrailSize",10,40);
+    rpg.maxActive=unsigned(std::max(1.f,number("RPG","MaxActive",16,64)));
     const auto& sections=WeaponSlots::Sections;
     for (int slot=0;slot<WeaponSlots::Count;++slot) {
         auto& weapon=result.weapons[slot];
@@ -420,7 +436,7 @@ float GameplaySettings::ContactDamage(int slot,bool secondary,float heroAttack) 
     if (slot<0 || slot>=WeaponSlots::Count) return 0;
     // Native average attack works for heroes and creeps, including their active bonuses; heavy melee keeps its ratio.
     float heavy=secondary ? (slot==WeaponSlots::Knife ? 65.0f/40 : slot==WeaponSlots::Sword ? 2.0f : 1.0f) : 1.0f;
-    if (heroDamage && slot!=WeaponSlots::C4 && !WeaponSlots::Grenade(slot)) return std::max(0.0f,heroAttack)*heroMultiplier[slot]*heavy;
+    if (heroDamage && slot!=WeaponSlots::C4 && slot!=WeaponSlots::RPG && !WeaponSlots::Grenade(slot)) return std::max(0.0f,heroAttack)*heroMultiplier[slot]*heavy;
     return secondary && slot==WeaponSlots::Knife ? knifeSecondaryDamage :
         secondary && slot==WeaponSlots::Sword ? swordSecondaryDamage : damage[slot];
 }

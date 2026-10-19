@@ -55,7 +55,10 @@ ADAPTED MECHANICS AND RESEARCH REFERENCES
 4. Valve Half-Life SDK — https://github.com/ValveSoftware/halflife
    Research reference for GoldSrc studio-model layout, animation/event encoding,
    movement and view behavior, including wish-direction projection in PM_AirAccelerate
-   and friction ordering around takeoff. The project independently applies these rules
+   and friction ordering around takeoff. The RPG reference also informs numerical
+   launch, motor and laser behavior in the project-owned RocketProjectile module;
+   its collision and blast integration are original Warcraft adapters. No RPG SDK
+   implementation or engine code is copied. The project independently applies movement rules
    in src/movement/MovementPhysics.cpp with configurable Warcraft-specific limits.
    The SDK has Valve's own noncommercial HL1-engine
    modification license, not MIT/Apache. No SDK code/header/runtime is bundled or

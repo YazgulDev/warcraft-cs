@@ -4,6 +4,7 @@
 #include "../src/combat/CombatDamage.hpp"
 #include "../src/combat/UnitScaling.hpp"
 #include <cassert>
+#include <filesystem>
 #include <cmath>
 #include <fstream>
 #include <windows.h>
@@ -540,5 +541,29 @@ int main() {
         assert(scale>=.1f && scale<=2);
         if(!strcmp(value,"nan") || !strcmp(value,"inf") || !strcmp(value,"bad") || !*value)assert(std::abs(scale-10.f/11)<.00001f);
     }
+    // The optional resource seal is checked by the real startup/F8 parser, with no OpenGL dependency.
+    auto rpgRoot=std::filesystem::current_path()/("warcraft-rpg-test-"+std::to_string(GetCurrentProcessId()));
+    assert(std::filesystem::create_directory(rpgRoot));auto assets=rpgRoot/"assets";std::filesystem::create_directory(assets);
+    auto rpgPath=(rpgRoot/"WarcraftCS.ini").string();{std::ofstream f(rpgPath);f<<"[RPG]\nDamage=777\nMaximumSpeed=1234\n";}
+    assert(!GameplaySettings::Load(rpgPath).rpg.available);
+    const char* rpgFiles[]={"rpg.wcg","rpg.wca","buy/rpg.wcg","world/rpgrocket.wcg","sounds/hl_rpg_fire.wav","sounds/hl_rpg_motor.wav","sounds/hl_rpg_explode.wav"};
+    {
+        std::ofstream seal(assets/"rpg.ready",std::ios::binary);seal.write("WRP1",4);
+        for(auto name:rpgFiles) {
+            auto output=assets/name;std::filesystem::create_directories(output.parent_path());std::string bytes="synthetic optional asset";
+            {std::ofstream f(output,std::ios::binary);f<<bytes;}
+            uint64_t n=bytes.size(),hash=14695981039346656037ull;for(unsigned char c:bytes){hash^=c;hash*=1099511628211ull;}
+            seal.write(reinterpret_cast<char*>(&n),8);seal.write(reinterpret_cast<char*>(&hash),8);
+        }
+    }
+    auto optional=GameplaySettings::Load(rpgPath);assert(optional.rpg.available && optional.WeaponEnabled(WeaponSlots::RPG) && optional.damage[17]==777 && optional.rpg.maximumSpeed==1234);
+    {std::ofstream f(assets/"world/rpgrocket.wcg",std::ios::app);f<<"corrupt";}
+    assert(!GameplaySettings::Load(rpgPath).rpg.available);
+    for(auto key:{"Radius","LaunchSpeed","MaximumSpeed","Acceleration","IgnitionSeconds","BoostSeconds","LaunchGravity","LifetimeSeconds","InheritedVelocity","WorldModelScale","TrailSeconds","TrailSize","MaxActive"}) {
+        WritePrivateProfileStringA("RPG",key,"nan",rpgPath.c_str());auto g=GameplaySettings::Load(rpgPath).rpg;
+        assert(std::isfinite(g.maximumSpeed) && g.radius>=32 && g.lifetime>=1 && g.maxActive>=1);
+    }
+    // This test owns the freshly created temporary directory exclusively.
+    assert(rpgRoot.parent_path()==std::filesystem::current_path());std::filesystem::remove_all(rpgRoot);
     DeleteFileA(path.c_str());return 0;
 }

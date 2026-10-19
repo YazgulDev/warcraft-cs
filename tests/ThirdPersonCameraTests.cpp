@@ -3,7 +3,7 @@
 #include <cstring>
 
 namespace {
-float ground=0,buildingEntry=0,obstacleEntry=200;bool obstacle=false,walkable=false;int groups=0,intersections=0;wc3::Handle candidate=0;
+float ground=0,buildingEntry=0,obstacleEntry=200;bool obstacle=false;int groups=0,intersections=0;wc3::Handle candidate=0;
 wc3::Bits Bits(float f) {wc3::Bits bits;memcpy(&bits,&f,4);return bits;}
 wc3::Bits __cdecl Zero(wc3::Handle) {return Bits(0);}
 wc3::Bits __cdecl Life(wc3::Handle,int) {return Bits(100);}
@@ -19,14 +19,11 @@ BOOL __cdecl Hidden(wc3::Handle) {return FALSE;}
 namespace wc3 {
 float Real(Bits bits) {float f;memcpy(&f,&bits,4);return f;}
 float TerrainGround(float,float) {return ground;}
-bool WalkableSurface(float,float,float& height) {height=64;return walkable;}
 std::vector<Handle> NearbyDestructables(float,float,float) {return obstacle ? std::vector<Handle>{3} : std::vector<Handle>{};}
 Bits (__cdecl* GetUnitX)(Handle)=Zero;
 Bits (__cdecl* GetUnitY)(Handle)=Zero;
 Bits (__cdecl* GetUnitState)(Handle,int)=Life;
 Bits (__cdecl* GetDestructableLife)(Handle)=ObjectLife;
-Bits (__cdecl* GetDestructableX)(Handle)=Zero;
-Bits (__cdecl* GetDestructableY)(Handle)=Zero;
 Handle (__cdecl* CreateGroup)()=Group;
 void (__cdecl* DestroyGroup)(Handle)=Destroy;
 void (__cdecl* GroupEnumUnitsInRange)(Handle,float*,float*,float*,Handle)=Enum;
@@ -53,9 +50,8 @@ int main() {
     obstacle=true;assert(distance()==184);
     // A bridge/ladder's enclosing box and an already containing proxy are not walls behind the hero.
     obstacleEntry=0;assert(distance()==500);
-    obstacleEntry=24;walkable=true;assert(distance()==500);
     // An actual separate gate/tree surface and terrain still shorten the camera boom.
-    walkable=false;obstacleEntry=200;assert(distance()==184);
+    obstacleEntry=200;assert(distance()==184);
     obstacle=false;ground=125;assert(distance()==0);
     ground=0;settings.distance=700;assert(distance()==700);
 }

@@ -4,14 +4,16 @@ import struct
 from pathlib import Path
 
 
-def export_preview(source: Path, destination: Path, texture_names: list[str]) -> int:
+def export_preview(source: Path, destination: Path, texture_names: list[str], excluded_textures: tuple[str, ...] = ()) -> int:
     # Material names come from the player's studio model; never ship retail art or guessed silhouettes.
     data = source.read_bytes()
     magic, textures, meshes, sequences, bones = struct.unpack_from('<4s4I', data)
     if magic != b'WCG2' or textures > 128 or meshes > 256 or not 0 < bones <= 128:
         raise ValueError('Invalid preview source header')
+    # Half-Life hands use named glove materials instead of CS's view_ prefix.
+    extra = {name.casefold() for name in excluded_textures}
     excluded = {i for i, name in enumerate(texture_names)
-                if name.casefold().startswith('view_') or name.casefold() == 'silencer.bmp'}
+                if name.casefold().startswith('view_') or name.casefold() == 'silencer.bmp' or name.casefold() in extra}
     at = 20
     for _ in range(textures):
         width, height = struct.unpack_from('<2I', data, at)

@@ -24,7 +24,7 @@ void Overlay::Text(float x, float y, const char* text, const HudFont* font) {
     (font ? *font : font_).Draw(x,y,text);
 }
 void Overlay::ResetGraphics(bool deleteObjects) {
-    grenadeWorld_.Reset(deleteObjects);
+    grenadeWorld_.Reset(deleteObjects);rocketView_.Reset(deleteObjects);
     spellHud_.Reset(deleteObjects);
     inventoryIcons_.Reset(deleteObjects);unitFont_.Reset(deleteObjects);inventoryFont_.Reset(deleteObjects);
     sky_.Reset(deleteObjects);
@@ -54,7 +54,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
             glGetString(GL_VENDOR), glGetString(GL_RENDERER), glGetString(GL_VERSION), glIsEnabled(GL_LINE_STIPPLE));
     } else if (refreshPending_) {
         // Keep surviving resources: blind deletion after Alt-Tab can touch IDs recycled by the game.
-        bool valid=font_.Valid() && statusFont_.Valid() && spellFont_.Valid() && grenadeWorld_.Valid();
+        bool valid=font_.Valid() && statusFont_.Valid() && spellFont_.Valid() && grenadeWorld_.Valid() && rocketView_.Valid();
         valid=valid && sky_.Valid() && spellHud_.Valid() && inventoryIcons_.Valid() && unitFont_.Valid() && inventoryFont_.Valid();
         for (int i=0;i<WeaponSlots::Count;++i) if (loaded_[i] && !guns_[i].TexturesValid()) valid=false;
         for (int i=0;i<WeaponSlots::Count;++i) if (previewLoaded_[i] && !buyPreviews_[i].TexturesValid()) valid=false;
@@ -105,6 +105,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     if(controller.UnitFirstPerson()) {
         if(!controller.Status().contained && !controller.Status().hidden) {
             grenadeWorld_.Draw(root_,controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
+            rocketView_.Draw(root_,controller.RocketVisuals(),controller.LaserVisible(),controller.LaserPoint(),barView,width,height,nearPlane,farPlane);
             GrenadeView::Draw(controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
             GrenadeView::Flash(controller.FlashOpacity(),width,height);
         }
@@ -117,6 +118,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         barCount=HealthBarRenderer::Draw(bars,barView,width,height,nearPlane,farPlane);
     if(!controller.Status().contained && !controller.Status().hidden) {
         grenadeWorld_.Draw(root_,controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
+        rocketView_.Draw(root_,controller.RocketVisuals(),controller.LaserVisible(),controller.LaserPoint(),barView,width,height,nearPlane,farPlane);
         GrenadeView::Draw(controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
     }
     glMatrixMode(GL_PROJECTION); glPushMatrix(); glLoadIdentity();
@@ -143,7 +145,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         // Preserve each model's original arm origin instead of exposing detached elbow ends.
         const auto& pose=controller.WeaponPose();
         glTranslatef(pose.x,pose.y,pose.z);glRotatef(pose.roll,0,0,1);
-        guns_[index].Draw(controller.Animation(),controller.AnimationTime(),flash,visuals.flashScale,controller.ShotSerial(),!controller.Scoped());
+        guns_[index].Draw(controller.Animation(),controller.AnimationTime(),flash,visuals.flashScale,controller.ShotSerial(),!controller.Scoped(),controller.IdleAnimation());
         glDisable(GL_DEPTH_TEST);
     }
     glMatrixMode(GL_PROJECTION); glLoadIdentity(); glOrtho(0, width, height, 0, -1, 1);

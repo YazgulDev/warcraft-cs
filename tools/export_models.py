@@ -272,6 +272,9 @@ def main():
     (args.output / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     # Sky faces remain private game-derived content, just like hands, skins and audio.
     export_skies(args.cstrike, args.output / "skies")
+    # Optional guest content never makes an otherwise complete Counter-Strike install fail.
+    from export_halflife_rpg import export as export_rpg
+    print(json.dumps(export_rpg(args.cstrike, args.output), indent=2))
     print(json.dumps(manifest, indent=2))
 
 

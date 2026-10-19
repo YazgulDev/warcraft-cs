@@ -24,6 +24,7 @@ inline const std::array<Weapon,WeaponSlots::Count> Weapons={{
     {"XM1014", "xm1014-1.wav", 7, 32, 80, .25f, 3.5f, 1200, true},
     {"HE GRENADE","hegrenade-1.wav",1,0,100,0,0,350,false},
     {"FLASHBANG","flashbang-1.wav",2,0,0,0,0,1000,false},
-    {"SMOKE GRENADE","sg_explode.wav",1,0,0,0,0,300,false}
+    {"SMOKE GRENADE","sg_explode.wav",1,0,0,0,0,300,false},
+    {"RPG","hl_rpg_fire.wav",1,5,100,1.5f,2,30000,false}
 }};
 }

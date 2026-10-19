@@ -10,6 +10,7 @@ funds and full packs do not charge gold. Inventory slot IDs remain stable. The
 to highlight a weapon, then LMB to equip it. Tab toggles item-number routing.
 F11 refills owned weapons; F12 grants all weapons. The initial kit is unchanged.
 Models, sounds and hand-free previews are converted privately from owned CS files.
+An optional [Half-Life RPG](HALF-LIFE-RPG.md) appears only with complete owned resources.
 
 The new INI sections `[Deagle]`, `[Glock]`, `[MP5]`, `[P90]`, `[M249]`, `[M3]`,
 `[XM1014]` expose `Price`/`AmmoPrice` in native gold (0–1000000), `AmmoPack`

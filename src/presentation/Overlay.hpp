@@ -1,5 +1,6 @@
 #pragma once
 #include "GrenadeWorldView.hpp"
+#include "RocketView.hpp"
 #include "../combat/WeaponSlots.hpp"
 #include "GunMesh.hpp"
 #include "../application/ShooterController.hpp"
@@ -40,4 +41,5 @@ private:
     MuzzleFlashPulse muzzleFlash_;
     SkyView sky_;
     GrenadeWorldView grenadeWorld_;
+    RocketView rocketView_;
 };

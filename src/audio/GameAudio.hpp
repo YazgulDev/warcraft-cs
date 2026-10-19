@@ -16,6 +16,7 @@ public:
     void SetVolumePercent(float percent);
     float VolumePercent() const;
     void Play(const char* name, float volume = 0.75f);
+    void SetLoop(const char* name,bool playing,float volume=.75f);
     float Duration(int weapon,const char* name) const;
     float BeginAnimation(int weapon, const char* name, DWORD start,float rate=1);
     void Tick(DWORD now);
@@ -26,6 +27,7 @@ private:
         std::vector<BYTE> data;
         std::array<IXAudio2SourceVoice*, 8> voices{};
         size_t next = 0;
+        bool looping=false;
     };
     struct Event { float time; std::string sound; };
     struct Sequence { float duration; std::vector<Event> events; };

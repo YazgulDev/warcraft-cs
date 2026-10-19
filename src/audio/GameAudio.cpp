@@ -107,18 +107,32 @@ void GameAudio::Play(const char* name, float volume) {
     Clip& clip = *found->second;
     // Reuse an idle voice rather than queuing behind an old shot or interrupting footsteps.
     IXAudio2SourceVoice* voice = nullptr; unsigned occupied = 0;
-    for (auto candidate : clip.voices) {
+    for (size_t i=0;i<clip.voices.size()-(clip.looping ? 1 : 0);++i) {
+        auto candidate=clip.voices[i];
         XAUDIO2_VOICE_STATE state{}; candidate->GetState(&state, XAUDIO2_VOICE_NOSAMPLESPLAYED);
         if (state.BuffersQueued) ++occupied; else if (!voice) voice = candidate;
     }
     if (!voice) {
-        voice = clip.voices[clip.next++ % clip.voices.size()];
+        voice = clip.voices[clip.next++ % (clip.voices.size()-(clip.looping ? 1 : 0))];
         voice->Stop(); voice->FlushSourceBuffers(); voice->Start();
     }
     XAUDIO2_BUFFER buffer{}; buffer.AudioBytes = UINT32(clip.data.size()); buffer.pAudioData = clip.data.data();
     buffer.Flags = XAUDIO2_END_OF_STREAM; voice->SetVolume(volume);
     HRESULT result = voice->SubmitSourceBuffer(&buffer);
     wc3::Log("CS sound=%s volume=%.2f overlapping=%u queued=%08X", name, volume, occupied, result);
+}
+void GameAudio::SetLoop(const char* name,bool playing,float volume) {
+    auto found=clips_.find(name);if(found==clips_.end())return;auto& clip=*found->second;
+    if(clip.looping==playing)return;
+    auto voice=clip.voices.back();if(!voice)return;
+    // The motor owns one reserved voice and cannot queue another loop on every rendered frame.
+    voice->Stop();voice->FlushSourceBuffers();clip.looping=false;
+    if(playing) {
+        XAUDIO2_BUFFER buffer{};buffer.AudioBytes=UINT32(clip.data.size());buffer.pAudioData=clip.data.data();
+        buffer.Flags=XAUDIO2_END_OF_STREAM;buffer.LoopCount=XAUDIO2_LOOP_INFINITE;voice->SetVolume(volume);
+        clip.looping=SUCCEEDED(voice->SubmitSourceBuffer(&buffer));
+    }
+    voice->Start();wc3::Log("CS loop=%s playing=%d",name,clip.looping);
 }
 float GameAudio::Duration(int weapon,const char* name) const {
     auto found=timelines_[weapon].find(name);return found==timelines_[weapon].end() ? 0 : found->second.duration;
@@ -142,7 +156,7 @@ void GameAudio::CancelAnimation() { current_ = nullptr; event_ = 0; }
 void GameAudio::Stop() {
     // Only our voices stop on mode exit; ambient sounds and Warcraft music keep playing.
     CancelAnimation();
-    for (auto& pair : clips_) for (auto voice : pair.second->voices) {
+    for (auto& pair : clips_) {pair.second->looping=false;for (auto voice : pair.second->voices) {
         voice->Stop(); voice->FlushSourceBuffers(); voice->Start();
-    }
+    }}
 }

@@ -420,3 +420,14 @@ foreach($case in @(@('750','800','','1125','660'),@('750.0','800.0','1','1125','
     $trajectoryHash=(Get-FileHash $trajectoryConfig).Hash;Update-GameplayConfig $template $trajectoryConfig
     if((Get-FileHash $trajectoryConfig).Hash -ne $trajectoryHash){throw 'Trajectory migration must be idempotent.'}
 }
+
+# An optional RPG section merges even when absent locally; saved opt-outs and tuning survive repeated updates.
+$rpgConfig=Join-Path $folder 'custom-optional-rpg.ini'
+@('[RPG]','Enabled=false','Damage=777','MaximumSpeed=1234','Price=2222') | Set-Content -LiteralPath $rpgConfig -Encoding ascii
+Update-GameplayConfig $template $rpgConfig
+$rpgText=Get-Content $rpgConfig -Raw
+foreach($expected in @('Enabled=false','Damage=777','MaximumSpeed=1234','Price=2222','GuidanceByDefault=true','TrailSeconds=1','MaxReserve=5')) {
+    if(!$rpgText.Contains($expected)){throw ('RPG update lost '+$expected)}
+}
+$rpgHash=(Get-FileHash $rpgConfig).Hash;Update-GameplayConfig $template $rpgConfig
+if((Get-FileHash $rpgConfig).Hash -ne $rpgHash){throw 'RPG migration is not idempotent.'}

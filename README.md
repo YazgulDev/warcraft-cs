@@ -226,6 +226,12 @@ barrel muzzle flash. F8 applies the editable `[Viewmodel]` settings; see the
 
 ## Configuration
 
+Optional **Half-Life RPG**: setup detects the owner's sibling `valve` files (loose or PAK)
+and converts them privately. If complete, buy with **B → 8 → 7**; carried RPG appears in
+primary group **1** and the wheel. LMB launches a physical rocket, RMB toggles laser guidance,
+R reloads one rocket. Turn the laser off to reload while a rocket is flying. Missing or
+changed resources hide RPG without affecting CS weapons. See [RPG settings](docs/HALF-LIFE-RPG.md).
+
 CS grenades: **B → 8 Equipment → 4 HE / 5 Flashbang / 6 Smoke**. Select a carried
 grenade with group 4 or the wheel, then click to confirm. Hold LMB again to pull the pin, release to throw; the fuse starts
 at launch. Defaults carry one HE, two flashes and one smoke. See
@@ -247,7 +253,7 @@ The camera keeps this distance near buildings by default: their broad model boxe
 space and previously forced extreme close-ups from either side. `[ThirdPerson] CameraBuildingCollision=false`
 controls this policy (true restores building push-in; startup/F8). With false the camera may pass through
 building models; terrain and separate tree/gate surfaces still shorten the boom.
-Walkable bridge/ladder proxies and boxes already containing the camera pivot do not force close-ups.
+Boxes already containing the camera pivot, including enclosing bridge/ladder volumes, do not force close-ups.
 Reachable targets have brackets and a ground circle: red for enemies, yellow for other contacts.
 `[ThirdPerson] ShowTargetIndicator` hides/shows both; `TargetCircleRadius=64` sets the circle radius
 in Warcraft units (16..256). Change them in `Game/WarcraftCS/WarcraftCS.ini` and press F8 to reload.

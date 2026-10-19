@@ -9,7 +9,7 @@ $script=Join-Path $build 'test-grenades.cmd'
 @('@echo off',('call "'+$environment+'" >nul'),
     ('cl /nologo /std:c++17 /EHsc /O2 /W4 /DNOMINMAX "'+(Join-Path $root 'tests/GrenadeTests.cpp')+'" /Fe:grenade-tests.exe'),
     'if errorlevel 1 exit /b 1','grenade-tests.exe','if errorlevel 1 exit /b 1',
-    ('cl /nologo /std:c++17 /EHsc /O2 /W4 /DNOMINMAX "'+(Join-Path $root 'tests/NativeGrenadeTests.cpp')+'" "'+(Join-Path $root 'src/platform/NativeGrenades.cpp')+'" "'+(Join-Path $root 'src/input/ShortcutBindings.cpp')+'" /Fe:native-grenade-tests.exe'),
+    ('cl /nologo /std:c++17 /EHsc /O2 /W4 /DNOMINMAX "'+(Join-Path $root 'tests/NativeGrenadeTests.cpp')+'" "'+(Join-Path $root 'src/platform/NativeGrenades.cpp')+'" "'+(Join-Path $root 'src/platform/NativeBlast.cpp')+'" "'+(Join-Path $root 'src/platform/NativeRockets.cpp')+'" "'+(Join-Path $root 'src/input/ShortcutBindings.cpp')+'" /Fe:native-grenade-tests.exe'),
     'if errorlevel 1 exit /b 1','native-grenade-tests.exe','if errorlevel 1 exit /b 1',
     ('cl /nologo /std:c++17 /EHsc /O2 /W4 /DNOMINMAX "'+(Join-Path $root 'tests/GrenadeViewTests.cpp')+'" "'+(Join-Path $root 'src/presentation/GrenadeView.cpp')+'" /Fe:grenade-view-tests.exe user32.lib gdi32.lib opengl32.lib'),
     'if errorlevel 1 exit /b 1','grenade-view-tests.exe','if errorlevel 1 exit /b 1',

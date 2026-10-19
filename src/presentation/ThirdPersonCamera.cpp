@@ -13,9 +13,6 @@ ThirdPersonPose ThirdPersonCamera::Position(wc3::Handle actor,float z,float yaw,
     }
     for(auto object:wc3::NearbyDestructables(x,y,settings.distance+512)) {
         if(wc3::Real(wc3::GetDestructableLife(object))<=.405f)continue;
-        float deck=0,cx=wc3::Real(wc3::GetDestructableX(object)),cy=wc3::Real(wc3::GetDestructableY(object));
-        // Walkable bridges/ladders enclose empty space above their decks; their box is not a camera wall.
-        if(wc3::WalkableSurface(cx,cy,deck))continue;
         float entry=0;
         // A pivot already inside a broad model proxy must be allowed to look out instead of collapsing to zero.
         if(destructables.Intersect(object,pose.pivot.data(),direction,limit,entry) && entry>0)limit=entry;
