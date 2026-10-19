@@ -1,4 +1,4 @@
-# Warcraft CS 0.10.0
+# Warcraft CS 0.11.0
 
 Counter-Strike 1.6 inside Warcraft III: control your own hero or unit in first person,
 shoot, and play regular maps, campaigns and compatible custom maps.
@@ -11,25 +11,20 @@ Neither variant includes game files, models, sounds, maps or saves.
 You need your own Warcraft III installation. CS 1.6 is required only for the full weapon mode.**
 This is an early prototype with known limitations.
 
-**[Download 0.10.0](https://github.com/YazgulDev/warcraft-cs/releases/tag/v0.10.0)** В·
-[Release Notes](docs/RELEASE-0.10.0.md) В· [Installation](INSTALL.md) В· [Requirements](REQUIREMENTS.md)
+**[Download 0.11.0](https://github.com/YazgulDev/warcraft-cs/releases/tag/v0.11.0)** В·
+[Release Notes](docs/RELEASE-0.11.0.md) В· [Installation](INSTALL.md) В· [Requirements](REQUIREMENTS.md)
 В· [Troubleshooting](TROUBLESHOOTING.md) В· [Discussions](https://github.com/YazgulDev/warcraft-cs/discussions)
 
-0.10.0 adds the animated F6/F7 unit HUD, interactive inventory and right-click squad commands.
-Tab starts with item numbers; I opens mouse inventory, and Y toggles squad orders in armed F6.
+0.11.0 adds Deagle, Glock, MP5, P90, M249, M3 and XM1014, CS grenades and an
+optional Half-Life RPG detected from owned local files. E opens native shops,
+U toggles the army assistant, and a CS-style menu keeps every carried weapon selectable.
 
-It also fixes point-spell targeting, building zoom, side-contact snaps and neutral/gate attacks,
-including Kael's native ranged missiles. See the [complete release notes](docs/RELEASE-0.10.0.md)
-for every change, new setting, upgrade steps and validation limits.
-
-The current feature branch expands the paid arsenal with Deagle, Glock, MP5, P90,
-M249, M3 and XM1014; adds native shop interaction on E in F6/F7 and army AI on U.
-See [arsenal, shops and AI controls/configuration](docs/ARSENAL-SHOPS-AI.md).
-Firearms reach at least 30000 world units by default, covering visible aimed targets;
-M3/XM1014 reloads use a continuous fitted shell timeline without idle flashes.
-Partial shotgun reloads finish sooner at a constant insertion speed, with shell sounds.
-Each completed insertion loads one real shell; a fresh LMB press interrupts to fire a loaded round.
-Glock LMB fires one ordinary shot; RMB fires one three-round burst unless Y enables squad orders.
+It also adds movement of hands and muzzle flashes, per-shell shotgun reloads,
+Glock mouse actions, longer firearm reach and ledge/camera fixes. The HUD now
+isolates its OpenGL state and records detailed phase/font/profile diagnostics.
+See the [complete release notes](docs/RELEASE-0.11.0.md) for all changes, settings,
+upgrade steps and verification limits. Existing F6/F7 HUD, Tab/I inventory,
+Y squad orders and clean F9 remain available.
 
 ## Features
 
@@ -159,7 +154,7 @@ Run in PowerShell, replacing the game paths with your own:
 ```powershell
 git clone https://github.com/YazgulDev/warcraft-cs.git
 cd warcraft-cs
-git switch release/0.10.0
+git switch release/0.11.0
 .\setup.cmd -WarcraftDirectory "E:\Warcraft III" -CounterStrikeDirectory "C:\SteamGames\steamapps\common\Half-Life\cstrike"
 .\play.cmd
 ```

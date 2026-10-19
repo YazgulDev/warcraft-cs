@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.11.0 — 2026-10-20
+
+- Added Deagle, Glock, MP5, P90, M249, M3 and XM1014 purchases.
+- Added native shops on E and optional army economy and support AI on U.
+- Added a CS-style carried weapon menu with sequential wheel selection.
+- Added HE, flash and smoke grenades with original thrown models.
+- Added an optional Half-Life RPG with real rockets and laser guidance.
+- Added movement of hands and animated muzzle flashes.
+- Changed firearm reach to cover the visible world by default.
+- Fixed shotgun reload timing and sounds with interruptible per-shell loading.
+- Added single-shot and right-click burst actions for the Glock.
+- Fixed ledge traversal and camera collapse inside bridge model bounds.
+- Fixed inherited OpenGL state hiding the flat HUD.
+- Added bounded HUD, font, installation profile and DLL diagnostics.
+
+- Preserve saved prices, bindings and feature opt-outs; migrate only the old stock grenade
+  trajectory pair once. U yields to existing custom bindings. Optional RPG resources are sealed
+  and rechecked on startup/F8; missing content cannot be bought, granted or selected.
+- Keep render/projectile/diagnostic ownership in cohesive modules, extend private conversion
+  and the weapon authoring skill, retain upstream notices and include RPG in the full test wrapper.
+- Full controls, new settings/defaults/bounds, upgrade steps, verification and limitations:
+  [Release 0.11.0](docs/RELEASE-0.11.0.md). All changes are measured from immutable v0.10.0.
+
+
 ## 0.10.0 — 2026-10-18
 
 - Restore native F7 ranged projectiles against destructable gates/crates, including Kael attacks
