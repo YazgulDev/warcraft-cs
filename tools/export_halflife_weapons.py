@@ -50,7 +50,7 @@ def export_one(cstrike: Path, output: Path, stem: str) -> dict:
                 if data is None:
                     raise ValueError('Missing owned animation group')
                 (raw / name).write_bytes(data)
-            model.export(stage / f'{stem}.wcg', muzzle_attachments=(0,) if model.integer(212) else ())
+            model.export(stage / f'{stem}.wcg', muzzle_attachments=(0,) if model.integer(212) else (), presentation=True)
             timeline = stage / f'{stem}.wca'
             samples = model.audio_timeline(timeline)
             # Prefix guest samples so an animation cannot collide with Counter-Strike's sound namespace.

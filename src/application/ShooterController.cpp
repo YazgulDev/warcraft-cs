@@ -744,21 +744,24 @@ void ShooterController::FireEnergy(bool primaryPressed,bool secondaryHeld,DWORD 
     auto event=energy_.Step(weapon_,now*.001,primaryPressed,Down(VK_LBUTTON),secondaryHeld,ammo_[weapon_],w.interval,settings_.halfLife);
     bool gluon=weapon_==WeaponSlots::Gluon;
     if(event.started) {
-        Play(gluon ? "altfireon" : "spinup");
+        Play(gluon ? "fire3" : "spinup"); // Gluon's authored firing cycle, not its unused alternate opening action.
         if(gluon)Sound("hl_egon_windup2.wav");
         audio_.SetLoop(gluon ? "hl_egon_run3.wav" : "hl_gauss_charge.wav",true);
         wc3::Log("Half-Life energy started weapon=%s cells=%d",w.name,ammo_[weapon_]);
     }
-    if(energy_.Active() && AnimationTime()> (gluon ? 1.5f : 1.f) && !strcmp(Animation(),gluon ? "altfireon" : "spinup"))Play(gluon ? "altfirecycle" : "spin");
+    if(!gluon && energy_.Active() && !strcmp(Animation(),"spinup")) {
+        float duration=audio_.Duration(weapon_,"spinup");
+        if(duration>0 && AnimationTime()>=duration)Play("spin",1,AnimationTime()-duration); // No idle frame or lost overshoot at the charge boundary.
+    }
     if(event.stopped) {
         audio_.SetLoop(gluon ? "hl_egon_run3.wav" : "hl_gauss_charge.wav",false);
-        if(gluon){Sound("hl_egon_off1.wav");Play("altfireoff");energyBeam_.tick=0;}
+        if(gluon){Sound("hl_egon_off1.wav");Play("idle");energyBeam_.tick=0;}
     }
     if(!event.shot)return;
     // Only accepted energy expenditure produces native damage, an animated muzzle event and a world beam.
     float damage=settings_.damage[weapon_];
     if(event.charged)damage+=(settings_.halfLife.tauChargedDamage-damage)*event.charge;
-    if(!gluon){Play(event.charged ? "fire2" : "fire");Sound(w.sound);}
+    if(!gluon){Play("fire2");Sound(w.sound);} // Both Tau modes use its complete authored recoil/recovery clip.
     ++shotSerial_;flashWeapon_=weapon_;lastShot_=now;
     Strike(0,0,1,damage); // Charged damage remains configurable even when ordinary Tau damage is zero.
     recoil_.Shot(weapon_,movement_.Speed(),movement_.Grounded(),movement_.Duck()>=.5f,settings_.weaponKick[weapon_]);
@@ -846,7 +849,13 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
             if (WeaponSlots::Melee(weapon_)) {
                 static const char* contacts[] = {"knife_hit1.wav", "knife_hit2.wav", "knife_hit3.wav", "knife_hit4.wav"};
                 const char* sample = destructable ? "knife_hitwall1.wav" : (weapon_ == WeaponSlots::Sword || meleeAttack_.secondary) ? "knife_stab.wav" : contacts[knifeSwing_ % 4];
-                if(weapon_==WeaponSlots::Crowbar)sample=destructable ? "hl_cbar_hit1.wav" : "hl_cbar_hitbod1.wav";
+                if(weapon_==WeaponSlots::Crowbar) {
+                    sample=destructable ? "hl_cbar_hit1.wav" : "hl_cbar_hitbod1.wav";
+                    // A confirmed crowbar contact uses the authored hit follow-through at the current frame,
+                    // instead of finishing a miss animation or replaying its windup from the beginning.
+                    const char* clip=!strcmp(Animation(),"attack1miss") ? "attack1" : !strcmp(Animation(),"attack2") ? "attack2hit" : "attack3hit";
+                    Play(clip,1,AnimationTime());
+                }
                 Sound(sample); wc3::Log("melee contact weapon=%s sound=%s animationTime=%.3f mode=%s", w.name, sample, AnimationTime(), meleeAttack_.secondary ? "secondary" : "primary");
             }
             wc3::Log("hit feedback=marker");

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fixed Half-Life Crowbar/Tau/Gluon chrome textures and rigid skeleton interpolation, complete action frames, charge transitions and firing clips; RPG unchanged.
+
 - Added optional owned Half-Life Crowbar, Tau Cannon (primary and charged secondary) and continuous Gluon Gun.
 - Added a separate Half-Life purchase category on B/9 and carried selection group 6, including RPG.
 - Added independent asset seals, private models/previews/audio, direct energy-cell purchases, F8 tuning and transition cancellation.

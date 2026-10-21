@@ -45,6 +45,19 @@ attachments and previews are converted locally rather than redistributed.
 
 ## Configuration
 
+### Models and animation update
+
+Re-run setup/private conversion after updating this feature. Crowbar, Tau and Gluon
+use private WCG3 caches carrying chrome material flags, animated normals, local bone
+hierarchy and original loop flags. Runtime interpolates rigid rotations before
+composing parents, keeping hands and weapon parts attached. Gluon plays its authored
+firing cycle; Tau completes spin-up and uses the full recoil clip for either shot.
+Final action frames are retained, and charge transitions do not flash an idle pose.
+Existing WCG2 caches remain readable, but rebuilding is required for corrected chrome
+and skeleton playback. CS and RPG retain their WCG2 conversion and animations.
+
+### Tuning
+
 Edit `WarcraftCS/WarcraftCS.ini`, then F8 or restart. Updates add missing keys without
 replacing custom values. F8 cancels charge/channel and rechecks seals; it never grants
 ammo. Existing CS/RPG controls and settings are preserved.
