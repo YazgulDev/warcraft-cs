@@ -381,3 +381,13 @@ normal bones, parent indices, local animation poses and sequence loop flags.
 WCG2 remains supported with its original sampling behavior; RPG and CS conversion
 retain that format. Synthetic conversion and hidden-WGL regressions cover both
 formats, chrome movement, loop seams and complete terminal action frames.
+
+`TauChargeFeedback` integrates the charge speed ramp as an absolute animation phase;
+the existing energy state exposes elapsed charge time without changing resource rules.
+`GameAudio` changes a reserved live loop voice's pitch rather than restarting buffers.
+`CrowbarContact` owns impact sample selection; the controller supplies native creature,
+structure/destructable or terrain classification independently of damage immunity.
+The owned converter fits Gluon's front opening in its rigid bone, while `ViewmodelAnchor`
+compensates native versus held aspect and near clipping. Overlay samples one animation
+time for both beam attachment and held geometry. Synthetic aperture/phase/projection
+tests and real XAudio2 pitch/loop tests cover these boundaries.

@@ -46,4 +46,9 @@ class StudioPresentationTests(unittest.TestCase):
             # The legacy default is retained for CS/RPG; normals/materials are strictly opt-in.
             model.export(root/'legacy.wcg');self.assertEqual((root/'legacy.wcg').read_bytes()[:4],b'WCG2')
             self.assertNotEqual(data,(root/'legacy.wcg').read_bytes())
+            # Fit a real front opening to the correct rigid bone rather than guessing a HUD-space offset.
+            model.export(root/'nozzle.wcg',presentation=True,muzzle_texture='chrome.bmp')
+            footer=(root/'nozzle.wcg').read_bytes()[-24:]
+            self.assertEqual(struct.unpack_from('<4sII',footer),(b'WCM1',1,1))
+            self.assertEqual(struct.unpack_from('<3f',footer,12),(0,.5,.5))
 if __name__=='__main__':unittest.main()

@@ -1,4 +1,5 @@
 #include "ShooterController.hpp"
+#include "../presentation/TauChargeFeedback.hpp"
 #include "../platform/DiagnosticLog.hpp"
 #include "../combat/CombatDamage.hpp"
 #include "../combat/UnitScaling.hpp"
@@ -744,6 +745,7 @@ void ShooterController::FireEnergy(bool primaryPressed,bool secondaryHeld,DWORD 
     auto event=energy_.Step(weapon_,now*.001,primaryPressed,Down(VK_LBUTTON),secondaryHeld,ammo_[weapon_],w.interval,settings_.halfLife);
     bool gluon=weapon_==WeaponSlots::Gluon;
     if(event.started) {
+        tauFeedbackBand_=-1;
         Play(gluon ? "fire3" : "spinup"); // Gluon's authored firing cycle, not its unused alternate opening action.
         if(gluon)Sound("hl_egon_windup2.wav");
         audio_.SetLoop(gluon ? "hl_egon_run3.wav" : "hl_gauss_charge.wav",true);
@@ -751,7 +753,16 @@ void ShooterController::FireEnergy(bool primaryPressed,bool secondaryHeld,DWORD 
     }
     if(!gluon && energy_.Active() && !strcmp(Animation(),"spinup")) {
         float duration=audio_.Duration(weapon_,"spinup");
-        if(duration>0 && AnimationTime()>=duration)Play("spin",1,AnimationTime()-duration); // No idle frame or lost overshoot at the charge boundary.
+        if(duration>0 && AnimationTime()>=duration)Play("spin"); // The integrated charge phase below retains overshoot without an idle frame.
+    }
+    if(!gluon && energy_.Active()) {
+        float elapsed=energy_.ChargeElapsed(now*.001);
+        audio_.SetLoopPitch("hl_gauss_charge.wav",TauChargeFeedback::Pitch(elapsed,settings_.halfLife));
+        int band=int(TauChargeFeedback::Fraction(elapsed,settings_.halfLife)*10);
+        if(band!=tauFeedbackBand_) {
+            tauFeedbackBand_=band;wc3::Log("Tau charge elapsed=%.3f spinRate=%.3f phase=%.3f pitch=%.3f",elapsed,
+                TauChargeFeedback::Rate(elapsed,settings_.halfLife),TauChargeFeedback::SpinSeconds(elapsed,audio_.Duration(weapon_,"spinup"),settings_.halfLife),audio_.LoopPitch("hl_gauss_charge.wav"));
+        }
     }
     if(event.stopped) {
         audio_.SetLoop(gluon ? "hl_egon_run3.wav" : "hl_gauss_charge.wav",false);
@@ -822,6 +833,9 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
     }
     if (target) {
         if(!destructable && !settings_.targetAllies && AttackTargetPolicy::Allied(target,wc3::GetOwningPlayer(unit_)))return;
+        // Physical impacts sound even on invulnerable contacts; native HP/quest immunity still owns damage.
+        if(weapon_==WeaponSlots::Crowbar)CrowbarImpact(destructable ? CrowbarContact::Surface::Destructable :
+            wc3::IsUnitType(target,2) ? CrowbarContact::Surface::Structure : CrowbarContact::Surface::Creature);
         // The existing hero is the attacker, preserving mission kill/XP trigger ownership.
         auto life = [&]() { return wc3::Real(destructable ? wc3::GetDestructableLife(target) : wc3::GetUnitState(target,0)); };
         float before = life();
@@ -846,25 +860,26 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
         if (after < before) {
             // The same hit marker confirms damage to every faction, without blood.
             hits_.Record();
-            if (WeaponSlots::Melee(weapon_)) {
+            if (WeaponSlots::Melee(weapon_) && weapon_!=WeaponSlots::Crowbar) {
                 static const char* contacts[] = {"knife_hit1.wav", "knife_hit2.wav", "knife_hit3.wav", "knife_hit4.wav"};
                 const char* sample = destructable ? "knife_hitwall1.wav" : (weapon_ == WeaponSlots::Sword || meleeAttack_.secondary) ? "knife_stab.wav" : contacts[knifeSwing_ % 4];
-                if(weapon_==WeaponSlots::Crowbar) {
-                    sample=destructable ? "hl_cbar_hit1.wav" : "hl_cbar_hitbod1.wav";
-                    // A confirmed crowbar contact uses the authored hit follow-through at the current frame,
-                    // instead of finishing a miss animation or replaying its windup from the beginning.
-                    const char* clip=!strcmp(Animation(),"attack1miss") ? "attack1" : !strcmp(Animation(),"attack2") ? "attack2hit" : "attack3hit";
-                    Play(clip,1,AnimationTime());
-                }
                 Sound(sample); wc3::Log("melee contact weapon=%s sound=%s animationTime=%.3f mode=%s", w.name, sample, AnimationTime(), meleeAttack_.secondary ? "secondary" : "primary");
             }
             wc3::Log("hit feedback=marker");
         }
         wc3::Log("shot weapon=%s target=%08X damage=%.1f hpBefore=%.1f hpAfter=%.1f allied=%d destructable=%d finishing=%d effects=%d distance=%.1f range=%.1f", w.name, target, damage, before, after,allied,destructable,lethal,effects,nearest,attackRange);
     } else if (WeaponSlots::Melee(weapon_) && nearest < attackRange) {
-        // Terrain contact uses the original hard-surface sample; misses keep only the swing sound.
-        Sound(weapon_==WeaponSlots::Crowbar ? "hl_cbar_hit1.wav" : "knife_hitwall1.wav");
+        // Dirt contact differs from structures; an empty swing still has no contact sample.
+        if(weapon_==WeaponSlots::Crowbar)CrowbarImpact(CrowbarContact::Surface::Ground);
+        else Sound("knife_hitwall1.wav");
     }
+}
+void ShooterController::CrowbarImpact(CrowbarContact::Surface surface) {
+    const char* sample=CrowbarContact::Sample(surface,crowbarContacts_++,settings_.halfLife.crowbarSurfaceSounds);
+    // Continue the matching authored hit action at the current swing phase, including hard/immune contacts.
+    const char* clip=!strcmp(Animation(),"attack1miss") ? "attack1" : !strcmp(Animation(),"attack2") ? "attack2hit" : "attack3hit";
+    Play(clip,1,AnimationTime());Sound(sample);
+    wc3::Log("melee contact weapon=CROWBAR surface=%s sound=%s animationTime=%.3f mode=%s",CrowbarContact::Name(surface),sample,AnimationTime(),meleeAttack_.secondary ? "secondary" : "primary");
 }
 void ShooterController::CancelPlant() {
     CancelEnergy(); // Holster, menus, casts, focus and view transitions also release guest attack loops.
@@ -907,7 +922,12 @@ void ShooterController::PlantC4(float dt) {
     }
 }
 const char* ShooterController::Animation() const { return animation_.c_str(); }
-float ShooterController::AnimationTime() const { return (GetTickCount() - animationTick_) * 0.001f * animationRate_; }
+float ShooterController::AnimationTime() const {
+    // A time integral keeps rotation continuous while the Tau motor accelerates and after reaching full charge.
+    if(weapon_==WeaponSlots::Tau && energy_.Active() && animation_=="spin")return TauChargeFeedback::SpinSeconds(
+        energy_.ChargeElapsed(GetTickCount()*.001),audio_.Duration(weapon_,"spinup"),settings_.halfLife);
+    return (GetTickCount() - animationTick_) * 0.001f * animationRate_;
+}
 // Squad tactics are shared by armed views and the unarmed unit camera.
 void ShooterController::UpdateSquad(DWORD now) {
     if (squadRequested_) {

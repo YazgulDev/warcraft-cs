@@ -226,6 +226,11 @@ and converts them privately. **B → 9 Half-Life → 1 Crowbar / 2 Tau Cannon / 
 Carried Half-Life weapons use group **6** and the wheel. Turn Tab item numbers off to use
 weapon number keys. Hold LMB for Crowbar swings or Gluon beam; Tau uses LMB for a shot
 and holding/releasing RMB for a charged shot. See [arsenal settings](docs/HALF-LIFE-ARSENAL.md).
+Tau's charge gradually accelerates its spinner and motor pitch; `[TauCannon]` exposes
+`SpinStartRate`/`SpinEndRate` and `ChargePitchStart`/`ChargePitchEnd` (F8 reload).
+Crowbar distinguishes flesh, structures/destructables and dirt, with varied samples;
+`[Crowbar] SurfaceSounds=false` restores simple impact samples. Re-run setup after
+updating to rebuild Gluon's nozzle anchor and import the additional owned Crowbar sounds.
 For RPG, LMB launches a physical rocket, RMB toggles laser guidance,
 R reloads one rocket. Turn the laser off to reload while a rocket is flying. Missing or
 changed resources hide RPG without affecting CS weapons. See [RPG settings](docs/HALF-LIFE-RPG.md).

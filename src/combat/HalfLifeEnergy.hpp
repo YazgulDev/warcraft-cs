@@ -8,6 +8,7 @@ class HalfLifeEnergy {
 public:
     struct Event {bool shot=false,started=false,stopped=false,charged=false;float charge=0;};
     bool Active() const {return charging_ || channel_;}
+    float ChargeElapsed(double now) const {return charging_ ? float(std::max(0.0,now-start_)) : 0;}
     void Cancel() {charging_=channel_=false;}
     Event Step(int slot,double now,bool pressed,bool held,bool secondary,int& cells,float interval,const HalfLifeSettings& settings) {
         Event event;

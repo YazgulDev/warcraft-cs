@@ -94,7 +94,7 @@ class StudioModel:
             sequences.append((name, float(fps), frames, np.asarray(matrices, dtype="<f4").tobytes()))
         return sequences
 
-    def export(self, destination: Path, excluded_textures: tuple[str, ...] = (), muzzle_attachments: tuple[int, ...] = (0,), presentation: bool = False) -> dict:
+    def export(self, destination: Path, excluded_textures: tuple[str, ...] = (), muzzle_attachments: tuple[int, ...] = (0,), presentation: bool = False, muzzle_texture: str | None = None) -> dict:
         textures = []
         material_flags = []
         texture_names = []
@@ -158,6 +158,25 @@ class StudioModel:
                                 packed_normals.extend(struct.pack('<3fI', *normals[normal], normal_bones[normal]))
                 meshes.append((texture, bytes(packed), bytes(packed_normals)))
         sequences = self.sequences(local=presentation)
+        fitted_muzzle = None
+        if muzzle_texture and muzzle_texture.casefold() in [name.casefold() for name in texture_names]:
+            # Some guest attachments sit inside/above the nozzle. Fit the actual front opening in the owned mesh,
+            # then return its center to its rigid bone; never compensate with a guessed screen-space offset.
+            idle = self.sequences()[0]
+            world = np.frombuffer(idle[3], dtype='<f4').reshape(idle[2], len(self.bones), 3, 4)[0]
+            points = []
+            for texture, packed, _ in meshes:
+                if texture_names[texture].casefold() != muzzle_texture.casefold(): continue
+                for x, y, z, _, _, bone in struct.iter_unpack('<5fI', packed):
+                    points.append((world[bone] @ np.array([x, y, z, 1]), bone))
+            if points:
+                forward = max(point[0][0] for point in points)
+                front = [(point, bone) for point, bone in points if abs(point[0] - forward) < .001]
+                if len({bone for _, bone in front}) != 1: raise ValueError('Nozzle opening is not rigid')
+                bone = front[0][1];opening = np.asarray([point for point, _ in front])
+                center = (opening.min(axis=0) + opening.max(axis=0)) * .5
+                transform = np.eye(4);transform[:3] = world[bone]
+                fitted_muzzle = (bone, (np.linalg.inv(transform) @ np.r_[center, 1])[:3])
         with destination.open("wb") as output:
             # WCG3 is opt-in for the three Half-Life weapons. CS and RPG keep byte-identical WCG2 caches.
             output.write(struct.pack("<4s4I", b"WCG3" if presentation else b"WCG2", len(textures), len(meshes), len(sequences), len(self.bones)))
@@ -181,7 +200,10 @@ class StudioModel:
             selected = muzzle_attachments if count else ()
             if len(selected) > 8:
                 raise ValueError("Unsafe selected muzzle count")
-            output.write(struct.pack("<4sI", b"WCM1", len(selected)))
+            output.write(struct.pack("<4sI", b"WCM1", 1 if fitted_muzzle else len(selected)))
+            if fitted_muzzle:
+                output.write(struct.pack('<I3f', fitted_muzzle[0], *fitted_muzzle[1]))
+                selected = ()
             for index in selected:
                 if not 0 <= index < count:
                     raise ValueError("Missing selected muzzle attachment")

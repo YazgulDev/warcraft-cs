@@ -2,6 +2,7 @@
 #include "../combat/ShotgunReload.hpp"
 #include "../combat/HalfLifeEnergy.hpp"
 #include "../presentation/EnergyBeam.hpp"
+#include "../audio/CrowbarContact.hpp"
 #include "../combat/BurstFire.hpp"
 #include "../presentation/ViewmodelMotion.hpp"
 #include "../combat/GrenadeThrow.hpp"
@@ -258,6 +259,7 @@ private:
     bool Fire(bool secondary = false,bool burstRound=false,bool interruptReload=false);
     void FireGlock(bool primaryPressed,bool secondaryPressed,DWORD now);
     void FireEnergy(bool primaryPressed,bool secondaryHeld,DWORD now);
+    void CrowbarImpact(CrowbarContact::Surface surface);
     void CancelEnergy();
     HalfLifeEnergy energy_;
     EnergyBeam energyBeam_;
@@ -375,6 +377,8 @@ private:
     float stepDistance_ = 0;
     unsigned stepIndex_ = 0;
     unsigned knifeSwing_ = 0;
+    unsigned crowbarContacts_=0;
+    int tauFeedbackBand_=-1;
     float animationRate_ = 1;
     DWORD refillTick_ = 0;
     HitFeedback hits_;

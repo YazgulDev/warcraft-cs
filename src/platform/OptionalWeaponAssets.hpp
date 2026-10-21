@@ -26,7 +26,8 @@ inline bool Rpg(const std::filesystem::path& root) {
 }
 inline bool HalfLife(const std::filesystem::path& root,int index) {
     // Separate seals include all required sounds; a stale model alone never unlocks the weapon.
-    const char* crowbar[]={"crowbar.wcg","crowbar.wca","buy/crowbar.wcg","sounds/hl_cbar_miss1.wav","sounds/hl_cbar_hit1.wav","sounds/hl_cbar_hitbod1.wav"};
+    const char* crowbar[]={"crowbar.wcg","crowbar.wca","buy/crowbar.wcg","sounds/hl_cbar_miss1.wav","sounds/hl_cbar_hit1.wav","sounds/hl_cbar_hitbod1.wav",
+        "sounds/hl_cbar_hit2.wav","sounds/hl_cbar_hitbod2.wav","sounds/hl_cbar_hitbod3.wav","sounds/hl_cbar_ground1.wav","sounds/hl_cbar_ground2.wav","sounds/hl_cbar_ground3.wav"};
     const char* tau[]={"gauss.wcg","gauss.wca","buy/gauss.wcg","sounds/hl_gauss2.wav","sounds/hl_gauss_charge.wav"};
     const char* gluon[]={"egon.wcg","egon.wca","buy/egon.wcg","sounds/hl_egon_windup2.wav","sounds/hl_egon_run3.wav","sounds/hl_egon_off1.wav"};
     return index==0 ? Sealed(root,"crowbar.ready","WHL1",crowbar) : index==1 ? Sealed(root,"gauss.ready","WHL1",tau) :

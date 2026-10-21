@@ -566,7 +566,8 @@ int main() {
     }
     // Independent seals must be checked by the real startup/F8 loader, not just converter tests.
     const std::vector<std::vector<const char*>> guestFiles={
-        {"crowbar.wcg","crowbar.wca","buy/crowbar.wcg","sounds/hl_cbar_miss1.wav","sounds/hl_cbar_hit1.wav","sounds/hl_cbar_hitbod1.wav"},
+        {"crowbar.wcg","crowbar.wca","buy/crowbar.wcg","sounds/hl_cbar_miss1.wav","sounds/hl_cbar_hit1.wav","sounds/hl_cbar_hitbod1.wav",
+        "sounds/hl_cbar_hit2.wav","sounds/hl_cbar_hitbod2.wav","sounds/hl_cbar_hitbod3.wav","sounds/hl_cbar_ground1.wav","sounds/hl_cbar_ground2.wav","sounds/hl_cbar_ground3.wav"},
         {"gauss.wcg","gauss.wca","buy/gauss.wcg","sounds/hl_gauss2.wav","sounds/hl_gauss_charge.wav"},
         {"egon.wcg","egon.wca","buy/egon.wcg","sounds/hl_egon_windup2.wav","sounds/hl_egon_run3.wav","sounds/hl_egon_off1.wav"}};
     const char* seals[]={"crowbar.ready","gauss.ready","egon.ready"};
@@ -583,11 +584,18 @@ int main() {
     }
     {std::ofstream f(rpgPath);f<<"[TauCannon]\nChargeSeconds=2\nChargedDamage=777\nMagazine=55\nMaxReserve=999\n[HalfLife]\nBeamWidth=8\n";}
     auto hl=GameplaySettings::Load(rpgPath);assert(hl.halfLife.tauChargeSeconds==2 && hl.halfLife.tauChargedDamage==777 && hl.halfLife.beamWidth==8);
+    assert(hl.halfLife.tauSpinStartRate==1 && hl.halfLife.tauSpinEndRate==3 && hl.halfLife.tauPitchStart==1 && hl.halfLife.tauPitchEnd==2.5f && hl.halfLife.crowbarSurfaceSounds);
+    WritePrivateProfileStringA("Crowbar","SurfaceSounds","false",rpgPath.c_str());assert(!GameplaySettings::Load(rpgPath).halfLife.crowbarSurfaceSounds);
+    WritePrivateProfileStringA("TauCannon","SpinEndRate","6",rpgPath.c_str());assert(GameplaySettings::Load(rpgPath).halfLife.tauSpinEndRate==6);
     assert(hl.weapons[WeaponSlots::Tau].magazine==55 && hl.maxReserve[WeaponSlots::Tau]==0);
     assert(hl.ContactDamage(WeaponSlots::Tau,false,9999)==20 && hl.ContactDamage(WeaponSlots::Gluon,false,9999)==14);
     for(auto value:{"nan","inf","bad","","-1","999999"}) {
         WritePrivateProfileStringA("TauCannon","ChargeSeconds",value,rpgPath.c_str());
         WritePrivateProfileStringA("HalfLife","BeamWidth",value,rpgPath.c_str());hl=GameplaySettings::Load(rpgPath);
+        for(auto key:{"SpinStartRate","SpinEndRate","ChargePitchStart","ChargePitchEnd"})WritePrivateProfileStringA("TauCannon",key,value,rpgPath.c_str());
+        hl=GameplaySettings::Load(rpgPath);auto feedback=hl.halfLife;
+        assert(std::isfinite(feedback.tauSpinStartRate) && feedback.tauSpinStartRate>=.25f && feedback.tauSpinEndRate>=feedback.tauSpinStartRate && feedback.tauSpinEndRate<=8);
+        assert(std::isfinite(feedback.tauPitchStart) && feedback.tauPitchStart>=.25f && feedback.tauPitchEnd>=feedback.tauPitchStart && feedback.tauPitchEnd<=4);
         assert(std::isfinite(hl.halfLife.tauChargeSeconds) && hl.halfLife.tauChargeSeconds>=.1f && hl.halfLife.tauChargeSeconds<=10);
         assert(std::isfinite(hl.halfLife.beamWidth) && hl.halfLife.beamWidth>=.5f && hl.halfLife.beamWidth<=20);
     }

@@ -9,13 +9,15 @@ from pathlib import Path
 from export_halflife_rpg import OwnedFiles, fingerprint
 
 WEAPONS = {
-    'crowbar': ('cbar_miss1.wav', 'cbar_hit1.wav', 'cbar_hitbod1.wav'),
+    'crowbar': ('cbar_miss1.wav', 'cbar_hit1.wav', 'cbar_hitbod1.wav', 'cbar_hit2.wav', 'cbar_hitbod2.wav', 'cbar_hitbod3.wav', 'cbar_ground1.wav', 'cbar_ground2.wav', 'cbar_ground3.wav'),
     'gauss': ('gauss2.wav', 'gauss_charge.wav'),
     'egon': ('egon_windup2.wav', 'egon_run3.wav', 'egon_off1.wav'),
 }
 GLOVES = ('GLOVED_sleeve.bmp', 'rubbergloveCHROME.bmp', 'GLOVED_knuckle.bmp', 'GLOVE_handpak.bmp.bmp')
 
 def sound_source(name: str) -> str:
+    # Soft ground uses the owner's dirt contacts, distinct from metal-bar and flesh impact variants.
+    if name.startswith('cbar_ground'): return 'sound/player/pl_dirt' + name[len('cbar_ground'):]
     # The real Tau spinner is an ambience sample; store it under a unique weapon-cache alias.
     return 'sound/ambience/pulsemachine.wav' if name == 'gauss_charge.wav' else 'sound/weapons/' + name
 
@@ -50,7 +52,8 @@ def export_one(cstrike: Path, output: Path, stem: str) -> dict:
                 if data is None:
                     raise ValueError('Missing owned animation group')
                 (raw / name).write_bytes(data)
-            model.export(stage / f'{stem}.wcg', muzzle_attachments=(0,) if model.integer(212) else (), presentation=True)
+            model.export(stage / f'{stem}.wcg', muzzle_attachments=(0,) if model.integer(212) else (), presentation=True,
+                         muzzle_texture='nose_work.bmp' if stem == 'egon' else None)
             timeline = stage / f'{stem}.wca'
             samples = model.audio_timeline(timeline)
             # Prefix guest samples so an animation cannot collide with Counter-Strike's sound namespace.

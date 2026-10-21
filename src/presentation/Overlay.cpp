@@ -121,6 +121,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     }
     // Load the held model before world effects so its actual animated attachment can anchor an energy beam.
     int index=controller.WeaponIndex();float projectionScale=controller.Settings().weaponModelScale[index];
+    float animationSeconds=controller.AnimationTime(); // Attachment and mesh must sample one identical animation phase.
     if(!controller.Settings().warcraftOnly && !attempted_[index]) {
         attempted_[index]=true;loaded_[index]=guns_[index].Load(root_+"\\assets\\"+WeaponSlots::Caches[index]+".wcg");
     }
@@ -130,8 +131,8 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     if(!controller.Status().contained && !controller.Status().hidden) {
         if(!controller.ThirdPerson() && !controller.Buying() && WeaponSlots::Energy(index)) {
             auto beam=controller.Beam();std::array<float,3> anchor;
-            if(beam.tick && loaded_[index] && guns_[index].MuzzlePoint(controller.Animation(),controller.AnimationTime(),controller.ShotSerial(),anchor,controller.IdleAnimation()))
-                beam.start=ViewmodelAnchor::World(anchor,controller.WeaponPose(),projectionScale,barView);
+            if(beam.tick && loaded_[index] && guns_[index].MuzzlePoint(controller.Animation(),animationSeconds,controller.ShotSerial(),anchor,controller.IdleAnimation()))
+                beam.start=ViewmodelAnchor::World(anchor,controller.WeaponPose(),projectionScale,barView,float(width)/height,nearPlane);
             EnergyBeamView::Draw(beam,barView,nearPlane,farPlane);
         }
         grenadeWorld_.Draw(root_,controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
@@ -153,7 +154,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         // Preserve each model's original arm origin instead of exposing detached elbow ends.
         const auto& pose=controller.WeaponPose();
         glTranslatef(pose.x,pose.y,pose.z);glRotatef(pose.roll,0,0,1);
-        guns_[index].Draw(controller.Animation(),controller.AnimationTime(),flash,visuals.flashScale,controller.ShotSerial(),!controller.Scoped(),controller.IdleAnimation());
+        guns_[index].Draw(controller.Animation(),animationSeconds,flash,visuals.flashScale,controller.ShotSerial(),!controller.Scoped(),controller.IdleAnimation());
         glDisable(GL_DEPTH_TEST);
     }
     bool unavailableView = controller.Status().contained || controller.Status().hidden;

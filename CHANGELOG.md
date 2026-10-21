@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fixed Gluon beam origin at the actual nozzle and native/held viewport alignment; added gradual Tau spinner/audio-pitch acceleration and varied Crowbar flesh, structure/destructable and dirt impacts with F8 settings.
+
 - Fixed Half-Life Crowbar/Tau/Gluon chrome textures and rigid skeleton interpolation, complete action frames, charge transitions and firing clips; RPG unchanged.
 
 - Added optional owned Half-Life Crowbar, Tau Cannon (primary and charged secondary) and continuous Gluon Gun.

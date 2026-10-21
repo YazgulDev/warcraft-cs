@@ -414,10 +414,16 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         hl.available[i]=!result.warcraftOnly && OptionalWeaponAssets::HalfLife(std::filesystem::path(filename).parent_path(),i);
     }
     hl.tauChargeSeconds=std::max(.1f,number("TauCannon","ChargeSeconds",4,10));
+    // The same bounded charge clock drives a continuous spinner phase and live loop pitch; equal rates disable the ramp.
+    hl.tauSpinStartRate=std::max(.25f,number("TauCannon","SpinStartRate",1,8));
+    hl.tauSpinEndRate=std::max(hl.tauSpinStartRate,number("TauCannon","SpinEndRate",3,8));
+    hl.tauPitchStart=std::max(.25f,number("TauCannon","ChargePitchStart",1,4));
+    hl.tauPitchEnd=std::max(hl.tauPitchStart,number("TauCannon","ChargePitchEnd",2.5f,4));
     hl.tauDrainSeconds=std::max(.05f,number("TauCannon","ChargeDrainSeconds",.3f,2));
     hl.tauChargedDamage=number("TauCannon","ChargedDamage",200,1000000);
     hl.tauPrimaryCost=int(std::max(1.f,number("TauCannon","PrimaryCost",2,100)));
     hl.crowbarContactSeconds=number("Crowbar","ContactSeconds",.1f,1);
+    hl.crowbarSurfaceSounds=enabled("Crowbar","SurfaceSounds");
     hl.beamSeconds=std::max(.025f,number("HalfLife","BeamSeconds",.15f,1));
     hl.beamWidth=std::max(.5f,number("HalfLife","BeamWidth",3,20));
     const auto& sections=WeaponSlots::Sections;
