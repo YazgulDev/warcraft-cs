@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Added optional owned Half-Life Crowbar, Tau Cannon (primary and charged secondary) and continuous Gluon Gun.
+- Added a separate Half-Life purchase category on B/9 and carried selection group 6, including RPG.
+- Added independent asset seals, private models/previews/audio, direct energy-cell purchases, F8 tuning and transition cancellation.
+- See [Half-Life arsenal controls, settings and limits](docs/HALF-LIFE-ARSENAL.md).
+
 ## 0.11.0 — 2026-10-20
 
 - Added Deagle, Glock, MP5, P90, M249, M3 and XM1014 purchases.

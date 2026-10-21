@@ -367,3 +367,6 @@ immunity; flash leases remain in `NativeGrenades`. `RocketView` owns original tr
 glow and airburst effects plus the private model, sharing `WorldEffectPass` with
 grenade world rendering. Overlay alone owns OpenGL context replacement. The controller
 coordinates accepted shots/reload/laser input rather than implementing projectile physics.
+
+## Half-Life energy weapons
+`HalfLifeEnergy` owns portable charge/channel lifecycle, cadence and cell expenditure. The controller translates its accepted events into the existing native Strike contact and GameAudio paths. `EnergyBeam` is a read-only contact snapshot; `EnergyBeamView` draws project-authored depth-tested geometry before held-weapon depth clearing. The common GunMesh bob/muzzle/animation path remains shared. `OptionalWeaponAssets` verifies independent seals; export_halflife_weapons converts only owned local/PAK data and publishes each seal last. BuyCatalog registers all four Half-Life weapons once for buying and group 6 selection.

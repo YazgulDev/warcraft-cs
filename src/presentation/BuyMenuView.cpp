@@ -11,7 +11,7 @@ void Rect(float x,float y,float w,float h,bool outline=false) {
 }
 const char* MainLabel(int key) {
     switch (key) { case 1:return "PISTOLS";case 2:return "SHOTGUNS";case 3:return "SMGS";case 4:return "RIFLES";case 5:return "MACHINE GUNS";case 6:return "PRIMARY AMMO";
-        case 7:return "SECONDARY AMMO";case 8:return "EQUIPMENT";default:return ""; }
+        case 7:return "SECONDARY AMMO";case 8:return "EQUIPMENT";case 9:return "HALF-LIFE";default:return ""; }
 }
 }
 namespace BuyMenuView {
@@ -21,7 +21,7 @@ void Draw(const ShooterController& controller,int width,int height,HWND window,c
     const char* title=page==BuyMenu::Page::Main ? "BUY MENU" : page==BuyMenu::Page::Rifles ? "BUY RIFLES (PRIMARY WEAPON)" :
         page==BuyMenu::Page::Pistols ? "BUY PISTOLS (SECONDARY WEAPON)" :
         page==BuyMenu::Page::Shotguns ? "BUY SHOTGUNS" : page==BuyMenu::Page::SMGs ? "BUY SMGS" :
-        page==BuyMenu::Page::Machineguns ? "BUY MACHINE GUNS" : "BUY EQUIPMENT";
+        page==BuyMenu::Page::Machineguns ? "BUY MACHINE GUNS" : page==BuyMenu::Page::HalfLife ? "BUY HALF-LIFE" : "BUY EQUIPMENT";
     // Recreate the original translucent black/amber panel, sparse category keys and red hovered rows.
     glColor4f(0,0,0,.77f);Rect(box.x,box.y,box.width,box.height);
     glColor4f(1,.72f,.22f,.9f);glLineWidth(1);
@@ -61,7 +61,8 @@ void Draw(const ShooterController& controller,int width,int height,HWND window,c
         sprintf_s(value,": %s",item->caliber);line("CALIBER / TYPE",value);
         // Keep magazine/reserve in one row so the existing panel also fits small windows.
         sprintf_s(value,": %d / %d",weapon.magazine,settings.maxReserve[previewSlot]);
-        if(WeaponSlots::Grenade(previewSlot)){sprintf_s(value,": %d",weapon.magazine);line("CARRY LIMIT",value);}
+        if(WeaponSlots::Energy(previewSlot)){sprintf_s(value,": %d",weapon.magazine);line("ENERGY CAPACITY",value);}
+        else if(WeaponSlots::Grenade(previewSlot)){sprintf_s(value,": %d",weapon.magazine);line("CARRY LIMIT",value);}
         else if (!WeaponSlots::Melee(previewSlot) && previewSlot!=WeaponSlots::C4) line("CLIP / RESERVE",value);
         sprintf_s(value,": %.0f",settings.ContactDamage(previewSlot,false,controller.Status().attackDamage));line("BASE DAMAGE",value);
         if (weapon.interval>0 && !WeaponSlots::Melee(previewSlot)) {

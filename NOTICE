@@ -185,3 +185,6 @@ DracoL1ch's WC3Memory native entry-point references, then independently disassem
 the owner's Warcraft III 1.26a. NativeWeaponAttack is project-authored scoped dispatch and guarded
 base-roll substitution; no WC3Memory implementation or proprietary game code is redistributed.
 https://github.com/DracoL1ch/WC3Memory/blob/master/war3map.j
+
+Half-Life Crowbar/Tau/Gluon controls, model sequence names and numerical timing were researched from ValveSoftware/halflife dlls/crowbar.cpp, dlls/gauss.cpp, dlls/egon.cpp and cl_dll/ev_hldm.cpp. The SDK license is not this project's code license: no SDK implementation is copied or redistributed. Charge/channel logic, contact orchestration, beam geometry and optional converters are independently authored. Owned models/samples are read locally or from owned PAK files; public source/packages contain no retail data.
+https://github.com/ValveSoftware/halflife

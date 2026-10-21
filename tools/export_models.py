@@ -275,6 +275,8 @@ def main():
     # Optional guest content never makes an otherwise complete Counter-Strike install fail.
     from export_halflife_rpg import export as export_rpg
     print(json.dumps(export_rpg(args.cstrike, args.output), indent=2))
+    from export_halflife_weapons import export as export_halflife
+    print(json.dumps(export_halflife(args.cstrike, args.output), indent=2))
     print(json.dumps(manifest, indent=2))
 
 

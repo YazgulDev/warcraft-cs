@@ -3,18 +3,19 @@
 Armed F6 keeps every supported weapon you own. Selecting another weapon does not discard the
 others or impose a primary/pistol carry limit. The menu previews a choice before equipping it.
 
-With Tab item-number mode off, the first five weapon bindings open these categories:
+With Tab item-number mode off, the first six weapon bindings open these categories:
 
 | Default key | Category |
 | --- | --- |
-| 1 | Primary: rifles, sniper rifles, SMGs, machine guns, shotguns and available RPG |
+| 1 | Primary: rifles, sniper rifles, SMGs, machine guns and shotguns |
 | 2 | Pistols |
 | 3 | Melee weapons |
 | 4 | Grenades |
 | 5 | C4 |
+| 6 | Half-Life: available Crowbar, Tau Cannon, Gluon Gun and RPG |
 
 Press the same category again to highlight the next carried weapon in that group. Wheel up/down
-browses all carried weapons in displayed group order (1 through 5), top to bottom in each list,
+browses all carried weapons in displayed group order (1 through 6), top to bottom in each list,
 and opens the same menu. Wheel up retraces that order. One detent advances one available weapon;
 fast batches retain their direction and every detent, skipping unowned/depleted entries.
 Left-click confirms the highlight; that click

@@ -14,7 +14,7 @@ int main() {
     menu.Close();assert(menu.Confirm(available)==-1);
     // Every catalog entry remains reachable without a limit on carried weapon types.
     available.fill(true);bool seen[WeaponSlots::Count]={};int total=0;
-    for(int group=1;group<=5;++group) {
+    for(int group=1;group<=WeaponSlots::SelectionGroups;++group) {
         auto items=WeaponSelection::Items(group,available);assert(!items.empty());menu.Close();
         for(size_t i=0;i<items.size();++i) {
             assert(menu.Category(group,-1,available,10));
@@ -26,14 +26,15 @@ int main() {
     // The wheel must visit the visible primary rows before crossing into the pistol group.
     menu.Close();menu.Cycle(2,0,available,19);
     assert(menu.Pending()==WeaponSlots::AWP);
-    menu.Close();menu.Cycle(-1,0,available,20);assert(menu.Pending()==WeaponSlots::C4);
+    menu.Close();menu.Cycle(-1,0,available,20);assert(menu.Pending()==WeaponSlots::RPG);
     menu.Cycle(1,0,available,21);assert(menu.Pending()==0);
     menu.Cycle(4,0,available,22);assert(menu.Pending()==WeaponSlots::P90);
     assert(menu.Confirm(available)==WeaponSlots::P90 && !menu.Open());
     // Expected visible rows, including every category boundary; reversing retraces each individual step.
     const int ordered[]={0,1,WeaponSlots::AWP,WeaponSlots::MP5,WeaponSlots::P90,WeaponSlots::M249,
-        WeaponSlots::M3,WeaponSlots::XM1014,WeaponSlots::RPG,WeaponSlots::Pistol,WeaponSlots::Deagle,WeaponSlots::Glock,
-        WeaponSlots::Knife,WeaponSlots::Sword,WeaponSlots::HE,WeaponSlots::Flashbang,WeaponSlots::Smoke,WeaponSlots::C4};
+        WeaponSlots::M3,WeaponSlots::XM1014,WeaponSlots::Pistol,WeaponSlots::Deagle,WeaponSlots::Glock,
+        WeaponSlots::Knife,WeaponSlots::Sword,WeaponSlots::HE,WeaponSlots::Flashbang,WeaponSlots::Smoke,WeaponSlots::C4,
+        WeaponSlots::Crowbar,WeaponSlots::Tau,WeaponSlots::Gluon,WeaponSlots::RPG};
     for(int i=0;i<WeaponSlots::Count;++i) {
         menu.Close();menu.Cycle(1,ordered[i],available,23);
         assert(menu.Pending()==ordered[(i+1)%WeaponSlots::Count]);

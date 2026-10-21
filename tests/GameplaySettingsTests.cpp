@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <cmath>
 #include <fstream>
+#include <vector>
 #include <windows.h>
 namespace wc3 { void Log(const char*,...) {} }
 int main() {
@@ -563,6 +564,37 @@ int main() {
         WritePrivateProfileStringA("RPG",key,"nan",rpgPath.c_str());auto g=GameplaySettings::Load(rpgPath).rpg;
         assert(std::isfinite(g.maximumSpeed) && g.radius>=32 && g.lifetime>=1 && g.maxActive>=1);
     }
+    // Independent seals must be checked by the real startup/F8 loader, not just converter tests.
+    const std::vector<std::vector<const char*>> guestFiles={
+        {"crowbar.wcg","crowbar.wca","buy/crowbar.wcg","sounds/hl_cbar_miss1.wav","sounds/hl_cbar_hit1.wav","sounds/hl_cbar_hitbod1.wav"},
+        {"gauss.wcg","gauss.wca","buy/gauss.wcg","sounds/hl_gauss2.wav","sounds/hl_gauss_charge.wav"},
+        {"egon.wcg","egon.wca","buy/egon.wcg","sounds/hl_egon_windup2.wav","sounds/hl_egon_run3.wav","sounds/hl_egon_off1.wav"}};
+    const char* seals[]={"crowbar.ready","gauss.ready","egon.ready"};
+    for(int i=0;i<3;++i) {
+        assert(!GameplaySettings::Load(rpgPath).WeaponEnabled(WeaponSlots::Crowbar+i));
+        std::ofstream seal(assets/seals[i],std::ios::binary);seal.write("WHL1",4);
+        for(auto name:guestFiles[i]) {
+            auto output=assets/name;std::filesystem::create_directories(output.parent_path());std::string bytes="synthetic guest asset";
+            {std::ofstream f(output,std::ios::binary);f<<bytes;}
+            uint64_t n=bytes.size(),hash=14695981039346656037ull;for(unsigned char c:bytes){hash^=c;hash*=1099511628211ull;}
+            seal.write(reinterpret_cast<char*>(&n),8);seal.write(reinterpret_cast<char*>(&hash),8);
+        }
+        seal.close();assert(GameplaySettings::Load(rpgPath).WeaponEnabled(WeaponSlots::Crowbar+i));
+    }
+    {std::ofstream f(rpgPath);f<<"[TauCannon]\nChargeSeconds=2\nChargedDamage=777\nMagazine=55\nMaxReserve=999\n[HalfLife]\nBeamWidth=8\n";}
+    auto hl=GameplaySettings::Load(rpgPath);assert(hl.halfLife.tauChargeSeconds==2 && hl.halfLife.tauChargedDamage==777 && hl.halfLife.beamWidth==8);
+    assert(hl.weapons[WeaponSlots::Tau].magazine==55 && hl.maxReserve[WeaponSlots::Tau]==0);
+    assert(hl.ContactDamage(WeaponSlots::Tau,false,9999)==20 && hl.ContactDamage(WeaponSlots::Gluon,false,9999)==14);
+    for(auto value:{"nan","inf","bad","","-1","999999"}) {
+        WritePrivateProfileStringA("TauCannon","ChargeSeconds",value,rpgPath.c_str());
+        WritePrivateProfileStringA("HalfLife","BeamWidth",value,rpgPath.c_str());hl=GameplaySettings::Load(rpgPath);
+        assert(std::isfinite(hl.halfLife.tauChargeSeconds) && hl.halfLife.tauChargeSeconds>=.1f && hl.halfLife.tauChargeSeconds<=10);
+        assert(std::isfinite(hl.halfLife.beamWidth) && hl.halfLife.beamWidth>=.5f && hl.halfLife.beamWidth<=20);
+    }
+    WritePrivateProfileStringA("TauCannon","Enabled","false",rpgPath.c_str());
+    assert(!GameplaySettings::Load(rpgPath).WeaponEnabled(WeaponSlots::Tau));
+    {std::ofstream f(assets/"egon.wcg",std::ios::app);f<<"changed";}
+    hl=GameplaySettings::Load(rpgPath);assert(!hl.WeaponEnabled(WeaponSlots::Gluon) && hl.WeaponEnabled(WeaponSlots::Crowbar));
     // This test owns the freshly created temporary directory exclusively.
     assert(rpgRoot.parent_path()==std::filesystem::current_path());std::filesystem::remove_all(rpgRoot);
     DeleteFileA(path.c_str());return 0;

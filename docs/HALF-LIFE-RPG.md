@@ -12,7 +12,7 @@ preview, world rocket and three sounds are complete. Startup/F8 checks their siz
 and fingerprints. Partial, changed or missing resources cannot unlock purchases,
 free grants or selection. Unit-only installations always exclude RPG.
 
-In armed F6, buy **B → 8 Equipment → 7 RPG** (4000 gold), then use group **1** or the
+In armed F6, buy **B → 9 Half-Life → 4 RPG** (4000 gold), then use group **6** or the
 wheel and LMB confirmation as for other carried primaries. Buying grants one loaded
 rocket; reserve packs cost 500 gold for one, up to five in reserve. Duplicates and
 full packs never charge. Free refill restores owned RPG; all-weapons grants it only

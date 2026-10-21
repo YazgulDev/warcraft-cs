@@ -1,4 +1,5 @@
 #include "Overlay.hpp"
+#include "EnergyBeamView.hpp"
 #include "ScopeView.hpp"
 #include "GrenadeView.hpp"
 #include "ReticleView.hpp"
@@ -121,6 +122,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     if(!controller.Status().contained && !controller.Status().hidden && !controller.Buying())
         barCount=HealthBarRenderer::Draw(bars,barView,width,height,nearPlane,farPlane);
     if(!controller.Status().contained && !controller.Status().hidden) {
+        if(!controller.ThirdPerson() && !controller.Buying())EnergyBeamView::Draw(controller.Beam(),barView,nearPlane,farPlane);
         grenadeWorld_.Draw(root_,controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
         rocketView_.Draw(root_,controller.RocketVisuals(),controller.LaserVisible(),controller.LaserPoint(),barView,width,height,nearPlane,farPlane);
         GrenadeView::Draw(controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
@@ -219,7 +221,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     controls+=" | "+key(ShortcutAction::ToggleThirdPerson)+(controller.ThirdPerson() ? ": RTS" : ": THIRD PERSON");
     controls+=" | "+key(ShortcutAction::ToggleView)+(controller.ThirdPerson() ? (controller.Settings().warcraftOnly ? ": UNIT VIEW" : ": FPS") : ": THIRD PERSON");
     controls+=" | "+key(ShortcutAction::ToggleUnitView)+": UNIT VIEW";
-    std::string equipment="WHEEL: WEAPONS | "+key(ShortcutAction::Weapon6)+": C4 | "+key(ShortcutAction::Pickup)+": ITEM | "+key(ShortcutAction::Buy)+": BUY | "+key(ShortcutAction::BuyAmmo)+": AMMO";
+    std::string equipment="WHEEL: WEAPONS | "+(controller.Settings().weaponSelectionMenu ? key(ShortcutAction::Weapon6)+": HALF-LIFE" : key(ShortcutAction::Weapon6)+": C4")+" | "+key(ShortcutAction::Pickup)+": ITEM | "+key(ShortcutAction::Buy)+": BUY | "+key(ShortcutAction::BuyAmmo)+": AMMO";
     // The same control now dispatches the unit's primary melee or ranged attack.
     if(controller.ThirdPerson())equipment="LMB: UNIT ATTACK | WASD: MOVE | WHEEL: CAMERA | "+key(ShortcutAction::Pickup)+": ITEM / SHOP";
     if(controller.Settings().warcraftOnly)equipment="LMB: UNIT ATTACK | WASD: MOVE | WHEEL: CAMERA | "+key(ShortcutAction::Pickup)+": ITEM / SHOP";

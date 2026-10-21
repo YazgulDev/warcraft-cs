@@ -54,7 +54,7 @@ Y squad orders and clean F9 remain available.
 - E picks up items/runes through the real inventory; a successful rune restores 40% ammunition by default.
 - H recruits your own units to follow and fight, O makes them follow without attacking, J releases them.
 - INI settings for ammunition recovery, damage and squad behavior, reloaded with F8.
-- CS-style owned-weapon selection menu with five groups, mouse-wheel browsing and click confirmation.
+- CS-style owned-weapon selection menu with six groups, mouse-wheel browsing and click confirmation.
 - B opens a CS-style buy menu using Warcraft gold; configurable prices, starting kits and shop/building access.
 - No starting C4 by default; unlimited paid C4 purchases and configurable reserve ammunition caps.
 - Multiple planted C4 charges with independent fuses; F11 refills carried equipment and F12 grants every weapon for free.
@@ -197,7 +197,7 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 | B | Open/close the buy menu; number keys or mouse select categories and purchases |
 | . | Buy one ammo pack for the weapon currently held |
 | Esc / 0 in buy menu | Close / back to previous menu (0 closes the main menu) |
-| 1 / 2 / 3 / 4 / 5 (F6, Tab items off) | Open primary / pistols / melee / grenades / C4; repeat to browse the group |
+| 1 / 2 / 3 / 4 / 5 / 6 (F6, Tab items off) | Open primary / pistols / melee / grenades / C4 / Half-Life; repeat to browse the group |
 | Mouse wheel up / down (F6) | Preview previous / next carried weapon; LMB confirms without firing |
 | RMB / 0 / Esc in weapon menu | Cancel the pending selection; timeout also cancels |
 | 6 / 7 (when not routed to items) | Legacy direct C4 / original greatsword shortcuts |
@@ -221,9 +221,12 @@ barrel muzzle flash. F8 applies the editable `[Viewmodel]` settings; see the
 
 ## Configuration
 
-Optional **Half-Life RPG**: setup detects the owner's sibling `valve` files (loose or PAK)
-and converts them privately. If complete, buy with **B → 8 → 7**; carried RPG appears in
-primary group **1** and the wheel. LMB launches a physical rocket, RMB toggles laser guidance,
+Optional **Half-Life weapons**: setup detects the owner's sibling `valve` files (loose or PAK)
+and converts them privately. **B → 9 Half-Life → 1 Crowbar / 2 Tau Cannon / 3 Gluon Gun / 4 RPG**.
+Carried Half-Life weapons use group **6** and the wheel. Turn Tab item numbers off to use
+weapon number keys. Hold LMB for Crowbar swings or Gluon beam; Tau uses LMB for a shot
+and holding/releasing RMB for a charged shot. See [arsenal settings](docs/HALF-LIFE-ARSENAL.md).
+For RPG, LMB launches a physical rocket, RMB toggles laser guidance,
 R reloads one rocket. Turn the laser off to reload while a rocket is flying. Missing or
 changed resources hide RPG without affecting CS weapons. See [RPG settings](docs/HALF-LIFE-RPG.md).
 

@@ -107,7 +107,7 @@ void GunMesh::Draw(const char* animation,float seconds,float flash,float flashSc
     for (const auto& item : sequences_) if (item.name == animation) { sequence = &item; break; }
     float frame = WeaponAnimation::Frame(sequence->frames,sequence->fps,seconds,false);
     // One-shot actions settle into idle; idle itself loops smoothly.
-    if (sequence->name.find("idle") == 0) frame = WeaponAnimation::Frame(sequence->frames,sequence->fps,seconds,true);
+    if (sequence->name.find("idle") == 0 || sequence->name=="spin" || sequence->name=="altfirecycle") frame = WeaponAnimation::Frame(sequence->frames,sequence->fps,seconds,true);
     else if (!WeaponAnimation::HoldLastFrame(sequence->name) && frame >= sequence->frames - 1) {
         for (const auto& item : sequences_) if (item.name.find("idle") == 0) { sequence = &item; break; }
         // The caller supplies loaded/empty idle intent; an empty RPG must not grow a rocket back visually.

@@ -407,6 +407,19 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     rpg.modelScale=std::max(.25f,number("RPG","WorldModelScale",1.5f,4));
     rpg.trailSeconds=number("RPG","TrailSeconds",1,3);rpg.trailSize=number("RPG","TrailSize",10,40);
     rpg.maxActive=unsigned(std::max(1.f,number("RPG","MaxActive",16,64)));
+    // F8 validates each owned Half-Life weapon independently and replaces one complete tuning snapshot.
+    auto& hl=result.halfLife;
+    for(int i=0;i<3;++i) {
+        hl.enabled[i]=enabled(WeaponSlots::Sections[WeaponSlots::Crowbar+i],"Enabled");
+        hl.available[i]=!result.warcraftOnly && OptionalWeaponAssets::HalfLife(std::filesystem::path(filename).parent_path(),i);
+    }
+    hl.tauChargeSeconds=std::max(.1f,number("TauCannon","ChargeSeconds",4,10));
+    hl.tauDrainSeconds=std::max(.05f,number("TauCannon","ChargeDrainSeconds",.3f,2));
+    hl.tauChargedDamage=number("TauCannon","ChargedDamage",200,1000000);
+    hl.tauPrimaryCost=int(std::max(1.f,number("TauCannon","PrimaryCost",2,100)));
+    hl.crowbarContactSeconds=number("Crowbar","ContactSeconds",.1f,1);
+    hl.beamSeconds=std::max(.025f,number("HalfLife","BeamSeconds",.15f,1));
+    hl.beamWidth=std::max(.5f,number("HalfLife","BeamWidth",3,20));
     const auto& sections=WeaponSlots::Sections;
     for (int slot=0;slot<WeaponSlots::Count;++slot) {
         auto& weapon=result.weapons[slot];
@@ -427,6 +440,11 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         result.ammoPrice[slot]=int(number(sections[slot],"AmmoPrice",float(result.ammoPrice[slot]),1000000));
         result.ammoPack[slot]=int(std::max(1.0f,number(sections[slot],"AmmoPack",float(std::max(1,result.ammoPack[slot])),1000)));
         if(WeaponSlots::Firearm(slot))result.maxReserve[slot]=int(number(sections[slot],"MaxReserve",float(result.maxReserve[slot]),100000));
+        if(WeaponSlots::Energy(slot))result.maxReserve[slot]=0; // Cell capacity lives in Magazine; no hidden reload reserve.
+        if(slot==WeaponSlots::Crowbar) {
+            weapon.range=std::max(32.f,number(sections[slot],"Range",150,1000));
+            weapon.interval=std::max(.1f,number(sections[slot],"FireInterval",.5f,5));
+        }
     }
     result.knifeSecondaryDamage=number("Knife","SecondaryDamage",65,1000000);
     result.swordSecondaryDamage=number("Sword","SecondaryDamage",240,1000000);
@@ -436,7 +454,7 @@ float GameplaySettings::ContactDamage(int slot,bool secondary,float heroAttack) 
     if (slot<0 || slot>=WeaponSlots::Count) return 0;
     // Native average attack works for heroes and creeps, including their active bonuses; heavy melee keeps its ratio.
     float heavy=secondary ? (slot==WeaponSlots::Knife ? 65.0f/40 : slot==WeaponSlots::Sword ? 2.0f : 1.0f) : 1.0f;
-    if (heroDamage && slot!=WeaponSlots::C4 && slot!=WeaponSlots::RPG && !WeaponSlots::Grenade(slot)) return std::max(0.0f,heroAttack)*heroMultiplier[slot]*heavy;
+    if (heroDamage && slot!=WeaponSlots::C4 && slot!=WeaponSlots::RPG && !WeaponSlots::Energy(slot) && !WeaponSlots::Grenade(slot)) return std::max(0.0f,heroAttack)*heroMultiplier[slot]*heavy;
     return secondary && slot==WeaponSlots::Knife ? knifeSecondaryDamage :
         secondary && slot==WeaponSlots::Sword ? swordSecondaryDamage : damage[slot];
 }
