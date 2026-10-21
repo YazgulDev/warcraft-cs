@@ -1,9 +1,25 @@
 #include "../src/presentation/EnergyBeamView.hpp"
+#include "../src/presentation/ViewmodelAnchor.hpp"
 #include <cassert>
 #include <vector>
 #include <cstdio>
 
 int main() {
+    // An authored held-model muzzle must project to the identical screen point under native FOV,
+    // arbitrary camera heading/pitch, custom model framing and the decorative movement pose.
+    for(float fov:{25.f,50.f,85.f})for(float yaw:{0.f,90.f,270.f})for(float pitch:{-50.f,0.f,50.f})for(float scale:{.25f,1.f,2.f}) {
+        WorldLabelView view;view.eye[0]=120;view.eye[1]=-500;view.eye[2]=96;view.verticalFov=fov;view.yaw=yaw;view.pitch=pitch;view.aspect=2.05f;
+        ViewmodelPose pose={1.2f,-.5f,.2f,10};std::array<float,3> anchor={-5.27f,-8.88f,-20.08f};
+        auto point=ViewmodelAnchor::World(anchor,pose,scale,view);float delta[3];for(int i=0;i<3;++i)delta[i]=point[i]-view.eye[i];
+        constexpr float radians=.01745329252f;float cy=std::cos(yaw*radians),sy=std::sin(yaw*radians),cp=std::cos(pitch*radians),sp=std::sin(pitch*radians);
+        float depth=delta[0]*cy*cp+delta[1]*sy*cp+delta[2]*sp;
+        float right=delta[0]*sy-delta[1]*cy,up=-delta[0]*cy*sp-delta[1]*sy*sp+delta[2]*cp;
+        float x=anchor[0]*std::cos(pose.roll*radians)-anchor[1]*std::sin(pose.roll*radians)+pose.x;
+        float y=anchor[0]*std::sin(pose.roll*radians)+anchor[1]*std::cos(pose.roll*radians)+pose.y;
+        float z=anchor[2]+pose.z,tan=std::tan(fov*radians*.5f);
+        assert(std::abs(right/(depth*tan*view.aspect)-x/(-z*scale*view.aspect))<.00002f);
+        assert(std::abs(up/(depth*tan)-y/(-z*scale))<.00002f);
+    }
     HWND window=CreateWindowA("STATIC","Energy beam",WS_POPUP,0,0,256,256,nullptr,nullptr,nullptr,nullptr);HDC dc=GetDC(window);
     PIXELFORMATDESCRIPTOR format={};format.nSize=sizeof(format);format.nVersion=1;format.dwFlags=PFD_DRAW_TO_WINDOW|PFD_SUPPORT_OPENGL;
     format.iPixelType=PFD_TYPE_RGBA;format.cColorBits=32;format.cDepthBits=24;

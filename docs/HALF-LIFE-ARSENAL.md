@@ -72,4 +72,6 @@ ammo. Existing CS/RPG controls and settings are preserved.
 
 The portable energy state owns spending/cadence; the controller applies native contact
 and audio events. Beam snapshots are read-only and never deal damage from rendering.
-Movement bob and accepted-shot muzzle flashes use the common viewmodel path.
+Movement bob and accepted-shot muzzle flashes use the common viewmodel path. The beam
+starts at that same animated barrel attachment, compensating for the different native
+and held-model projections; its near end tapers to avoid a large opaque wedge.

@@ -3,6 +3,7 @@
 #include <gl/GL.h>
 #include <string>
 #include <vector>
+#include <array>
 
 class GunMesh {
 public:
@@ -14,7 +15,11 @@ public:
     void DrawWorld();
     void Reset(bool deleteTextures);
     bool TexturesValid() const;
+    // Beam origins and muzzle flashes sample the same interpolated attachment in held-model GL coordinates.
+    bool MuzzlePoint(const char* animation,float seconds,unsigned serial,std::array<float,3>& point,const char* idle=nullptr) const;
 private:
+    std::vector<float> SamplePose(const char* animation,float seconds,const char* idle) const;
+    bool MuzzlePoint(const std::vector<float>& bones,unsigned serial,std::array<float,3>& point) const;
     void Geometry(const std::vector<float>& bones,bool viewmodel);
     struct Vertex { float x, y, z, u, v; unsigned bone; };
     struct Mesh { unsigned texture; std::vector<Vertex> vertices; };

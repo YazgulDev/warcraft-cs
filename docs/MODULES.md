@@ -370,3 +370,5 @@ coordinates accepted shots/reload/laser input rather than implementing projectil
 
 ## Half-Life energy weapons
 `HalfLifeEnergy` owns portable charge/channel lifecycle, cadence and cell expenditure. The controller translates its accepted events into the existing native Strike contact and GameAudio paths. `EnergyBeam` is a read-only contact snapshot; `EnergyBeamView` draws project-authored depth-tested geometry before held-weapon depth clearing. The common GunMesh bob/muzzle/animation path remains shared. `OptionalWeaponAssets` verifies independent seals; export_halflife_weapons converts only owned local/PAK data and publishes each seal last. BuyCatalog registers all four Half-Life weapons once for buying and group 6 selection.
+
+The energy beam samples GunMesh's shared interpolated muzzle anchor; ViewmodelAnchor compensates held/native FOV while preserving bob/roll and camera heading/pitch. EnergyBeamView tapers the near end. Portable projection and actual WGL attachment/pixel/state regressions accompany authorized native mouse purchases, damage/cell/charge/channel/mode/resource checks in an isolated map; ordinary builds exclude fixtures.

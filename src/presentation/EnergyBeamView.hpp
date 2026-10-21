@@ -25,7 +25,8 @@ inline void Draw(const EnergyBeam& beam,const WorldLabelView& view,float nearPla
         glColor4f(layer ? 1.f : beam.gluon ? .2f : 1.f,layer ? 1.f : beam.gluon ? .4f : .55f,layer || beam.gluon ? 1.f : .1f,alpha);
         glBegin(GL_QUADS);
         for(int i=0;i<4;++i) {
-            const auto& point=i<2 ? beam.start : beam.end;float sign=i==0 || i==3 ? -scale : scale;
+            const auto& point=i<2 ? beam.start : beam.end;float sign=(i==0 || i==3 ? -scale : scale)*(i<2 ? .15f : 1.f);
+            // Taper at the nearby muzzle: constant world width otherwise magnifies into an opaque screen-wide wedge.
             glVertex3f(point[0]+side[0]*sign,point[1]+side[1]*sign,point[2]+side[2]*sign);
         }
         glEnd();

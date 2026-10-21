@@ -1,5 +1,6 @@
 #include "Overlay.hpp"
 #include "EnergyBeamView.hpp"
+#include "ViewmodelAnchor.hpp"
 #include "ScopeView.hpp"
 #include "GrenadeView.hpp"
 #include "ReticleView.hpp"
@@ -118,29 +119,30 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         if(activeTexture)activeTexture(oldTexture);
         return;
     }
+    // Load the held model before world effects so its actual animated attachment can anchor an energy beam.
+    int index=controller.WeaponIndex();float projectionScale=controller.Settings().weaponModelScale[index];
+    if(!controller.Settings().warcraftOnly && !attempted_[index]) {
+        attempted_[index]=true;loaded_[index]=guns_[index].Load(root_+"\\assets\\"+WeaponSlots::Caches[index]+".wcg");
+    }
     unsigned barCount=0;
     if(!controller.Status().contained && !controller.Status().hidden && !controller.Buying())
         barCount=HealthBarRenderer::Draw(bars,barView,width,height,nearPlane,farPlane);
     if(!controller.Status().contained && !controller.Status().hidden) {
-        if(!controller.ThirdPerson() && !controller.Buying())EnergyBeamView::Draw(controller.Beam(),barView,nearPlane,farPlane);
+        if(!controller.ThirdPerson() && !controller.Buying() && WeaponSlots::Energy(index)) {
+            auto beam=controller.Beam();std::array<float,3> anchor;
+            if(beam.tick && loaded_[index] && guns_[index].MuzzlePoint(controller.Animation(),controller.AnimationTime(),controller.ShotSerial(),anchor,controller.IdleAnimation()))
+                beam.start=ViewmodelAnchor::World(anchor,controller.WeaponPose(),projectionScale,barView);
+            EnergyBeamView::Draw(beam,barView,nearPlane,farPlane);
+        }
         grenadeWorld_.Draw(root_,controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
         rocketView_.Draw(root_,controller.RocketVisuals(),controller.LaserVisible(),controller.LaserPoint(),barView,width,height,nearPlane,farPlane);
         GrenadeView::Draw(controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
     }
     glMatrixMode(GL_PROJECTION); glPushMatrix(); glLoadIdentity();
-    int index = controller.WeaponIndex();
     // Slightly tighten USP/AWP framing while preserving the original lower-edge arm origins.
-    const auto& projectionScales=controller.Settings().weaponModelScale;
-    float projectionScale = projectionScales[index];
     float top = std::tan(45.0f * 0.01745329252f) * projectionScale; float side = top * width / height;
     glFrustum(-side, side, -top, top, 1, 200);
     glMatrixMode(GL_MODELVIEW); glPushMatrix(); glLoadIdentity();
-    // Unit-only installations never open even a retained cache from an earlier full install.
-    if (!controller.Settings().warcraftOnly && !attempted_[index]) {
-        attempted_[index] = true;
-        const auto& names=WeaponSlots::Caches;
-        loaded_[index] = guns_[index].Load(root_ + "\\assets\\" + names[index] + ".wcg");
-    }
     bool heldModel=!controller.ThirdPerson() && loaded_[index] && !controller.Status().contained && !controller.Status().hidden && (index!=WeaponSlots::C4 || controller.Ammo()>0);
     const auto& visuals=controller.Settings().viewmodel;
     float flash=muzzleFlash_.Sample(controller.ShotSerial(),heldModel && controller.ShowMuzzleFlash(),GetTickCount(),visuals.flashMilliseconds);

@@ -101,8 +101,8 @@ bool GunMesh::TexturesValid() const {
     return !textures_.empty() && std::all_of(textures_.begin(), textures_.end(),
         [](GLuint texture) { return glIsTexture(texture)==GL_TRUE; });
 }
-void GunMesh::Draw(const char* animation,float seconds,float flash,float flashScale,unsigned serial,bool geometry,const char* idle) {
-    if (sequences_.empty()) return;
+std::vector<float> GunMesh::SamplePose(const char* animation,float seconds,const char* idle) const {
+    if (sequences_.empty()) return {};
     const Sequence* sequence = &sequences_.front();
     for (const auto& item : sequences_) if (item.name == animation) { sequence = &item; break; }
     float frame = WeaponAnimation::Frame(sequence->frames,sequence->fps,seconds,false);
@@ -121,14 +121,26 @@ void GunMesh::Draw(const char* animation,float seconds,float flash,float flashSc
         float a = sequence->bones[f0 * bones.size() + i], b = sequence->bones[f1 * bones.size() + i];
         bones[i] = a + (b - a) * weight;
     }
+    return bones;
+}
+bool GunMesh::MuzzlePoint(const std::vector<float>& bones,unsigned serial,std::array<float,3>& point) const {
+    if(bones.empty() || muzzles_.empty())return false;
+    const auto& muzzle=muzzles_[(serial ? serial-1 : 0)%muzzles_.size()];const float* m=&bones[muzzle.bone*12];
+    float x=m[0]*muzzle.x+m[1]*muzzle.y+m[2]*muzzle.z+m[3];
+    float y=m[4]*muzzle.x+m[5]*muzzle.y+m[6]*muzzle.z+m[7];
+    float z=m[8]*muzzle.x+m[9]*muzzle.y+m[10]*muzzle.z+m[11];
+    point={y,z,-x};return true;
+}
+bool GunMesh::MuzzlePoint(const char* animation,float seconds,unsigned serial,std::array<float,3>& point,const char* idle) const {
+    return MuzzlePoint(SamplePose(animation,seconds,idle),serial,point);
+}
+void GunMesh::Draw(const char* animation,float seconds,float flash,float flashScale,unsigned serial,bool geometry,const char* idle) {
+    auto bones=SamplePose(animation,seconds,idle);if(bones.empty())return;
     if(geometry)Geometry(bones,true);
-    if(flash>0 && !muzzles_.empty()) {
-        const auto& muzzle=muzzles_[(serial ? serial-1 : 0)%muzzles_.size()];const float* m=&bones[muzzle.bone*12];
-        float x=m[0]*muzzle.x+m[1]*muzzle.y+m[2]*muzzle.z+m[3];
-        float y=m[4]*muzzle.x+m[5]*muzzle.y+m[6]*muzzle.z+m[7];
-        float z=m[8]*muzzle.x+m[9]*muzzle.y+m[10]*muzzle.z+m[11];
-        MuzzleFlashView::Draw(y,z,-x,flash,flashScale,serial);
-        if(serial!=lastFlashSerial_) {lastFlashSerial_=serial;wc3::Log("muzzle flash model=%s serial=%u point=%.2f,%.2f,%.2f",label_.c_str(),serial,y,z,-x);}
+    std::array<float,3> point;
+    if(flash>0 && MuzzlePoint(bones,serial,point)) {
+        MuzzleFlashView::Draw(point[0],point[1],point[2],flash,flashScale,serial);
+        if(serial!=lastFlashSerial_) {lastFlashSerial_=serial;wc3::Log("muzzle flash model=%s serial=%u point=%.2f,%.2f,%.2f",label_.c_str(),serial,point[0],point[1],point[2]);}
     }
 }
 void GunMesh::Geometry(const std::vector<float>& bones,bool viewmodel) {
