@@ -2,6 +2,8 @@
 
 ## Unreleased — unified launcher preview
 
+- Fix the remaining native ranged audio path: an instant attack also creates ordinary unit attack art, whose embedded sound events survived contact-sound muting. Guard only its two verified 1.26a call sites during a silent FPS impact; retain passive/spell art, reentrant attacks by other units, TPS and RTS. Add actual x86 call-site regression thunks and adapter diagnostics. The existing `Combat.NativeAttackSound` preference controls both ordinary attack sources; installing the DLL correction requires a game restart after saving.
+
 - Silence the controlled unit's native weapon contact audio during FPS attacks by default with `[Combat] NativeAttackSound=false`, retaining native crits/orbs/passives and ordinary TPS audio. Guard the verified 1.26a sound field, restore it after synchronous contacts and keep callback lifecycle checks.
 - Update Gluon endpoint traces on every game frame without spending extra cells or applying damage. Add continuously animated energy strands/core and depth-tested contact flares, plus private optional conversion of owned Half-Life xbeam1/XSpark1 sprite frames with procedural fallback and graphics-context cleanup.
 - Increase stock Tau primary/fully charged damage from 20/200 to 100/1000 and Gluon from 14 to 70 per tick. Add one-time stock migration preserving custom values and F8-reloadable `HalfLife.BeamEffects`, `OwnedSprites`, and `ImpactSize` (default true/true/18, radius 0..100 world units).

@@ -103,7 +103,7 @@ ammo. Existing CS/RPG controls and settings are preserved.
 | HalfLife / BeamSeconds, BeamWidth | 0.15, 3 | seconds 0.025–1, world units 0.5–20 |
 | HalfLife / BeamEffects, OwnedSprites | true, true | true/false; animated strands/impact, optional private Half-Life textures |
 | HalfLife / ImpactSize | 18 | contact flare radius 0–100 world units; zero disables |
-| Combat / NativeAttackSound | false | true/false; FPS native weapon contact audio, preserves passives and TPS audio |
+| Combat / NativeAttackSound | false | true/false; FPS native weapon audio and associated instant-hit art, preserves passives and TPS audio |
 
 Equal Start/End values disable the corresponding ramp. Both reach their maximum at
 `ChargeSeconds`, remain there while held, and support F8 reload (which cancels an active charge).
@@ -127,3 +127,12 @@ settings and cancels any current channel. Graphics-context replacement rebuilds 
 `[HalfLife] DamageVersion=2` migrates previous stock Tau 20/200 and Gluon 14 once to
 100/1000 and 70. Other custom values, including zero, remain unchanged. Later tuning
 back to an old value is preserved. F8 alone does not rewrite an existing INI.
+
+The native audio opt-out covers both weapon contact sounds and the ordinary unit's
+instant ranged attack art. The latter can carry embedded MDX sound events, so muting
+only the contact sound still left arrow audio when a ranged hero hit with Gluon.
+The adapter filters only the two verified 1.26a instant-art call sites during this
+FPS contact. Passive/spell art, attacks triggered for other units, TPS, and RTS retain
+their normal effects and audio. `NativeAttackSound=true` restores the native attack
+presentation. F8 reloads the preference; installing a DLL fix requires restarting
+Warcraft after saving progress. No campaign fixtures or forced restart are used.

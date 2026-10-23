@@ -38,6 +38,12 @@ retaining attack effects. `[Combat] NativeAttackSound=true` restores that sound 
 TPS native attacks keep their audio. The verified 1.26a adapter changes only the
 synchronous contact and restores the original field afterwards. 1.27a continues to
 use its existing direct-damage fallback without unverified attack-component writes.
+The opt-out also removes the ordinary instant ranged attack art that can carry its
+own arrow sound events, fixing the additional audio path left by the first contact
+sound change. The two verified engine call sites are filtered only inside the
+current FPS impact; nested attacks by other units and spell/passive art are preserved.
+Save and close Warcraft before reinstalling this DLL update; F8 alone cannot load
+a replacement module into an already running game.
 
 Gluon's beam tracks aim every game frame, including between damage ticks, stays
 bright while channeling and gains animated energy strands and a contact flare.
@@ -84,6 +90,7 @@ launcher reinstall. Report real-game testing separately from these checks.
 - Fixed delayed Gluon beam aiming and added animated energy strands, impact glow and optional owned Half-Life effect textures.
 - Changed default Tau damage to 100 / 1000 charged and Gluon damage to 70 per tick, preserving custom settings.
 - Disabled native hero weapon contact sounds during FPS attacks by default while retaining native attack effects.
+- Fixed residual ranged attack audio from native instant-hit art during FPS weapon contacts, preserving spell and passive effects.
 - Changed default purchases to dollars with 800 starting money, 300 per mod weapon kill and a 16000 cap.
 - Added configurable rare weapon drops with a 0.5 percent default chance and E pickup.
 - Changed default RPG blast radius to 525 while retaining 100 peak damage.

@@ -5,6 +5,7 @@
 - Fixed delayed Gluon beam aiming and added animated energy strands, impact glow and optional owned Half-Life effect textures.
 - Changed default Tau damage to 100 / 1000 charged and Gluon damage to 70 per tick, preserving custom settings.
 - Disabled native hero weapon contact sounds during FPS attacks by default while retaining native attack effects.
+- Fixed residual ranged attack audio from native instant-hit art during FPS weapon contacts, preserving spell and passive effects.
 - Changed default purchases to dollars with 800 starting money, 300 per mod weapon kill and a 16000 cap.
 - Added configurable rare weapon drops with a 0.5 percent default chance and E pickup.
 - Changed default RPG blast radius to 525 while retaining 100 peak damage.
