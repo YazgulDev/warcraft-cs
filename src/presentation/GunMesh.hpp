@@ -1,6 +1,6 @@
 #pragma once
 #include <windows.h>
-#include <gl/GL.h>
+#include "GraphicsApi.hpp"
 #include <string>
 #include <vector>
 #include <array>

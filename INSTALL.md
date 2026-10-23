@@ -1,5 +1,10 @@
 # Install and play Warcraft CS
 
+This source branch additionally supports experimental Warcraft III **1.27a
+(Game.dll 1.27.0.52240)** through Developer setup, selecting D3D9 at launch.
+Published 0.11.0 Player modules cannot be reused across host versions. Read
+[port limits and verification status](docs/PORT-1.27.md) before using that host.
+
 You need your own installed Warcraft III **1.26a x86** (Game.dll **1.26.0.6401**)
 and, for CS weapons, Counter-Strike 1.6. Reforged and other Warcraft patches are unsupported.
 This offline, single-player prototype does not download games or redistribute their content.

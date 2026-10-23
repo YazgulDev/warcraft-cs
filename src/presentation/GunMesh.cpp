@@ -1,3 +1,4 @@
+#include "GraphicsApi.hpp"
 #include "GunMesh.hpp"
 #include "WeaponAnimation.hpp"
 #include "MuzzleFlashView.hpp"

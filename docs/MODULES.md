@@ -1,5 +1,12 @@
 # Source modules
 
+`GameBuild` owns exact host identity and address translation for 1.26a/experimental 1.27a.
+Unavailable internal adapters retain native behavior instead of installing legacy addresses.
+`D3DHooks` owns D3D9 interception. `GraphicsApi` adapts current presentation calls;
+`D3DGraphics` owns draw/state/matrix isolation, `D3DTextures` owns texture lifetime,
+and `RenderMatrix` owns portable matrix math. Gameplay and layout keep their existing
+modules. Native GL minimap/portrait capture remains separate. See `PORT-1.27.md`.
+
 `HudDiagnostics` samples phase-specific GL state independently of drawing, preserves
 queried texture state and the GL error queue, and records labelled font lifecycle
 events. The existing platform `DiagnosticLog` still owns serialization and rotation.

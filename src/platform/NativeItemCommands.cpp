@@ -1,3 +1,4 @@
+#include "GameBuild.hpp"
 #include "NativeItemCommands.hpp"
 #include <array>
 #include <utility>
@@ -8,6 +9,9 @@ template<class T> bool Load(uintptr_t at,T& value) {
 }
 }
 unsigned NativeItemCommands::Forms(uintptr_t base,wc3::Handle actor,int slot,wc3::Handle item) {
+    // This adapter requires engine internals that are not yet verified on 1.27a.
+    if(wc3::ActiveBuild()==wc3::GameBuildKind::Classic127a) return 0;
+
     if(!base || slot<0 || slot>=6 || !item || wc3::UnitItemInSlot(actor,slot)!=item)return 0;
     // These native CItem getters perform the engine's live active-ability/type checks, including map overrides.
     std::array<unsigned char,3> expected={0x6A,0xFF,0x68},code={};uintptr_t handler=0;
@@ -17,9 +21,9 @@ unsigned NativeItemCommands::Forms(uintptr_t base,wc3::Handle actor,int slot,wc3
     using Item=uintptr_t (__fastcall*)(wc3::Handle,int);
     using Order=int (__thiscall*)(uintptr_t,int);
     using Flags=unsigned (__thiscall*)(uintptr_t);
-    auto object=reinterpret_cast<Item>(base+0x3BEB50)(item,0);if(!object)return 0;
-    int command=reinterpret_cast<Order>(base+0x2B6CC0)(object,0);
+    auto object=reinterpret_cast<Item>(base + wc3::Rva(0x3BEB50))(item,0);if(!object)return 0;
+    int command=reinterpret_cast<Order>(base + wc3::Rva(0x2B6CC0))(object,0);
     if(command!=852008+slot)return 0; // Passive items have no activation order.
-    unsigned forms=reinterpret_cast<Flags>(base+0x2B6E20)(object)&7;
+    unsigned forms=reinterpret_cast<Flags>(base + wc3::Rva(0x2B6E20))(object)&7;
     wc3::Log("Inventory native slot=%d order=%d forms=%u",slot+1,command,forms);return forms;
 }

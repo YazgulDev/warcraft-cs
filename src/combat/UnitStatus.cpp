@@ -1,3 +1,4 @@
+#include "../platform/GameBuild.hpp"
 #include "UnitStatus.hpp"
 #include <algorithm>
 #include <cmath>
@@ -6,7 +7,7 @@ UnitStatus UnitStatus::Read(wc3::Handle unit, uintptr_t gameBase) {
     UnitStatus result;
     // Use the same validated handle resolver as 1.26a's native unit getters, never a cached pointer.
     using ResolveUnit = uintptr_t (__fastcall*)(wc3::Handle, uintptr_t);
-    uintptr_t object = reinterpret_cast<ResolveUnit>(gameBase + 0x3BDCB0)(unit, 0);
+    uintptr_t object = reinterpret_cast<ResolveUnit>(gameBase + wc3::Rva(0x3BDCB0))(unit, 0);
     if (!object) { result.incapacitated = result.immobilized = result.disarmed = true; return result; }
     // Bdvv is the victim's Devour vision buff; loading alone also covers ordinary transports.
     result.contained = wc3::IsUnitLoaded(unit) != FALSE;
@@ -16,7 +17,7 @@ UnitStatus UnitStatus::Read(wc3::Handle unit, uintptr_t gameBase) {
     result.incapacitated = result.stunCount > 0 || wc3::IsUnitPaused(unit) || result.contained || result.hidden;
     result.nativeSpeed = wc3::Real(wc3::GetUnitMoveSpeed(unit));
     // Presentation consumes the same live unit attack used by damage mode, without calling natives while drawing.
-    result.attackDamage=wc3::UnitAttackAverage(unit);
+    result.attackDamage=std::max(0.f,wc3::UnitAttackAverage(unit)); // HUD never displays an unavailable-adapter sentinel.
     result.defaultSpeed = wc3::Real(wc3::GetUnitDefaultMoveSpeed(unit));
     // Native effective speed includes stacked spells/items and returns zero while movement is disabled.
     result.immobilized = result.incapacitated || !std::isfinite(result.nativeSpeed) || result.nativeSpeed <= 0.01f;

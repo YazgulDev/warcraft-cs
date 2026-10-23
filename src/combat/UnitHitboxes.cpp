@@ -1,3 +1,4 @@
+#include "../platform/GameBuild.hpp"
 #include "UnitHitboxes.hpp"
 #include "../geometry/ModelBounds.hpp"
 #include <cstring>
@@ -31,7 +32,7 @@ bool UnitHitboxes::Intersect(wc3::Handle unit, const float* origin, const float*
     if (found == models_.end()) found = models_.emplace(type, Load(type, wc3::IsUnitType(unit, 2) != FALSE)).first;
     Bounds3 bounds = found->second;
     using Resolve = uintptr_t(__fastcall*)(wc3::Handle, uintptr_t);
-    uintptr_t object = reinterpret_cast<Resolve>(base_ + 0x3BDCB0)(unit, 0), sprite = Pointer(object + 0x28);
+    uintptr_t object = reinterpret_cast<Resolve>(base_ + wc3::Rva(0x3BDCB0))(unit, 0), sprite = Pointer(object + 0x28);
     float scale = 1, modelZ = 0;
     Read(sprite + 0xE8, scale);
     if (!std::isfinite(scale) || scale <= 0 || scale > 100) scale = 1;

@@ -1,4 +1,5 @@
 # Player packages contain only our two x86 modules and their notices, never retail Warcraft libraries.
+. (Join-Path $PSScriptRoot 'host-build.ps1')
 function Assert-OrdinaryRuntimePath([string]$Path) {
     for ($part=[IO.Path]::GetFullPath($Path);$part;$part=[IO.Path]::GetDirectoryName($part)) {
         if ((Test-Path -LiteralPath $part) -and ((Get-Item -LiteralPath $part -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
@@ -11,7 +12,7 @@ function Assert-X86Module([byte[]]$Bytes) {
     $pe=[BitConverter]::ToInt32($Bytes,60)
     if ($pe -lt 64 -or $pe -gt $Bytes.Length-26 -or [BitConverter]::ToUInt32($Bytes,$pe) -ne 17744 -or
         [BitConverter]::ToUInt16($Bytes,$pe+4) -ne 332 -or !([BitConverter]::ToUInt16($Bytes,$pe+22) -band 8192)) {
-        throw 'Prebuilt modules must be x86 DLLs for Warcraft III 1.26a.'
+        throw 'Prebuilt modules must be x86 DLLs for a supported Warcraft III host.'
     }
 }
 function Get-RuntimeHash([byte[]]$Bytes) {
@@ -36,7 +37,7 @@ function Read-RuntimePackage([byte[]]$Bytes,[string]$Revision,[string]$Version) 
             try { $stream.CopyTo($content);$files[$entry.FullName]=$content.ToArray() } finally { $stream.Dispose();$content.Dispose() }
         }
         $manifest=[Text.Encoding]::UTF8.GetString($files['runtime.json']).TrimStart([char]65279) | ConvertFrom-Json
-        if ($manifest.SourceRevision -cne $Revision -or $manifest.Version -cne $Version -or $manifest.HostVersion -cne '1.26.0.6401' -or
+        if ($manifest.SourceRevision -cne $Revision -or $manifest.Version -cne $Version -or !(Test-WarcraftHostVersion $manifest.HostVersion) -or
             $manifest.OriginalSoundSha256 -cnotmatch '^[0-9a-f]{64}$') { throw 'Runtime package does not match the source version or supported Warcraft host.' }
         foreach ($name in $allowed | Where-Object { $_ -ne 'runtime.json' }) {
             $expected=$manifest.Files.PSObject.Properties[$name].Value
@@ -74,6 +75,9 @@ function Expand-LauncherRuntime([string]$LauncherFile,[string]$Source,[string]$D
 }
 function Assert-PrebuiltHost([string]$Directory,[string]$Warcraft) {
     $manifest=Get-Content -LiteralPath (Join-Path $Directory 'runtime.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+    # The Miles proxy is generated against a specific game's exports, independently of mod DLL compatibility.
+    $hostBuild=Get-WarcraftHostBuild $Warcraft
+    if($manifest.HostVersion -cne $hostBuild.Version) { throw 'Player modules target a different Warcraft build. Use Developer mode to build matching modules.' }
     # The generated Miles forwarders target the exact owned library used for this supported build.
     $original=Join-Path $Warcraft 'WarcraftOriginalMss.dll'
     if (!(Test-Path -LiteralPath $original)) { $original=Join-Path $Warcraft 'Mss32.dll' }

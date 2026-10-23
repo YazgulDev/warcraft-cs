@@ -2,7 +2,7 @@
 #include "SpellHudSlot.hpp"
 #include "SpellHudLayout.hpp"
 #include <windows.h>
-#include <gl/GL.h>
+#include "GraphicsApi.hpp"
 #include <functional>
 #include "HudIconCache.hpp"
 

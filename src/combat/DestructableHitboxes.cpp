@@ -1,3 +1,4 @@
+#include "../platform/GameBuild.hpp"
 #include "DestructableHitboxes.hpp"
 #include "../geometry/ModelBounds.hpp"
 #include "../platform/SpriteTransform.hpp"
@@ -26,7 +27,7 @@ bool DestructableHitboxes::Intersect(wc3::Handle target,const float* origin,cons
     Bounds3 bounds=found->second.bounds;
     if (bounds.maximum[0]<=bounds.minimum[0]) return false;
     using Resolve=uintptr_t (__fastcall*)(wc3::Handle,uintptr_t);
-    uintptr_t object=reinterpret_cast<Resolve>(base_+0x3BE010)(target,0),sprite=0;
+    uintptr_t object=reinterpret_cast<Resolve>(base_ + wc3::Rva(0x3BE010))(target,0),sprite=0;
     Read(object+0x28,sprite);
     ModelTransform transform;
     float localOrigin[3],localDirection[3];

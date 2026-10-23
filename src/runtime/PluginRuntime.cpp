@@ -1,3 +1,6 @@
+#include "../platform/D3DHooks.hpp"
+#include "../presentation/D3DGraphics.hpp"
+#include "../platform/GameBuild.hpp"
 #include "PluginRuntime.hpp"
 #include "../input/InputDispatcher.hpp"
 #include "../platform/NativeFloatingText.hpp"
@@ -119,7 +122,7 @@ static LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM key, LPARAM
 }
 static uintptr_t CurrentUI() {
     using GetUI = uintptr_t (__fastcall*)(int, int);
-    return reinterpret_cast<GetUI>(gameBase + 0x300710)(0, 0);
+    return reinterpret_cast<GetUI>(gameBase + wc3::Rva(0x300710))(0, 0);
 }
 static void ObserveMap(uintptr_t ui) {
     if (mapUI == ui) return;
@@ -235,7 +238,7 @@ static void __cdecl PauseHook(BOOL value) {
 static void __fastcall UIHook(uintptr_t frame, uintptr_t unused) {
     // Suppress classic console/cinematic backing only during live FPS; menus keep their UI.
     using GetUI = uintptr_t (__fastcall*)(int, int);
-    uintptr_t ui = reinterpret_cast<GetUI>(gameBase + 0x300710)(0, 0);
+    uintptr_t ui = reinterpret_cast<GetUI>(gameBase + wc3::Rva(0x300710))(0, 0);
     // UI drawing is filtered at GL submission, preserving layout and frame update callbacks.
     nativeUIPhase = ui && !*reinterpret_cast<int*>(ui + 0x258) && !*reinterpret_cast<int*>(ui + 0x260);
     originalUI(frame, unused);
@@ -276,6 +279,15 @@ static void __fastcall PerspectiveHook(uintptr_t output, uintptr_t unused, float
         }
     }
 }
+static void UpdateFallbackView() {
+    WorldLabelView view;view.active=healthy && controller.Visible();
+    if(view.active) {
+        view.eye[0]=wc3::Real(wc3::GetCameraEyePositionX());view.eye[1]=wc3::Real(wc3::GetCameraEyePositionY());view.eye[2]=wc3::Real(wc3::GetCameraEyePositionZ());
+        view.yaw=controller.ViewYaw();view.pitch=std::clamp(controller.ViewPitch(),-65.f,65.f);
+        view.verticalFov=healthVerticalFov;view.aspect=healthAspect;view.maximumDistance=controller.Settings().healthBars.distance;
+    }
+    healthBarView=view;
+}
 static void FinishFrame(HDC dc,const char* route) {
     // F8's validated snapshot drives the client cap; gameplay continues to use elapsed real time.
     frameRate.Configure(controller.Settings().render.maxFPS);
@@ -283,7 +295,11 @@ static void FinishFrame(HDC dc,const char* route) {
     static DWORD previous = 0;
     static unsigned frames = 0;
     ++frames;
-    ObserveMap(CurrentUI());
+    uintptr_t currentUI=CurrentUI();ObserveMap(currentUI);
+    if(!originalWorld && currentUI) {
+        // 1.27a's world hook is unresolved; one API presentation supplies its controller tick.
+        lastWorld=GetTickCount();if(healthy)SafeTick(currentUI);UpdateFallbackView();worldPending=true;
+    }
     actorJumpView.End(); // Native world geometry has drawn; restore before the next simulation tick.
     // Menus, cinematics, faults and F6 release the camera limit even without another world batch.
     cameraFarClip.Update(healthy && controller.Visible());
@@ -294,9 +310,9 @@ static void FinishFrame(HDC dc,const char* route) {
         overlay.RefreshAfterFocus();
     }
     overlayPass = true;
-    portrait.Finish();
+    if(!D3DGraphics::Active())portrait.Finish();
     // Restore captured minimap pixels before the overlay reads world depth for health bars.
-    minimap.FinishFrame();
+    if(!D3DGraphics::Active())minimap.FinishFrame();
     // Consume a real world submission, rather than rejecting a valid slow campaign frame by elapsed time.
     bool worldReady=worldPending;worldPending=false;
     if (healthy && worldReady) overlay.Draw(dc,controller,minimap,portrait,healthBars.Items(),healthBarView,healthNear,healthFar);
@@ -343,12 +359,15 @@ static DWORD WINAPI Initialize(void*) {
     uintptr_t base = gameBase = reinterpret_cast<uintptr_t>(game);
     // Verify the render callback prologue before installing any game hook.
     const unsigned char expected[] = {0x53,0x56,0x8B,0xF1,0x8B,0x8E,0x38,0x03,0x00,0x00};
-    if (memcmp(reinterpret_cast<void*>(base + 0x395900), expected, sizeof(expected))) {
+    bool legacyWorld=wc3::Rva(0x395900)!=0;
+    if (legacyWorld && memcmp(reinterpret_cast<void*>(base + wc3::Rva(0x395900)), expected, sizeof(expected))) {
         wc3::Log("World render signature mismatch: no hooks installed"); return 0;
     }
     controller.Configure(root, base); overlay.Configure(root);
     frameRate.Install(base);
-    if (MH_Initialize() != MH_OK) { wc3::Log("MinHook initialization failed"); return 0; }
+    // Early D3D factory capture may initialize the shared hook library before engine binding finishes.
+    MH_STATUS hookStatus=MH_Initialize();
+    if (hookStatus != MH_OK && hookStatus != MH_ERROR_ALREADY_INITIALIZED) { wc3::Log("MinHook initialization failed"); return 0; }
 #ifdef WCS_GAMEPLAY_TEST
     FramePresentationScene::Install(base,Hook); // Disposable swap oracle; absent from ordinary builds.
 #endif
@@ -369,23 +388,42 @@ static DWORD WINAPI Initialize(void*) {
         []() { return healthy ? controller.EnemyProtectedActor() : 0; });
     NativeMovementGuard::Install(base,[]() { return healthy ? controller.ViewActor() : 0; },
         []() { return healthy && controller.NativeCastMovement(); },Hook);
-    Hook(reinterpret_cast<void*>(base + 0x3BC4D0), reinterpret_cast<void*>(PauseHook), reinterpret_cast<void**>(&originalPause));
+    Hook(reinterpret_cast<void*>(base + wc3::Rva(0x3BC4D0)), reinterpret_cast<void*>(PauseHook), reinterpret_cast<void**>(&originalPause));
     Hook(reinterpret_cast<void*>(wc3::ShowInterface), reinterpret_cast<void*>(InterfaceHook), reinterpret_cast<void**>(&originalInterface));
-    if (!Hook(reinterpret_cast<void*>(base + 0x395900), reinterpret_cast<void*>(WorldHook), reinterpret_cast<void**>(&originalWorld))) return 0;
+    if (legacyWorld && !Hook(reinterpret_cast<void*>(base + wc3::Rva(0x395900)), reinterpret_cast<void*>(WorldHook), reinterpret_cast<void**>(&originalWorld))) return 0;
     const unsigned char uiSignature[] = {0x83,0xEC,0x10,0x53,0x55,0x56,0x57,0x8B,0xF9};
-    if (!memcmp(reinterpret_cast<void*>(base + 0x60C580), uiSignature, sizeof(uiSignature)))
-        Hook(reinterpret_cast<void*>(base + 0x60C580), reinterpret_cast<void*>(UIHook), reinterpret_cast<void**>(&originalUI));
+    if (wc3::Rva(0x60C580) && !memcmp(reinterpret_cast<void*>(base + wc3::Rva(0x60C580)), uiSignature, sizeof(uiSignature)))
+        Hook(reinterpret_cast<void*>(base + wc3::Rva(0x60C580)), reinterpret_cast<void*>(UIHook), reinterpret_cast<void**>(&originalUI));
     else wc3::Log("UI signature mismatch; original UI retained");
     const unsigned char perspectiveSignature[] = {0x51, 0xD9, 0x44, 0x24, 0x0C};
-    if (!memcmp(reinterpret_cast<void*>(base + 0x7B66F0), perspectiveSignature, sizeof(perspectiveSignature)))
-        Hook(reinterpret_cast<void*>(base + 0x7B66F0), reinterpret_cast<void*>(PerspectiveHook), reinterpret_cast<void**>(&originalPerspective));
+    if (wc3::Rva(0x7B66F0) && !memcmp(reinterpret_cast<void*>(base + wc3::Rva(0x7B66F0)), perspectiveSignature, sizeof(perspectiveSignature)))
+        Hook(reinterpret_cast<void*>(base + wc3::Rva(0x7B66F0)), reinterpret_cast<void*>(PerspectiveHook), reinterpret_cast<void**>(&originalPerspective));
     else wc3::Log("Perspective signature mismatch; original near plane retained");
     // The verified Game.dll import uses the two-argument layer-buffer API.
-    HMODULE gl = GetModuleHandleA("opengl32.dll");
+    HMODULE gl = LoadLibraryA("opengl32.dll");
     Hook(reinterpret_cast<void*>(GetProcAddress(gl, "glViewport")), reinterpret_cast<void*>(ViewportHook), reinterpret_cast<void**>(&originalViewport));
     Hook(reinterpret_cast<void*>(GetProcAddress(gl, "glScissor")), reinterpret_cast<void*>(ScissorHook), reinterpret_cast<void**>(&originalScissor));
     Hook(reinterpret_cast<void*>(GetProcAddress(gl, "wglDeleteContext")), reinterpret_cast<void*>(DeleteContextHook), reinterpret_cast<void**>(&originalDeleteContext));
     Hook(reinterpret_cast<void*>(GetProcAddress(gl, "glDrawElements")), reinterpret_cast<void*>(DrawElementsHook), reinterpret_cast<void**>(&originalDrawElements));
+    // D3D callbacks share the current overlay instead of reverting presentation/gameplay to the 0.8.0 fork.
+    // An explicit OpenGL launch never loads/probes an unused D3D runtime.
+    if(!strstr(GetCommandLineA(),"-opengl"))D3DHooks::Install([](IDirect3DDevice9* device,HWND window,int width,int height) {
+        if(windowInput.Observe(window)){controller.AttachWindow(window);overlay.RefreshAfterFocus();}
+        HDC dc=GetDC(window);if(!dc)return;
+        if(D3DGraphics::BeginFrame(device,dc,width,height)) {
+            FinishFrame(dc,"d3d9-present");
+            D3DGraphics::EndFrame();
+        }
+        ReleaseDC(window,dc);
+        RECT region={0,height*80/593,width,height-height*178/593};
+        D3DHooks::SetUiSuppression(healthy && controller.Visible(),region);
+    },[](const float* matrix,const int* viewport) {
+        // Read the actual world projection so overlay depth and health bars agree with the engine.
+        if(!matrix || !viewport || std::abs(matrix[11])<.5f || viewport[2]<320 || viewport[3]<200 || matrix[0]<=0 || matrix[5]<=0)return;
+        healthVerticalFov=2*std::atan(1/matrix[5])/.01745329252f;healthAspect=matrix[5]/matrix[0];
+        float nearPlane=std::abs(matrix[14]/matrix[10]),farPlane=std::abs(matrix[14]/(matrix[10]-1));
+        if(std::isfinite(nearPlane) && std::isfinite(farPlane) && nearPlane>0 && farPlane>nearPlane){healthNear=nearPlane;healthFar=farPlane;}
+    });
     // Bind to Warcraft's completed batches independently of the Windows/OpenGL presentation entry point.
     NativeFramePresentation::Install(base,Hook,FinishFrame);
     wc3::Log("WarcraftCS initialized. Offline only. Select an owned unit and press F6.");
@@ -402,5 +440,6 @@ BOOL PluginRuntime::Attach(HINSTANCE module) {
         // Defer engine work until after the loader lock has been released.
         HANDLE thread = CreateThread(nullptr, 0, Initialize, nullptr, 0, nullptr);
         if (thread) CloseHandle(thread);
+    if(!strstr(GetCommandLineA(),"-opengl"))D3DHooks::StartEarlyInstall();
     return TRUE;
 }

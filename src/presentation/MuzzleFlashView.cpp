@@ -1,3 +1,4 @@
+#include "GraphicsApi.hpp"
 #include "MuzzleFlashView.hpp"
 #include <windows.h>
 #include <gl/GL.h>

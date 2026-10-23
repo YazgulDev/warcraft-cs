@@ -1,3 +1,4 @@
+#include "GameBuild.hpp"
 #include "NativeCommandCard.hpp"
 #include <windows.h>
 #include <cmath>
@@ -39,8 +40,8 @@ bool NativeCommandCard::PointOnly(uintptr_t base,uintptr_t ui,uintptr_t abilityO
     if(!base || !order || !Button(ui,abilityObject,ability))return false;
     const std::array<unsigned char,7> expected={0x8B,0x44,0x24,0x04,0x56,0x8B,0xF1};
     std::array<unsigned char,7> signature={};uintptr_t bar=0;
-    if(!Load(base+0x372C30,signature) || signature!=expected || !Load(ui+0x3C8,bar) || !bar)return false;
+    if(!Load(base + wc3::Rva(0x372C30),signature) || signature!=expected || !Load(ui+0x3C8,bar) || !bar)return false;
     using Flags=unsigned (__thiscall*)(uintptr_t,int);
-    unsigned flags=reinterpret_cast<Flags>(base+0x372C30)(bar,order)&0x3FF;
+    unsigned flags=reinterpret_cast<Flags>(base + wc3::Rva(0x372C30))(bar,order)&0x3FF;
     return (flags&2)!=0 && (flags&4)==0;
 }

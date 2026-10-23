@@ -3,6 +3,10 @@
 Applies to **0.11.0**. See [Release Notes](docs/RELEASE-0.11.0.md) for changes and
 [antivirus troubleshooting](TROUBLESHOOTING.md#antivirus) for unsigned-module detections.
 
+This source branch additionally accepts experimental **1.27a, Game.dll 1.27.0.52240**,
+with a D3D9 driver. Use Developer setup; published 0.11.0 Player modules target 1.26a.
+See [port limitations and verification status](docs/PORT-1.27.md).
+
 ## Playing through the Windows launcher
 
 | Requirement | Details |
