@@ -1,4 +1,6 @@
+#include "../platform/GameBuild.hpp"
 #include "ShooterController.hpp"
+#include "../presentation/TauChargeFeedback.hpp"
 #include "../platform/DiagnosticLog.hpp"
 #include "../combat/CombatDamage.hpp"
 #include "../combat/UnitScaling.hpp"
@@ -30,10 +32,15 @@ static constexpr float radians = 0.01745329252f;
 void ShooterController::Configure(const char* root, uintptr_t gameBase) {
     root_ = root;
     gameBase_ = gameBase;
+    // Loot randomness is local to the mod and never advances Warcraft's scripted random stream.
+    lootRandom_.seed(GetTickCount()^GetCurrentProcessId());
     hitboxes_.Configure(gameBase);
     destructableHitboxes_.Configure(gameBase);
     collision_.Configure(gameBase);
     grenades_.Configure(gameBase);rockets_.Configure(gameBase);
+    // Projectile adapters report deaths; the application applies the current wallet/drop policy.
+    auto rewards=[this](const KillReward& reward){RewardKill(reward);};
+    grenades_.SetKillSink(rewards);rockets_.SetKillSink(rewards);
     spells_.Configure(gameBase);itemInventory_.Configure(gameBase);
     unitHudReader_.Configure(gameBase); // Verify map-resolved XP and item art before sampling the actor.
     // Native-only clients do not need a CS mixer or any converted cache to initialize.
@@ -57,26 +64,48 @@ void ShooterController::Notice(const char* message) { ammoMessage_=message;refil
 void ShooterController::RequestBuyClick(int x,int y,int width,int height) {
     if (Buying()) buyKeyRequested_=BuyMenuLayout::Key(x,y,width,height,buyMenu_.Current(),&settings_);
 }
+int ShooterController::PurchaseBalance(wc3::Handle owner) {
+    return !settings_.warcraftOnly && settings_.economy.currency==EconomySettings::Currency::Dollars ? dollars_.Balance(owner,settings_.economy) : wc3::GetPlayerState(owner,1);
+}
+void ShooterController::RewardKill(const KillReward& reward) {
+    if(settings_.warcraftOnly || reward.owner!=wc3::GetLocalPlayer())return;
+    // The CS reward never modifies map gold. The captured owner also survives holstering and unit switching.
+    int added=settings_.economy.currency==EconomySettings::Currency::Dollars ? dollars_.Reward(reward.owner,settings_.economy) : 0;
+    money_=PurchaseBalance(reward.owner);
+    if(added>0){char message[64];sprintf_s(message,"+$%d ENEMY KILLED",added);Notice(message);}
+    float roll=std::uniform_real_distribution<float>(0.f,100.f)(lootRandom_);
+    if(WeaponDropRules::Success(settings_.weaponDrops,roll)) {
+        auto candidates=WeaponDropRules::Candidates(settings_);
+        if(!candidates.empty()) {
+            int slot=candidates[std::uniform_int_distribution<size_t>(0,candidates.size()-1)(lootRandom_)];
+            if(droppedWeapons_.Spawn(slot,reward.x,reward.y,settings_.weaponDrops))wc3::Log("weapon dropped slot=%d at=%.1f,%.1f",slot,reward.x,reward.y);
+        }
+    }
+    wc3::Log("CS kill reward target=%08X dollars=%d balance=%d",reward.target,added,money_);
+}
 void ShooterController::Buy(int slot,bool ammunition) {
     if(settings_.warcraftOnly)return; // All purchase entry points honor the installed mode set.
     if (status_.incapacitated || status_.contained || status_.hidden) { Notice("CANNOT BUY WHILE DISABLED");return; }
     if (!BuyAccess::Allowed(unit_,settings_)) { Notice("OUTSIDE BUY ZONE");return; }
     if (slot<0 || slot>=WeaponSlots::Count) return;
-    auto owner=wc3::GetOwningPlayer(unit_);int gold=wc3::GetPlayerState(owner,1);
-    auto result=inventory_.Buy(slot,ammunition,settings_,gold,ammo_[slot],reserve_[slot],settings_.weapons[slot].magazine,settings_.maxReserve[slot]);
-    // Native gold is charged only after validation, once on the game's main thread.
+    auto owner=wc3::GetOwningPlayer(unit_);int balance=PurchaseBalance(owner);
+    auto result=inventory_.Buy(slot,ammunition,settings_,balance,ammo_[slot],reserve_[slot],settings_.weapons[slot].magazine,settings_.maxReserve[slot]);
+    // Only the selected currency is charged, after validation on the game thread.
     if (result==BuyInventory::Result::Bought) {
-        wc3::SetPlayerState(owner,1,gold);gold_=gold;Notice(ammunition ? "AMMUNITION PURCHASED" : "WEAPON PURCHASED");
-        wc3::Log("buy weapon=%s ammunition=%d gold=%d ammo=%d reserve=%d",settings_.weapons[slot].name,ammunition,gold,ammo_[slot],reserve_[slot]);
+        if(settings_.economy.currency==EconomySettings::Currency::Dollars)dollars_.Store(owner,balance,settings_.economy);
+        else {wc3::SetPlayerState(owner,1,balance);gold_=balance;}
+        money_=balance;Notice(ammunition ? "AMMUNITION PURCHASED" : "WEAPON PURCHASED");
+        wc3::Log("buy weapon=%s ammunition=%d balance=%d ammo=%d reserve=%d",settings_.weapons[slot].name,ammunition,balance,ammo_[slot],reserve_[slot]);
         if (!ammunition) SwitchWeapon(slot);
         // Successful CS purchases return directly to play; rejected purchases leave the menu open.
         buyMenu_.Close();CloseWeaponSelection();
-    } else Notice(result==BuyInventory::Result::NoGold ? "NOT ENOUGH GOLD" : result==BuyInventory::Result::Full ? "AMMUNITION FULL" :
+    } else Notice(result==BuyInventory::Result::NoGold ? (settings_.economy.currency==EconomySettings::Currency::Dollars ? "NOT ENOUGH DOLLARS" : "NOT ENOUGH GOLD") : result==BuyInventory::Result::Full ? "AMMUNITION FULL" :
         result==BuyInventory::Result::AlreadyOwned ? "ALREADY OWNED" : "NO AMMUNITION FOR THIS WEAPON");
 }
 void ShooterController::UpdateBuyMenu() {
     bool wasBuying=Buying();
     gold_=wc3::GetPlayerState(wc3::GetOwningPlayer(unit_),1);
+    money_=PurchaseBalance(wc3::GetOwningPlayer(unit_));
     if (status_.contained || status_.hidden) { buyMenu_.Close();CloseWeaponSelection();itemInventory_.ClearInput();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1;suppressFire_=true;return; }
     if (buyToggleRequested_) {
         itemInventory_.ClearInput(); // The weapon catalog and mouse inventory have exclusive cursor ownership.
@@ -114,6 +143,15 @@ bool ShooterController::Down(int key) const {
 }
 bool ShooterController::Pressed(int key) { if(key<=0 || key>=256)return false;bool down = Down(key), rising = down && !keys_[key]; keys_[key] = down; return rising; }
 const char* ShooterController::Sequence(const char* name) const {
+    // Use the owned models' actual sequence labels, rather than CS rifle/knife aliases.
+    if(weapon_==WeaponSlots::Crowbar) {
+        if(!strcmp(name,"idle"))return "idle1";
+        if(!strcmp(name,"stab"))return "attack3";
+        if(!strcmp(name,"midslash1"))return "attack1miss";
+        if(!strcmp(name,"midslash2"))return "attack2";
+    }
+    if(weapon_==WeaponSlots::Tau && !strcmp(name,"shoot1"))return "fire";
+    if(weapon_==WeaponSlots::Gluon && !strcmp(name,"idle"))return "idle1";
     if(WeaponSlots::Grenade(weapon_) && !strcmp(name,"draw"))return "deploy";
     // Half-Life uses separate empty/loaded deploy and idle clips, with a single authored fire action.
     if(weapon_==WeaponSlots::RPG) {
@@ -201,6 +239,8 @@ void ShooterController::Disable(bool restoreCamera) {
     wc3::Log("FPS disabled");
 }
 void ShooterController::ResetMap() {
+    // Currency and local loot belong to the unloaded map, independently of view/loadout changes.
+    ++rewardGeneration_;dollars_.Reset();droppedWeapons_.Reset();nearbyWeapon_=-1;money_=0;
     flashWeapon_=-1;viewmodelMotion_.Reset(); // No viewmodel offset or unpresented flash crosses a map boundary.
     glockBurst_={}; // A new map has neither queued rounds nor a cooldown inherited from the previous actor.
     shop_=0;shopCloseRequested_=false; // Forget native selection handles after unload.
@@ -377,6 +417,8 @@ void ShooterController::AimAndMove(float dt) {
     viewmodelMotion_.Step(dt,bob ? DisplaySpeed() : 0,bob && movement_.Grounded(),movement_.Duck(),settings_.viewmodel);
 }
 void ShooterController::UpdateStatus() {
+    // Keep money visible in F7 as well as armed F6; clean F9 still omits the HUD.
+    auto owner=wc3::GetOwningPlayer(unit_);gold_=wc3::GetPlayerState(owner,1);money_=PurchaseBalance(owner);
     UnitStatus current = UnitStatus::Read(unit_, gameBase_);
     if (current.incapacitated != status_.incapacitated || current.immobilized != status_.immobilized ||
         current.disarmed != status_.disarmed || current.contained != status_.contained ||
@@ -420,6 +462,7 @@ void ShooterController::Camera() {
     ownCameraRequest_ = false;
 }
 void ShooterController::Reload() {
+    if(WeaponSlots::Energy(weapon_))return; // Uranium feeds the beam directly; no fabricated reload animation.
     const Weapon& w = settings_.weapons[weapon_];
     if (!WeaponSlots::Firearm(weapon_) || reloadEnd_ || ammo_[weapon_] == w.magazine || reserve_[weapon_] <= 0) return;
     if(weapon_==WeaponSlots::RPG && rpgLaser_ && rockets_.Active(unit_)){Notice("DISABLE LASER TO RELOAD");return;}
@@ -439,7 +482,7 @@ void ShooterController::Reload() {
 void ShooterController::RefillAmmo(bool grantAll) {
     if(settings_.warcraftOnly)return;
     glockBurst_.Cancel(); // Free refills must not preserve a partially spent burst queue.
-    // F11 restores carried ammo and grants C4; F12 additionally unlocks every weapon without spending gold.
+    // F11 restores carried ammo and grants C4; F12 additionally unlocks every weapon without spending money.
     int magazines[WeaponSlots::Count],reserves[WeaponSlots::Count];
     for (int i=0;i<WeaponSlots::Count;++i) { magazines[i]=settings_.weapons[i].magazine;reserves[i]=settings_.maxReserve[i]; }
     inventory_.Refill(settings_,ammo_,reserve_,magazines,reserves,grantAll);
@@ -485,7 +528,7 @@ void ShooterController::UpdateWeaponSelection(DWORD now) {
     }
     for(int i=0;i<WeaponSlots::ShortcutCount;++i)if(Pressed(ShortcutAction(int(ShortcutAction::Weapon1)+i)) && !ThirdPerson() &&
         InventoryControls::NumberSlot(settings_.shortcuts.Key(ShortcutAction(int(ShortcutAction::Weapon1)+i)),ItemControls().Numbers(),false)<0) {
-        if(settings_.weaponSelectionMenu && i<5) {
+        if(settings_.weaponSelectionMenu && i<WeaponSlots::SelectionGroups) {
             if(!weaponSelection_.Category(i+1,weapon_,available,now*.001))Notice("NO CARRIED WEAPONS IN THIS GROUP");
         } else {CloseWeaponSelection();SwitchWeapon(i);}
     }
@@ -513,6 +556,7 @@ void ShooterController::ToggleHealthBars() {
     Notice(saved ? (settings_.healthBars.allies ? "HEALTH BARS ON" : "HEALTH BARS OFF") : "HEALTH BAR SETTINGS COULD NOT BE SAVED");
 }
 void ShooterController::ReloadSettings() {
+    CancelEnergy(); // F8 cannot complete a charge using a different damage or resource snapshot.
     CloseWeaponSelection(); // F8 cannot retain a choice under the previous controls/configuration.
     // Replace one complete snapshot; stale fractional credit must not survive a percentage/scope change.
     settings_=GameplaySettings::Load(root_+"\\WarcraftCS.ini");
@@ -521,7 +565,8 @@ void ShooterController::ReloadSettings() {
     // F8 restores the saved designator preference and cannot leave absent optional content equipped.
     rpgLaser_=settings_.rpg.guidance;
     wc3::Log("RPG configured available=%d enabled=%d laser=%d",settings_.rpg.available,settings_.rpg.enabled,rpgLaser_);
-    if(weapon_==WeaponSlots::RPG && !settings_.WeaponEnabled(weapon_))SwitchWeapon(WeaponSlots::Pistol);
+    for(int i=0;i<3;++i)wc3::Log("Half-Life slot=%d available=%d enabled=%d",WeaponSlots::Crowbar+i,settings_.halfLife.available[i],settings_.halfLife.enabled[i]);
+    if(!settings_.WeaponEnabled(weapon_))SwitchWeapon(WeaponSlots::Pistol);
     if(!settings_.armyAI.enabled)armyAI_.Reset();
     // Startup/F8 restore the configured distance; wheel choices stay in this map session only.
     thirdPersonDistance_=settings_.thirdPerson.distance;cameraWheel_.Reset();
@@ -563,6 +608,9 @@ void ShooterController::ReloadSettings() {
         settings_.thirdPerson.attackInterval,settings_.thirdPerson.contactDelay,settings_.thirdPerson.damageMultiplier);
     wc3::Log("Spells configured enabled=%d aimDistance=%.0f",settings_.spells.enabled,settings_.spells.aimDistance);
     for(int slot=0;slot<4;++slot)wc3::Log("Spell slot=%d ability=%s order=%d target=%s",slot+1,settings_.spells.ability[slot].c_str(),settings_.spells.order[slot],settings_.spells.target[slot].c_str());
+    // F8 applies opt-outs/caps immediately, without minting starting money or retaining a stale loot hint.
+    droppedWeapons_.Tick(settings_.weaponDrops,!settings_.warcraftOnly);nearbyWeapon_=-1;
+    if(unit_ && wc3::GetUnitTypeId(unit_))money_=PurchaseBalance(wc3::GetOwningPlayer(unit_));
     showSpeed_=settings_.showSpeed;
     showMinimap_=settings_.showMinimap;
     wc3::Log("Minimap configured visible=%d sizePercent=%.1f",showMinimap_,settings_.minimapSizePercent);
@@ -601,6 +649,14 @@ void ShooterController::ReloadSettings() {
 }
 void ShooterController::PickupItem() {
     if (status_.incapacitated || status_.contained || status_.hidden) return;
+    // CS loot has its own inventory, so even a unit without Warcraft item slots can collect it.
+    int drop=!settings_.warcraftOnly && settings_.weaponDrops.enabled ? droppedWeapons_.Nearest(unit_,settings_.weaponDrops.pickupRadius) : -1;
+    if(drop>=0) {
+        int slot=droppedWeapons_.Slot(drop);bool owned=inventory_.owned[slot];
+        if(!inventory_.Pickup(slot,settings_,ammo_[slot],reserve_[slot])){Notice("AMMUNITION FULL / WEAPON DISABLED");return;}
+        droppedWeapons_.Take(drop);if(!owned)SwitchWeapon(slot);
+        Notice(owned ? "DROPPED WEAPON: AMMO PICKED UP" : "WEAPON PICKED UP");nearbyWeapon_=-1;return;
+    }
     ItemPickupResult result=itemPickup_.Take(unit_,settings_.runePickupRadius);
     if (!result.found) return;
     // Equipment uses native inventory slots; only successful powerups award the configured rune ammo.
@@ -678,6 +734,10 @@ bool ShooterController::Fire(bool secondary,bool burstRound,bool interruptReload
     if (WeaponSlots::Melee(weapon_)) {
         // Delay damage and the contact sample until the blade reaches the target, never at button-down.
         meleeAttack_ = MeleeAttack::Select(weapon_, secondary);
+        if(weapon_==WeaponSlots::Crowbar) {
+            meleeAttack_.range=w.range;meleeAttack_.contactSeconds=settings_.halfLife.crowbarContactSeconds;
+            meleeAttack_.recoverySeconds=std::max(w.interval,meleeAttack_.contactSeconds); // A custom late contact must land before another swing.
+        }
         meleeContact_ = now + DWORD(meleeAttack_.contactSeconds * 1000);
         meleeReady_ = now + DWORD(std::max(meleeAttack_.recoverySeconds, duration / animationRate_) * 1000);
         return true;
@@ -715,7 +775,53 @@ void ShooterController::FireGlock(bool primaryPressed,bool secondaryPressed,DWOR
         }
     } else if(primaryPressed)Fire();
 }
-void ShooterController::Strike(float yawOffset,float pitchOffset,float damageScale) {
+void ShooterController::CancelEnergy() {
+    if(energy_.Active()) {
+        audio_.SetLoop("hl_gauss_charge.wav",false);audio_.SetLoop("hl_egon_run3.wav",false);
+        if(weapon_==WeaponSlots::Gluon)Sound("hl_egon_off1.wav");
+        energy_.Cancel();audio_.CancelAnimation();Play("idle");wc3::Log("Half-Life energy canceled");
+    }
+    energyBeam_.tick=0;
+}
+void ShooterController::FireEnergy(bool primaryPressed,bool secondaryHeld,DWORD now) {
+    const auto& w=settings_.weapons[weapon_];
+    auto event=energy_.Step(weapon_,now*.001,primaryPressed,Down(VK_LBUTTON),secondaryHeld,ammo_[weapon_],w.interval,settings_.halfLife);
+    bool gluon=weapon_==WeaponSlots::Gluon;
+    if(event.started) {
+        tauFeedbackBand_=-1;
+        Play(gluon ? "fire3" : "spinup"); // Gluon's authored firing cycle, not its unused alternate opening action.
+        if(gluon)Sound("hl_egon_windup2.wav");
+        audio_.SetLoop(gluon ? "hl_egon_run3.wav" : "hl_gauss_charge.wav",true);
+        wc3::Log("Half-Life energy started weapon=%s cells=%d",w.name,ammo_[weapon_]);
+    }
+    if(!gluon && energy_.Active() && !strcmp(Animation(),"spinup")) {
+        float duration=audio_.Duration(weapon_,"spinup");
+        if(duration>0 && AnimationTime()>=duration)Play("spin"); // The integrated charge phase below retains overshoot without an idle frame.
+    }
+    if(!gluon && energy_.Active()) {
+        float elapsed=energy_.ChargeElapsed(now*.001);
+        audio_.SetLoopPitch("hl_gauss_charge.wav",TauChargeFeedback::Pitch(elapsed,settings_.halfLife));
+        int band=int(TauChargeFeedback::Fraction(elapsed,settings_.halfLife)*10);
+        if(band!=tauFeedbackBand_) {
+            tauFeedbackBand_=band;wc3::Log("Tau charge elapsed=%.3f spinRate=%.3f phase=%.3f pitch=%.3f",elapsed,
+                TauChargeFeedback::Rate(elapsed,settings_.halfLife),TauChargeFeedback::SpinSeconds(elapsed,audio_.Duration(weapon_,"spinup"),settings_.halfLife),audio_.LoopPitch("hl_gauss_charge.wav"));
+        }
+    }
+    if(event.stopped) {
+        audio_.SetLoop(gluon ? "hl_egon_run3.wav" : "hl_gauss_charge.wav",false);
+        if(gluon){Sound("hl_egon_off1.wav");Play("idle");energyBeam_.tick=0;}
+    }
+    if(!event.shot)return;
+    // Only accepted energy expenditure produces native damage, an animated muzzle event and a world beam.
+    float damage=settings_.damage[weapon_];
+    if(event.charged)damage+=(settings_.halfLife.tauChargedDamage-damage)*event.charge;
+    if(!gluon){Play("fire2");Sound(w.sound);} // Both Tau modes use its complete authored recoil/recovery clip.
+    ++shotSerial_;flashWeapon_=weapon_;lastShot_=now;
+    Strike(0,0,1,damage); // Charged damage remains configurable even when ordinary Tau damage is zero.
+    recoil_.Shot(weapon_,movement_.Speed(),movement_.Grounded(),movement_.Duck()>=.5f,settings_.weaponKick[weapon_]);
+    wc3::Log("Half-Life energy shot weapon=%s cells=%d charged=%d fraction=%.3f damage=%.1f",w.name,ammo_[weapon_],event.charged,event.charge,damage);
+}
+void ShooterController::Strike(float yawOffset,float pitchOffset,float damageScale,float fixedDamage) {
     if(UnitFirstPerson() || settings_.warcraftOnly)return; // Queued contacts cannot bypass the installation profile.
     const Weapon& w = settings_.weapons[weapon_];
 
@@ -760,11 +866,19 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
     }
     // Trace only as far as the nearest contact. Empty long-range firearm rays need no terrain sampling.
     // Solid terrain/decks still stop hits; melee misses retain their hard-surface contact sound.
-    if(target || WeaponSlots::Melee(weapon_))for(float t=48;t<nearest;t+=48) {
+    if(target || WeaponSlots::Melee(weapon_) || WeaponSlots::Energy(weapon_))for(float t=48;t<nearest;t+=48) {
         if(wc3::AttackSurface(x+vx*t,y+vy*t,settings_.waterBlocksAttacks)>z+vz*t) {nearest=t;target=0;break;}
+    }
+    if(WeaponSlots::Energy(weapon_)) {
+        // The visible beam terminates at the same solid contact that won the damage trace.
+        energyBeam_={{x+vx*24-vy*8,y+vy*24+vx*8,z+vz*24-8},{x+vx*nearest,y+vy*nearest,z+vz*nearest},
+            GetTickCount(),settings_.halfLife.beamSeconds,settings_.halfLife.beamWidth,weapon_==WeaponSlots::Gluon};
     }
     if (target) {
         if(!destructable && !settings_.targetAllies && AttackTargetPolicy::Allied(target,wc3::GetOwningPlayer(unit_)))return;
+        // Physical impacts sound even on invulnerable contacts; native HP/quest immunity still owns damage.
+        if(weapon_==WeaponSlots::Crowbar)CrowbarImpact(destructable ? CrowbarContact::Surface::Destructable :
+            wc3::IsUnitType(target,2) ? CrowbarContact::Surface::Structure : CrowbarContact::Surface::Creature);
         // The existing hero is the attacker, preserving mission kill/XP trigger ownership.
         auto life = [&]() { return wc3::Real(destructable ? wc3::GetDestructableLife(target) : wc3::GetUnitState(target,0)); };
         float before = life();
@@ -774,22 +888,29 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
         // Alliance changes are evaluated at contact; friendly AWP scales ordinary damage instead of finishing.
         // Hero mode applies the current attack and per-weapon multiplier at contact; friendly reduction follows it.
         float attack=settings_.heroDamage ? wc3::UnitAttackAverage(unit_) : 0;
-        float baseDamage=settings_.ContactDamage(weapon_,WeaponSlots::Melee(weapon_) && meleeAttack_.secondary,attack)*damageScale;
+        float baseDamage=(fixedDamage>=0 ? fixedDamage : settings_.ContactDamage(weapon_,WeaponSlots::Melee(weapon_) && meleeAttack_.secondary,attack))*damageScale;
         float damage = CombatDamage::Amount(baseDamage,allied,lethal,before,settings_.friendlyFirePercent);
         if (settings_.heroDamage) wc3::Log("hero damage attack=%.1f multiplier=%.2f base=%.1f",attack,settings_.heroMultiplier[weapon_],baseDamage);
         // Confirmed weapon hits dispatch one native attack, including the map's attack effects, without pursuit.
         // C4/destructables and explicit finishing retain their own policies; zero friendly damage causes no events.
         // Native impact compares unit centers; the ray has already enforced the weapon's surface range.
+        KillReward::Sink rewards=[this](const KillReward& reward){RewardKill(reward);};
+        auto reward=destructable ? KillReward{} : KillReward::Capture(unit_,target,rewards);
+        unsigned generation=rewardGeneration_;
         bool effects=damage>0 && !destructable && !lethal && settings_.enableAttackEffects &&
             NativeWeaponAttack::Apply(unit_,target,damage,std::hypot(wc3::Real(wc3::GetUnitX(target))-x,wc3::Real(wc3::GetUnitY(target))-y));
+        if(generation!=rewardGeneration_)return;
         if(damage>0 && !effects)wc3::UnitDamageTarget(unit_,target,&damage,FALSE,TRUE,
             destructable || lethal ? 0 : NativeWeaponAttack::AttackType(unit_),lethal ? 26 : 4,0);
+        if(generation!=rewardGeneration_)return;
         if (lethal && wc3::Real(wc3::GetUnitState(target, 0)) > 0.405f) wc3::KillUnit(target);
+        if(generation!=rewardGeneration_)return; // A native death trigger may have unloaded the map.
+        if(damage>0)reward.Confirm(rewards);
         float after = life();
         if (after < before) {
             // The same hit marker confirms damage to every faction, without blood.
             hits_.Record();
-            if (WeaponSlots::Melee(weapon_)) {
+            if (WeaponSlots::Melee(weapon_) && weapon_!=WeaponSlots::Crowbar) {
                 static const char* contacts[] = {"knife_hit1.wav", "knife_hit2.wav", "knife_hit3.wav", "knife_hit4.wav"};
                 const char* sample = destructable ? "knife_hitwall1.wav" : (weapon_ == WeaponSlots::Sword || meleeAttack_.secondary) ? "knife_stab.wav" : contacts[knifeSwing_ % 4];
                 Sound(sample); wc3::Log("melee contact weapon=%s sound=%s animationTime=%.3f mode=%s", w.name, sample, AnimationTime(), meleeAttack_.secondary ? "secondary" : "primary");
@@ -798,11 +919,20 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
         }
         wc3::Log("shot weapon=%s target=%08X damage=%.1f hpBefore=%.1f hpAfter=%.1f allied=%d destructable=%d finishing=%d effects=%d distance=%.1f range=%.1f", w.name, target, damage, before, after,allied,destructable,lethal,effects,nearest,attackRange);
     } else if (WeaponSlots::Melee(weapon_) && nearest < attackRange) {
-        // Terrain contact uses the original hard-surface sample; misses keep only the swing sound.
-        Sound("knife_hitwall1.wav");
+        // Dirt contact differs from structures; an empty swing still has no contact sample.
+        if(weapon_==WeaponSlots::Crowbar)CrowbarImpact(CrowbarContact::Surface::Ground);
+        else Sound("knife_hitwall1.wav");
     }
 }
+void ShooterController::CrowbarImpact(CrowbarContact::Surface surface) {
+    const char* sample=CrowbarContact::Sample(surface,crowbarContacts_++,settings_.halfLife.crowbarSurfaceSounds);
+    // Continue the matching authored hit action at the current swing phase, including hard/immune contacts.
+    const char* clip=!strcmp(Animation(),"attack1miss") ? "attack1" : !strcmp(Animation(),"attack2") ? "attack2hit" : "attack3hit";
+    Play(clip,1,AnimationTime());Sound(sample);
+    wc3::Log("melee contact weapon=CROWBAR surface=%s sound=%s animationTime=%.3f mode=%s",CrowbarContact::Name(surface),sample,AnimationTime(),meleeAttack_.secondary ? "secondary" : "primary");
+}
 void ShooterController::CancelPlant() {
+    CancelEnergy(); // Holster, menus, casts, focus and view transitions also release guest attack loops.
     // Existing equipment transitions also cancel an unlaunched throw and release its held-pin pose.
     if(grenadeThrow_.Active()){grenadeThrow_.Reset();audio_.CancelAnimation();Play("idle");wc3::Log("grenade throw canceled");}
     if (plantProgress_ <= 0) return;
@@ -842,7 +972,12 @@ void ShooterController::PlantC4(float dt) {
     }
 }
 const char* ShooterController::Animation() const { return animation_.c_str(); }
-float ShooterController::AnimationTime() const { return (GetTickCount() - animationTick_) * 0.001f * animationRate_; }
+float ShooterController::AnimationTime() const {
+    // A time integral keeps rotation continuous while the Tau motor accelerates and after reaching full charge.
+    if(weapon_==WeaponSlots::Tau && energy_.Active() && animation_=="spin")return TauChargeFeedback::SpinSeconds(
+        energy_.ChargeElapsed(GetTickCount()*.001),audio_.Duration(weapon_,"spinup"),settings_.halfLife);
+    return (GetTickCount() - animationTick_) * 0.001f * animationRate_;
+}
 // Squad tactics are shared by armed views and the unarmed unit camera.
 void ShooterController::UpdateSquad(DWORD now) {
     if (squadRequested_) {
@@ -891,7 +1026,11 @@ void ShooterController::Tick(uintptr_t ui) {
     float dt=tick_.time_since_epoch().count() ? std::min(std::chrono::duration<float>(frameTime-tick_).count(),0.05f) : 0;
     tick_=frameTime;
     DWORD foregroundPid = 0; GetWindowThreadProcessId(GetForegroundWindow(), &foregroundPid);
-    if (bombs_.Tick(audio_) && Visible()) hits_.Record();
+    droppedWeapons_.Tick(settings_.weaponDrops,!settings_.warcraftOnly);
+    auto rewardGeneration=rewardGeneration_;
+    if (bombs_.Tick(audio_,[this,rewardGeneration](const KillReward& reward){
+        if(rewardGeneration==rewardGeneration_)RewardKill(reward);
+    }) && Visible()) hits_.Record();
     // Native timers continue after holstering/RTS return and freeze with Warcraft's simulation pause.
     GrenadePoint grenadeEye{},grenadeDirection{};wc3::Handle grenadeViewer=Visible() ? unit_ : 0;
     if(grenadeViewer) {
@@ -982,7 +1121,7 @@ void ShooterController::Tick(uintptr_t ui) {
     nativeSky_.Update(ui_,Visible() && settings_.nativeSky && !settings_.csSky,mapTileset_);
     nativeFog_.Update(Visible() && fogOfWarDisabled_);
     // A queued display tap cannot take effect after FPS is suspended or left.
-    if (!active_ || suspended_) { CloseWeaponSelection();itemInventory_.ClearInput();squadOrderMode_.ClearInput();mouseLook_.Reset();weaponWheel_.Reset();cameraWheel_.Reset();itemRequested_=false;squadRequested_=0;speedToggleRequested_=fogToggleRequested_=minimapToggleRequested_=healthBarToggleRequested_=allyTargetToggleRequested_=false;spellRequested_=-1;spellCancelRequested_=false;return; }
+    if (!active_ || suspended_) { CancelEnergy();CloseWeaponSelection();itemInventory_.ClearInput();squadOrderMode_.ClearInput();mouseLook_.Reset();weaponWheel_.Reset();cameraWheel_.Reset();itemRequested_=false;squadRequested_=0;speedToggleRequested_=fogToggleRequested_=minimapToggleRequested_=healthBarToggleRequested_=allyTargetToggleRequested_=false;spellRequested_=-1;spellCancelRequested_=false;return; }
     if (settingsRequested_) { settingsRequested_=false;ReloadSettings();if(!Visible())return; } // Unit-view opt-out may return to RTS.
     if(armyToggleRequested_) {
         armyToggleRequested_=false;
@@ -1035,7 +1174,7 @@ void ShooterController::Tick(uintptr_t ui) {
                     int type=wc3::GetDestructableTypeId(objectHandle);
                     if (type!=0x4C546531 && type!=0x4C546732 && type!=0x4C546733 && type!=0x4C546734) continue;
                     using Resolve=uintptr_t (__fastcall*)(wc3::Handle,uintptr_t);
-                    uintptr_t object=reinterpret_cast<Resolve>(gameBase_+0x3BE010)(objectHandle,0);
+                    uintptr_t object=reinterpret_cast<Resolve>(gameBase_ + wc3::Rva(0x3BE010))(objectHandle,0);
                     uintptr_t sprite=*reinterpret_cast<uintptr_t*>(object+0x28);
                     ModelTransform transform;
                     if (!SpriteTransform::Read(sprite,transform)) continue;
@@ -1173,6 +1312,9 @@ void ShooterController::Tick(uintptr_t ui) {
         squad_.Release();squadRequested_=0;ammoMessage_="SQUAD RELEASED";refillTick_=now;
         wc3::Log("squad released by shortcut: count=%u",unsigned(squad_.Count()));
     }
+    // Cancel before any disabled/cursor early return; no hidden channel or charge may keep spending cells.
+    if(energy_.Active() && (ThirdPerson() || UnitFirstPerson() || CursorMode() || Casting() || status_.incapacitated ||
+        status_.disarmed || status_.contained || status_.hidden || !settings_.WeaponEnabled(weapon_)))CancelEnergy();
     recoil_.Step(dt, Down(VK_LBUTTON) && !status_.incapacitated && !status_.disarmed, weapon_);
     if (status_.incapacitated) {
         unitLocomotion_.Release(); // Early disabled-state returns must not retain the running time scale.
@@ -1289,7 +1431,9 @@ void ShooterController::Tick(uintptr_t ui) {
     UpdateSquad(now);
     static DWORD lastItemScan=0;
     if (now-lastItemScan>200) {
-        lastItemScan=now;itemNearby_=!status_.incapacitated && !status_.contained && !status_.hidden && itemPickup_.Nearest(unit_,settings_.runePickupRadius)!=0;
+        int drop=!settings_.warcraftOnly && settings_.weaponDrops.enabled ? droppedWeapons_.Nearest(unit_,settings_.weaponDrops.pickupRadius) : -1;
+        nearbyWeapon_=drop<0 ? -1 : droppedWeapons_.Slot(drop);
+        lastItemScan=now;itemNearby_=!status_.incapacitated && !status_.contained && !status_.hidden && (nearbyWeapon_>=0 || itemPickup_.Nearest(unit_,settings_.runePickupRadius)!=0);
     }
     // Pending melee contact is cancelled if the unit loses attack control before the blade lands.
     if (meleeContact_ && (status_.disarmed || status_.incapacitated)) meleeContact_ = 0;
@@ -1317,6 +1461,9 @@ void ShooterController::Tick(uintptr_t ui) {
             aimTarget_=heroAttack_.Preview(unit_,yaw_,movement_.FeetZ()+wc3::Real(wc3::GetUnitFlyHeight(unit_)),origin,direction,
                 settings_,hitboxes_,destructableHitboxes_);
         }
+    } else if(WeaponSlots::Energy(weapon_)) {
+        if(!Casting() && !suppressFire_ && !status_.disarmed && settings_.WeaponEnabled(weapon_))FireEnergy(firePressed,Down(VK_RBUTTON) && !SquadReticleOrdersEnabled(),now);
+        else CancelEnergy();
     } else if(WeaponSlots::Grenade(weapon_))ThrowGrenade(firePressed);
     else if (!Casting() && !suppressFire_ && weapon_ == WeaponSlots::C4) PlantC4(dt);
     else if(weapon_==WeaponSlots::Glock) {

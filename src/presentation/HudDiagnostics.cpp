@@ -1,3 +1,4 @@
+#include "GraphicsApi.hpp"
 #include "HudDiagnostics.hpp"
 #include "../platform/DiagnosticLog.hpp"
 #include <gl/GL.h>

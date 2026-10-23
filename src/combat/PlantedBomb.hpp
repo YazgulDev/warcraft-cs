@@ -1,6 +1,7 @@
 #pragma once
 #include "../platform/WarcraftApi.hpp"
 #include "../audio/GameAudio.hpp"
+#include "../platform/KillReward.hpp"
 
 // One planted charge owns its simulation clock and world marker independently of equipped weapons.
 class PlantedBomb {
@@ -8,7 +9,7 @@ public:
     // A fixed explosion lets high-health targets survive; it is no longer an unconditional kill.
     static constexpr float Damage = 2500.0f;
     bool Plant(wc3::Handle attacker, float x, float y, GameAudio& audio,float damage=Damage,float friendlyFirePercent=50);
-    bool Tick(GameAudio& audio);
+    bool Tick(GameAudio& audio,const KillReward::Sink& onKill={});
     void Reset();
     bool Active() const { return timer_ && !exploded_; }
     bool Finished() const { return timer_==0; }

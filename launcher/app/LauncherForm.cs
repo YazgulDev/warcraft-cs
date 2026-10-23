@@ -42,8 +42,9 @@ namespace WarcraftCSLauncher {
                 await CheckUpdates();
             };
             AddLabel("WARCRAFT CS", 22, 18, 730, 36, new Font("Segoe UI", 22, FontStyle.Bold));
-            AddLabel("Version "+CurrentVersion+" — "+(includesRuntime ? "DLL included" : "source-only; DLLs built locally"), 24, 62, 730, 28, Font);
-            FolderRow("Warcraft III 1.26a folder", warcraft, 100);
+            // Identify a combined local preview while keeping its published base version intact.
+            AddLabel("Version "+CurrentVersion+(LauncherVariant.IsPreview ? " preview" : "")+" — "+(includesRuntime ? "DLL included" : "source-only; DLLs built locally"), 24, 62, 730, 28, Font);
+            FolderRow("Warcraft III 1.26a / 1.27a folder", warcraft, 100);
             FolderRow("Counter-Strike 1.6 folder (cstrike or Half-Life)", cs, 172);
             FolderRow("Install Warcraft CS here", destination, 244);
             warcraft.Name="WarcraftDirectory"; cs.Name="CounterStrikeDirectory"; destination.Name="InstallDirectory";
@@ -204,7 +205,7 @@ namespace WarcraftCSLauncher {
                 Report("Update metadata received version="+(candidate==null ? "none" : candidate.Manifest.Version));
                 // The metadata request may finish after the user closes the window.
                 if (IsDisposed) return;
-                latest=UpdateSelection.Select(candidate,CurrentVersion,SourcePayload.Revision,InstalledRevision(),includesRuntime,reinstall);
+                latest=UpdateSelection.Select(candidate,CurrentVersion,SourcePayload.Revision,InstalledRevision(),includesRuntime,reinstall,LauncherVariant.IsPreview);
                 if (busy) return;
                 status.Text=latest==null ? "Up to date. Play and offline installation remain available." :
                     "Update available: "+latest.Manifest.Version+". Choose whether to install it.";

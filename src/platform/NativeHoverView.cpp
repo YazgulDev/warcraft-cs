@@ -1,3 +1,4 @@
+#include "GameBuild.hpp"
 #include "NativeHoverView.hpp"
 #include "WarcraftApi.hpp"
 #include <cstring>
@@ -16,10 +17,13 @@ void __fastcall SetHook(uintptr_t ui,uintptr_t,BOOL input,BOOL presentation) {
 }
 }
 bool NativeHoverView::Install(uintptr_t base,HookInstaller hook) {
+    // Retain the native path until this internal adapter has verified 1.27a signatures.
+    if(wc3::ActiveBuild()==wc3::GameBuildKind::Classic127a) {return false;}
+
     // 1.26a EnablePreSelect delegates here: two BOOLs at UI+298/+29C, callee pops eight bytes.
     const unsigned char signature[]={0x8B,0x44,0x24,0x04,0x89,0x81,0x98,0x02,0x00,0x00,
         0x8B,0x44,0x24,0x08,0x85,0xC0,0x89,0x81,0x9C,0x02,0x00,0x00};
-    void* target=reinterpret_cast<void*>(base+0x2F6F90);
+    void* target=reinterpret_cast<void*>(base + wc3::Rva(0x2F6F90));
     if(std::memcmp(target,signature,sizeof(signature))) {
         wc3::Log("Native hover signature mismatch; preselection retained");return false;
     }

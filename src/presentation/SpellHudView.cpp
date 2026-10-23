@@ -1,3 +1,4 @@
+#include "GraphicsApi.hpp"
 #include "SpellHudView.hpp"
 #include "SpellCooldownWedge.hpp"
 #include <cstdio>

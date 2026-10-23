@@ -1,3 +1,4 @@
+#include "GameBuild.hpp"
 #include "NativeAbilityInfo.hpp"
 #include <windows.h>
 #include <algorithm>
@@ -27,11 +28,14 @@ std::string NativeAbilityInfo::ClassName(uintptr_t ability) {
     return Text(type+8);
 }
 bool NativeAbilityInfo::Definition(uintptr_t base,int ability,int& column,int& row,std::string& icon) {
+    // Retain the native path until this internal adapter has verified 1.27a signatures.
+    if(wc3::ActiveBuild()==wc3::GameBuildKind::Classic127a) {return false;}
+
     if(!base || !ability)return false;
     const unsigned char signature[]={0x51,0x53,0x8B,0xD9,0x57};
-    if(std::memcmp(reinterpret_cast<void*>(base+0x32C8E0),signature,sizeof(signature)))return false;
+    if(std::memcmp(reinterpret_cast<void*>(base + wc3::Rva(0x32C8E0)),signature,sizeof(signature)))return false;
     using UI=uintptr_t (__thiscall*)(int);
-    uintptr_t ui=reinterpret_cast<UI>(base+0x32C8E0)(ability),items=0,art=0;unsigned count=0;
+    uintptr_t ui=reinterpret_cast<UI>(base + wc3::Rva(0x32C8E0))(ability),items=0,art=0;unsigned count=0;
     if(!Load(ui+0x60,column) || !Load(ui+0x64,row) || column<-16 || column>16 || row<-16 || row>16)return false;
     // Native definitions include war3map.w3a and runtime changes even for skills not yet learned.
     if(Load(ui+0xB0,count) && count>0 && count<=100 && Load(ui+0xB4,items) && Load(items,art))icon=Text(art);

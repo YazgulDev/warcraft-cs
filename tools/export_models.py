@@ -59,7 +59,7 @@ class StudioModel:
         result[:3, 3] = values[:3]
         return result
 
-    def sequences(self) -> list:
+    def sequences(self, local: bool = False) -> list:
         sequences = []
         for i in range(self.integer(164)):
             at = self.integer(168) + i * 176
@@ -77,6 +77,7 @@ class StudioModel:
             matrices = []
             for frame in range(frames):
                 world = []
+                relative = []
                 for bone, (parent, base, scale) in enumerate(self.bones):
                     cursor = anim + bone * 12
                     offsets = struct.unpack_from("<6H", source, cursor)
@@ -85,15 +86,17 @@ class StudioModel:
                         if offset:
                             values[channel] += self.channel(source, cursor + offset, frame) * scale[channel]
                     transform = self.matrix(values)
+                    relative.append(transform.copy())
                     if parent >= 0:
                         transform = world[parent] @ transform
                     world.append(transform)
-                matrices.extend(matrix[:3, :].reshape(-1) for matrix in world)
+                matrices.extend(matrix[:3, :].reshape(-1) for matrix in (relative if local else world))
             sequences.append((name, float(fps), frames, np.asarray(matrices, dtype="<f4").tobytes()))
         return sequences
 
-    def export(self, destination: Path, excluded_textures: tuple[str, ...] = (), muzzle_attachments: tuple[int, ...] = (0,)) -> dict:
+    def export(self, destination: Path, excluded_textures: tuple[str, ...] = (), muzzle_attachments: tuple[int, ...] = (0,), presentation: bool = False, muzzle_texture: str | None = None) -> dict:
         textures = []
+        material_flags = []
         texture_names = []
         excluded = {name.casefold() for name in excluded_textures}
         excluded_meshes = 0
@@ -101,6 +104,7 @@ class StudioModel:
             at = self.integer(184) + i * 80
             texture_names.append(self.data[at:at + 64].split(b"\0")[0].decode("ascii"))
             flags, width, height, pixels = struct.unpack_from("<4i", self.data, at + 64)
+            material_flags.append(flags)
             if not (0 < width <= 2048 and 0 < height <= 2048):
                 raise ValueError("Unsafe texture dimensions")
             indexed = np.frombuffer(self.data, dtype=np.uint8, count=width * height, offset=pixels)
@@ -119,6 +123,10 @@ class StudioModel:
             vertex_count = self.integer(model + 80)
             vertices = self.floats(self.integer(model + 88), vertex_count * 3).reshape(-1, 3)
             bones = self.data[self.integer(model + 84):self.integer(model + 84) + vertex_count]
+            normal_count = self.integer(model + 92)
+            if presentation:
+                normals = self.floats(self.integer(model + 100), normal_count * 3).reshape(-1, 3)
+                normal_bones = self.data[self.integer(model + 96):self.integer(model + 96) + normal_count]
             for mesh in range(self.integer(model + 72)):
                 mesh_at = self.integer(model + 76) + mesh * 20
                 cursor = self.integer(mesh_at + 4)
@@ -130,6 +138,7 @@ class StudioModel:
                     continue
                 width, height, _ = textures[texture]
                 packed = bytearray()
+                packed_normals = bytearray()
                 while True:
                     count = struct.unpack_from("<h", self.data, cursor)[0]
                     cursor += 2
@@ -141,19 +150,49 @@ class StudioModel:
                     for i in range(2, len(indices)):
                         triangle = (0, i - 1, i) if count < 0 else ((i - 2, i - 1, i) if i % 2 == 0 else (i - 1, i - 2, i))
                         for corner in triangle:
-                            vertex, _, s, t = indices[corner]
+                            vertex, normal, s, t = indices[corner]
                             packed.extend(struct.pack("<5fI", *vertices[vertex], s / width, t / height, bones[vertex]))
-                meshes.append((texture, bytes(packed)))
-        sequences = self.sequences()
+                            if presentation:
+                                if not 0 <= normal < normal_count or normal_bones[normal] >= len(self.bones):
+                                    raise ValueError("Invalid studio normal")
+                                packed_normals.extend(struct.pack('<3fI', *normals[normal], normal_bones[normal]))
+                meshes.append((texture, bytes(packed), bytes(packed_normals)))
+        sequences = self.sequences(local=presentation)
+        fitted_muzzle = None
+        if muzzle_texture and muzzle_texture.casefold() in [name.casefold() for name in texture_names]:
+            # Some guest attachments sit inside/above the nozzle. Fit the actual front opening in the owned mesh,
+            # then return its center to its rigid bone; never compensate with a guessed screen-space offset.
+            idle = self.sequences()[0]
+            world = np.frombuffer(idle[3], dtype='<f4').reshape(idle[2], len(self.bones), 3, 4)[0]
+            points = []
+            for texture, packed, _ in meshes:
+                if texture_names[texture].casefold() != muzzle_texture.casefold(): continue
+                for x, y, z, _, _, bone in struct.iter_unpack('<5fI', packed):
+                    points.append((world[bone] @ np.array([x, y, z, 1]), bone))
+            if points:
+                forward = max(point[0][0] for point in points)
+                front = [(point, bone) for point, bone in points if abs(point[0] - forward) < .001]
+                if len({bone for _, bone in front}) != 1: raise ValueError('Nozzle opening is not rigid')
+                bone = front[0][1];opening = np.asarray([point for point, _ in front])
+                center = (opening.min(axis=0) + opening.max(axis=0)) * .5
+                transform = np.eye(4);transform[:3] = world[bone]
+                fitted_muzzle = (bone, (np.linalg.inv(transform) @ np.r_[center, 1])[:3])
         with destination.open("wb") as output:
-            output.write(struct.pack("<4s4I", b"WCG2", len(textures), len(meshes), len(sequences), len(self.bones)))
-            for width, height, rgba in textures:
+            # WCG3 is opt-in for the three Half-Life weapons. CS and RPG keep byte-identical WCG2 caches.
+            output.write(struct.pack("<4s4I", b"WCG3" if presentation else b"WCG2", len(textures), len(meshes), len(sequences), len(self.bones)))
+            if presentation:
+                output.write(struct.pack(f'<{len(self.bones)}i', *(bone[0] for bone in self.bones)))
+            for index, (width, height, rgba) in enumerate(textures):
+                if presentation: output.write(struct.pack('<I', material_flags[index]))
                 output.write(struct.pack("<2I", width, height) + rgba)
-            for texture, packed in meshes:
+            for texture, packed, normals_data in meshes:
                 output.write(struct.pack("<2I", texture, len(packed) // 24) + packed)
-            for name, fps, frames, matrices in sequences:
-                output.write(struct.pack("<32sfI", name, fps, frames) + matrices)
-            # Optional WCG2 footer retains model-local muzzle anchors and their animated bones.
+                if presentation: output.write(normals_data)
+            for index, (name, fps, frames, matrices) in enumerate(sequences):
+                output.write(struct.pack("<32sfI", name, fps, frames))
+                if presentation: output.write(struct.pack('<I', self.integer(self.integer(168) + index * 176 + 36)))
+                output.write(matrices)
+            # Both cache formats retain model-local muzzle anchors and their animated bones in the optional footer.
             # Older readers ignore the footer; models without attachments keep a geometry-derived fallback.
             count, attachments = self.integer(212), self.integer(216)
             if not 0 <= count <= 32:
@@ -161,7 +200,10 @@ class StudioModel:
             selected = muzzle_attachments if count else ()
             if len(selected) > 8:
                 raise ValueError("Unsafe selected muzzle count")
-            output.write(struct.pack("<4sI", b"WCM1", len(selected)))
+            output.write(struct.pack("<4sI", b"WCM1", 1 if fitted_muzzle else len(selected)))
+            if fitted_muzzle:
+                output.write(struct.pack('<I3f', fitted_muzzle[0], *fitted_muzzle[1]))
+                selected = ()
             for index in selected:
                 if not 0 <= index < count:
                     raise ValueError("Missing selected muzzle attachment")
@@ -275,6 +317,8 @@ def main():
     # Optional guest content never makes an otherwise complete Counter-Strike install fail.
     from export_halflife_rpg import export as export_rpg
     print(json.dumps(export_rpg(args.cstrike, args.output), indent=2))
+    from export_halflife_weapons import export as export_halflife
+    print(json.dumps(export_halflife(args.cstrike, args.output), indent=2))
     print(json.dumps(manifest, indent=2))
 
 

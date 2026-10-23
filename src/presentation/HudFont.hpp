@@ -1,6 +1,6 @@
 #pragma once
 #include <windows.h>
-#include <gl/GL.h>
+#include "GraphicsApi.hpp"
 #include <array>
 
 // Owns one context's alpha atlas; Overlay controls disposal when WGL contexts change.

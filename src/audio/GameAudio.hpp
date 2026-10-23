@@ -17,6 +17,8 @@ public:
     float VolumePercent() const;
     void Play(const char* name, float volume = 0.75f);
     void SetLoop(const char* name,bool playing,float volume=.75f);
+    void SetLoopPitch(const char* name,float ratio);
+    float LoopPitch(const char* name) const;
     float Duration(int weapon,const char* name) const;
     float BeginAnimation(int weapon, const char* name, DWORD start,float rate=1);
     void Tick(DWORD now);

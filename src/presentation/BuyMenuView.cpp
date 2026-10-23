@@ -1,3 +1,4 @@
+#include "GraphicsApi.hpp"
 #include "BuyMenuView.hpp"
 #include "../combat/UnitScaling.hpp"
 #include "BuyMenuLayout.hpp"
@@ -11,7 +12,7 @@ void Rect(float x,float y,float w,float h,bool outline=false) {
 }
 const char* MainLabel(int key) {
     switch (key) { case 1:return "PISTOLS";case 2:return "SHOTGUNS";case 3:return "SMGS";case 4:return "RIFLES";case 5:return "MACHINE GUNS";case 6:return "PRIMARY AMMO";
-        case 7:return "SECONDARY AMMO";case 8:return "EQUIPMENT";default:return ""; }
+        case 7:return "SECONDARY AMMO";case 8:return "EQUIPMENT";case 9:return "HALF-LIFE";default:return ""; }
 }
 }
 namespace BuyMenuView {
@@ -21,7 +22,7 @@ void Draw(const ShooterController& controller,int width,int height,HWND window,c
     const char* title=page==BuyMenu::Page::Main ? "BUY MENU" : page==BuyMenu::Page::Rifles ? "BUY RIFLES (PRIMARY WEAPON)" :
         page==BuyMenu::Page::Pistols ? "BUY PISTOLS (SECONDARY WEAPON)" :
         page==BuyMenu::Page::Shotguns ? "BUY SHOTGUNS" : page==BuyMenu::Page::SMGs ? "BUY SMGS" :
-        page==BuyMenu::Page::Machineguns ? "BUY MACHINE GUNS" : "BUY EQUIPMENT";
+        page==BuyMenu::Page::Machineguns ? "BUY MACHINE GUNS" : page==BuyMenu::Page::HalfLife ? "BUY HALF-LIFE" : "BUY EQUIPMENT";
     // Recreate the original translucent black/amber panel, sparse category keys and red hovered rows.
     glColor4f(0,0,0,.77f);Rect(box.x,box.y,box.width,box.height);
     glColor4f(1,.72f,.22f,.9f);glLineWidth(1);
@@ -57,11 +58,12 @@ void Draw(const ShooterController& controller,int width,int height,HWND window,c
             text(box.detailX,infoY,label);text(box.detailX+box.detailWidth*.43f,infoY,contents);infoY+=box.row*.48f;
         };
         text(box.detailX,infoY,item->name);infoY+=box.row*.75f;
-        sprintf_s(value,": %d GOLD",settings.weaponPrice[previewSlot]);line("PRICE",value);
+        sprintf_s(value,": %s",CurrencyDisplay::Format(settings.weaponPrice[previewSlot],settings.economy).c_str());line("PRICE",value);
         sprintf_s(value,": %s",item->caliber);line("CALIBER / TYPE",value);
         // Keep magazine/reserve in one row so the existing panel also fits small windows.
         sprintf_s(value,": %d / %d",weapon.magazine,settings.maxReserve[previewSlot]);
-        if(WeaponSlots::Grenade(previewSlot)){sprintf_s(value,": %d",weapon.magazine);line("CARRY LIMIT",value);}
+        if(WeaponSlots::Energy(previewSlot)){sprintf_s(value,": %d",weapon.magazine);line("ENERGY CAPACITY",value);}
+        else if(WeaponSlots::Grenade(previewSlot)){sprintf_s(value,": %d",weapon.magazine);line("CARRY LIMIT",value);}
         else if (!WeaponSlots::Melee(previewSlot) && previewSlot!=WeaponSlots::C4) line("CLIP / RESERVE",value);
         sprintf_s(value,": %.0f",settings.ContactDamage(previewSlot,false,controller.Status().attackDamage));line("BASE DAMAGE",value);
         if (weapon.interval>0 && !WeaponSlots::Melee(previewSlot)) {
@@ -69,19 +71,20 @@ void Draw(const ShooterController& controller,int width,int height,HWND window,c
             float interval=UnitScaling::FireInterval(weapon.interval,settings.scaleFireRateFromAttackSpeed,controller.Status().attackSpeed);
             sprintf_s(value,": %.0f RPM",60/interval);line("RATE OF FIRE",value);
         }
-        if (!WeaponSlots::Melee(previewSlot)) { sprintf_s(value,": %d GOLD",settings.ammoPrice[previewSlot]);line("AMMO PACK",value); }
+        if (!WeaponSlots::Melee(previewSlot)) { sprintf_s(value,": %s",CurrencyDisplay::Format(settings.ammoPrice[previewSlot],settings.economy).c_str());line("AMMO PACK",value); }
         line("INVENTORY",controller.OwnsWeapon(previewSlot) ? ": OWNED" : ": NOT OWNED");
     } else {
         glColor4f(1,.72f,.22f,1);
         text(box.detailX,box.listY+box.row*.45f,"SELECT A CATEGORY");
-        text(box.detailX,box.listY+box.row*1.2f,"WEAPONS AND AMMO COST GOLD");
+        // Prices and wallet use the same selected currency after startup or F8.
+        text(box.detailX,box.listY+box.row*1.2f,settings.economy.currency==EconomySettings::Currency::Dollars ? "PAY IN DOLLARS" : "PAY IN GOLD");
         // Display the same reloaded bindings that dispatch these actions.
         auto refill=controller.Shortcut(ShortcutAction::Refill)+": FREE AMMO REFILL";
         auto all=controller.Shortcut(ShortcutAction::AllWeapons)+": GET ALL WEAPONS FREE";
         text(box.detailX,box.listY+box.row*2.1f,refill.c_str());
         text(box.detailX,box.listY+box.row*2.85f,all.c_str());
     }
-    char money[160];sprintf_s(money,"GOLD: %d   |   %s / ESC: CLOSE   |   %s: CURRENT AMMO",controller.Gold(),controller.Shortcut(ShortcutAction::Buy).c_str(),controller.Shortcut(ShortcutAction::BuyAmmo).c_str());
+    char money[160];sprintf_s(money,"%s   |   %s / ESC: CLOSE   |   %s: CURRENT AMMO",controller.MoneyText().c_str(),controller.Shortcut(ShortcutAction::Buy).c_str(),controller.Shortcut(ShortcutAction::BuyAmmo).c_str());
     glColor4f(1,.72f,.22f,1);text(box.listX,box.y+box.height*.95f,money);
     // Warcraft's pointer is hidden with its RTS HUD; retain a visible pointer for mouse purchases.
     glColor4f(1,1,1,1);glBegin(GL_TRIANGLES);

@@ -3,12 +3,16 @@
 Applies to **0.11.0**. See [Release Notes](docs/RELEASE-0.11.0.md) for changes and
 [antivirus troubleshooting](TROUBLESHOOTING.md#antivirus) for unsigned-module detections.
 
+This source branch additionally accepts experimental **1.27a, Game.dll 1.27.0.52240**,
+with a D3D9 driver. The unified preview supports Player and Developer setup; published 0.11.0 Player modules target 1.26a.
+See [port limitations and verification status](docs/PORT-1.27.md).
+
 ## Playing through the Windows launcher
 
 | Requirement | Details |
 | --- | --- |
 | Operating system | Windows 10/11 x64, with .NET Framework 4.x and Windows PowerShell 5.1 available. The launcher is x64; the supported Warcraft runtime and mod are x86. |
-| Warcraft III | Your own complete **Warcraft III 1.26a** installation; `Game.dll` must report **1.26.0.6401**. Reforged and other patches are unsupported. |
+| Warcraft III | Your own complete **Warcraft III 1.26a** (`Game.dll` **1.26.0.6401**), or experimental **1.27a** (**1.27.0.52240**) with the unified preview. Reforged and other patches are unsupported. |
 | Counter-Strike | Your own installed **Counter-Strike 1.6**, with the loose models and sounds listed below. Select `cstrike` or its Half-Life parent in the launcher. |
 | Graphics/input | A working OpenGL driver compatible with Warcraft's OpenGL mode, a keyboard and a mouse. A wheel is optional; keys 1–7 also select weapons. |
 | Installation folder | A dedicated writable folder outside both original games. Allow room for another complete Warcraft copy, converted assets, source revisions and dependency caches. |

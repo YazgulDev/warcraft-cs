@@ -1,4 +1,7 @@
+#include "GraphicsApi.hpp"
 #include "Overlay.hpp"
+#include "EnergyBeamView.hpp"
+#include "ViewmodelAnchor.hpp"
 #include "ScopeView.hpp"
 #include "GrenadeView.hpp"
 #include "ReticleView.hpp"
@@ -117,28 +120,31 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         if(activeTexture)activeTexture(oldTexture);
         return;
     }
+    // Load the held model before world effects so its actual animated attachment can anchor an energy beam.
+    int index=controller.WeaponIndex();float projectionScale=controller.Settings().weaponModelScale[index];
+    float animationSeconds=controller.AnimationTime(); // Attachment and mesh must sample one identical animation phase.
+    if(!controller.Settings().warcraftOnly && !attempted_[index]) {
+        attempted_[index]=true;loaded_[index]=guns_[index].Load(root_+"\\assets\\"+WeaponSlots::Caches[index]+".wcg");
+    }
     unsigned barCount=0;
     if(!controller.Status().contained && !controller.Status().hidden && !controller.Buying())
         barCount=HealthBarRenderer::Draw(bars,barView,width,height,nearPlane,farPlane);
     if(!controller.Status().contained && !controller.Status().hidden) {
+        if(!controller.ThirdPerson() && !controller.Buying() && WeaponSlots::Energy(index)) {
+            auto beam=controller.Beam();std::array<float,3> anchor;
+            if(beam.tick && loaded_[index] && guns_[index].MuzzlePoint(controller.Animation(),animationSeconds,controller.ShotSerial(),anchor,controller.IdleAnimation()))
+                beam.start=ViewmodelAnchor::World(anchor,controller.WeaponPose(),projectionScale,barView,float(width)/height,nearPlane);
+            EnergyBeamView::Draw(beam,barView,nearPlane,farPlane);
+        }
         grenadeWorld_.Draw(root_,controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
         rocketView_.Draw(root_,controller.RocketVisuals(),controller.LaserVisible(),controller.LaserPoint(),barView,width,height,nearPlane,farPlane);
         GrenadeView::Draw(controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
     }
     glMatrixMode(GL_PROJECTION); glPushMatrix(); glLoadIdentity();
-    int index = controller.WeaponIndex();
     // Slightly tighten USP/AWP framing while preserving the original lower-edge arm origins.
-    const auto& projectionScales=controller.Settings().weaponModelScale;
-    float projectionScale = projectionScales[index];
     float top = std::tan(45.0f * 0.01745329252f) * projectionScale; float side = top * width / height;
     glFrustum(-side, side, -top, top, 1, 200);
     glMatrixMode(GL_MODELVIEW); glPushMatrix(); glLoadIdentity();
-    // Unit-only installations never open even a retained cache from an earlier full install.
-    if (!controller.Settings().warcraftOnly && !attempted_[index]) {
-        attempted_[index] = true;
-        const auto& names=WeaponSlots::Caches;
-        loaded_[index] = guns_[index].Load(root_ + "\\assets\\" + names[index] + ".wcg");
-    }
     bool heldModel=!controller.ThirdPerson() && loaded_[index] && !controller.Status().contained && !controller.Status().hidden && (index!=WeaponSlots::C4 || controller.Ammo()>0);
     const auto& visuals=controller.Settings().viewmodel;
     float flash=muzzleFlash_.Sample(controller.ShotSerial(),heldModel && controller.ShowMuzzleFlash(),GetTickCount(),visuals.flashMilliseconds);
@@ -149,7 +155,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         // Preserve each model's original arm origin instead of exposing detached elbow ends.
         const auto& pose=controller.WeaponPose();
         glTranslatef(pose.x,pose.y,pose.z);glRotatef(pose.roll,0,0,1);
-        guns_[index].Draw(controller.Animation(),controller.AnimationTime(),flash,visuals.flashScale,controller.ShotSerial(),!controller.Scoped(),controller.IdleAnimation());
+        guns_[index].Draw(controller.Animation(),animationSeconds,flash,visuals.flashScale,controller.ShotSerial(),!controller.Scoped(),controller.IdleAnimation());
         glDisable(GL_DEPTH_TEST);
     }
     bool unavailableView = controller.Status().contained || controller.Status().hidden;
@@ -182,13 +188,14 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     if(unitHudVisible)statusSize=std::max(18,statusSize*2/3);
     Font(statusSize);
     controller.Hits().Draw(float(width), float(height));
-    char status[160]; sprintf_s(status, "HP %.0f   %s   %d / %d   GOLD %d", controller.Health(),
-        controller.WeaponData(index).name, controller.Ammo(), controller.Reserve(),controller.Gold());
+    // Money formatting follows the active purchase currency in both HUD layouts.
+    char status[160]; sprintf_s(status, "HP %.0f   %s   %d / %d   %s", controller.Health(),
+        controller.WeaponData(index).name, controller.Ammo(), controller.Reserve(),controller.MoneyText().c_str());
     // Melee equipment has no magazine; show only its name instead of a misleading empty-ammo counter.
-    if (WeaponSlots::Melee(index)) sprintf_s(status, "HP %.0f   %s   GOLD %d", controller.Health(), controller.WeaponData(index).name,controller.Gold());
+    if (WeaponSlots::Melee(index)) sprintf_s(status, "HP %.0f   %s   %s", controller.Health(), controller.WeaponData(index).name,controller.MoneyText().c_str());
     // Hero combat has no magazine or CS weapon label; expose the mode and live native attack instead.
-    if(controller.ThirdPerson())sprintf_s(status,"HP %.0f   UNIT ATTACK %.0f   GOLD %d",controller.Health(),
-        controller.Status().attackDamage*controller.Settings().thirdPerson.damageMultiplier,controller.Gold());
+    if(controller.ThirdPerson())sprintf_s(status,"HP %.0f   UNIT ATTACK %.0f   %s",controller.Health(),
+        controller.Status().attackDamage*controller.Settings().thirdPerson.damageMultiplier,controller.MoneyText().c_str());
     float statusPad = statusSize * 0.75f, statusY = height - statusPad;
     auto unitLayout=UnitHudLayout::Calculate(width,height,controller.Settings().unitHudScalePercent);
     if(unitHudVisible) {
@@ -196,9 +203,9 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         statusY=float(unitLayout.y-16);
         unitFont_.Ensure(std::clamp(int(unitLayout.portrait*.19f),12,32));
         UnitHudView::Draw(controller.UnitHud(),unitLayout,portrait,[&](float x,float y,const char* label){Text(x,y,label,&unitFont_);});
-        if(controller.ThirdPerson())sprintf_s(status,"UNIT ATTACK %.0f   GOLD %d",controller.Status().attackDamage*controller.Settings().thirdPerson.damageMultiplier,controller.Gold());
-        else if(WeaponSlots::Melee(index))sprintf_s(status,"%s   GOLD %d",controller.WeaponData(index).name,controller.Gold());
-        else sprintf_s(status,"%s   %d / %d   GOLD %d",controller.WeaponData(index).name,controller.Ammo(),controller.Reserve(),controller.Gold());
+        if(controller.ThirdPerson())sprintf_s(status,"UNIT ATTACK %.0f   %s",controller.Status().attackDamage*controller.Settings().thirdPerson.damageMultiplier,controller.MoneyText().c_str());
+        else if(WeaponSlots::Melee(index))sprintf_s(status,"%s   %s",controller.WeaponData(index).name,controller.MoneyText().c_str());
+        else sprintf_s(status,"%s   %d / %d   %s",controller.WeaponData(index).name,controller.Ammo(),controller.Reserve(),controller.MoneyText().c_str());
     }
     glColor4f(1.0f, 0.85f, 0.3f, 1); Text(statusPad, statusY, status, &statusFont_);
     // Installation progress and fuse are independent of which weapon is currently equipped.
@@ -213,13 +220,13 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     // Compact hints reflect the configured keys and wrap before the native minimap.
     auto key=[&](ShortcutAction action) {return controller.Shortcut(action);};
     auto mapLayout=MinimapLayout::Calculate(width,height,controller.Settings().minimapSizePercent);
-    if(controller.MinimapVisible())minimap.Draw(mapLayout);
+    if(controller.MinimapVisible() && !GraphicsBackend::IsD3D9())minimap.Draw(mapLayout);
     std::string controls="Warcraft CS by Yazgul | "+key(ShortcutAction::ToggleFPS)+": RTS | "+key(ShortcutAction::ReloadSettings)+": CONFIG | "+key(ShortcutAction::Minimap)+": MINIMAP | "+key(ShortcutAction::Speed)+": SPEED | "+key(ShortcutAction::Fog)+": FOG";
     // The dedicated key exposes direct entry/RTS exit independently of the active view switch.
     controls+=" | "+key(ShortcutAction::ToggleThirdPerson)+(controller.ThirdPerson() ? ": RTS" : ": THIRD PERSON");
     controls+=" | "+key(ShortcutAction::ToggleView)+(controller.ThirdPerson() ? (controller.Settings().warcraftOnly ? ": UNIT VIEW" : ": FPS") : ": THIRD PERSON");
     controls+=" | "+key(ShortcutAction::ToggleUnitView)+": UNIT VIEW";
-    std::string equipment="WHEEL: WEAPONS | "+key(ShortcutAction::Weapon6)+": C4 | "+key(ShortcutAction::Pickup)+": ITEM | "+key(ShortcutAction::Buy)+": BUY | "+key(ShortcutAction::BuyAmmo)+": AMMO";
+    std::string equipment="WHEEL: WEAPONS | "+(controller.Settings().weaponSelectionMenu ? key(ShortcutAction::Weapon6)+": HALF-LIFE" : key(ShortcutAction::Weapon6)+": C4")+" | "+key(ShortcutAction::Pickup)+": ITEM | "+key(ShortcutAction::Buy)+": BUY | "+key(ShortcutAction::BuyAmmo)+": AMMO";
     // The same control now dispatches the unit's primary melee or ranged attack.
     if(controller.ThirdPerson())equipment="LMB: UNIT ATTACK | WASD: MOVE | WHEEL: CAMERA | "+key(ShortcutAction::Pickup)+": ITEM / SHOP";
     if(controller.Settings().warcraftOnly)equipment="LMB: UNIT ATTACK | WASD: MOVE | WHEEL: CAMERA | "+key(ShortcutAction::Pickup)+": ITEM / SHOP";
@@ -240,7 +247,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     // Armed F6 shows both the rebindable mode switch and its current session choice.
     if(controller.Settings().squadReticleAttack && !controller.ThirdPerson())
         equipment+=" | "+key(ShortcutAction::SquadOrders)+": RMB "+(controller.SquadOrdersInFPS() ? "ORDERS" : "WEAPON");
-    int hintRight=controller.MinimapVisible() ? mapLayout.x-mapLayout.padding : width-25;
+    int hintRight=(controller.MinimapVisible() && !GraphicsBackend::IsD3D9()) ? mapLayout.x-mapLayout.padding : width-25;
     int columns=std::max(1,(hintRight-25)/hintGlyphWidth_);float hintY=27;
     if(!controller.Buying())for(const auto& group : {controls,equipment,abilities,std::string(squad)}) {
         for(const auto& row : HudHints::Wrap(group,columns)) {Text(25,hintY,row.c_str());hintY+=23;}
@@ -269,7 +276,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         Text(statusPad,statusY-(statusSize+16)*rows,speed,&statusFont_);
     }
     // Ground items advertise interaction without issuing a walk-to-item RTS order.
-    if (controller.ItemNearby()) {controls=key(ShortcutAction::Pickup)+": PICK UP ITEM";Text(width*.5f-120,height*.72f,controls.c_str(),&statusFont_);}
+    if (controller.ItemNearby()) {controls=key(ShortcutAction::Pickup)+": PICK UP "+(controller.NearbyWeaponName().empty() ? "ITEM" : controller.NearbyWeaponName());Text(width*.5f-120,height*.72f,controls.c_str(),&statusFont_);}
     // Explain blocked controls next to the status HUD while the corresponding Warcraft effect lasts.
     if (*controller.Status().Label()) {
         char effect[96]; sprintf_s(effect, "%s", controller.Status().Label());

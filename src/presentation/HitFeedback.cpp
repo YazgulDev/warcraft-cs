@@ -1,3 +1,4 @@
+#include "GraphicsApi.hpp"
 #include "HitFeedback.hpp"
 #include <gl/GL.h>
 #include <algorithm>

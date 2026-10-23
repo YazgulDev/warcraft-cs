@@ -9,13 +9,13 @@ struct BuyMenuLayout {
     float x,y,width,height,row,listX,listY,listWidth,detailX,detailWidth,previewY,previewHeight,cancelY;
     BuyMenuLayout(int w,int h) {
         width=w*.72f;height=h*.86f;x=(w-width)*.5f;y=h*.06f;
-        row=height*.072f;listX=x+width*.053f;listY=y+height*.23f;listWidth=width*.31f;
+        row=height*.064f;listX=x+width*.053f;listY=y+height*.23f;listWidth=width*.31f; // Nine categories fit above Back/Cancel.
         detailX=x+width*.405f;detailWidth=width*.54f;previewY=listY;previewHeight=height*.19f;
         cancelY=y+height*.83f;
     }
     static std::vector<int> Keys(BuyMenu::Page page,const GameplaySettings* settings=nullptr) {
         if (page==BuyMenu::Page::Closed) return {};
-        if (page==BuyMenu::Page::Main) return {1,2,3,4,5,6,7,8};
+        if (page==BuyMenu::Page::Main) return {1,2,3,4,5,6,7,8,9};
         // Rendering and pointer hitboxes omit absent optional content using the same availability mask.
         std::vector<int> keys;
         for (const auto& item : BuyCatalog::Entries) if (item.category==BuyMenu::Category(page) && (!settings || settings->WeaponEnabled(item.slot))) keys.push_back(item.key);

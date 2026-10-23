@@ -1,3 +1,4 @@
+#include "GraphicsApi.hpp"
 #include "GrenadeWorldView.hpp"
 #include "WorldEffectPass.hpp"
 #include "../combat/WeaponSlots.hpp"

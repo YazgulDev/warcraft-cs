@@ -194,6 +194,11 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.runeAmmoAllWeapons=_stricmp(text("Runes","AmmoWeapons","all").c_str(),"current")!=0;
     auto damageMode=text("Damage","Mode","unit");
     result.heroDamage=_stricmp(damageMode.c_str(),"weapon")!=0;
+    // Experimental hosts may lack the native attack-stat adapter; retain configurable fixed damage as fallback.
+    auto unavailableAttack=text("Damage","UnavailableAttackFallback","weapon");
+    result.unavailableAttackUsesWeaponDamage=_stricmp(unavailableAttack.c_str(),"zero")!=0;
+    if(_stricmp(unavailableAttack.c_str(),"weapon") && _stricmp(unavailableAttack.c_str(),"zero"))
+        wc3::Log("Invalid Damage.UnavailableAttackFallback; using weapon");
     if(_stricmp(damageMode.c_str(),"unit") && _stricmp(damageMode.c_str(),"hero") && _stricmp(damageMode.c_str(),"weapon"))
         wc3::Log("Invalid Damage.Mode; using unit");
     // Missing or malformed settings must not silently enable instant kills; explicit preferences still reload on F8.
@@ -360,6 +365,18 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.squadClearance=std::max(60.f,number("Squad","PlayerClearance",100,300));
     result.squadYieldAhead=std::max(result.squadClearance,number("Squad","YieldAheadDistance",350,1000));
     result.squadOrderIntervalMs=unsigned(std::max(50.f,number("Squad","OrderIntervalMs",150,1000)));
+    // Dollars are isolated from campaign resources; malformed settings retain the documented defaults.
+    auto currency=text("Economy","Currency","dollars");
+    if(!_stricmp(currency.c_str(),"gold"))result.economy.currency=EconomySettings::Currency::Gold;
+    else if(_stricmp(currency.c_str(),"dollars"))wc3::Log("Invalid Economy.Currency; using dollars");
+    result.economy.maximumMoney=int(number("Economy","MaximumMoney",16000,1000000));
+    result.economy.startingMoney=std::min(result.economy.maximumMoney,int(number("Economy","StartingMoney",800,1000000)));
+    result.economy.killReward=int(number("Economy","KillReward",300,1000000));
+    result.weaponDrops.enabled=enabled("WeaponDrops","Enabled");
+    result.weaponDrops.chancePercent=number("WeaponDrops","ChancePercent",.5f,100);
+    result.weaponDrops.lifetimeSeconds=std::max(1.f,number("WeaponDrops","LifetimeSeconds",120,3600));
+    result.weaponDrops.pickupRadius=std::max(16.f,number("WeaponDrops","PickupRadius",160,400));
+    result.weaponDrops.maximumDrops=unsigned(std::max(1.f,number("WeaponDrops","MaximumDrops",64,256)));
     // Restricted modes govern both opening B and every transaction, including the quick-ammo key.
     auto access=text("Buy","Access","anywhere");
     if (!_stricmp(access.c_str(),"friendly")) result.buyAccess=BuyAccess::FriendlyBuildings;
@@ -395,7 +412,10 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     // Optional RPG defaults use the same bounded F8 snapshot, while availability comes only from owned caches.
     auto& rpg=result.rpg;rpg.enabled=enabled("RPG","Enabled");rpg.guidance=enabled("RPG","GuidanceByDefault");
     rpg.available=!result.warcraftOnly && OptionalWeaponAssets::Rpg(std::filesystem::path(filename).parent_path());
-    rpg.radius=std::max(32.f,number("RPG","Radius",375,3000));
+    rpg.radius=std::max(32.f,number("RPG","Radius",525,3000));
+    // Upgrade only the former stock blast, including an old config loaded directly with F8.
+    auto blastVersion=text("RPG","BlastVersion","1");
+    if((blastVersion=="1" || blastVersion.empty()) && rpg.radius==375)rpg.radius=525;
     rpg.launchSpeed=std::max(50.f,number("RPG","LaunchSpeed",375,6000));
     rpg.maximumSpeed=std::max(100.f,number("RPG","MaximumSpeed",3000,10000));
     rpg.acceleration=number("RPG","Acceleration",6000,20000);
@@ -407,6 +427,25 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     rpg.modelScale=std::max(.25f,number("RPG","WorldModelScale",1.5f,4));
     rpg.trailSeconds=number("RPG","TrailSeconds",1,3);rpg.trailSize=number("RPG","TrailSize",10,40);
     rpg.maxActive=unsigned(std::max(1.f,number("RPG","MaxActive",16,64)));
+    // F8 validates each owned Half-Life weapon independently and replaces one complete tuning snapshot.
+    auto& hl=result.halfLife;
+    for(int i=0;i<3;++i) {
+        hl.enabled[i]=enabled(WeaponSlots::Sections[WeaponSlots::Crowbar+i],"Enabled");
+        hl.available[i]=!result.warcraftOnly && OptionalWeaponAssets::HalfLife(std::filesystem::path(filename).parent_path(),i);
+    }
+    hl.tauChargeSeconds=std::max(.1f,number("TauCannon","ChargeSeconds",4,10));
+    // The same bounded charge clock drives a continuous spinner phase and live loop pitch; equal rates disable the ramp.
+    hl.tauSpinStartRate=std::max(.25f,number("TauCannon","SpinStartRate",1,8));
+    hl.tauSpinEndRate=std::max(hl.tauSpinStartRate,number("TauCannon","SpinEndRate",3,8));
+    hl.tauPitchStart=std::max(.25f,number("TauCannon","ChargePitchStart",1,4));
+    hl.tauPitchEnd=std::max(hl.tauPitchStart,number("TauCannon","ChargePitchEnd",2.5f,4));
+    hl.tauDrainSeconds=std::max(.05f,number("TauCannon","ChargeDrainSeconds",.3f,2));
+    hl.tauChargedDamage=number("TauCannon","ChargedDamage",200,1000000);
+    hl.tauPrimaryCost=int(std::max(1.f,number("TauCannon","PrimaryCost",2,100)));
+    hl.crowbarContactSeconds=number("Crowbar","ContactSeconds",.1f,1);
+    hl.crowbarSurfaceSounds=enabled("Crowbar","SurfaceSounds");
+    hl.beamSeconds=std::max(.025f,number("HalfLife","BeamSeconds",.15f,1));
+    hl.beamWidth=std::max(.5f,number("HalfLife","BeamWidth",3,20));
     const auto& sections=WeaponSlots::Sections;
     for (int slot=0;slot<WeaponSlots::Count;++slot) {
         auto& weapon=result.weapons[slot];
@@ -427,6 +466,11 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         result.ammoPrice[slot]=int(number(sections[slot],"AmmoPrice",float(result.ammoPrice[slot]),1000000));
         result.ammoPack[slot]=int(std::max(1.0f,number(sections[slot],"AmmoPack",float(std::max(1,result.ammoPack[slot])),1000)));
         if(WeaponSlots::Firearm(slot))result.maxReserve[slot]=int(number(sections[slot],"MaxReserve",float(result.maxReserve[slot]),100000));
+        if(WeaponSlots::Energy(slot))result.maxReserve[slot]=0; // Cell capacity lives in Magazine; no hidden reload reserve.
+        if(slot==WeaponSlots::Crowbar) {
+            weapon.range=std::max(32.f,number(sections[slot],"Range",150,1000));
+            weapon.interval=std::max(.1f,number(sections[slot],"FireInterval",.5f,5));
+        }
     }
     result.knifeSecondaryDamage=number("Knife","SecondaryDamage",65,1000000);
     result.swordSecondaryDamage=number("Sword","SecondaryDamage",240,1000000);
@@ -436,7 +480,10 @@ float GameplaySettings::ContactDamage(int slot,bool secondary,float heroAttack) 
     if (slot<0 || slot>=WeaponSlots::Count) return 0;
     // Native average attack works for heroes and creeps, including their active bonuses; heavy melee keeps its ratio.
     float heavy=secondary ? (slot==WeaponSlots::Knife ? 65.0f/40 : slot==WeaponSlots::Sword ? 2.0f : 1.0f) : 1.0f;
-    if (heroDamage && slot!=WeaponSlots::C4 && slot!=WeaponSlots::RPG && !WeaponSlots::Grenade(slot)) return std::max(0.0f,heroAttack)*heroMultiplier[slot]*heavy;
+    if (heroDamage && slot!=WeaponSlots::C4 && slot!=WeaponSlots::RPG && !WeaponSlots::Energy(slot) && !WeaponSlots::Grenade(slot)) {
+        // Zero is a real unarmed unit; only the negative unavailable sentinel permits configured fallback damage.
+        if(heroAttack>=0 || !unavailableAttackUsesWeaponDamage)return std::max(0.0f,heroAttack)*heroMultiplier[slot]*heavy;
+    }
     return secondary && slot==WeaponSlots::Knife ? knifeSecondaryDamage :
         secondary && slot==WeaponSlots::Sword ? swordSecondaryDamage : damage[slot];
 }

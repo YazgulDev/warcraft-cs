@@ -24,7 +24,7 @@ bool GameAudio::LoadClip(const std::string& path, Clip& clip) {
     }
     if (format.wFormatTag != WAVE_FORMAT_PCM || !format.nBlockAlign || clip.data.empty()) return false;
     for (auto& voice : clip.voices) {
-        if (FAILED(engine_->CreateSourceVoice(&voice, &format))) return false;
+        if (FAILED(engine_->CreateSourceVoice(&voice, &format,0,4))) return false; // Tau's charge motor can rise beyond the default 2x voice limit.
         voice->Start();
     }
     return true;
@@ -118,6 +118,7 @@ void GameAudio::Play(const char* name, float volume) {
     }
     XAUDIO2_BUFFER buffer{}; buffer.AudioBytes = UINT32(clip.data.size()); buffer.pAudioData = clip.data.data();
     buffer.Flags = XAUDIO2_END_OF_STREAM; voice->SetVolume(volume);
+    voice->SetFrequencyRatio(1); // A voice released by a loop must not pitch-shift the next ordinary impact/shot.
     HRESULT result = voice->SubmitSourceBuffer(&buffer);
     wc3::Log("CS sound=%s volume=%.2f overlapping=%u queued=%08X", name, volume, occupied, result);
 }
@@ -127,12 +128,26 @@ void GameAudio::SetLoop(const char* name,bool playing,float volume) {
     auto voice=clip.voices.back();if(!voice)return;
     // The motor owns one reserved voice and cannot queue another loop on every rendered frame.
     voice->Stop();voice->FlushSourceBuffers();clip.looping=false;
+    voice->SetFrequencyRatio(1);
     if(playing) {
         XAUDIO2_BUFFER buffer{};buffer.AudioBytes=UINT32(clip.data.size());buffer.pAudioData=clip.data.data();
         buffer.Flags=XAUDIO2_END_OF_STREAM;buffer.LoopCount=XAUDIO2_LOOP_INFINITE;voice->SetVolume(volume);
         clip.looping=SUCCEEDED(voice->SubmitSourceBuffer(&buffer));
     }
     voice->Start();wc3::Log("CS loop=%s playing=%d",name,clip.looping);
+}
+float GameAudio::LoopPitch(const char* name) const {
+    auto found=clips_.find(name);float ratio=1;
+    if(found!=clips_.end() && found->second->voices.back())found->second->voices.back()->GetFrequencyRatio(&ratio);
+    return ratio;
+}
+void GameAudio::SetLoopPitch(const char* name,float ratio) {
+    auto found=clips_.find(name);if(found==clips_.end() || !found->second->looping)return;
+    ratio=std::isfinite(ratio) ? std::clamp(ratio,.25f,4.f) : 1;
+    float before=LoopPitch(name);
+    // Change the already queued motor voice, preserving its buffer/cursor rather than restarting it each frame.
+    HRESULT result=found->second->voices.back()->SetFrequencyRatio(ratio);
+    if(std::lround(before*10)!=std::lround(ratio*10))wc3::Log("CS loop pitch=%s requested=%.3f applied=%.3f result=%08X",name,ratio,LoopPitch(name),result);
 }
 float GameAudio::Duration(int weapon,const char* name) const {
     auto found=timelines_[weapon].find(name);return found==timelines_[weapon].end() ? 0 : found->second.duration;

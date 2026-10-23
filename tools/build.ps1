@@ -18,6 +18,8 @@ $hookRoot=Join-Path $MinHookDirectory 'include'
 # Actor mesh filtering owns rendering only, independent of the unit's simulation visibility.
 # Relative Windows input is separate from look-angle math, physical movement and native camera ownership.
 $sources = @('platform/WarcraftApi.cpp', 'input/MouseLook.cpp', 'movement/MovementPhysics.cpp', 'platform/WarcraftCollision.cpp', 'presentation/FirstPersonCamera.cpp', 'platform/MapCameraGuard.cpp', 'platform/ActorRenderFilter.cpp', 'audio/GameAudio.cpp', 'presentation/FullscreenView.cpp', 'presentation/HitFeedback.cpp', 'presentation/ScopeView.cpp', 'combat/UnitStatus.cpp', 'geometry/ModelBounds.cpp', 'platform/SpriteTransform.cpp', 'combat/UnitHitboxes.cpp', 'combat/DestructableHitboxes.cpp', 'combat/PlantedBomb.cpp', 'combat/WeaponRecoil.cpp', 'application/ShooterController.cpp', 'presentation/GunMesh.cpp', 'presentation/Overlay.cpp', 'runtime/PluginRuntime.cpp', 'Plugin.cpp', 'input/InputDispatcher.cpp') | ForEach-Object { '"' + (Join-Path $modRoot "src/$_") + '"' }
+# Host selection and the alternate graphics backend keep existing view layouts and gameplay independent.
+$sources += @('platform/GameBuild.cpp','platform/D3DHooks.cpp','presentation/D3DGraphics.cpp','presentation/D3DTextures.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 # Native spell fixtures are opt-in and are excluded from the installed normal build.
 # Item pickup and temporary native squad policies remain independent of shooter input/rendering.
 $sources += @('config/GameplaySettings.cpp','inventory/ItemPickup.cpp','squad/SquadController.cpp','platform/FpsCombatGuard.cpp') | ForEach-Object { '"' + (Join-Path $modRoot "src/$_") + '"' }
@@ -69,6 +71,8 @@ $sources += '"' + (Join-Path $modRoot 'src/platform/NativeCommandCard.cpp') + '"
 $sources += @('input/ShortcutBindings.cpp','config/HeroSpellSlots.cpp','platform/NativeSpellSlots.cpp','platform/SpellAim.cpp','platform/SpellCaster.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 $sources += '"' + (Join-Path $modRoot 'src/platform/MovementObstacles.cpp') + '"'
 $sources += '"' + (Join-Path $modRoot 'src/platform/NativeGrenades.cpp') + '"'
+# Local CS drops own their native markers independently of Warcraft inventory items.
+$sources += '"' + (Join-Path $modRoot 'src/platform/DroppedWeapons.cpp') + '"'
 # RPG flight/damage and rendering remain independent of the gameplay controller.
 $sources += @('platform/NativeBlast.cpp','platform/NativeRockets.cpp','presentation/RocketView.cpp') | ForEach-Object { '"' + (Join-Path $modRoot "src/$_") + '"' }
 $sources += '"' + (Join-Path $modRoot 'src/presentation/GrenadeView.cpp') + '"'
@@ -87,7 +91,7 @@ New-Item -ItemType Directory -Path $configDirectory -Force | Out-Null
 $configFile=Join-Path $configDirectory 'WarcraftCS.ini'
 . (Join-Path $modRoot 'setup/gameplay-config.ps1')
 Update-GameplayConfig (Join-Path $modRoot 'config/WarcraftCS.ini') $configFile
-$testDefine = ''
+$testDefine = ' /DWCS_D3D9'
 if ($TestMovement) {
     # Movement requests and destructive fixtures exist only in this explicit disposable-map build.
     $sources += '"'+(Join-Path $modRoot 'tests/MovementScene.cpp')+'"'
@@ -117,7 +121,9 @@ if ($TestWorldSurfaces) {
     $sources += '"' + (Join-Path $modRoot 'tests/WorldSurfaceScene.cpp') + '"'
     $testDefine += ' /DWCS_SURFACE_TEST'
 }
-$buildDirectory = Join-Path $modRoot 'build'
+
+# Production objects must not collide with isolated regressions compiling the same source filenames.
+$buildDirectory = Join-Path $modRoot 'build/native'
 New-Item -ItemType Directory -Path $buildDirectory -Force | Out-Null
 # Fingerprint the compiled source/config inputs; support logs distinguish same-version test DLLs.
 $fingerprints=@(Get-ChildItem -LiteralPath (Join-Path $modRoot 'src') -Recurse -File | Sort-Object FullName | ForEach-Object {

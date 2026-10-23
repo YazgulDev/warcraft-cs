@@ -11,6 +11,11 @@ Neither variant includes game files, models, sounds, maps or saves.
 You need your own Warcraft III installation. CS 1.6 is required only for the full weapon mode.**
 This is an early prototype with known limitations.
 
+**Unified launcher preview:** experimental Warcraft III **1.27a (1.27.0.52240)**
+and **Direct3D 9**, the full optional Half-Life arsenal and dollar/loot economy are combined in this branch. The DLL-included preview supports both hosts in Player mode; see [preview installation and changes](docs/UNIFIED-PREVIEW.md). Published 0.11.0
+downloads retain their original host support. See [port setup, verification and
+limitations](docs/PORT-1.27.md); real 1.27a gameplay has not yet been verified.
+
 **[Download 0.11.0](https://github.com/YazgulDev/warcraft-cs/releases/tag/v0.11.0)** В·
 [Release Notes](docs/RELEASE-0.11.0.md) В· [Installation](INSTALL.md) В· [Requirements](REQUIREMENTS.md)
 В· [Troubleshooting](TROUBLESHOOTING.md) В· [Discussions](https://github.com/YazgulDev/warcraft-cs/discussions)
@@ -54,8 +59,8 @@ Y squad orders and clean F9 remain available.
 - E picks up items/runes through the real inventory; a successful rune restores 40% ammunition by default.
 - H recruits your own units to follow and fight, O makes them follow without attacking, J releases them.
 - INI settings for ammunition recovery, damage and squad behavior, reloaded with F8.
-- CS-style owned-weapon selection menu with five groups, mouse-wheel browsing and click confirmation.
-- B opens a CS-style buy menu using Warcraft gold; configurable prices, starting kits and shop/building access.
+- CS-style owned-weapon selection menu with six groups, mouse-wheel browsing and click confirmation.
+- B opens a CS-style buy menu using a separate dollar wallet ($800 start, $300 per CS weapon kill, $16000 cap); configurable prices, starting kits and shop/building access.
 - No starting C4 by default; unlimited paid C4 purchases and configurable reserve ammunition caps.
 - Multiple planted C4 charges with independent fuses; F11 refills carried equipment and F12 grants every weapon for free.
 - Warcraft sky by default in FPS, optional privately converted CS skyboxes, and visible native walkable bridge decks.
@@ -197,7 +202,7 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 | B | Open/close the buy menu; number keys or mouse select categories and purchases |
 | . | Buy one ammo pack for the weapon currently held |
 | Esc / 0 in buy menu | Close / back to previous menu (0 closes the main menu) |
-| 1 / 2 / 3 / 4 / 5 (F6, Tab items off) | Open primary / pistols / melee / grenades / C4; repeat to browse the group |
+| 1 / 2 / 3 / 4 / 5 / 6 (F6, Tab items off) | Open primary / pistols / melee / grenades / C4 / Half-Life; repeat to browse the group |
 | Mouse wheel up / down (F6) | Preview previous / next carried weapon; LMB confirms without firing |
 | RMB / 0 / Esc in weapon menu | Cancel the pending selection; timeout also cancels |
 | 6 / 7 (when not routed to items) | Legacy direct C4 / original greatsword shortcuts |
@@ -221,9 +226,24 @@ barrel muzzle flash. F8 applies the editable `[Viewmodel]` settings; see the
 
 ## Configuration
 
-Optional **Half-Life RPG**: setup detects the owner's sibling `valve` files (loose or PAK)
-and converts them privately. If complete, buy with **B → 8 → 7**; carried RPG appears in
-primary group **1** and the wheel. LMB launches a physical rocket, RMB toggles laser guidance,
+**Dollar economy and rare weapon loot (source feature):** purchases use dollars by default,
+independently of map gold. Hostile creature kills with CS weapons, HE, C4 or RPG award $300;
+start with $800 per player/map, capped at $16000. Weapon drops default to a 0.5% chance per
+eligible kill. A chest marks the drop; approach to see its weapon name and press **E**.
+Duplicate guns give one ammo pack; full reserves leave the chest intact. Toggle drops,
+adjust rewards or restore gold purchases in INI/F8. See [economy and loot settings](docs/ECONOMY-AND-LOOT.md).
+
+Optional **Half-Life weapons**: setup detects the owner's sibling `valve` files (loose or PAK)
+and converts them privately. **B → 9 Half-Life → 1 Crowbar / 2 Tau Cannon / 3 Gluon Gun / 4 RPG**.
+Carried Half-Life weapons use group **6** and the wheel. Turn Tab item numbers off to use
+weapon number keys. Hold LMB for Crowbar swings or Gluon beam; Tau uses LMB for a shot
+and holding/releasing RMB for a charged shot. See [arsenal settings](docs/HALF-LIFE-ARSENAL.md).
+Tau's charge gradually accelerates its spinner and motor pitch; `[TauCannon]` exposes
+`SpinStartRate`/`SpinEndRate` and `ChargePitchStart`/`ChargePitchEnd` (F8 reload).
+Crowbar distinguishes flesh, structures/destructables and dirt, with varied samples;
+`[Crowbar] SurfaceSounds=false` restores simple impact samples. Re-run setup after
+updating to rebuild Gluon's nozzle anchor and import the additional owned Crowbar sounds.
+For RPG, LMB launches a physical rocket, RMB toggles laser guidance,
 R reloads one rocket. Turn the laser off to reload while a rocket is flying. Missing or
 changed resources hide RPG without affecting CS weapons. See [RPG settings](docs/HALF-LIFE-RPG.md).
 
@@ -385,10 +405,11 @@ Edit it and press F8 in FPS.
   `UnlimitedBombPurchases=true` allows repeated paid purchases beyond that amount; false restores
   it as the purchase cap. F8 applies this switch; refills never discard surplus purchased bombs.
   F6/F8 and changing the controlled unit never grant another starting kit.
-- `[AK47]`, `[M4A1]`, `[USP]`, `[AWP]`, `[Knife]`, `[Sword]`, `[C4]` use `Price` in native Warcraft
-  **gold**. Buying a firearm gives one loaded magazine, with zero reserve rounds. `AmmoPrice` buys
+- `[AK47]`, `[M4A1]`, `[USP]`, `[AWP]`, `[Knife]`, `[Sword]`, `[C4]` use `Price` in
+  the selected `[Economy] Currency` (dollars by default; `gold` restores Warcraft gold).
+  Buying a firearm gives one loaded magazine, with zero reserve rounds. `AmmoPrice` buys
   `AmmoPack` reserve rounds (R loads them). A C4 weapon/ammo purchase grants one charge. Full ammo,
-  duplicate non-consumable weapons and rejected purchases do not cost gold.
+  duplicate non-consumable weapons and rejected purchases do not spend money.
 - `[Buy] Access=anywhere` allows buying anywhere (default); `friendly` requires a nearby allied
   building **or shop**; `shops` allows shops only. `Radius=600` is the center distance in Warcraft units.
   Stock neutral merchants, mercenary camps and shops with purchase/sell/neutral-interaction abilities
@@ -397,7 +418,7 @@ Edit it and press F8 in FPS.
   check the zone. The menu does not pause the world; leaving a valid zone closes it.
 - F11 refills carried magazines/reserves and grants C4 up to at least `MaxBombs` for free;
   surplus purchased bombs are retained. F12 also unlocks all weapons.
-  These shortcuts do not spend gold or bypass Warcraft incapacitation. Legacy `AllowFreeRefill` is ignored.
+  These shortcuts do not spend money or bypass Warcraft incapacitation. Legacy `AllowFreeRefill` is ignored.
   Rune rewards still follow `[Runes]` settings, apply only to owned weapons and use `MaxBombs` for C4.
 - `[Sky] Enabled=false` keeps Warcraft's native sky by default; `true` enables a private CS sky in FPS. `Default=Des` is the unknown-tileset fallback;
   map tileset keys such as `W=snow`, `A=forest`, `D=DrkG` choose a filename stem from your
@@ -446,7 +467,7 @@ Edit it and press F8 in FPS.
   `MinimapSizePercent=22` sets the square's side to 22% of window height (10..40, fractional values allowed).
   F8 applies size changes live; missing/invalid values use the defaults and updates preserve custom values.
   The FPS minimap is a display; use RTS for map clicks/orders. Native RTS layout and campaign bounds stay intact.
-  Top hints use three compact groups and wrap before the minimap; gold appears beside health/ammunition.
+  Top hints use three compact groups and wrap before the minimap; the active currency appears beside health/ammunition.
 - `[Interface] DisableFogOfWar=false` keeps map visibility by default (`true`/`false`, also `1`/`0`).
   Set `true` or press N in offline FPS to remove both explored fog and the unexplored black mask.
   N changes only the session; startup/F8 loads the saved preference. F6, menus and cinematics restore
@@ -468,7 +489,7 @@ Only supported categories appear, preserving CS keys: 1 pistols, 4 rifles, 6 pri
 Primary/secondary ammo rows buy one pack per carried weapon in that category; every transaction checks
 funds independently. Weapon prices are doubled: AK47 1250, M4A1 1550,
 USP 250, AWP 2376, knife 0, sword 500 and C4 3000. Other ammo-pack prices are unchanged;
-both C4 purchase paths charge 3000 gold for one bomb by default.
+both C4 purchase paths charge $3000 for one bomb by default (or 3000 gold in gold mode).
 No round, buy-time or team-spawn restriction is imposed.
 
 When adding a weapon, apply [warcraft-cs-weapon-menu](skills/warcraft-cs-weapon-menu/SKILL.md).
@@ -496,7 +517,7 @@ Map scripts can conflict with camera or unit control. Maps without living owned 
 an FPS character. Hitboxes approximate model bounds rather than individual bones.
 
 The recoil calculations are adapted, but **complete CS bullet spread/accuracy and the GoldSrc client
-are not implemented**. Purchases use Warcraft gold; CS rounds and team economy are not implemented.
+are not implemented**. Purchases use a separate CS dollar wallet by default; Warcraft gold remains selectable. CS rounds and team economy are not implemented.
 
 ## TODO
 

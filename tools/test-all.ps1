@@ -29,7 +29,13 @@ foreach ($name in @('window-input','fog-of-war','diagnostic-log','native-frame-r
 & (Join-Path $PSScriptRoot 'test-grenades.ps1')
 # Optional RPG flight, private-asset discovery and actual GL effects belong to the complete release checks.
 & (Join-Path $PSScriptRoot 'test-rpg.ps1')
+& (Join-Path $PSScriptRoot 'test-halflife.ps1')
 # Buying/sky decoding are independent of Warcraft and use only synthetic/private-free test inputs.
 & (Join-Path $PSScriptRoot 'test-buy-menu.ps1')
+& (Join-Path $PSScriptRoot 'test-dollar-loot.ps1')
 & (Join-Path $PSScriptRoot 'test-weapon-selection.ps1')
+# Alternate graphics and host selection use synthetic fixtures and a real hidden D3D device, without Warcraft files.
+& (Join-Path $PSScriptRoot 'test-d3d9.ps1')
+& (Join-Path $PSScriptRoot 'test-host-builds.ps1')
+& (Join-Path $PSScriptRoot 'test-miles-forwarders.ps1')
 Write-Output 'All native-independent regression suites passed.'

@@ -63,9 +63,9 @@ int main() {
     gold=10000;int saved=gold;
     assert(!inventory.owned[WeaponSlots::RPG]);
     assert(inventory.Buy(WeaponSlots::RPG,false,settings,gold,ammo[17],reserve[17],1,5)==BuyInventory::Result::Invalid && gold==saved);
-    auto hidden=BuyMenuLayout::Keys(BuyMenu::Page::Equipment,&settings);assert(std::find(hidden.begin(),hidden.end(),7)==hidden.end());
+    auto hidden=BuyMenuLayout::Keys(BuyMenu::Page::HalfLife,&settings);assert(hidden.empty());
     settings.rpg.available=true;assert(settings.WeaponEnabled(WeaponSlots::RPG));
-    auto shown=BuyMenuLayout::Keys(BuyMenu::Page::Equipment,&settings);assert(std::find(shown.begin(),shown.end(),7)!=shown.end());
+    auto shown=BuyMenuLayout::Keys(BuyMenu::Page::HalfLife,&settings);assert(shown==std::vector<int>{4});
     assert(inventory.Buy(17,false,settings,gold,ammo[17],reserve[17],1,5)==BuyInventory::Result::Bought && gold==saved-4000 && ammo[17]==1 && reserve[17]==0);
     assert(inventory.Buy(17,false,settings,gold,ammo[17],reserve[17],1,5)==BuyInventory::Result::AlreadyOwned);
     assert(inventory.Buy(17,true,settings,gold,ammo[17],reserve[17],1,5)==BuyInventory::Result::Bought && reserve[17]==1);
@@ -84,7 +84,7 @@ int main() {
     for (const auto& item : BuyCatalog::Entries) {
         assert(item.slot>=0 && item.slot<WeaponSlots::Count && !seen[item.slot]);seen[item.slot]=true;
         assert(BuyCatalog::Find(item.category,item.key)==&item);
-        BuyMenu menu;menu.Toggle();menu.Select(item.category==BuyCatalog::Category::Pistols ? 1 : item.category==BuyCatalog::Category::Rifles ? 4 : item.category==BuyCatalog::Category::Shotguns ? 2 : item.category==BuyCatalog::Category::SMGs ? 3 : item.category==BuyCatalog::Category::Machineguns ? 5 : 8,2);
+        BuyMenu menu;menu.Toggle();menu.Select(item.category==BuyCatalog::Category::HalfLife ? 9 : item.category==BuyCatalog::Category::Pistols ? 1 : item.category==BuyCatalog::Category::Rifles ? 4 : item.category==BuyCatalog::Category::Shotguns ? 2 : item.category==BuyCatalog::Category::SMGs ? 3 : item.category==BuyCatalog::Category::Machineguns ? 5 : 8,2);
         assert(menu.Select(item.key,2).slot==item.slot);
     }
     for (bool present : seen) assert(present);
@@ -98,7 +98,7 @@ int main() {
         assert(wallet==0 && spare==settings.ammoPack[slot]);
     }
     // Consumables charge once per grenade, obey their carry limit and never create magazine reserves.
-    for(int slot=WeaponSlots::HE;slot<WeaponSlots::Count;++slot) {
+    for(int slot=WeaponSlots::HE;slot<=WeaponSlots::Smoke;++slot) {
         assert(!WeaponSlots::Firearm(slot));BuyInventory fresh;int loaded=0,spare=0,wallet=10000;
         for(int i=0;i<magazines[slot];++i)assert(fresh.Buy(slot,false,settings,wallet,loaded,spare,magazines[slot],0)==BuyInventory::Result::Bought);
         int saved=wallet;assert(loaded==magazines[slot] && spare==0);
@@ -107,7 +107,7 @@ int main() {
         assert(wallet==saved-settings.ammoPrice[slot]);
         settings.grenades.enabled=false;assert(fresh.Buy(slot,false,settings,wallet,loaded,spare,magazines[slot],0)==BuyInventory::Result::Invalid);settings.grenades.enabled=true;
     }
-    BuyMenu menu;menu.Toggle();assert(menu.Select(9,2).slot==-1 && menu.Current()==BuyMenu::Page::Main);
+    BuyMenu menu;menu.Toggle();menu.Select(9,2);assert(menu.Current()==BuyMenu::Page::HalfLife);menu.Select(0,2);
     assert(menu.Select(6,2).primaryAmmo && menu.Select(7,2).secondaryAmmo);
     menu.Select(4,2);assert(menu.Select(3,2).slot==3);menu.Select(0,2);assert(menu.Current()==BuyMenu::Page::Main);
     menu.Select(0,2);assert(!menu.Open());

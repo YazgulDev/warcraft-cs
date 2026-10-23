@@ -4,14 +4,14 @@
 #include <algorithm>
 #include <limits>
 
-// Pure inventory transactions: callers debit native gold only after a useful purchase succeeds.
+// Pure inventory transactions debit the selected currency only after a useful purchase succeeds.
 class BuyInventory {
 public:
     std::array<bool,WeaponSlots::Count> owned{};
     void Reset(const GameplaySettings& settings,int* ammo,int* reserve,const int* magazines,const int* reserves) {
         for (int i=0;i<WeaponSlots::Count;++i) {
             // C4 enters the starting kit only through an explicit bomb count or the all-weapons option.
-            owned[i]=settings.startAllWeapons || WeaponSlots::Melee(i) || i==WeaponSlots::Pistol ||
+            owned[i]=settings.startAllWeapons || i==WeaponSlots::Knife || i==WeaponSlots::Sword || i==WeaponSlots::Pistol ||
                 (i==WeaponSlots::C4 && settings.startBombs>0);
             if(!settings.WeaponEnabled(i))owned[i]=false;
             ammo[i]=owned[i] ? (i==WeaponSlots::C4 ? settings.startBombs : magazines[i]) : 0;
@@ -28,6 +28,19 @@ public:
             // Refilling must never discard paid bombs above the configured free-refill amount.
             ammo[i]=i==WeaponSlots::C4 ? std::max(ammo[i],settings.maxBombs) : magazines[i];reserve[i]=reserves[i];
         }
+    }
+    bool Pickup(int slot,const GameplaySettings& settings,int& ammo,int& reserve) {
+        if(!settings.WeaponEnabled(slot) || !WeaponSlots::Firearm(slot))return false;
+        // A new drop grants one loaded gun; duplicate guns become one ammo pack without consuming a full pickup.
+        if(!owned[slot]) {owned[slot]=true;ammo=settings.weapons[slot].magazine;reserve=0;return true;}
+        // Tau/Gluon duplicate drops refill usable cells directly, matching their shop path without a reserve magazine.
+        if(WeaponSlots::Energy(slot)) {
+            int missing=settings.weapons[slot].magazine-ammo;if(missing<=0)return false;
+            ammo+=std::min(missing,settings.ammoPack[slot]);return true;
+        }
+        int missing=settings.maxReserve[slot]-reserve;
+        if(missing<=0)return false;
+        reserve+=std::min(missing,settings.ammoPack[slot]);return true;
     }
     int Next(int current,int steps,const GameplaySettings* settings=nullptr) const {
         int result=current;
@@ -51,12 +64,15 @@ public:
         if (bomb && ((!settings.unlimitedBombPurchases && ammo>=settings.maxBombs) ||
             ammo==std::numeric_limits<int>::max())) return Result::Full;
         if(grenade && ammo>=magazine)return Result::Full;
-        if (ammunition && !bomb && !grenade && reserve>=reserveCapacity) return Result::Full;
+        bool energy=WeaponSlots::Energy(slot); // Cells replenish usable energy directly, without R/reload.
+        if(ammunition && energy && ammo>=magazine)return Result::Full;
+        if (ammunition && !bomb && !grenade && !energy && reserve>=reserveCapacity) return Result::Full;
         int cost=ammunition ? settings.ammoPrice[slot] : settings.weaponPrice[slot];
         if (gold<cost) return Result::NoGold;
         // A bomb is one consumable; firearm ammo fills reserves, then R transfers it into a magazine.
         gold-=cost;owned[slot]=true;
         if (bomb || grenade) ++ammo;
+        else if (ammunition && energy)ammo=std::min(magazine,ammo+settings.ammoPack[slot]);
         else if (ammunition) reserve=std::min(reserveCapacity,reserve+settings.ammoPack[slot]);
         else { ammo=magazine;reserve=0; }
         return Result::Bought;

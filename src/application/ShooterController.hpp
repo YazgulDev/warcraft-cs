@@ -1,5 +1,8 @@
 #pragma once
 #include "../combat/ShotgunReload.hpp"
+#include "../combat/HalfLifeEnergy.hpp"
+#include "../presentation/EnergyBeam.hpp"
+#include "../audio/CrowbarContact.hpp"
 #include "../combat/BurstFire.hpp"
 #include "../presentation/ViewmodelMotion.hpp"
 #include "../combat/GrenadeThrow.hpp"
@@ -34,6 +37,11 @@
 #include "../config/GameplaySettings.hpp"
 #include "../inventory/AmmoRecovery.hpp"
 #include "../inventory/ItemPickup.hpp"
+#include "../inventory/WeaponDropRules.hpp"
+#include "../economy/DollarWallet.hpp"
+#include "../economy/CurrencyDisplay.hpp"
+#include "../platform/DroppedWeapons.hpp"
+#include <random>
 #include "../squad/SquadController.hpp"
 #include "../squad/ArmyAI.hpp"
 #include "../platform/SpellCaster.hpp"
@@ -143,6 +151,9 @@ public:
     const WeaponSelection& WeaponChoice() const {return weaponSelection_;}
     WeaponSelection::Available AvailableWeapons() const;
     int Gold() const { return gold_; }
+    int Money() const {return money_;}
+    std::string MoneyText() const {return settings_.warcraftOnly ? std::to_string(gold_)+" GOLD" : CurrencyDisplay::Format(money_,settings_.economy);}
+    std::string NearbyWeaponName() const {return nearbyWeapon_<0 ? "" : settings_.weapons[nearbyWeapon_].name;}
     float ViewYaw() const { return yaw_+(ThirdPerson() ? 0 : recoil_.Yaw()); }
     float ViewPitch() const { return pitch_+(ThirdPerson() ? 0 : recoil_.Pitch()); }
     float ViewFov() const { return scopeLevel_==2 ? 10.0f : Scoped() ? 40.0f : 85.0f; }
@@ -231,6 +242,7 @@ public:
     size_t BombCount() const { return bombs_.Count(); }
     float PlantProgress() const { return plantProgress_; }
     const HitFeedback& Hits() const { return hits_; }
+    const EnergyBeam& Beam() const {return energyBeam_;}
     void Configure(const char* root, uintptr_t gameBase);
     static const Weapon* const weapons; // Compatibility defaults for private fixtures.
     const Weapon& WeaponData(int slot) const {return settings_.weapons[slot];}
@@ -254,8 +266,13 @@ private:
     void AimAndMove(float dt);
     bool Fire(bool secondary = false,bool burstRound=false,bool interruptReload=false);
     void FireGlock(bool primaryPressed,bool secondaryPressed,DWORD now);
+    void FireEnergy(bool primaryPressed,bool secondaryHeld,DWORD now);
+    void CrowbarImpact(CrowbarContact::Surface surface);
+    void CancelEnergy();
+    HalfLifeEnergy energy_;
+    EnergyBeam energyBeam_;
     BurstFire glockBurst_;
-    void Strike(float yawOffset=0,float pitchOffset=0,float damageScale=1);
+    void Strike(float yawOffset=0,float pitchOffset=0,float damageScale=1,float fixedDamage=-1);
     void Reload();
     ShotgunReload shotgunReload_;
     DWORD shotgunReloadStart_=0;
@@ -272,6 +289,8 @@ private:
     void CancelPlant();
     void RefillAmmo(bool grantAll=false);
     void PickupItem();
+    void RewardKill(const KillReward& reward);
+    int PurchaseBalance(wc3::Handle owner);
     bool OpenShop();
     void CloseShop();
     wc3::Handle shop_=0;
@@ -355,7 +374,12 @@ private:
     BuyInventory inventory_;
     BuyMenu buyMenu_;
     bool buyToggleRequested_=false,buyAmmoRequested_=false,suppressFire_=false;
-    int buyKeyRequested_=-1,gold_=0;
+    int buyKeyRequested_=-1,gold_=0,money_=0;
+    DollarWallet dollars_;
+    DroppedWeapons droppedWeapons_;
+    int nearbyWeapon_=-1;
+    unsigned rewardGeneration_=0;
+    std::mt19937 lootRandom_{};
     char mapTileset_=0;
     AmmoRecovery ammoRecovery_;
     ItemPickup itemPickup_;
@@ -368,6 +392,8 @@ private:
     float stepDistance_ = 0;
     unsigned stepIndex_ = 0;
     unsigned knifeSwing_ = 0;
+    unsigned crowbarContacts_=0;
+    int tauFeedbackBand_=-1;
     float animationRate_ = 1;
     DWORD refillTick_ = 0;
     HitFeedback hits_;

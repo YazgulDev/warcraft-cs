@@ -1,12 +1,16 @@
+#include "GameBuild.hpp"
 #include "ActorJumpView.hpp"
 #include <cmath>
 #include <cstring>
 
 void ActorJumpView::Install(uintptr_t base,Hook hook) {
+    // This adapter requires engine internals that are not yet verified on 1.27a.
+    if(wc3::ActiveBuild()==wc3::GameBuildKind::Classic127a) return;
+
     // CSprite's native 4D4594 call passes matrix, alpha and two 3-vectors to the full skinning update.
     const unsigned char signature[]={0xD9,0x44,0x24,0x04,0x53,0xDC,0x25};
-    bool valid=!std::memcmp(reinterpret_cast<void*>(base+0x50D240),signature,sizeof(signature));
-    bool installed=valid && hook(reinterpret_cast<void*>(base+0x50D240),reinterpret_cast<void*>(Apply),reinterpret_cast<void**>(&original_));
+    bool valid=!std::memcmp(reinterpret_cast<void*>(base + wc3::Rva(0x50D240)),signature,sizeof(signature));
+    bool installed=valid && hook(reinterpret_cast<void*>(base + wc3::Rva(0x50D240)),reinterpret_cast<void*>(Apply),reinterpret_cast<void**>(&original_));
     if(installed)context_=this;
     wc3::Log("Actor jump skinning adapter verified=%d installed=%d",valid,installed);
 }
