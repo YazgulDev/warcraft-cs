@@ -13,6 +13,23 @@ function Update-GameplayConfig([string]$Template,[string]$Destination) {
     $lines=[Collections.Generic.List[string]]::new()
     $lines.AddRange([string[]]@(Get-Content -LiteralPath $Destination))
     $changed=$false
+    # Migrate only the former RPG stock radius once; preserve every other custom blast and damage value.
+    $rpgSection=$false;$radiusIndex=-1;$blastIndex=-1;$blastVersion='1'
+    for($i=0;$i -lt $lines.Count;$i++) {
+        if($lines[$i] -match '^\s*\[([^\]]+)\]\s*$'){$rpgSection=$Matches[1] -eq 'RPG';continue}
+        if($rpgSection -and $lines[$i] -match '^\s*(Radius|BlastVersion)\s*=\s*(.*?)\s*$') {
+            if($Matches[1] -eq 'Radius'){$radiusIndex=$i}else{$blastIndex=$i;$blastVersion=$Matches[2].Trim()}
+        }
+    }
+    if($blastVersion -in @('','1')) {
+        if($radiusIndex -ge 0) {
+            [double]$oldRadius=0
+            if([double]::TryParse(($lines[$radiusIndex] -split '=',2)[1].Trim(),[Globalization.NumberStyles]::Float,[Globalization.CultureInfo]::InvariantCulture,[ref]$oldRadius) -and $oldRadius -eq 375) {
+                $lines[$radiusIndex]='Radius=525';$changed=$true
+            }
+        }
+        if($blastIndex -ge 0){$lines[$blastIndex]='BlastVersion=2';$changed=$true}
+    }
     # Upgrade the complete old stock trajectory once; every custom speed/gravity pair remains intact.
     $grenadeSection=$false;$throwIndex=-1;$gravityIndex=-1;$trajectoryIndex=-1;$trajectoryVersion='1'
     for($i=0;$i -lt $lines.Count;$i++) {

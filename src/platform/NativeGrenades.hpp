@@ -1,5 +1,6 @@
 #pragma once
 #include "MovementObstacles.hpp"
+#include "KillReward.hpp"
 #include "../combat/GrenadeProjectile.hpp"
 #include "../combat/GrenadeVisual.hpp"
 #include "../config/GameplaySettings.hpp"
@@ -8,6 +9,8 @@
 // Native time/targets are isolated from the portable trajectory and the read-only render snapshots.
 class NativeGrenades {
 public:
+    // The application owns the reward policy; native damage only reports confirmed creature deaths.
+    void SetKillSink(KillReward::Sink sink){onKill_=std::move(sink);}
     void Configure(uintptr_t base) {obstacles_.Configure(base);}
     void Reset();
     bool Throw(wc3::Handle actor,int slot,const GrenadePoint& eye,const GrenadePoint& direction,const GrenadePoint& motion,const GameplaySettings& settings);
@@ -15,6 +18,7 @@ public:
     const std::vector<GrenadeVisual>& Visuals() const {return visuals_;}
     float FlashOpacity() const {return flashOpacity_;}
 private:
+    KillReward::Sink onKill_;
     struct Charge {GrenadeProjectile flight;wc3::Handle actor=0;int type=0,slot=0;float born=0,damage=0,friendly=0;bool detonated=false;};
     struct Stun {wc3::Handle unit;int type;float until;};
     float Time() const;

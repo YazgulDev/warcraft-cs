@@ -99,6 +99,7 @@ int main() {
     }
     // Consumables charge once per grenade, obey their carry limit and never create magazine reserves.
     for(int slot=WeaponSlots::HE;slot<WeaponSlots::Count;++slot) {
+        if(!WeaponSlots::Grenade(slot))continue; // Appended optional firearms are tested separately.
         assert(!WeaponSlots::Firearm(slot));BuyInventory fresh;int loaded=0,spare=0,wallet=10000;
         for(int i=0;i<magazines[slot];++i)assert(fresh.Buy(slot,false,settings,wallet,loaded,spare,magazines[slot],0)==BuyInventory::Result::Bought);
         int saved=wallet;assert(loaded==magazines[slot] && spare==0);

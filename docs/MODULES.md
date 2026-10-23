@@ -367,3 +367,10 @@ immunity; flash leases remain in `NativeGrenades`. `RocketView` owns original tr
 glow and airburst effects plus the private model, sharing `WorldEffectPass` with
 grenade world rendering. Overlay alone owns OpenGL context replacement. The controller
 coordinates accepted shots/reload/laser input rather than implementing projectile physics.
+
+Dollar economy and loot: `economy/DollarWallet` owns per-player map balances;
+`CurrencyDisplay` formats UI money. `inventory/WeaponDropRules` selects eligible
+content, while `platform/KillReward` snapshots confirmed CS damage deaths and
+`DroppedWeapons` owns pause-aware native chest effects. `BuyInventory::Pickup`
+applies ownership/ammo rules. The application wires explicit death callbacks from
+firearms, HE/C4 and RPG; callbacks never overwrite native gold or item inventories.

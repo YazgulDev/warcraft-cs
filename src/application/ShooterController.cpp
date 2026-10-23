@@ -30,10 +30,15 @@ static constexpr float radians = 0.01745329252f;
 void ShooterController::Configure(const char* root, uintptr_t gameBase) {
     root_ = root;
     gameBase_ = gameBase;
+    // Loot randomness is local to the mod and never advances Warcraft's scripted random stream.
+    lootRandom_.seed(GetTickCount()^GetCurrentProcessId());
     hitboxes_.Configure(gameBase);
     destructableHitboxes_.Configure(gameBase);
     collision_.Configure(gameBase);
     grenades_.Configure(gameBase);rockets_.Configure(gameBase);
+    // Projectile adapters report deaths; the application applies the current wallet/drop policy.
+    auto rewards=[this](const KillReward& reward){RewardKill(reward);};
+    grenades_.SetKillSink(rewards);rockets_.SetKillSink(rewards);
     spells_.Configure(gameBase);itemInventory_.Configure(gameBase);
     unitHudReader_.Configure(gameBase); // Verify map-resolved XP and item art before sampling the actor.
     // Native-only clients do not need a CS mixer or any converted cache to initialize.
@@ -57,26 +62,48 @@ void ShooterController::Notice(const char* message) { ammoMessage_=message;refil
 void ShooterController::RequestBuyClick(int x,int y,int width,int height) {
     if (Buying()) buyKeyRequested_=BuyMenuLayout::Key(x,y,width,height,buyMenu_.Current(),&settings_);
 }
+int ShooterController::PurchaseBalance(wc3::Handle owner) {
+    return !settings_.warcraftOnly && settings_.economy.currency==EconomySettings::Currency::Dollars ? dollars_.Balance(owner,settings_.economy) : wc3::GetPlayerState(owner,1);
+}
+void ShooterController::RewardKill(const KillReward& reward) {
+    if(settings_.warcraftOnly || reward.owner!=wc3::GetLocalPlayer())return;
+    // The CS reward never modifies map gold. The captured owner also survives holstering and unit switching.
+    int added=settings_.economy.currency==EconomySettings::Currency::Dollars ? dollars_.Reward(reward.owner,settings_.economy) : 0;
+    money_=PurchaseBalance(reward.owner);
+    if(added>0){char message[64];sprintf_s(message,"+$%d ENEMY KILLED",added);Notice(message);}
+    float roll=std::uniform_real_distribution<float>(0.f,100.f)(lootRandom_);
+    if(WeaponDropRules::Success(settings_.weaponDrops,roll)) {
+        auto candidates=WeaponDropRules::Candidates(settings_);
+        if(!candidates.empty()) {
+            int slot=candidates[std::uniform_int_distribution<size_t>(0,candidates.size()-1)(lootRandom_)];
+            if(droppedWeapons_.Spawn(slot,reward.x,reward.y,settings_.weaponDrops))wc3::Log("weapon dropped slot=%d at=%.1f,%.1f",slot,reward.x,reward.y);
+        }
+    }
+    wc3::Log("CS kill reward target=%08X dollars=%d balance=%d",reward.target,added,money_);
+}
 void ShooterController::Buy(int slot,bool ammunition) {
     if(settings_.warcraftOnly)return; // All purchase entry points honor the installed mode set.
     if (status_.incapacitated || status_.contained || status_.hidden) { Notice("CANNOT BUY WHILE DISABLED");return; }
     if (!BuyAccess::Allowed(unit_,settings_)) { Notice("OUTSIDE BUY ZONE");return; }
     if (slot<0 || slot>=WeaponSlots::Count) return;
-    auto owner=wc3::GetOwningPlayer(unit_);int gold=wc3::GetPlayerState(owner,1);
-    auto result=inventory_.Buy(slot,ammunition,settings_,gold,ammo_[slot],reserve_[slot],settings_.weapons[slot].magazine,settings_.maxReserve[slot]);
-    // Native gold is charged only after validation, once on the game's main thread.
+    auto owner=wc3::GetOwningPlayer(unit_);int balance=PurchaseBalance(owner);
+    auto result=inventory_.Buy(slot,ammunition,settings_,balance,ammo_[slot],reserve_[slot],settings_.weapons[slot].magazine,settings_.maxReserve[slot]);
+    // Only the selected currency is charged, after validation on the game thread.
     if (result==BuyInventory::Result::Bought) {
-        wc3::SetPlayerState(owner,1,gold);gold_=gold;Notice(ammunition ? "AMMUNITION PURCHASED" : "WEAPON PURCHASED");
-        wc3::Log("buy weapon=%s ammunition=%d gold=%d ammo=%d reserve=%d",settings_.weapons[slot].name,ammunition,gold,ammo_[slot],reserve_[slot]);
+        if(settings_.economy.currency==EconomySettings::Currency::Dollars)dollars_.Store(owner,balance,settings_.economy);
+        else {wc3::SetPlayerState(owner,1,balance);gold_=balance;}
+        money_=balance;Notice(ammunition ? "AMMUNITION PURCHASED" : "WEAPON PURCHASED");
+        wc3::Log("buy weapon=%s ammunition=%d balance=%d ammo=%d reserve=%d",settings_.weapons[slot].name,ammunition,balance,ammo_[slot],reserve_[slot]);
         if (!ammunition) SwitchWeapon(slot);
         // Successful CS purchases return directly to play; rejected purchases leave the menu open.
         buyMenu_.Close();CloseWeaponSelection();
-    } else Notice(result==BuyInventory::Result::NoGold ? "NOT ENOUGH GOLD" : result==BuyInventory::Result::Full ? "AMMUNITION FULL" :
+    } else Notice(result==BuyInventory::Result::NoGold ? (settings_.economy.currency==EconomySettings::Currency::Dollars ? "NOT ENOUGH DOLLARS" : "NOT ENOUGH GOLD") : result==BuyInventory::Result::Full ? "AMMUNITION FULL" :
         result==BuyInventory::Result::AlreadyOwned ? "ALREADY OWNED" : "NO AMMUNITION FOR THIS WEAPON");
 }
 void ShooterController::UpdateBuyMenu() {
     bool wasBuying=Buying();
     gold_=wc3::GetPlayerState(wc3::GetOwningPlayer(unit_),1);
+    money_=PurchaseBalance(wc3::GetOwningPlayer(unit_));
     if (status_.contained || status_.hidden) { buyMenu_.Close();CloseWeaponSelection();itemInventory_.ClearInput();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1;suppressFire_=true;return; }
     if (buyToggleRequested_) {
         itemInventory_.ClearInput(); // The weapon catalog and mouse inventory have exclusive cursor ownership.
@@ -201,6 +228,8 @@ void ShooterController::Disable(bool restoreCamera) {
     wc3::Log("FPS disabled");
 }
 void ShooterController::ResetMap() {
+    // Currency and local loot belong to the unloaded map, independently of view/loadout changes.
+    ++rewardGeneration_;dollars_.Reset();droppedWeapons_.Reset();nearbyWeapon_=-1;money_=0;
     flashWeapon_=-1;viewmodelMotion_.Reset(); // No viewmodel offset or unpresented flash crosses a map boundary.
     glockBurst_={}; // A new map has neither queued rounds nor a cooldown inherited from the previous actor.
     shop_=0;shopCloseRequested_=false; // Forget native selection handles after unload.
@@ -377,6 +406,8 @@ void ShooterController::AimAndMove(float dt) {
     viewmodelMotion_.Step(dt,bob ? DisplaySpeed() : 0,bob && movement_.Grounded(),movement_.Duck(),settings_.viewmodel);
 }
 void ShooterController::UpdateStatus() {
+    // Keep money visible in F7 as well as armed F6; clean F9 still omits the HUD.
+    auto owner=wc3::GetOwningPlayer(unit_);gold_=wc3::GetPlayerState(owner,1);money_=PurchaseBalance(owner);
     UnitStatus current = UnitStatus::Read(unit_, gameBase_);
     if (current.incapacitated != status_.incapacitated || current.immobilized != status_.immobilized ||
         current.disarmed != status_.disarmed || current.contained != status_.contained ||
@@ -439,7 +470,7 @@ void ShooterController::Reload() {
 void ShooterController::RefillAmmo(bool grantAll) {
     if(settings_.warcraftOnly)return;
     glockBurst_.Cancel(); // Free refills must not preserve a partially spent burst queue.
-    // F11 restores carried ammo and grants C4; F12 additionally unlocks every weapon without spending gold.
+    // F11 restores carried ammo and grants C4; F12 additionally unlocks every weapon without spending money.
     int magazines[WeaponSlots::Count],reserves[WeaponSlots::Count];
     for (int i=0;i<WeaponSlots::Count;++i) { magazines[i]=settings_.weapons[i].magazine;reserves[i]=settings_.maxReserve[i]; }
     inventory_.Refill(settings_,ammo_,reserve_,magazines,reserves,grantAll);
@@ -563,6 +594,9 @@ void ShooterController::ReloadSettings() {
         settings_.thirdPerson.attackInterval,settings_.thirdPerson.contactDelay,settings_.thirdPerson.damageMultiplier);
     wc3::Log("Spells configured enabled=%d aimDistance=%.0f",settings_.spells.enabled,settings_.spells.aimDistance);
     for(int slot=0;slot<4;++slot)wc3::Log("Spell slot=%d ability=%s order=%d target=%s",slot+1,settings_.spells.ability[slot].c_str(),settings_.spells.order[slot],settings_.spells.target[slot].c_str());
+    // F8 applies opt-outs/caps immediately, without minting starting money or retaining a stale loot hint.
+    droppedWeapons_.Tick(settings_.weaponDrops,!settings_.warcraftOnly);nearbyWeapon_=-1;
+    if(unit_ && wc3::GetUnitTypeId(unit_))money_=PurchaseBalance(wc3::GetOwningPlayer(unit_));
     showSpeed_=settings_.showSpeed;
     showMinimap_=settings_.showMinimap;
     wc3::Log("Minimap configured visible=%d sizePercent=%.1f",showMinimap_,settings_.minimapSizePercent);
@@ -601,6 +635,14 @@ void ShooterController::ReloadSettings() {
 }
 void ShooterController::PickupItem() {
     if (status_.incapacitated || status_.contained || status_.hidden) return;
+    // CS loot has its own inventory, so even a unit without Warcraft item slots can collect it.
+    int drop=!settings_.warcraftOnly && settings_.weaponDrops.enabled ? droppedWeapons_.Nearest(unit_,settings_.weaponDrops.pickupRadius) : -1;
+    if(drop>=0) {
+        int slot=droppedWeapons_.Slot(drop);bool owned=inventory_.owned[slot];
+        if(!inventory_.Pickup(slot,settings_,ammo_[slot],reserve_[slot])){Notice("AMMUNITION FULL / WEAPON DISABLED");return;}
+        droppedWeapons_.Take(drop);if(!owned)SwitchWeapon(slot);
+        Notice(owned ? "DROPPED WEAPON: AMMO PICKED UP" : "WEAPON PICKED UP");nearbyWeapon_=-1;return;
+    }
     ItemPickupResult result=itemPickup_.Take(unit_,settings_.runePickupRadius);
     if (!result.found) return;
     // Equipment uses native inventory slots; only successful powerups award the configured rune ammo.
@@ -780,11 +822,18 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
         // Confirmed weapon hits dispatch one native attack, including the map's attack effects, without pursuit.
         // C4/destructables and explicit finishing retain their own policies; zero friendly damage causes no events.
         // Native impact compares unit centers; the ray has already enforced the weapon's surface range.
+        KillReward::Sink rewards=[this](const KillReward& reward){RewardKill(reward);};
+        auto reward=destructable ? KillReward{} : KillReward::Capture(unit_,target,rewards);
+        unsigned generation=rewardGeneration_;
         bool effects=damage>0 && !destructable && !lethal && settings_.enableAttackEffects &&
             NativeWeaponAttack::Apply(unit_,target,damage,std::hypot(wc3::Real(wc3::GetUnitX(target))-x,wc3::Real(wc3::GetUnitY(target))-y));
+        if(generation!=rewardGeneration_)return;
         if(damage>0 && !effects)wc3::UnitDamageTarget(unit_,target,&damage,FALSE,TRUE,
             destructable || lethal ? 0 : NativeWeaponAttack::AttackType(unit_),lethal ? 26 : 4,0);
+        if(generation!=rewardGeneration_)return;
         if (lethal && wc3::Real(wc3::GetUnitState(target, 0)) > 0.405f) wc3::KillUnit(target);
+        if(generation!=rewardGeneration_)return; // A native death trigger may have unloaded the map.
+        if(damage>0)reward.Confirm(rewards);
         float after = life();
         if (after < before) {
             // The same hit marker confirms damage to every faction, without blood.
@@ -891,7 +940,11 @@ void ShooterController::Tick(uintptr_t ui) {
     float dt=tick_.time_since_epoch().count() ? std::min(std::chrono::duration<float>(frameTime-tick_).count(),0.05f) : 0;
     tick_=frameTime;
     DWORD foregroundPid = 0; GetWindowThreadProcessId(GetForegroundWindow(), &foregroundPid);
-    if (bombs_.Tick(audio_) && Visible()) hits_.Record();
+    droppedWeapons_.Tick(settings_.weaponDrops,!settings_.warcraftOnly);
+    auto rewardGeneration=rewardGeneration_;
+    if (bombs_.Tick(audio_,[this,rewardGeneration](const KillReward& reward){
+        if(rewardGeneration==rewardGeneration_)RewardKill(reward);
+    }) && Visible()) hits_.Record();
     // Native timers continue after holstering/RTS return and freeze with Warcraft's simulation pause.
     GrenadePoint grenadeEye{},grenadeDirection{};wc3::Handle grenadeViewer=Visible() ? unit_ : 0;
     if(grenadeViewer) {
@@ -1289,7 +1342,9 @@ void ShooterController::Tick(uintptr_t ui) {
     UpdateSquad(now);
     static DWORD lastItemScan=0;
     if (now-lastItemScan>200) {
-        lastItemScan=now;itemNearby_=!status_.incapacitated && !status_.contained && !status_.hidden && itemPickup_.Nearest(unit_,settings_.runePickupRadius)!=0;
+        int drop=!settings_.warcraftOnly && settings_.weaponDrops.enabled ? droppedWeapons_.Nearest(unit_,settings_.weaponDrops.pickupRadius) : -1;
+        nearbyWeapon_=drop<0 ? -1 : droppedWeapons_.Slot(drop);
+        lastItemScan=now;itemNearby_=!status_.incapacitated && !status_.contained && !status_.hidden && (nearbyWeapon_>=0 || itemPickup_.Nearest(unit_,settings_.runePickupRadius)!=0);
     }
     // Pending melee contact is cancelled if the unit loses attack control before the blade lands.
     if (meleeContact_ && (status_.disarmed || status_.incapacitated)) meleeContact_ = 0;

@@ -22,7 +22,7 @@ bool PlantedBomb::Plant(wc3::Handle attacker, float x, float y, GameAudio& audio
     wc3::Log("C4 planted marker=%08X model=%s at=%.1f,%.1f fuse=35", marker_, model.c_str(), x_, y_);
     return true;
 }
-bool PlantedBomb::Tick(GameAudio& audio) {
+bool PlantedBomb::Tick(GameAudio& audio,const KillReward::Sink& onKill) {
     if (!timer_) return false;
     // JASS timers follow Warcraft simulation time, so pause/Alt-Tab never skip the fuse.
     float elapsed = wc3::Real(wc3::TimerGetElapsed(timer_));
@@ -74,7 +74,10 @@ bool PlantedBomb::Tick(GameAudio& audio) {
         float damage = CombatDamage::Amount(damage_, allied, false, before,friendlyFirePercent_);
         // Chaos + universal keeps the configured damage before map triggers (default 2500).
         // Zero friendly fire must not emit a native damage event that can trigger map retaliation/reflect effects.
+        // Snapshot hostile creature eligibility before map death scripts mutate ownership or remove the corpse.
+        auto reward=KillReward::Capture(attacker_,victim,onKill);
         if (damage>0 && wc3::GetUnitTypeId(attacker_)) wc3::UnitDamageTarget(attacker_, victim, &damage, FALSE, TRUE, 5, 26, 0);
+        if(damage>0)reward.Confirm(onKill);
         float after = wc3::Real(wc3::GetUnitState(victim, 0)); damaged |= after < before;
         wc3::Log("C4 blast target=%08X owner=%08X damage=%.1f hpBefore=%.1f hpAfter=%.1f", victim, wc3::GetOwningPlayer(victim), damage, before, after);
     }

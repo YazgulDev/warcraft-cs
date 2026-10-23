@@ -11,6 +11,30 @@
 namespace wc3 { void Log(const char*,...) {} }
 int main() {
     GameplaySettings settings;
+    // Missing configs and F8 share the requested defaults; invalid values are rejected at the INI boundary.
+    assert(settings.economy.currency==EconomySettings::Currency::Dollars && settings.economy.startingMoney==800);
+    assert(settings.economy.killReward==300 && settings.economy.maximumMoney==16000);
+    assert(settings.weaponDrops.enabled && settings.weaponDrops.chancePercent==.5f);
+    assert(settings.rpg.radius==525 && settings.damage[WeaponSlots::RPG]==100);
+    auto economyPath=(std::filesystem::current_path()/"economy-reload-test.ini").string();
+    {std::ofstream f(economyPath);f<<"[Economy]\nCurrency=gold\nStartingMoney=99999\nMaximumMoney=2000\nKillReward=nan\n[WeaponDrops]\nEnabled=false\nChancePercent=999\nLifetimeSeconds=-2\nPickupRadius=nan\nMaximumDrops=0\n[RPG]\nRadius=nan\nDamage=nan\n";}
+    auto economyReload=GameplaySettings::Load(economyPath);
+    assert(economyReload.economy.currency==EconomySettings::Currency::Gold && economyReload.economy.startingMoney==2000);
+    assert(economyReload.economy.killReward==300 && !economyReload.weaponDrops.enabled);
+    assert(economyReload.weaponDrops.chancePercent==100 && economyReload.weaponDrops.lifetimeSeconds==1);
+    assert(economyReload.weaponDrops.pickupRadius==160 && economyReload.weaponDrops.maximumDrops==1);
+    assert(economyReload.rpg.radius==525 && economyReload.damage[WeaponSlots::RPG]==100);
+    WritePrivateProfileStringA("Economy","Currency","broken",economyPath.c_str());
+    WritePrivateProfileStringA("WeaponDrops","Enabled","broken",economyPath.c_str());
+    WritePrivateProfileStringA("WeaponDrops","ChancePercent","nan",economyPath.c_str());
+    economyReload=GameplaySettings::Load(economyPath);
+    assert(economyReload.economy.currency==EconomySettings::Currency::Dollars && economyReload.weaponDrops.enabled && economyReload.weaponDrops.chancePercent==.5f);
+    // Direct F8 reload upgrades the old stock blast once; a versioned custom radius remains editable.
+    WritePrivateProfileStringA("RPG","Radius","375",economyPath.c_str());
+    assert(GameplaySettings::Load(economyPath).rpg.radius==525);
+    WritePrivateProfileStringA("RPG","BlastVersion","2",economyPath.c_str());
+    assert(GameplaySettings::Load(economyPath).rpg.radius==375);
+    DeleteFileA(economyPath.c_str());
     // Every firearm reaches visible distant targets, even when an older INI retains a short individual range.
     for(int slot=0;slot<WeaponSlots::Count;++slot)if(WeaponSlots::Firearm(slot))assert(settings.FirearmRange(slot)==30000);
     assert(settings.movement.useNativeUnitCollision);

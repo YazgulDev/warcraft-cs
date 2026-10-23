@@ -4,6 +4,23 @@ $root=Split-Path -Parent $PSScriptRoot
 $folder=Join-Path $root ('.local/config-merge-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $folder -Force | Out-Null
 $template=Join-Path $root 'config/WarcraftCS.ini'
+# Dollars/drop defaults fill older installs without replacing custom economy, RPG or unrelated settings.
+$economyConfig=Join-Path $folder 'dollar-loot.ini'
+@('[Economy]','Currency=gold','StartingMoney=123','[WeaponDrops]','Enabled=false','ChancePercent=0.01','[RPG]','Damage=777','Radius=900','[Sky]','Default=forest') | Set-Content -LiteralPath $economyConfig -Encoding ascii
+Update-GameplayConfig $template $economyConfig
+$economyText=Get-Content -LiteralPath $economyConfig -Raw
+foreach($expected in @('Currency=gold','StartingMoney=123','MaximumMoney=16000','KillReward=300','Enabled=false','ChancePercent=0.01','MaximumDrops=64','Damage=777','Radius=900','Default=forest')) {
+    if(!$economyText.Contains($expected)){throw "Economy/loot migration lost $expected"}
+}
+$economyHash=(Get-FileHash $economyConfig).Hash;Update-GameplayConfig $template $economyConfig
+if((Get-FileHash $economyConfig).Hash -ne $economyHash){throw 'Economy migration must be idempotent.'}
+$freshEconomy=Join-Path $folder 'dollar-defaults.ini'
+@('[Buy]','Radius=720') | Set-Content -LiteralPath $freshEconomy -Encoding ascii
+Update-GameplayConfig $template $freshEconomy
+$freshText=Get-Content -LiteralPath $freshEconomy -Raw
+foreach($expected in @('Currency=dollars','StartingMoney=800','ChancePercent=0.5','Radius=525','Radius=720')) {
+    if(!$freshText.Contains($expected)){throw "Economy/loot default missing: $expected"}
+}
 # Semicolon custom actions survive; only the former squad default migrates to Y.
 foreach($spelling in @('SEMICOLON',';')) {
     $semicolonConfig=Join-Path $folder ('semicolon-'+[guid]::NewGuid().ToString('N')+'.ini')
@@ -431,3 +448,16 @@ foreach($expected in @('Enabled=false','Damage=777','MaximumSpeed=1234','Price=2
 }
 $rpgHash=(Get-FileHash $rpgConfig).Hash;Update-GameplayConfig $template $rpgConfig
 if((Get-FileHash $rpgConfig).Hash -ne $rpgHash){throw 'RPG migration is not idempotent.'}
+# Only the previous stock blast migrates; versioned 375 and custom radii remain intentional choices.
+foreach($oldRadius in @('375','900')) {
+    foreach($versioned in @($false,$true)) {
+        $blastConfig=Join-Path $folder ('rpg-blast-'+$oldRadius+'-'+$versioned+'.ini')
+        @('[RPG]',('Radius='+$oldRadius),'Damage=777',$(if($versioned){'BlastVersion=2'}else{'; old stock format'})) | Set-Content -LiteralPath $blastConfig -Encoding ascii
+        Update-GameplayConfig $template $blastConfig
+        $blastText=Get-Content -LiteralPath $blastConfig -Raw
+        $expected=if($oldRadius -eq '375' -and !$versioned){'525'}else{$oldRadius}
+        if(!$blastText.Contains('Radius='+$expected) -or !$blastText.Contains('BlastVersion=2') -or !$blastText.Contains('Damage=777')){throw 'RPG stock migration lost a custom blast setting.'}
+        $blastHash=(Get-FileHash $blastConfig).Hash;Update-GameplayConfig $template $blastConfig
+        if((Get-FileHash $blastConfig).Hash -ne $blastHash){throw 'RPG stock migration is not idempotent.'}
+    }
+}

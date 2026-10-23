@@ -12,8 +12,9 @@ public:
         if (!charge.Plant(actor,x,y,audio,damage,friendly)) return false;
         bombs_.push_back(charge);return true;
     }
-    bool Tick(GameAudio& audio) {
-        bool hit=false;for (auto& charge:bombs_) hit=charge.Tick(audio)||hit;
+    bool Tick(GameAudio& audio,const KillReward::Sink& onKill={}) {
+        // Every independent charge reports its victims to the same per-map CS reward policy.
+        bool hit=false;for (auto& charge:bombs_) hit=charge.Tick(audio,onKill)||hit;
         bombs_.erase(std::remove_if(bombs_.begin(),bombs_.end(),[](const PlantedBomb& charge){return charge.Finished();}),bombs_.end());
         return hit;
     }

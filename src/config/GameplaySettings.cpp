@@ -360,6 +360,18 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.squadClearance=std::max(60.f,number("Squad","PlayerClearance",100,300));
     result.squadYieldAhead=std::max(result.squadClearance,number("Squad","YieldAheadDistance",350,1000));
     result.squadOrderIntervalMs=unsigned(std::max(50.f,number("Squad","OrderIntervalMs",150,1000)));
+    // Dollars are isolated from campaign resources; malformed settings retain the documented defaults.
+    auto currency=text("Economy","Currency","dollars");
+    if(!_stricmp(currency.c_str(),"gold"))result.economy.currency=EconomySettings::Currency::Gold;
+    else if(_stricmp(currency.c_str(),"dollars"))wc3::Log("Invalid Economy.Currency; using dollars");
+    result.economy.maximumMoney=int(number("Economy","MaximumMoney",16000,1000000));
+    result.economy.startingMoney=std::min(result.economy.maximumMoney,int(number("Economy","StartingMoney",800,1000000)));
+    result.economy.killReward=int(number("Economy","KillReward",300,1000000));
+    result.weaponDrops.enabled=enabled("WeaponDrops","Enabled");
+    result.weaponDrops.chancePercent=number("WeaponDrops","ChancePercent",.5f,100);
+    result.weaponDrops.lifetimeSeconds=std::max(1.f,number("WeaponDrops","LifetimeSeconds",120,3600));
+    result.weaponDrops.pickupRadius=std::max(16.f,number("WeaponDrops","PickupRadius",160,400));
+    result.weaponDrops.maximumDrops=unsigned(std::max(1.f,number("WeaponDrops","MaximumDrops",64,256)));
     // Restricted modes govern both opening B and every transaction, including the quick-ammo key.
     auto access=text("Buy","Access","anywhere");
     if (!_stricmp(access.c_str(),"friendly")) result.buyAccess=BuyAccess::FriendlyBuildings;
@@ -395,7 +407,10 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     // Optional RPG defaults use the same bounded F8 snapshot, while availability comes only from owned caches.
     auto& rpg=result.rpg;rpg.enabled=enabled("RPG","Enabled");rpg.guidance=enabled("RPG","GuidanceByDefault");
     rpg.available=!result.warcraftOnly && OptionalWeaponAssets::Rpg(std::filesystem::path(filename).parent_path());
-    rpg.radius=std::max(32.f,number("RPG","Radius",375,3000));
+    rpg.radius=std::max(32.f,number("RPG","Radius",525,3000));
+    // Upgrade only the former stock blast, including an old config loaded directly with F8.
+    auto blastVersion=text("RPG","BlastVersion","1");
+    if((blastVersion=="1" || blastVersion.empty()) && rpg.radius==375)rpg.radius=525;
     rpg.launchSpeed=std::max(50.f,number("RPG","LaunchSpeed",375,6000));
     rpg.maximumSpeed=std::max(100.f,number("RPG","MaximumSpeed",3000,10000));
     rpg.acceleration=number("RPG","Acceleration",6000,20000);
