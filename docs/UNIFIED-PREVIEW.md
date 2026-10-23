@@ -33,6 +33,25 @@ Half-Life weapons. Models, animation, chrome skins, held/world beam alignment,
 Tau spin/pitch charge ramps and Crowbar flesh/hard/dirt impacts are included.
 See [Half-Life controls and tuning](HALF-LIFE-ARSENAL.md) for prices, ammo and limits.
 
+FPS hits now mute the controlled unit's native weapon contact sound by default while
+retaining attack effects. `[Combat] NativeAttackSound=true` restores that sound on F8;
+TPS native attacks keep their audio. The verified 1.26a adapter changes only the
+synchronous contact and restores the original field afterwards. 1.27a continues to
+use its existing direct-damage fallback without unverified attack-component writes.
+
+Gluon's beam tracks aim every game frame, including between damage ticks, stays
+bright while channeling and gains animated energy strands and a contact flare.
+Setup optionally converts owned Half-Life `xbeam1.spr` and animated `XSpark1.spr`
+effect textures; missing art falls back to procedural rendering. No retail art is
+bundled. Reinstall to convert the new effects. `[HalfLife] BeamEffects=true`,
+`OwnedSprites=true`, `ImpactSize=18` control presentation; flare radius is 0..100
+world units and zero disables it. All three support F8; F8 cancels an active channel.
+
+Tau's default damage is now **100 primary / 1000 fully charged**; Gluon deals
+**70 per tick**, about 700/second at the default 0.1-second cadence. Native defenses
+still apply. `DamageVersion=2` migrates the previous 20/200 and 14 stock values once;
+custom damage is preserved, including later edits back to the former values.
+
 The default dollar wallet starts with **$800**, pays **$300** for a hostile creature
 killed by mod weapons/HE/C4/RPG, and caps at **$16000**. Native unit/spell/RTS kills
 are outside the initial reward adapter. `[Economy] Currency=gold` restores native
@@ -62,6 +81,9 @@ launcher reinstall. Report real-game testing separately from these checks.
 - Added Player setup for both hosts using exact local Miles export forwarders without C++ Build Tools.
 - Added optional Half-Life Crowbar, Tau Cannon, Gluon Gun and RPG in the B / 9 Half-Life category.
 - Fixed Half-Life chrome skins, complete weapon animations, beam muzzle alignment, Tau charge feedback and varied Crowbar impacts.
+- Fixed delayed Gluon beam aiming and added animated energy strands, impact glow and optional owned Half-Life effect textures.
+- Changed default Tau damage to 100 / 1000 charged and Gluon damage to 70 per tick, preserving custom settings.
+- Disabled native hero weapon contact sounds during FPS attacks by default while retaining native attack effects.
 - Changed default purchases to dollars with 800 starting money, 300 per mod weapon kill and a 16000 cap.
 - Added configurable rare weapon drops with a 0.5 percent default chance and E pickup.
 - Changed default RPG blast radius to 525 while retaining 100 peak damage.

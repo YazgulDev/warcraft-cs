@@ -625,11 +625,21 @@ int main() {
     }
     {std::ofstream f(rpgPath);f<<"[TauCannon]\nChargeSeconds=2\nChargedDamage=777\nMagazine=55\nMaxReserve=999\n[HalfLife]\nBeamWidth=8\n";}
     auto hl=GameplaySettings::Load(rpgPath);assert(hl.halfLife.tauChargeSeconds==2 && hl.halfLife.tauChargedDamage==777 && hl.halfLife.beamWidth==8);
+    assert(hl.damage[WeaponSlots::Tau]==100 && hl.damage[WeaponSlots::Gluon]==70 && !hl.nativeAttackSound);
+    for(const char* value:{"true","false","broken"}) {
+        WritePrivateProfileStringA("Combat","NativeAttackSound",value,rpgPath.c_str());hl=GameplaySettings::Load(rpgPath);
+        assert(hl.nativeAttackSound==!strcmp(value,"true"));
+    }
+    WritePrivateProfileStringA("HalfLife","BeamEffects","false",rpgPath.c_str());
+    WritePrivateProfileStringA("HalfLife","OwnedSprites","false",rpgPath.c_str());
+    WritePrivateProfileStringA("HalfLife","ImpactSize","999",rpgPath.c_str());hl=GameplaySettings::Load(rpgPath);
+    assert(!hl.halfLife.beamEffects && !hl.halfLife.ownedSprites && hl.halfLife.impactSize==100);
+    WritePrivateProfileStringA("HalfLife","ImpactSize","nan",rpgPath.c_str());hl=GameplaySettings::Load(rpgPath);assert(hl.halfLife.impactSize==18);
     assert(hl.halfLife.tauSpinStartRate==1 && hl.halfLife.tauSpinEndRate==3 && hl.halfLife.tauPitchStart==1 && hl.halfLife.tauPitchEnd==2.5f && hl.halfLife.crowbarSurfaceSounds);
     WritePrivateProfileStringA("Crowbar","SurfaceSounds","false",rpgPath.c_str());assert(!GameplaySettings::Load(rpgPath).halfLife.crowbarSurfaceSounds);
     WritePrivateProfileStringA("TauCannon","SpinEndRate","6",rpgPath.c_str());assert(GameplaySettings::Load(rpgPath).halfLife.tauSpinEndRate==6);
     assert(hl.weapons[WeaponSlots::Tau].magazine==55 && hl.maxReserve[WeaponSlots::Tau]==0);
-    assert(hl.ContactDamage(WeaponSlots::Tau,false,9999)==20 && hl.ContactDamage(WeaponSlots::Gluon,false,9999)==14);
+    assert(hl.ContactDamage(WeaponSlots::Tau,false,9999)==100 && hl.ContactDamage(WeaponSlots::Gluon,false,9999)==70);
     for(auto value:{"nan","inf","bad","","-1","999999"}) {
         WritePrivateProfileStringA("TauCannon","ChargeSeconds",value,rpgPath.c_str());
         WritePrivateProfileStringA("HalfLife","BeamWidth",value,rpgPath.c_str());hl=GameplaySettings::Load(rpgPath);

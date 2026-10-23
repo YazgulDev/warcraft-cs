@@ -29,6 +29,7 @@ void Overlay::Text(float x, float y, const char* text, const HudFont* font) {
 }
 void Overlay::ResetGraphics(bool deleteObjects) {
     grenadeWorld_.Reset(deleteObjects);rocketView_.Reset(deleteObjects);
+    energyBeamArt_.Reset(deleteObjects);energyImpactArt_.Reset(deleteObjects);
     spellHud_.Reset(deleteObjects);
     inventoryIcons_.Reset(deleteObjects);unitFont_.Reset(deleteObjects);inventoryFont_.Reset(deleteObjects);
     sky_.Reset(deleteObjects);
@@ -59,7 +60,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     } else if (refreshPending_) {
         // Keep surviving resources: blind deletion after Alt-Tab can touch IDs recycled by the game.
         bool valid=font_.Valid() && statusFont_.Valid() && spellFont_.Valid() && grenadeWorld_.Valid() && rocketView_.Valid();
-        valid=valid && sky_.Valid() && spellHud_.Valid() && inventoryIcons_.Valid() && unitFont_.Valid() && inventoryFont_.Valid();
+        valid=valid && sky_.Valid() && spellHud_.Valid() && inventoryIcons_.Valid() && unitFont_.Valid() && inventoryFont_.Valid() && energyBeamArt_.Valid() && energyImpactArt_.Valid();
         for (int i=0;i<WeaponSlots::Count;++i) if (loaded_[i] && !guns_[i].TexturesValid()) valid=false;
         for (int i=0;i<WeaponSlots::Count;++i) if (previewLoaded_[i] && !buyPreviews_[i].TexturesValid()) valid=false;
         if (!valid) { ResetGraphics(false); wc3::Log("Overlay lost resources forgotten after focus return"); }
@@ -134,7 +135,12 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
             auto beam=controller.Beam();std::array<float,3> anchor;
             if(beam.tick && loaded_[index] && guns_[index].MuzzlePoint(controller.Animation(),animationSeconds,controller.ShotSerial(),anchor,controller.IdleAnimation()))
                 beam.start=ViewmodelAnchor::World(anchor,controller.WeaponPose(),projectionScale,barView,float(width)/height,nearPlane);
-            EnergyBeamView::Draw(beam,barView,nearPlane,farPlane);
+            GLuint beamArt=0,impactArt=0;
+            if(beam.tick && beam.gluon && beam.effects && beam.ownedSprites) {
+                beamArt=energyBeamArt_.Frame(root_+"/assets/effects/egon_beam.wes",0);
+                impactArt=energyImpactArt_.Frame(root_+"/assets/effects/egon_impact.wes",GetTickCount()/50);
+            }
+            EnergyBeamView::Draw(beam,barView,nearPlane,farPlane,beamArt,impactArt);
         }
         grenadeWorld_.Draw(root_,controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
         rocketView_.Draw(root_,controller.RocketVisuals(),controller.LaserVisible(),controller.LaserPoint(),barView,width,height,nearPlane,farPlane);

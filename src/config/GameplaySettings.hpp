@@ -68,6 +68,7 @@ struct GameplaySettings {
     bool scaleFireRateFromAttackSpeed=false;
     // Weapon contacts use the controlled unit's native attack effects; F8 may opt out.
     bool enableAttackEffects=true;
+    bool nativeAttackSound=false; // FPS contacts keep passives while replacing the hero's weapon sound.
     // Nonphysical invulnerable effect units cannot shield enemies; F8 can restore legacy ray selection.
     bool ignorePassableInvulnerableObjects=true;
     bool waterBlocksAttacks=false; // FPS and TPS share solid-surface traces; F8 can restore liquid occlusion.
@@ -131,7 +132,7 @@ struct GameplaySettings {
     bool nativeSky=true;
     std::string defaultSky="Des";
     std::array<std::string,256> tilesetSky{};
-    std::array<float, WeaponSlots::Count> damage = {36,33,34,115,40,2500,120,54,25,26,21,32,104,80,100,0,0,100,10,20,14};
+    std::array<float, WeaponSlots::Count> damage = {36,33,34,115,40,2500,120,54,25,26,21,32,104,80,100,0,0,100,10,100,70};
     std::array<float, WeaponSlots::Count> heroMultiplier = {1,1,1,3,1,1,3,1.6f,.75f,.8f,.65f,1,3,2.4f,0,0,0,0,1,0,0};
     float knifeSecondaryDamage = 65, swordSecondaryDamage = 240;
     static GameplaySettings Load(const std::string& filename);

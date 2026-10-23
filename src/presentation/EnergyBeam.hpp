@@ -8,4 +8,6 @@ struct EnergyBeam {
     uint32_t tick=0;
     float seconds=.15f,width=3;
     bool gluon=false;
+    bool continuous=false,impact=false,effects=true,ownedSprites=true;
+    float impactSize=18;
 };

@@ -243,6 +243,11 @@ Tau's charge gradually accelerates its spinner and motor pitch; `[TauCannon]` ex
 Crowbar distinguishes flesh, structures/destructables and dirt, with varied samples;
 `[Crowbar] SurfaceSounds=false` restores simple impact samples. Re-run setup after
 updating to rebuild Gluon's nozzle anchor and import the additional owned Crowbar sounds.
+Gluon now tracks aim every game frame, with animated energy strands and optional owned
+Half-Life beam/impact sprites (re-run setup to convert them). Defaults are 70 damage per
+Gluon tick and 100/1000 for Tau primary/full charge; old stock values migrate once.
+`[HalfLife] BeamEffects`, `OwnedSprites`, `ImpactSize` and `[Combat] NativeAttackSound`
+(default false, retaining passives) reload with F8. Custom damage remains unchanged.
 For RPG, LMB launches a physical rocket, RMB toggles laser guidance,
 R reloads one rocket. Turn the laser off to reload while a rocket is flying. Missing or
 changed resources hide RPG without affecting CS weapons. See [RPG settings](docs/HALF-LIFE-RPG.md).

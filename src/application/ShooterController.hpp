@@ -272,7 +272,7 @@ private:
     HalfLifeEnergy energy_;
     EnergyBeam energyBeam_;
     BurstFire glockBurst_;
-    void Strike(float yawOffset=0,float pitchOffset=0,float damageScale=1,float fixedDamage=-1);
+    void Strike(float yawOffset=0,float pitchOffset=0,float damageScale=1,float fixedDamage=-1,bool visualOnly=false);
     void Reload();
     ShotgunReload shotgunReload_;
     DWORD shotgunReloadStart_=0;

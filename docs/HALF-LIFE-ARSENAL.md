@@ -36,7 +36,8 @@ kit. F12 grants every available weapon; F11 refills owned ones. Existing IDs sta
   as speed changes; releasing/canceling stops the motor without replaying its buffer.
 - **Gluon Gun:** hold LMB for a continuous blue beam. Each accepted tick spends one
   cell. Release, exhaustion or loss of attack ownership stops its sound and beam.
-  Native target/wall tests run at each accepted damage tick; damage is fixed.
+  Native target/wall tests update the beam every game frame, including between damage ticks.
+  Damage is fixed at 70 per tick by default (about 700/second at the default cadence).
 
 Tau and Gluon use **separate** cell pools, capacity 100 each. Their ammo packs cost
 $300 by default and add 20 usable cells directly, capped at capacity. R does nothing; full
@@ -47,8 +48,8 @@ and carried group 6 (see [RPG settings](HALF-LIFE-RPG.md)).
 These are Warcraft adaptations. Native immunities, attack effects, gates, terrain,
 friendly fire and map XP ownership apply. Energy stops at the first valid solid contact.
 Tau wall penetration, ricochets, propulsion and overcharge self-damage, Gluon splash,
-and GoldSrc underwater rules are not implemented. Audio uses owned samples at normal
-pitch. Original beam geometry is project-authored; retail models, animations, barrel
+and GoldSrc underwater rules are not implemented. Audio uses owned samples; Tau's motor
+has configurable pitch acceleration. Beam geometry is project-authored; retail models, animations, barrel
 attachments and previews are converted locally rather than redistributed.
 
 ## Configuration
@@ -85,13 +86,13 @@ ammo. Existing CS/RPG controls and settings are preserved.
 | Crowbar / Range | 150 | world units 32–1000 |
 | Crowbar / FireInterval, ContactSeconds | 0.5, 0.1 | seconds 0.1–5 / 0–1; authored clip can extend recovery |
 | Crowbar / SurfaceSounds | true | true/false; false uses simple flesh/hard impacts |
-| TauCannon / Damage, ChargedDamage | 20, 200 | fixed damage 0–1000000 |
+| TauCannon / Damage, ChargedDamage | 100, 1000 | fixed damage 0–1000000 |
 | TauCannon / ChargeSeconds | 4 | seconds 0.1–10 to full power |
 | TauCannon / SpinStartRate, SpinEndRate | 1, 3 | animation playback multipliers 0.25–8; End is at least Start |
 | TauCannon / ChargePitchStart, ChargePitchEnd | 1, 2.5 | source frequency/pitch ratios 0.25–4; End is at least Start |
 | TauCannon / ChargeDrainSeconds | 0.3 | seconds per cell 0.05–2 plus the starting cell |
 | TauCannon / PrimaryCost | 2 | cells 1–100 per primary shot |
-| GluonGun / Damage | 14 | fixed damage per tick 0–1000000 |
+| GluonGun / Damage | 70 | fixed damage per tick 0–1000000 |
 | TauCannon and GluonGun / Magazine | 100 | usable cells 1–1000; reserves always zero |
 | TauCannon / Price, GluonGun / Price | 5000, 6000 | selected currency 0–1000000 |
 | TauCannon and GluonGun / AmmoPrice, AmmoPack | 300, 20 | selected currency 0–1000000, cells 1–1000 |
@@ -100,6 +101,9 @@ ammo. Existing CS/RPG controls and settings are preserved.
 | All three / MoveSpeed, ModelScale | 250, 1 | movement 50–500 units/s, viewmodel scale 0.25–2 |
 | TauCannon / Kick, GluonGun / Kick | 2, 0 | degrees 0–10 |
 | HalfLife / BeamSeconds, BeamWidth | 0.15, 3 | seconds 0.025–1, world units 0.5–20 |
+| HalfLife / BeamEffects, OwnedSprites | true, true | true/false; animated strands/impact, optional private Half-Life textures |
+| HalfLife / ImpactSize | 18 | contact flare radius 0–100 world units; zero disables |
+| Combat / NativeAttackSound | false | true/false; FPS native weapon contact audio, preserves passives and TPS audio |
 
 Equal Start/End values disable the corresponding ramp. Both reach their maximum at
 `ChargeSeconds`, remain there while held, and support F8 reload (which cancels an active charge).
@@ -109,3 +113,17 @@ and audio events. Beam snapshots are read-only and never deal damage from render
 Movement bob and accepted-shot muzzle flashes use the common viewmodel path. The beam
 starts at that same animated barrel attachment, compensating for the different native
 and held-model projections; its near end tapers to avoid a large opaque wedge.
+
+Gluon's bright core and counter-rotating strands animate between damage ticks. A live
+channel stays at full intensity; its endpoint is traced from the current aim every game
+frame, without additional damage, cells, sounds or hit markers. Contact flares respect
+native scene depth. Setup optionally converts the owner's `sprites/xbeam1.spr` and all
+11 frames of `sprites/XSpark1.spr` into private WES1 caches. These are the original
+Egon beam/impact resources referenced by Valve's SDK; no SDK implementation or retail
+pixels are shipped. Missing/corrupt optional art uses procedural effects and does not
+hide the weapon. Reinstall to generate the caches; F8 reloads the visual/audio/damage
+settings and cancels any current channel. Graphics-context replacement rebuilds textures.
+
+`[HalfLife] DamageVersion=2` migrates previous stock Tau 20/200 and Gluon 14 once to
+100/1000 and 70. Other custom values, including zero, remain unchanged. Later tuning
+back to an old value is preserved. F8 alone does not rewrite an existing INI.

@@ -66,7 +66,10 @@ int main() {
         Require(D3DGraphics::BeginFrame(device,dc,320,240),"energy beam frame");
         WorldLabelView view;view.active=true;view.eye[2]=96;view.aspect=320.f/240;
         EnergyBeam beam;beam.start={50,-30,96};beam.end={100,30,96};beam.tick=GetTickCount();beam.seconds=1;beam.width=3;beam.gluon=gluon;
-        EnergyBeamView::Draw(beam,view,8,5000);D3DGraphics::EndFrame();
+        beam.continuous=gluon;beam.impact=true; // Exercise animated strands and the contact billboard as well as the core.
+        GLuint effectTexture=0;glGenTextures(1,&effectTexture);glBindTexture(GL_TEXTURE_2D,effectTexture);
+        const unsigned char white[4]={255,255,255,255};glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,1,1,0,GL_RGBA,GL_UNSIGNED_BYTE,white);
+        EnergyBeamView::Draw(beam,view,8,5000,effectTexture,effectTexture);glDeleteTextures(1,&effectTexture);D3DGraphics::EndFrame();
         IDirect3DSurface9 *target=nullptr,*readback=nullptr;
         Require(SUCCEEDED(device->GetRenderTarget(0,&target)),"beam target");
         Require(SUCCEEDED(device->CreateOffscreenPlainSurface(320,240,D3DFMT_A8R8G8B8,D3DPOOL_SYSTEMMEM,&readback,nullptr)),"beam readback");

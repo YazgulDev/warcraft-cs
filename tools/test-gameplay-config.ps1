@@ -4,6 +4,21 @@ $root=Split-Path -Parent $PSScriptRoot
 $folder=Join-Path $root ('.local/config-merge-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $folder -Force | Out-Null
 $template=Join-Path $root 'config/WarcraftCS.ini'
+# Previous energy stock values upgrade once; later edits back to those values must survive reinstallation.
+foreach($custom in @($false,$true)) {
+    $energyConfig=Join-Path $folder ('energy-'+$custom+'.ini')
+    @('[TauCannon]',$(if($custom){'Damage=123'}else{'Damage=20'}),'ChargedDamage=200','[GluonGun]','Damage=14','[HalfLife]','BeamWidth=8','[Combat]','EnableAttackEffects=true') | Set-Content $energyConfig
+    Update-GameplayConfig $template $energyConfig
+    $energyText=Get-Content $energyConfig -Raw
+    foreach($expected in @($(if($custom){'Damage=123'}else{'Damage=100'}),'ChargedDamage=1000','Damage=70','BeamWidth=8','NativeAttackSound=false','OwnedSprites=true','DamageVersion=2')) {
+        if(!$energyText.Contains($expected)){throw "Energy migration missing $expected"}
+    }
+    $energyHash=(Get-FileHash $energyConfig).Hash;Update-GameplayConfig $template $energyConfig
+    if((Get-FileHash $energyConfig).Hash -ne $energyHash){throw 'Energy migration must be idempotent.'}
+    (Get-Content $energyConfig -Raw).Replace('Damage=70','Damage=14') | Set-Content $energyConfig
+    Update-GameplayConfig $template $energyConfig
+    if(!(Get-Content $energyConfig -Raw).Contains('Damage=14')){throw 'Versioned energy tuning was overwritten.'}
+}
 # Dollars/drop defaults fill older installs without replacing custom economy, RPG or unrelated settings.
 $economyConfig=Join-Path $folder 'dollar-loot.ini'
 @('[Economy]','Currency=gold','StartingMoney=123','[WeaponDrops]','Enabled=false','ChancePercent=0.01','[RPG]','Damage=777','Radius=900','[Sky]','Default=forest') | Set-Content -LiteralPath $economyConfig -Encoding ascii

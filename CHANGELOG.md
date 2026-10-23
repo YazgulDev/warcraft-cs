@@ -2,6 +2,10 @@
 
 ## Unreleased — unified launcher preview
 
+- Silence the controlled unit's native weapon contact audio during FPS attacks by default with `[Combat] NativeAttackSound=false`, retaining native crits/orbs/passives and ordinary TPS audio. Guard the verified 1.26a sound field, restore it after synchronous contacts and keep callback lifecycle checks.
+- Update Gluon endpoint traces on every game frame without spending extra cells or applying damage. Add continuously animated energy strands/core and depth-tested contact flares, plus private optional conversion of owned Half-Life xbeam1/XSpark1 sprite frames with procedural fallback and graphics-context cleanup.
+- Increase stock Tau primary/fully charged damage from 20/200 to 100/1000 and Gluon from 14 to 70 per tick. Add one-time stock migration preserving custom values and F8-reloadable `HalfLife.BeamEffects`, `OwnedSprites`, and `ImpactSize` (default true/true/18, radius 0..100 world units).
+
 - Combine the 1.27a/D3D9 port, complete Half-Life arsenal and dollar/loot changes in one launcher. Full preview notes and installation details are in [UNIFIED-PREVIEW.md](docs/UNIFIED-PREVIEW.md).
 - Add format-2 Player bundles for both exact supported hosts. Generate export data from the owner's local Miles library inside a reserved section of the project proxy, preserving named/decorated/alias/ordinal exports without C++ tools or retail DLL redistribution. Retain old exact-host/hash package checks.
 - Add an explicit preview build resource and reviewed preview notes without changing published 0.11.0 notes/version. Startup checks do not offer the preview's published base as an upgrade; explicit public reinstall and newer stable versions remain available.

@@ -21,7 +21,12 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         return std::clamp(parsed,0.0f,maximum);
     };
     // New session controls reload with F8; malformed toggles preserve their documented defaults.
-    auto enabled=[&](const char* section,const char* key) {auto value=text(section,key,"true");return _stricmp(value.c_str(),"false") && value!="0";};
+    auto enabled=[&](const char* section,const char* key,bool fallback=true) {
+        auto value=text(section,key,fallback ? "true" : "false");
+        if(!_stricmp(value.c_str(),"true") || value=="1")return true;
+        if(!_stricmp(value.c_str(),"false") || value=="0")return false;
+        return fallback; // Malformed values retain the documented default, including opt-in native audio.
+    };
     // Visual-only settings share the real startup/F8 snapshot and bounded migration path.
     result.viewmodel.bob=enabled("Viewmodel","BobEnabled");
     result.viewmodel.bobAmount=number("Viewmodel","BobAmount",1,3);
@@ -440,12 +445,16 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     hl.tauPitchStart=std::max(.25f,number("TauCannon","ChargePitchStart",1,4));
     hl.tauPitchEnd=std::max(hl.tauPitchStart,number("TauCannon","ChargePitchEnd",2.5f,4));
     hl.tauDrainSeconds=std::max(.05f,number("TauCannon","ChargeDrainSeconds",.3f,2));
-    hl.tauChargedDamage=number("TauCannon","ChargedDamage",200,1000000);
+    hl.tauChargedDamage=number("TauCannon","ChargedDamage",1000,1000000);
     hl.tauPrimaryCost=int(std::max(1.f,number("TauCannon","PrimaryCost",2,100)));
     hl.crowbarContactSeconds=number("Crowbar","ContactSeconds",.1f,1);
     hl.crowbarSurfaceSounds=enabled("Crowbar","SurfaceSounds");
     hl.beamSeconds=std::max(.025f,number("HalfLife","BeamSeconds",.15f,1));
     hl.beamWidth=std::max(.5f,number("HalfLife","BeamWidth",3,20));
+    // Optional art and impact intensity reload independently of beam cadence and cell consumption.
+    hl.beamEffects=enabled("HalfLife","BeamEffects");hl.ownedSprites=enabled("HalfLife","OwnedSprites");
+    hl.impactSize=number("HalfLife","ImpactSize",18,100);
+    result.nativeAttackSound=enabled("Combat","NativeAttackSound",false);
     const auto& sections=WeaponSlots::Sections;
     for (int slot=0;slot<WeaponSlots::Count;++slot) {
         auto& weapon=result.weapons[slot];

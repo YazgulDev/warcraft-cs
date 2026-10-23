@@ -1,5 +1,7 @@
 #include "../src/presentation/EnergyBeamView.hpp"
 #include "../src/presentation/ViewmodelAnchor.hpp"
+#include "../src/presentation/EnergySpriteCache.hpp"
+#include <filesystem>
 #include <cassert>
 #include <vector>
 #include <cstdio>
@@ -36,6 +38,18 @@ int main() {
             beam.gluon=gluon;clear(1);EnergyBeamView::Draw(beam,view,8,5000);assert(ink()>50);
             clear(0);EnergyBeamView::Draw(beam,view,8,5000);assert(ink()==0); // Native geometry occludes both beam colors.
         }
+        // Animated impact art is context-owned and validated before upload; both textured passes respect native depth.
+        auto artPath=std::filesystem::temp_directory_path()/("wcs-energy-"+std::to_string(GetCurrentProcessId())+".wes");
+        {std::ofstream art(artPath,std::ios::binary);art.write("WES1",4);uint32_t count=2,w=2,h=2;art.write(reinterpret_cast<char*>(&count),4);
+            for(unsigned f=0;f<count;++f){art.write(reinterpret_cast<char*>(&w),4);art.write(reinterpret_cast<char*>(&h),4);unsigned char pixels[16];std::fill_n(pixels,16,255);art.write(reinterpret_cast<char*>(pixels),16);}}
+        EnergySpriteCache sprites;auto frame=sprites.Frame(artPath.string(),0);assert(frame && sprites.Valid() && sprites.Frame(artPath.string(),1)!=frame);
+        beam.gluon=beam.continuous=beam.impact=true;
+        clear(1);EnergyBeamView::Draw(beam,view,8,5000,frame,frame);assert(ink()>50);
+        clear(0);EnergyBeamView::Draw(beam,view,8,5000,frame,frame);assert(ink()==0);
+        sprites.Reset(true);assert(!glIsTexture(frame));
+        {std::ofstream corrupt(artPath,std::ios::binary);corrupt.write("WES1",4);}
+        assert(!sprites.Frame(artPath.string(),0));sprites.Reset(true);std::filesystem::remove(artPath);
+        beam.continuous=beam.impact=false;
         // A wide held viewport and a distant native near plane must still light the nozzle pixel, not leave a gap.
         clear(1);view.aspect=1.33f;beam.start=ViewmodelAnchor::World({-5,-8,-20},{},1,view,2.05f,100);beam.end={1000,0,96};
         EnergyBeamView::Draw(beam,view,100,5000);

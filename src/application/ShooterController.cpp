@@ -811,7 +811,11 @@ void ShooterController::FireEnergy(bool primaryPressed,bool secondaryHeld,DWORD 
         audio_.SetLoop(gluon ? "hl_egon_run3.wav" : "hl_gauss_charge.wav",false);
         if(gluon){Sound("hl_egon_off1.wav");Play("idle");energyBeam_.tick=0;}
     }
-    if(!event.shot)return;
+    if(!event.shot) {
+        // A channel tracks the current aim every game frame; only accepted ticks spend cells or damage targets.
+        if(gluon && energy_.Active())Strike(0,0,1,-1,true);
+        return;
+    }
     // Only accepted energy expenditure produces native damage, an animated muzzle event and a world beam.
     float damage=settings_.damage[weapon_];
     if(event.charged)damage+=(settings_.halfLife.tauChargedDamage-damage)*event.charge;
@@ -821,7 +825,7 @@ void ShooterController::FireEnergy(bool primaryPressed,bool secondaryHeld,DWORD 
     recoil_.Shot(weapon_,movement_.Speed(),movement_.Grounded(),movement_.Duck()>=.5f,settings_.weaponKick[weapon_]);
     wc3::Log("Half-Life energy shot weapon=%s cells=%d charged=%d fraction=%.3f damage=%.1f",w.name,ammo_[weapon_],event.charged,event.charge,damage);
 }
-void ShooterController::Strike(float yawOffset,float pitchOffset,float damageScale,float fixedDamage) {
+void ShooterController::Strike(float yawOffset,float pitchOffset,float damageScale,float fixedDamage,bool visualOnly) {
     if(UnitFirstPerson() || settings_.warcraftOnly)return; // Queued contacts cannot bypass the installation profile.
     const Weapon& w = settings_.weapons[weapon_];
 
@@ -847,7 +851,7 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
         if (hitboxes_.Intersect(candidate, origin, direction, nearest, entry, padding)) {
             // Skip native nonphysical effects without shortening the ray before the enemy behind them.
             if(settings_.ignorePassableInvulnerableObjects && WeaponTargetFilter::PassThrough(candidate,gameBase_)) {
-                wc3::Log("shot pass-through unit=%08X type=%08X entry=%.1f",candidate,wc3::GetUnitTypeId(candidate),entry);
+                if(!visualOnly)wc3::Log("shot pass-through unit=%08X type=%08X entry=%.1f",candidate,wc3::GetUnitTypeId(candidate),entry);
                 continue;
             }
             nearest = entry; target = candidate;
@@ -873,7 +877,12 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
         // The visible beam terminates at the same solid contact that won the damage trace.
         energyBeam_={{x+vx*24-vy*8,y+vy*24+vx*8,z+vz*24-8},{x+vx*nearest,y+vy*nearest,z+vz*nearest},
             GetTickCount(),settings_.halfLife.beamSeconds,settings_.halfLife.beamWidth,weapon_==WeaponSlots::Gluon};
+        energyBeam_.continuous=weapon_==WeaponSlots::Gluon && energy_.Active();
+        energyBeam_.impact=nearest<attackRange;
+        energyBeam_.effects=settings_.halfLife.beamEffects;energyBeam_.ownedSprites=settings_.halfLife.ownedSprites;
+        energyBeam_.impactSize=settings_.halfLife.impactSize;
     }
+    if(visualOnly)return; // Visual ray queries never dispatch contacts, markers, sounds or kill rewards.
     if (target) {
         if(!destructable && !settings_.targetAllies && AttackTargetPolicy::Allied(target,wc3::GetOwningPlayer(unit_)))return;
         // Physical impacts sound even on invulnerable contacts; native HP/quest immunity still owns damage.
@@ -898,7 +907,7 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
         auto reward=destructable ? KillReward{} : KillReward::Capture(unit_,target,rewards);
         unsigned generation=rewardGeneration_;
         bool effects=damage>0 && !destructable && !lethal && settings_.enableAttackEffects &&
-            NativeWeaponAttack::Apply(unit_,target,damage,std::hypot(wc3::Real(wc3::GetUnitX(target))-x,wc3::Real(wc3::GetUnitY(target))-y));
+            NativeWeaponAttack::Apply(unit_,target,damage,std::hypot(wc3::Real(wc3::GetUnitX(target))-x,wc3::Real(wc3::GetUnitY(target))-y),settings_.nativeAttackSound);
         if(generation!=rewardGeneration_)return;
         if(damage>0 && !effects)wc3::UnitDamageTarget(unit_,target,&damage,FALSE,TRUE,
             destructable || lethal ? 0 : NativeWeaponAttack::AttackType(unit_),lethal ? 26 : 4,0);

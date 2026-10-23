@@ -189,6 +189,12 @@ https://github.com/DracoL1ch/WC3Memory/blob/master/war3map.j
 Half-Life Crowbar/Tau/Gluon controls, model sequence names and numerical timing were researched from ValveSoftware/halflife dlls/crowbar.cpp, dlls/gauss.cpp, dlls/egon.cpp and cl_dll/ev_hldm.cpp. The SDK license is not this project's code license: no SDK implementation is copied or redistributed. Charge/channel logic, contact orchestration, beam geometry and optional converters are independently authored. Owned models/samples are read locally or from owned PAK files; public source/packages contain no retail data.
 https://github.com/ValveSoftware/halflife
 
+Optional energy-effect resource names were verified against Valve's dlls/egon.cpp.
+The bounded GoldSrc additive-sprite reader, private WES1 cache writer, animated beam
+geometry and context-owned texture loader are independently authored here. The
+owner's xbeam1.spr/XSpark1.spr pixels remain local; neither Valve SDK code nor retail
+sprite files are distributed.
+
 Experimental Warcraft III 1.27a support adapts native-address research, table
 generation and D3D9 frame interception from niceqwer55555's Warcraft CS fork,
 referenced through TTT-ux-max/warcraft-cs at 571fdec95a3059935545ab4c5a1b916fe5ea4866.

@@ -101,4 +101,6 @@ def export_one(cstrike: Path, output: Path, stem: str) -> dict:
 
 
 def export(cstrike: Path, output: Path) -> list[dict]:
+    from export_energy_sprites import export as export_effects
+    export_effects(cstrike, output)
     return [export_one(cstrike, output, stem) for stem in WEAPONS]

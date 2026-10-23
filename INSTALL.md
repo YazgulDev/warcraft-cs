@@ -141,6 +141,15 @@ Press **F8 in FPS** to apply it immediately, including sounds already playing. W
 music/effects are unaffected. For source installs, edit the prepared runtime's `WarcraftCS/WarcraftCS.ini`.
 Updates add this key to older configs without replacing an existing custom value.
 
+The unified preview mutes native hero weapon contact sounds in FPS by default while
+retaining attack effects. `[Combat] NativeAttackSound=true` restores them with F8.
+Reinstall with the same CS/Half-Life path to convert optional Gluon effect sprites.
+`[HalfLife] BeamEffects=true`, `OwnedSprites=true`, `ImpactSize=18` control animated
+beam/impact presentation (radius 0..100 world units; zero disables the flare), all
+F8 reloadable. Default Tau damage is 100 primary/1000 full charge, Gluon 70 per tick;
+updates migrate previous stock values once and preserve custom damage. See
+[Half-Life tuning](docs/HALF-LIFE-ARSENAL.md) for bounds and controls.
+
 Half-Life-style movement uses the same settings file. Run up with **W**, jump,
 release W, then alternate **A + mouse left / D + mouse right**. Hold **Space** to chain landings.
 The `[Movement]` section controls autojump, optional takeoff boost (default **0**), speed cap,

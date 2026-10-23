@@ -9,12 +9,13 @@ namespace {
 std::array<unsigned char,0x300> actor{},victim{},attack{};
 std::array<unsigned char,0x100> gates[2]{};int gateGeneration=0;bool gateAlive=true,reuseGateDuringPrepare=false;
 uintptr_t expectedVictim=0,finishedTarget=0;
-bool alive=true,removeDuringPrepare=false,removeDuringFinish=false,evade=false;
+bool alive=true,removeDuringPrepare=false,removeDuringFinish=false,evade=false,changeSoundDuringPrepare=false;
 bool incomingProtected=false;
 int prepared=0,finished=0,impacts=0;
 int windups=0,poses=0;
 float expectedRange=600;
 int expectedKind=4;
+int expectedSound=7;
 wc3::Handle controlled=1;
 using RollHook=float* (__fastcall*)(uintptr_t,uintptr_t,float*);
 RollHook rollHook=nullptr;
@@ -51,6 +52,7 @@ void __fastcall Prepare(uintptr_t,uintptr_t,uintptr_t,float*,float*) {
     rollHook(Attack(),0,&result);assert(result==42);
     rangeHook(Attack(),0,&result,0);assert(result==120); // Preparation keeps native range.
     if(removeDuringPrepare)alive=false;
+    if(changeSoundDuringPrepare)*reinterpret_cast<int*>(attack.data()+0xE8)=9;
     if(reuseGateDuringPrepare)gateGeneration=1;
 }
 void __fastcall Finish(uintptr_t,uintptr_t,uintptr_t target) {++finished;finishedTarget=target;if(removeDuringFinish)alive=false;}
@@ -58,6 +60,7 @@ void __fastcall Impact(uintptr_t component,uintptr_t,uintptr_t target,int,int,in
     ++impacts;
     if(expectedVictim)assert(target==expectedVictim);
     assert(*reinterpret_cast<int*>(attack.data()+0xDC)==expectedKind);
+    assert(*reinterpret_cast<int*>(attack.data()+0xE8)==expectedSound);
     float range=0;
     rangeHook(component+4,0,&range,0);assert(range==120);
     rangeHook(component,0,&range,1);assert(range==120);
@@ -89,6 +92,7 @@ int main() {
     uintptr_t base=reinterpret_cast<uintptr_t>(memory);
     *reinterpret_cast<uintptr_t*>(actor.data()+0x1E8)=Attack();
     *reinterpret_cast<int*>(attack.data()+0xDC)=2;
+    *reinterpret_cast<int*>(attack.data()+0xE8)=7;
     // Direct damage keeps the unit's native armor class even when passive dispatch is disabled.
     *reinterpret_cast<int*>(attack.data()+0xF4)=6;assert(NativeWeaponAttack::AttackType(1)==6);
     *reinterpret_cast<int*>(attack.data()+0xF4)=99;assert(NativeWeaponAttack::AttackType(1)==0);
@@ -103,6 +107,7 @@ int main() {
     const unsigned char range[]={0x56,0x8B,0xF1,0x8B,0x86,0xC0,2,0,0};memcpy(memory+0xC6B30,range,sizeof(range));
     const unsigned char windup[]={0x53,0x55,0x56,0x8B,0xF1,0x8B,0x46,0x70},pose[]={0x83,0xEC,8,0x56,0x57,0x8B,0xF9};
     memcpy(memory+0xCF5C0,windup,sizeof(windup));memcpy(memory+0xC8930,pose,sizeof(pose));
+    const unsigned char sound[]={0x8B,0x84,0xBE,0xE8,0,0,0};memcpy(memory+0xCF817,sound,sizeof(sound));
     *reinterpret_cast<int*>(memory+0xCF82B)=0xC6940-0xCF82F;
     NativeWeaponAttack::Install(base,Hook,[](){return controlled;},[](uintptr_t unit){return unit==Victim();},[](uintptr_t component){return component==777;});
     // The mock executable entries route through the real guards, matching the installed detours' argument layouts.
@@ -117,23 +122,31 @@ int main() {
     assert(!NativeWeaponAttack::Apply(0,2,123,600) && !NativeWeaponAttack::Apply(1,0,123,600));
     assert(!NativeWeaponAttack::Apply(1,2,0,600) && !NativeWeaponAttack::Apply(1,2,std::numeric_limits<float>::quiet_NaN(),600));
     assert(!NativeWeaponAttack::Apply(1,2,123,-1) && !NativeWeaponAttack::Apply(1,2,123,std::numeric_limits<float>::infinity()));
-    assert(NativeWeaponAttack::Apply(1,2,123,600) && prepared==1 && impacts==1 && finished==1);
+    expectedSound=0;
+    assert(NativeWeaponAttack::Apply(1,2,123,600,false) && prepared==1 && impacts==1 && finished==1);
+    assert(*reinterpret_cast<int*>(attack.data()+0xE8)==7);expectedSound=7; // FPS mute is synchronous; TPS/native contacts retain audio.
     assert(*reinterpret_cast<int*>(attack.data()+0xDC)==2);
     float ordinary=0;rollHook(Attack(),0,&ordinary);assert(ordinary==42);
     rangeHook(Attack(),0,&ordinary,0);assert(ordinary==120); // No permanent RTS range change.
     // A native miss has already dispatched effects: returning handled prevents a second fallback damage event.
-    evade=true;assert(NativeWeaponAttack::Apply(1,2,123,600) && impacts==2 && finished==2);
+    expectedSound=0;evade=true;assert(NativeWeaponAttack::Apply(1,2,123,600,false) && impacts==2 && finished==2);
+    assert(*reinterpret_cast<int*>(attack.data()+0xE8)==7);expectedSound=7;
     assert(*reinterpret_cast<int*>(attack.data()+0xDC)==2);
     // Cleanup callbacks may also remove the actor; their former component must not be restored afterwards.
-    evade=false;removeDuringFinish=true;assert(NativeWeaponAttack::Apply(1,2,123,600));
+    expectedSound=0;evade=false;removeDuringFinish=true;assert(NativeWeaponAttack::Apply(1,2,123,600,false));
     assert(impacts==3 && finished==3 && *reinterpret_cast<int*>(attack.data()+0xDC)==4);
+    assert(*reinterpret_cast<int*>(attack.data()+0xE8)==0); // Removed ownership forbids even an audio restore write.
+    *reinterpret_cast<int*>(attack.data()+0xE8)=7;expectedSound=7;
     alive=true;removeDuringFinish=false;*reinterpret_cast<int*>(attack.data()+0xDC)=2;
     // Transformation/removal during attack callbacks cancels impact and never writes the former component.
     evade=false;removeDuringPrepare=true;assert(NativeWeaponAttack::Apply(1,2,123,600));
     assert(impacts==3 && finished==3);
     alive=true;removeDuringPrepare=false;*reinterpret_cast<int*>(attack.data()+0xDC)=2;expectedRange=120;
     // Nearby contacts keep the larger native range rather than shrinking it to target distance.
-    assert(NativeWeaponAttack::Apply(1,2,123,60) && impacts==4 && finished==4);
+    changeSoundDuringPrepare=true;expectedSound=9;
+    assert(NativeWeaponAttack::Apply(1,2,123,60,false) && impacts==4 && finished==4);
+    assert(*reinterpret_cast<int*>(attack.data()+0xE8)==9); // Map callbacks own deliberate sound-type changes.
+    changeSoundDuringPrepare=false;expectedSound=7;*reinterpret_cast<int*>(attack.data()+0xE8)=7;
     rangeHook(Attack(),0,&ordinary,0);assert(ordinary==120);
     // Ranged launch snapshots the scoped damage while retaining missile kind and restoring ordinary stats afterwards.
     expectedKind=2;assert(NativeWeaponAttack::Launch(1,2,123,60) && impacts==5 && finished==5);
