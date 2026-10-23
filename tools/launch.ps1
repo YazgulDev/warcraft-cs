@@ -1,5 +1,6 @@
 param([string]$Map = '', [switch]$Menu, [switch]$Windowed,
-    [ValidateSet('FrozenThrone','ReignOfChaos')][string]$Edition='FrozenThrone')
+    [ValidateSet('FrozenThrone','ReignOfChaos')][string]$Edition='FrozenThrone',
+    [ValidateSet('Auto','OpenGL','D3D9')][string]$Renderer='Auto')
 $ErrorActionPreference = 'Stop'
 $modRoot=Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'paths.ps1')
@@ -10,7 +11,11 @@ if (!(Test-Path -LiteralPath $gameExecutable)) { throw 'The isolated Warcraft-CS
 if (Get-Process war3 -ErrorAction SilentlyContinue) { throw 'Close the existing Warcraft III window before starting Warcraft-CS.' }
 # Open Warcraft's map/campaign menu by default; an explicit -Map still launches that map directly.
 # Native fullscreen is the default; retain an explicit windowed mode for capture/debugging.
-$arguments = '-opengl'
+# The 1.27a host defaults to D3D9; explicit render selection remains available for diagnostics.
+. (Join-Path $modRoot 'setup/host-build.ps1')
+$hostBuild=Get-WarcraftHostBuild $labRoot
+if($Renderer -eq 'Auto') { $Renderer=if($hostBuild.Minor -eq 27){'D3D9'}else{'OpenGL'} }
+$arguments = if($Renderer -eq 'OpenGL'){'-opengl'}else{''}
 # RoC and TFT share war3.exe and the verified native ABI; the campaign menu is selected before startup.
 if ($Edition -eq 'ReignOfChaos') { $arguments += ' -classic' }
 if ($Windowed) { $arguments += ' -window' }

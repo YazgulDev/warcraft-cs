@@ -1,3 +1,4 @@
+#include "GameBuild.hpp"
 #include "NativeUnitHud.hpp"
 #include <algorithm>
 #include <array>
@@ -18,11 +19,11 @@ void NativeUnitHud::Configure(uintptr_t base) {
     std::array<unsigned char,8> code={};uintptr_t key=0;
     // Native level lookup clamps against this map's MaxHeroLevel and uses its already resolved XP table.
     const std::array<unsigned char,8> experience={0x56,0x8B,0x74,0x24,0x08,0x6A,0x00,0xBA};
-    experienceVerified_=base && Load(base+0x207760,code) && code==experience &&
-        Load(base+0x207768,key) && key==base+0x876208;
+    experienceVerified_=base && Load(base + wc3::Rva(0x207760),code) && code==experience &&
+        Load(base + wc3::Rva(0x207768),key) && key==base + wc3::Rva(0x876208);
     const std::array<unsigned char,4> art={0x56,0x8B,0xF2,0xBA};std::array<unsigned char,4> artCode={};
-    artVerified_=base && Load(base+0x32DCB0,artCode) && artCode==art &&
-        Load(base+0x32DCB4,key) && key==base+0x938FE0;
+    artVerified_=base && Load(base + wc3::Rva(0x32DCB0),artCode) && artCode==art &&
+        Load(base + wc3::Rva(0x32DCB4),key) && key==base + wc3::Rva(0x938FE0);
     wc3::Log("Unit HUD native experience=%d itemArt=%d",experienceVerified_,artVerified_);
 }
 UnitHudSnapshot NativeUnitHud::Read(wc3::Handle actor,bool inventory) const {
@@ -34,7 +35,7 @@ UnitHudSnapshot NativeUnitHud::Read(wc3::Handle actor,bool inventory) const {
         result.level=wc3::GetHeroLevel(actor);result.experience=wc3::GetHeroXP(actor);
         if(experienceVerified_ && result.level>0 && result.level<100000) {
             using Threshold=int (__stdcall*)(int);
-            auto threshold=reinterpret_cast<Threshold>(base_+0x207760);
+            auto threshold=reinterpret_cast<Threshold>(base_ + wc3::Rva(0x207760));
             // This native table is indexed by the level being completed: entry 1 is XP for level 2.
             result.levelExperience=result.level>1 ? threshold(result.level-1) : 0;
             result.nextExperience=threshold(result.level);
@@ -50,7 +51,7 @@ UnitHudSnapshot NativeUnitHud::Read(wc3::Handle actor,bool inventory) const {
             // Native buttonArt includes current-map object modifications and imported icons.
             if(artVerified_ && slot.type) {
                 using Art=uintptr_t (__fastcall*)(int,int);
-                slot.icon=Text(reinterpret_cast<Art>(base_+0x32DCB0)(slot.type,0));
+                slot.icon=Text(reinterpret_cast<Art>(base_ + wc3::Rva(0x32DCB0))(slot.type,0));
             }
         }
     }

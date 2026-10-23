@@ -14,6 +14,7 @@ $root=Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'prebuilt-runtime.ps1')
 . (Join-Path $PSScriptRoot 'gameplay-config.ps1')
 . (Join-Path $PSScriptRoot 'warcraft-runtime.ps1')
+. (Join-Path $PSScriptRoot 'host-build.ps1')
 . (Join-Path $root 'tools/sword-model.ps1')
 # Keep the owner's Grudge model and full authored animation set across repeated setup runs.
 if (!$WarcraftOnly) { $SwordModel=Get-WarcraftCsSwordModel $root $SwordModel }
@@ -28,10 +29,8 @@ if ($runtime -eq $warcraft.TrimEnd('\') -or $runtime.StartsWith($warcraft.TrimEn
 foreach ($name in @('war3.exe','Game.dll','Mss32.dll','Storm.dll','War3.mpq','War3x.mpq','War3Patch.mpq','War3xlocal.mpq')) {
     if (!(Test-Path -LiteralPath (Join-Path $warcraft $name))) { throw "Missing owned Warcraft file: $name" }
 }
-$version=(Get-Item -LiteralPath (Join-Path $warcraft 'Game.dll')).VersionInfo
-if ($version.FileMajorPart -ne 1 -or $version.FileMinorPart -ne 26 -or $version.FileBuildPart -ne 0 -or $version.FilePrivatePart -ne 6401) {
-    throw 'Only Warcraft III 1.26a x86 (Game.dll 1.26.0.6401) is supported.'
-}
+# Installation accepts the same exact host identities as the native runtime.
+Assert-WarcraftHostBuild $warcraft
 # Detect an incomplete owned install before creating a private copy or downloading dependencies.
 Assert-WarcraftAudioRuntime $warcraft
 # Reject mismatched Player modules before copying a runtime or installing Python dependencies.

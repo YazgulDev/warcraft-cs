@@ -1,3 +1,4 @@
+#include "../platform/GameBuild.hpp"
 #include "ShooterController.hpp"
 #include "../platform/DiagnosticLog.hpp"
 #include "../combat/CombatDamage.hpp"
@@ -1035,7 +1036,7 @@ void ShooterController::Tick(uintptr_t ui) {
                     int type=wc3::GetDestructableTypeId(objectHandle);
                     if (type!=0x4C546531 && type!=0x4C546732 && type!=0x4C546733 && type!=0x4C546734) continue;
                     using Resolve=uintptr_t (__fastcall*)(wc3::Handle,uintptr_t);
-                    uintptr_t object=reinterpret_cast<Resolve>(gameBase_+0x3BE010)(objectHandle,0);
+                    uintptr_t object=reinterpret_cast<Resolve>(gameBase_ + wc3::Rva(0x3BE010))(objectHandle,0);
                     uintptr_t sprite=*reinterpret_cast<uintptr_t*>(object+0x28);
                     ModelTransform transform;
                     if (!SpriteTransform::Read(sprite,transform)) continue;

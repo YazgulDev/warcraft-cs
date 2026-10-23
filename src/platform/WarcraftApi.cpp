@@ -1,3 +1,4 @@
+#include "GameBuild.hpp"
 #include "WarcraftApi.hpp"
 #include "DiagnosticLog.hpp"
 #include <cstdio>
@@ -12,11 +13,15 @@ namespace wc3 {
 #undef NATIVE
 static uintptr_t nativeBase = 0;
 int OrderId(const char* name) {
+    if(ActiveBuild()==GameBuildKind::Classic127a) {
+        // The legacy string helper uses a nonstandard ABI; its 1.27a call convention remains unverified.
+        return 0;
+    }
     const unsigned char signature[]={0x56,0x8B,0x35};
-    if(!name || !nativeBase || std::memcmp(reinterpret_cast<void*>(nativeBase+0x3BAD70),signature,sizeof(signature)))return 0;
+    if(!name || !nativeBase || std::memcmp(reinterpret_cast<void*>(nativeBase + wc3::Rva(0x3BAD70)),signature,sizeof(signature)))return 0;
     // Use the same bounded native string wrapper as Animate/Effect, without interning game-owned strings.
     uintptr_t node[8]={},wrapper[3]={};node[7]=reinterpret_cast<uintptr_t>(name);wrapper[2]=reinterpret_cast<uintptr_t>(node);
-    return reinterpret_cast<int (__fastcall*)(uintptr_t,uintptr_t)>(nativeBase+0x3BAD70)(reinterpret_cast<uintptr_t>(wrapper),0);
+    return reinterpret_cast<int (__fastcall*)(uintptr_t,uintptr_t)>(nativeBase + wc3::Rva(0x3BAD70))(reinterpret_cast<uintptr_t>(wrapper),0);
 }
 static bool cameraLimitsVerified=false;
 using SurfaceHeight = float (__fastcall*)(int, BOOL*, float, float, BOOL);
@@ -41,46 +46,48 @@ void LogError(const char* format, ...) {
 }
 float Real(Bits bits) { float value; memcpy(&value, &bits, 4); return value; }
 bool Bind(HMODULE game) {
-    // Refuse other builds rather than executing unverified function addresses.
-    char path[MAX_PATH]; GetModuleFileNameA(game, path, MAX_PATH);
-    DWORD ignored = 0, size = GetFileVersionInfoSizeA(path, &ignored);
-    if (!size) return false;
-    auto bytes = new unsigned char[size];
-    VS_FIXEDFILEINFO* info = nullptr; UINT length = 0;
-    bool correct = GetFileVersionInfoA(path, 0, size, bytes) &&
-        VerQueryValueA(bytes, "\\", reinterpret_cast<void**>(&info), &length) &&
-        info && info->dwFileVersionMS == MAKELONG(26, 1) && info->dwFileVersionLS == MAKELONG(6401, 0);
-    delete[] bytes;
-    if (!correct) { Log("Unsupported Game.dll: expected 1.26.0.6401"); return false; }
-    auto base = reinterpret_cast<uintptr_t>(game);
+    // A version and independent code signatures select the native table before any hook is installed.
+    auto build=SelectBuild(game);
+    if(build==GameBuildKind::Unsupported) {Log("Unsupported Game.dll: expected 1.26.0.6401 or 1.27.0.52240");return false;}
+    auto base=reinterpret_cast<uintptr_t>(game);
+    nativeBase=base;
+    if(build==GameBuildKind::Classic127a) {
+#define NATIVE(result,name,arguments,offset) name=reinterpret_cast<decltype(name)>(base+offset);
+#include "NativeOffsets127a.inc"
+#undef NATIVE
+        // Unresolved terrain/bridge internals use public Location/GetLocationZ instead of legacy machine code.
+        surfaceHeight=nullptr;terrainRoot=nullptr;terrainHeight=nullptr;cameraLimitsVerified=false;
+        MarkBound();Log("Bound experimental Warcraft III %s native API",ActiveBuildName());return true;
+    }
     // Verified 1.26a terrain/walkable-surface helper: ECX=terrain mode, EDX=raised-surface output,
     // stack=x/y/include-walkables, ST0=height. Refuse a patched helper instead of guessing its ABI.
     const unsigned char surfaceSignature[] = {0x83,0xEC,0x0C,0xD9,0x44,0x24,0x10,0x53,0xD9,0x5C,0x24,0x04};
-    if (memcmp(reinterpret_cast<void*>(base+0x126F0),surfaceSignature,sizeof(surfaceSignature)) != 0) {
+    if (memcmp(reinterpret_cast<void*>(base + wc3::Rva(0x126F0)),surfaceSignature,sizeof(surfaceSignature)) != 0) {
         Log("Unsupported native walkable-surface helper"); return false;
     }
-    surfaceHeight = reinterpret_cast<SurfaceHeight>(base+0x126F0);
+    surfaceHeight = reinterpret_cast<SurfaceHeight>(base + wc3::Rva(0x126F0));
     // 126F0 calls 1F5A0 for the terrain object, then 763F00 with position/mode and an ST0 result.
     const unsigned char terrainSignature[]={0x8B,0x44,0x24,0x08,0x83,0xF8,0xFD};
-    if(memcmp(reinterpret_cast<void*>(base+0x763F00),terrainSignature,sizeof(terrainSignature))) {
+    if(memcmp(reinterpret_cast<void*>(base + wc3::Rva(0x763F00)),terrainSignature,sizeof(terrainSignature))) {
         Log("Unsupported native terrain-height helper");return false;
     }
-    terrainRoot=reinterpret_cast<TerrainRoot>(base+0x1F5A0);
-    terrainHeight=reinterpret_cast<TerrainHeight>(base+0x763F00);
+    terrainRoot=reinterpret_cast<TerrainRoot>(base + wc3::Rva(0x1F5A0));
+    terrainHeight=reinterpret_cast<TerrainHeight>(base + wc3::Rva(0x763F00));
     nativeBase = base;
     // The camera getter, generation resolver and scalar clamp must match this owned 1.26a layout.
     const unsigned char cameraGetter[]={0x8B,0x81,0x54,0x02,0x00,0x00,0xC3};
     const unsigned char resolver[]={0x56,0x8B,0x35};
     const unsigned char scalarLimits[]={0x8D,0x96,0x80,0x00,0x00,0x00};
-    cameraLimitsVerified=!memcmp(reinterpret_cast<void*>(base+0x2F5ED0),cameraGetter,sizeof(cameraGetter)) &&
-        !memcmp(reinterpret_cast<void*>(base+0x3FA30),resolver,sizeof(resolver)) &&
-        *reinterpret_cast<uint32_t*>(base+0x3FA33)==base+0xAB7788 &&
-        !memcmp(reinterpret_cast<void*>(base+0x4771A6),scalarLimits,sizeof(scalarLimits));
+    cameraLimitsVerified=!memcmp(reinterpret_cast<void*>(base + wc3::Rva(0x2F5ED0)),cameraGetter,sizeof(cameraGetter)) &&
+        !memcmp(reinterpret_cast<void*>(base + wc3::Rva(0x3FA30)),resolver,sizeof(resolver)) &&
+        *reinterpret_cast<uint32_t*>(base + wc3::Rva(0x3FA33))==base + wc3::Rva(0xAB7788) &&
+        !memcmp(reinterpret_cast<void*>(base + wc3::Rva(0x4771A6)),scalarLimits,sizeof(scalarLimits));
     Log("Native camera far-limit layout verified=%d",cameraLimitsVerified);
 #define NATIVE(result, name, arguments, offset) name = reinterpret_cast<decltype(name)>(base + offset);
 #include "NativeOffsets.inc"
 #undef NATIVE
-    Log("Bound Warcraft III 1.26a native API");
+    MarkBound();
+    Log("Bound Warcraft III %s native API",ActiveBuildName());
     return true;
 }
 float* FarClipMaximum(uint32_t index,uint32_t serial) {
@@ -88,7 +95,7 @@ float* FarClipMaximum(uint32_t index,uint32_t serial) {
     // The native resolver rejects stale generations before the channel layout is accessed.
     using Resolve=uintptr_t (__fastcall*)(uint32_t,uint32_t);
     __try {
-        uintptr_t node=reinterpret_cast<Resolve>(nativeBase+0x3FA30)(index,serial);
+        uintptr_t node=reinterpret_cast<Resolve>(nativeBase + wc3::Rva(0x3FA30))(index,serial);
         if(!node) return nullptr;
         auto limits=reinterpret_cast<float*>(node+0x80);
         if(limits[0]!=100 || !std::isfinite(limits[1]) || limits[1]<100 || limits[1]>20000) return nullptr;
@@ -99,7 +106,7 @@ CameraClipChannel FarClipChannel() {
     if(!cameraLimitsVerified) return {};
     using GetUI=uintptr_t (__fastcall*)(int,int);
     __try {
-        uintptr_t ui=reinterpret_cast<GetUI>(nativeBase+0x300710)(0,0);
+        uintptr_t ui=reinterpret_cast<GetUI>(nativeBase + wc3::Rva(0x300710))(0,0);
         uintptr_t camera=ui ? *reinterpret_cast<uintptr_t*>(ui+0x254) : 0;
         if(!camera) return {};
         // CAMERA_FIELD_FARZ is the scalar wrapper at +114; +8/+C identify its native channel.
@@ -134,13 +141,15 @@ float TerrainGround(float x, float y) {
     return terrainHeight(terrainRoot(),position,-1);
 }
 std::string UnitModelPath(int type) {
+    // No 1.26a internal layout is assumed on the experimental host.
+    if(ActiveBuild()==GameBuildKind::Classic127a) return {};
     auto read = [](uintptr_t address, void* value, size_t size) {
         SIZE_T got = 0;
         return address && ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(address), value, size, &got) && got == size;
     };
     auto pointer = [&](uintptr_t address) { uintptr_t value = 0; read(address, &value, 4); return value; };
     // 1.26a's active-map definition list: rawcode at node +8, world path at definition +0x30.
-    uintptr_t head = pointer(nativeBase + 0xAB58F0), node = pointer(head + 8) + 0x10, first = node;
+    uintptr_t head = pointer(nativeBase + wc3::Rva(0xAB58F0)), node = pointer(head + 8) + 0x10, first = node;
     for (int i = 0; head && node && i < 8192; ++i) {
         int id = 0; if (!read(node + 8, &id, 4)) break;
         if (id == type) {
@@ -162,23 +171,25 @@ BOOL __fastcall CollectDestructable(uintptr_t object, DestructableEnumeration* c
     if (reinterpret_cast<ClassTag>(*reinterpret_cast<uintptr_t*>(table + 0x1C))(object) != 0x2B773364) return TRUE;
     // This is the same native widget-to-handle registration as CreateDestructable, using its current map environment.
     using ToHandle = Handle (__thiscall*)(uintptr_t, uintptr_t, BOOL);
-    Handle handle = reinterpret_cast<ToHandle>(nativeBase + 0x430C80)(context->environment, object, FALSE);
+    Handle handle = reinterpret_cast<ToHandle>(nativeBase + wc3::Rva(0x430C80))(context->environment, object, FALSE);
     if (handle) context->result.push_back(handle);
     return TRUE;
 }
 }
 std::vector<Handle> NearbyDestructables(float x, float y, float radius) {
+    // No 1.26a internal layout is assumed on the experimental host.
+    if(ActiveBuild()==GameBuildKind::Classic127a) return {};
     using Environment = uintptr_t (__thiscall*)(uintptr_t);
-    uintptr_t root = *reinterpret_cast<uintptr_t*>(nativeBase + 0xAB65F4);
+    uintptr_t root = *reinterpret_cast<uintptr_t*>(nativeBase + wc3::Rva(0xAB65F4));
     if (!root) return {};
-    DestructableEnumeration context{reinterpret_cast<Environment>(nativeBase + 0x3A8060)(root), {}};
+    DestructableEnumeration context{reinterpret_cast<Environment>(nativeBase + wc3::Rva(0x3A8060))(root), {}};
     if (!context.environment) return {};
     // EnumDestructablesInRect's synchronous spatial backend accepts a native callback, unlike its JASS-code parameter.
     using Enumerate = void (__fastcall*)(const float*, unsigned, uintptr_t, uintptr_t,
         BOOL (__fastcall*)(uintptr_t, DestructableEnumeration*), DestructableEnumeration*);
     // CRect stores Y before X; its getters prove the native order differs from a usual XY rectangle.
     float rectangle[] = {y-radius, x-radius, y+radius, x+radius};
-    reinterpret_cast<Enumerate>(nativeBase + 0x4693D0)(rectangle, 0x04FB0000, 0, 0, CollectDestructable, &context);
+    reinterpret_cast<Enumerate>(nativeBase + wc3::Rva(0x4693D0))(rectangle, 0x04FB0000, 0, 0, CollectDestructable, &context);
     return context.result;
 }
 namespace {
@@ -187,58 +198,66 @@ BOOL __fastcall CollectItem(uintptr_t object,DestructableEnumeration* context) {
     auto table=*reinterpret_cast<uintptr_t*>(object);
     if (reinterpret_cast<ClassTag>(*reinterpret_cast<uintptr_t*>(table+0x1C))(object)!=0x6974656D) return TRUE;
     using ToHandle=Handle (__thiscall*)(uintptr_t,uintptr_t,BOOL);
-    Handle item=reinterpret_cast<ToHandle>(nativeBase+0x430C80)(context->environment,object,FALSE);
+    Handle item=reinterpret_cast<ToHandle>(nativeBase + wc3::Rva(0x430C80))(context->environment,object,FALSE);
     if (item) context->result.push_back(item);return TRUE;
 }
 }
 std::vector<Handle> NearbyItems(float x,float y,float radius) {
+    // No 1.26a internal layout is assumed on the experimental host.
+    if(ActiveBuild()==GameBuildKind::Classic127a) return {};
     using Environment=uintptr_t (__thiscall*)(uintptr_t);
-    uintptr_t root=*reinterpret_cast<uintptr_t*>(nativeBase+0xAB65F4);if (!root) return {};
-    DestructableEnumeration context{reinterpret_cast<Environment>(nativeBase+0x3A8060)(root),{}};
+    uintptr_t root=*reinterpret_cast<uintptr_t*>(nativeBase + wc3::Rva(0xAB65F4));if (!root) return {};
+    DestructableEnumeration context{reinterpret_cast<Environment>(nativeBase + wc3::Rva(0x3A8060))(root),{}};
     if (!context.environment) return {};
     // EnumItemsInRect uses this same synchronous spatial backend with item mask 0x04F70000.
     // Pass a native callback, not a C++ address disguised as JASS bytecode; CRect is Y/X ordered.
     using Enumerate=void (__fastcall*)(const float*,unsigned,uintptr_t,uintptr_t,
         BOOL (__fastcall*)(uintptr_t,DestructableEnumeration*),DestructableEnumeration*);
     float rectangle[]={y-radius,x-radius,y+radius,x+radius};
-    reinterpret_cast<Enumerate>(nativeBase+0x4693D0)(rectangle,0x04F70000,0,0,CollectItem,&context);
+    reinterpret_cast<Enumerate>(nativeBase + wc3::Rva(0x4693D0))(rectangle,0x04F70000,0,0,CollectItem,&context);
     return context.result;
 }
 uintptr_t UnitObject(Handle unit) {
     // Resolve current-map handles instead of retaining pointers through removal or campaign transitions.
     using Resolve=uintptr_t (__fastcall*)(Handle,uintptr_t);
-    return unit ? reinterpret_cast<Resolve>(nativeBase+0x3BDCB0)(unit,0) : 0;
+    return unit ? reinterpret_cast<Resolve>(nativeBase + wc3::Rva(0x3BDCB0))(unit,0) : 0;
 }
 uintptr_t DestructableObject(Handle destructable) {
     // Same host-validated resolver already used by destructable geometry and transform readers.
     using Resolve=uintptr_t (__fastcall*)(Handle,uintptr_t);
-    return destructable ? reinterpret_cast<Resolve>(nativeBase+0x3BE010)(destructable,0) : 0;
+    return destructable ? reinterpret_cast<Resolve>(nativeBase + wc3::Rva(0x3BE010))(destructable,0) : 0;
 }
 float UnitAttackAverage(Handle unit) {
+    // No 1.26a internal layout is assumed on the experimental host.
+    if(ActiveBuild()==GameBuildKind::Classic127a) return -1;
     uintptr_t object=UnitObject(unit);
     uintptr_t attack=object ? *reinterpret_cast<uintptr_t*>(object+0x1E8) : 0;
     if (!attack) return 0;
     // Verified 1.26a getters: base+bonus+dice and base+bonus+dice*sides, primary attack index zero.
     using Damage=int (__thiscall*)(uintptr_t,int);
-    int low=reinterpret_cast<Damage>(nativeBase+0xC6CB0)(attack,0);
-    int high=reinterpret_cast<Damage>(nativeBase+0xC6CD0)(attack,0);
+    int low=reinterpret_cast<Damage>(nativeBase + wc3::Rva(0xC6CB0))(attack,0);
+    int high=reinterpret_cast<Damage>(nativeBase + wc3::Rva(0xC6CD0))(attack,0);
     return (float(low)+float(high))*.5f;
 }
 void Animate(Handle unit,const char* sequence) {
+    // The public JASS wrapper is mapped by registered name/signature on 1.27a.
+    if(ActiveBuild()==GameBuildKind::Classic127a) {uintptr_t node[8]={},wrapper[3]={};node[7]=reinterpret_cast<uintptr_t>(sequence);wrapper[2]=reinterpret_cast<uintptr_t>(node);
+        using Native=void (__cdecl*)(Handle,uintptr_t);reinterpret_cast<Native>(nativeBase+wc3::Rva(0x3C61A0))(unit,reinterpret_cast<uintptr_t>(wrapper));return;}
+
     // Owned 1.26a registration at 3D619B maps SetUnitAnimation (Hunit;S)V to 3C61A0.
     // Its string conversion is synchronous, using the same bounded wrapper as AddSpecialEffect.
     using Animation=void (__cdecl*)(Handle,Handle);
     const unsigned char signature[]={0x8B,0x44,0x24,0x08,0x8B,0x4C,0x24,0x04};
-    if(!unit || !nativeBase || std::memcmp(reinterpret_cast<void*>(nativeBase+0x3C61A0),signature,sizeof(signature)))return;
+    if(!unit || !nativeBase || std::memcmp(reinterpret_cast<void*>(nativeBase + wc3::Rva(0x3C61A0)),signature,sizeof(signature)))return;
     uintptr_t node[8]={},wrapper[3]={};node[7]=reinterpret_cast<uintptr_t>(sequence);wrapper[2]=reinterpret_cast<uintptr_t>(node);
-    reinterpret_cast<Animation>(nativeBase+0x3C61A0)(unit,reinterpret_cast<Handle>(wrapper));
+    reinterpret_cast<Animation>(nativeBase + wc3::Rva(0x3C61A0))(unit,reinterpret_cast<Handle>(wrapper));
 }
 int AnimationSequence(Handle unit) {
     // Owned 1.26a sprite getter reads the signed sequence at +2C; its -2 pending sentinel maps to Stand.
     const unsigned char getter[]={0x0F,0xB7,0x41,0x2C,0x66,0x3D,0xFE,0xFF};
     auto object=UnitObject(unit);uintptr_t body=object ? *reinterpret_cast<uintptr_t*>(object+0x28) : 0;
-    if(!body || !nativeBase || std::memcmp(reinterpret_cast<void*>(nativeBase+0x4D2FD0),getter,sizeof(getter)))return -1;
-    return reinterpret_cast<int (__thiscall*)(uintptr_t)>(nativeBase+0x4D2FD0)(body);
+    if(!body || !nativeBase || std::memcmp(reinterpret_cast<void*>(nativeBase + wc3::Rva(0x4D2FD0)),getter,sizeof(getter)))return -1;
+    return reinterpret_cast<int (__thiscall*)(uintptr_t)>(nativeBase + wc3::Rva(0x4D2FD0))(body);
 }
 float AnimationRate(Handle unit) {
     // Verified SetUnitTimeScale stores the native baseline on CUnit+300 (26DD00).
@@ -249,7 +268,7 @@ int ActiveAnimationSequence(Handle unit) {
     // Verified 511F10 selects the model controller's active byte at +58, bounded by its sequence count at +0C.
     // A sprite request of -2 is pending, not proof that the model switched to Stand.
     const unsigned char select[]={0x83,0xEC,0x0C,0x8B,0xC2,0x8A,0x54,0x24,0x10};
-    if(!unit || !nativeBase || std::memcmp(reinterpret_cast<void*>(nativeBase+0x511F10),select,sizeof(select)))return -1;
+    if(!unit || !nativeBase || std::memcmp(reinterpret_cast<void*>(nativeBase + wc3::Rva(0x511F10)),select,sizeof(select)))return -1;
     auto object=UnitObject(unit);auto sprite=object ? *reinterpret_cast<uintptr_t*>(object+0x28) : 0;
     auto model=sprite ? *reinterpret_cast<uintptr_t*>(sprite+0x20) : 0;
     auto animation=model ? *reinterpret_cast<uintptr_t*>(model+0x98) : 0;
@@ -259,29 +278,37 @@ int ActiveAnimationSequence(Handle unit) {
     return count>0 && count<=256 && active<count ? int(active) : -1;
 }
 void AnimateIndex(Handle unit,int sequence) {
+    // The public JASS wrapper is mapped by registered name/signature on 1.27a.
+    if(ActiveBuild()==GameBuildKind::Classic127a) {reinterpret_cast<void (__cdecl*)(Handle,int)>(nativeBase+wc3::Rva(0x3C61F0))(unit,sequence);return;}
+
     // Verified SetUnitAnimationByIndex registration selects the model's exact authored gait/variation.
     const unsigned char signature[]={0x8B,0x4C,0x24,0x04,0xE8};
-    if(!unit || sequence<0 || !nativeBase || std::memcmp(reinterpret_cast<void*>(nativeBase+0x3C61F0),signature,sizeof(signature)))return;
-    reinterpret_cast<void (__cdecl*)(Handle,int)>(nativeBase+0x3C61F0)(unit,sequence);
+    if(!unit || sequence<0 || !nativeBase || std::memcmp(reinterpret_cast<void*>(nativeBase + wc3::Rva(0x3C61F0)),signature,sizeof(signature)))return;
+    reinterpret_cast<void (__cdecl*)(Handle,int)>(nativeBase + wc3::Rva(0x3C61F0))(unit,sequence);
 }
 void AnimationRate(Handle unit,float rate) {
+    // The public JASS wrapper is mapped by registered name/signature on 1.27a.
+    if(ActiveBuild()==GameBuildKind::Classic127a) {reinterpret_cast<void (__cdecl*)(Handle,float*)>(nativeBase+wc3::Rva(0x3C6300))(unit,&rate);return;}
+
     if(!unit || !nativeBase || !std::isfinite(rate))return;
     const unsigned char native[]={0x8B,0x4C,0x24,0x04,0xE8};
     const unsigned char sprite[]={0x8B,0x01,0xD9,0x44,0x24,0x04};
-    if(std::memcmp(reinterpret_cast<void*>(nativeBase+0x3C6300),native,sizeof(native)) ||
-        std::memcmp(reinterpret_cast<void*>(nativeBase+0x4D31B0),sprite,sizeof(sprite)))return;
+    if(std::memcmp(reinterpret_cast<void*>(nativeBase + wc3::Rva(0x3C6300)),native,sizeof(native)) ||
+        std::memcmp(reinterpret_cast<void*>(nativeBase + wc3::Rva(0x4D31B0)),sprite,sizeof(sprite)))return;
     using Native=void (__cdecl*)(Handle,float*);
-    reinterpret_cast<Native>(nativeBase+0x3C6300)(unit,&rate);
+    reinterpret_cast<Native>(nativeBase + wc3::Rva(0x3C6300))(unit,&rate);
     // A movement component defers the JASS setter; update its sprite too, without changing move speed.
     auto object=UnitObject(unit);uintptr_t body=object ? *reinterpret_cast<uintptr_t*>(object+0x28) : 0;
-    if(body)reinterpret_cast<void (__thiscall*)(uintptr_t,float)>(nativeBase+0x4D31B0)(body,rate);
+    if(body)reinterpret_cast<void (__thiscall*)(uintptr_t,float)>(nativeBase + wc3::Rva(0x4D31B0))(body,rate);
 }
 void AnimationSeek(Handle unit,int sequence,float seconds) {
+    // No 1.26a internal layout is assumed on the experimental host.
+    if(ActiveBuild()==GameBuildKind::Classic127a) return;
     // Owned CSprite::SetAnimationTime (4D3010) forwards current sequence + relative milliseconds to this model setter.
     // Use that verified model path without its sprite fallback selecting Stand; native skinning is dirtied normally.
     const unsigned char seek[]={0x55,0x8B,0xE9,0x8B,0x8D,0x98,0x00,0x00,0x00};
     if(!unit || sequence<0 || !nativeBase || !std::isfinite(seconds) || seconds<0 || seconds>60 ||
-        std::memcmp(reinterpret_cast<void*>(nativeBase+0x50D560),seek,sizeof(seek)))return;
+        std::memcmp(reinterpret_cast<void*>(nativeBase + wc3::Rva(0x50D560)),seek,sizeof(seek)))return;
     auto object=UnitObject(unit);uintptr_t sprite=object ? *reinterpret_cast<uintptr_t*>(object+0x28) : 0;
     uintptr_t model=sprite ? *reinterpret_cast<uintptr_t*>(sprite+0x20) : 0;
     if(!model)return;
@@ -290,43 +317,49 @@ void AnimationSeek(Handle unit,int sequence,float seconds) {
     // Crowd hit reactions can starve the sprite queue, so select the rendered clip synchronously.
     if(active!=sequence) {
         const unsigned char select[]={0x8B,0x89,0x98,0x00,0x00,0x00,0x85,0xC9};
-        if(std::memcmp(reinterpret_cast<void*>(nativeBase+0x50C2E0),select,sizeof(select)))return;
+        if(std::memcmp(reinterpret_cast<void*>(nativeBase + wc3::Rva(0x50C2E0)),select,sizeof(select)))return;
         auto animation=*reinterpret_cast<uintptr_t*>(model+0x98);
         if(!animation || unsigned(sequence)>=*reinterpret_cast<unsigned*>(animation+0x0C))return;
         using Select=BOOL (__fastcall*)(uintptr_t,int,int);
-        if(!reinterpret_cast<Select>(nativeBase+0x50C2E0)(model,sequence,8))return;
+        if(!reinterpret_cast<Select>(nativeBase + wc3::Rva(0x50C2E0))(model,sequence,8))return;
     }
     // This native setter dirties skinning; it does not enqueue a combat/movement order or write animation memory.
-    reinterpret_cast<void (__fastcall*)(uintptr_t,int,int)>(nativeBase+0x50D560)(model,sequence,int(seconds*1000));
+    reinterpret_cast<void (__fastcall*)(uintptr_t,int,int)>(nativeBase + wc3::Rva(0x50D560))(model,sequence,int(seconds*1000));
 }
 bool AnimationBlending(Handle unit) {
+    // No 1.26a internal layout is assumed on the experimental host.
+    if(ActiveBuild()==GameBuildKind::Classic127a) return false;
     // Verified model getter forwards to 513970's native blending-enabled flag; no blend duration is changed.
     const unsigned char getter[]={0x8B,0x89,0x98,0x00,0x00,0x00};
     auto object=UnitObject(unit);auto sprite=object ? *reinterpret_cast<uintptr_t*>(object+0x28) : 0;
     auto model=sprite ? *reinterpret_cast<uintptr_t*>(sprite+0x20) : 0;
-    return model && nativeBase && !std::memcmp(reinterpret_cast<void*>(nativeBase+0x501D80),getter,sizeof(getter)) &&
-        reinterpret_cast<int (__thiscall*)(uintptr_t)>(nativeBase+0x501D80)(model)!=0;
+    return model && nativeBase && !std::memcmp(reinterpret_cast<void*>(nativeBase + wc3::Rva(0x501D80)),getter,sizeof(getter)) &&
+        reinterpret_cast<int (__thiscall*)(uintptr_t)>(nativeBase + wc3::Rva(0x501D80))(model)!=0;
 }
 void AnimationBlending(Handle unit,bool enabled) {
+    // No 1.26a internal layout is assumed on the experimental host.
+    if(ActiveBuild()==GameBuildKind::Classic127a) return;
     // SetUnitBlendTime's verified sprite enable/disable path (2AB790 -> 4D30B0), without altering stored duration.
     const unsigned char setter[]={0x8B,0x49,0x20,0x85,0xC9};
-    if(!unit || !nativeBase || std::memcmp(reinterpret_cast<void*>(nativeBase+0x4D30B0),setter,sizeof(setter)))return;
+    if(!unit || !nativeBase || std::memcmp(reinterpret_cast<void*>(nativeBase + wc3::Rva(0x4D30B0)),setter,sizeof(setter)))return;
     auto object=UnitObject(unit);auto sprite=object ? *reinterpret_cast<uintptr_t*>(object+0x28) : 0;
-    if(sprite)reinterpret_cast<void (__fastcall*)(uintptr_t,int)>(nativeBase+0x4D30B0)(sprite,enabled);
+    if(sprite)reinterpret_cast<void (__fastcall*)(uintptr_t,int)>(nativeBase + wc3::Rva(0x4D30B0))(sprite,enabled);
 }
 std::string DestructableModelPath(int type) {
+    // No 1.26a internal layout is assumed on the experimental host.
+    if(ActiveBuild()==GameBuildKind::Classic127a) return {};
     // Use CreateDestructable's active-definition filename builder, including directory and variation suffixes.
     // +0x268A50 is its replacement texture slot, not the model; single-variation gates use variation zero.
     using Path = void (__fastcall*)(char*, unsigned, int, int, BOOL, BOOL);
     char path[MAX_PATH] = {};
-    reinterpret_cast<Path>(nativeBase + 0x268E20)(path,MAX_PATH,type,0,FALSE,FALSE);
+    reinterpret_cast<Path>(nativeBase + wc3::Rva(0x268E20))(path,MAX_PATH,type,0,FALSE,FALSE);
     return path;
 }
 float DestructableFacing(Handle handle) {
     using Resolve = uintptr_t (__fastcall*)(Handle, uintptr_t);
     using Position = uintptr_t (__thiscall*)(uintptr_t);
     using Angle = uintptr_t (__thiscall*)(uintptr_t, float*);
-    uintptr_t object = reinterpret_cast<Resolve>(nativeBase + 0x3BE010)(handle, 0);
+    uintptr_t object = reinterpret_cast<Resolve>(nativeBase + wc3::Rva(0x3BE010))(handle, 0);
     if (!object) return 0;
     // Follow GetUnitFacing's transform getter directly: the shared widget transform supplies radians.
     uintptr_t table = *reinterpret_cast<uintptr_t*>(object);
@@ -348,8 +381,8 @@ bool HasUnitBuff(Handle unit, int type) {
     // Use the same read-only alias lookup and inclusion flags as 1.26a's UnitRemoveAbility, without removing it.
     using Resolve = uintptr_t (__fastcall*)(Handle, uintptr_t);
     using Find = uintptr_t (__thiscall*)(uintptr_t, int, BOOL, BOOL, BOOL, BOOL);
-    uintptr_t object = reinterpret_cast<Resolve>(nativeBase + 0x3BDCB0)(unit, 0);
-    return object && reinterpret_cast<Find>(nativeBase + 0x787D0)(object, type, FALSE, TRUE, TRUE, TRUE) != 0;
+    uintptr_t object = reinterpret_cast<Resolve>(nativeBase + wc3::Rva(0x3BDCB0))(unit, 0);
+    return object && reinterpret_cast<Find>(nativeBase + wc3::Rva(0x787D0))(object, type, FALSE, TRUE, TRUE, TRUE) != 0;
 }
 bool IsNeutralUnit(Handle unit) {
     Handle owner = GetOwningPlayer(unit);

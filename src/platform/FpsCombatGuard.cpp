@@ -1,3 +1,4 @@
+#include "GameBuild.hpp"
 #include "FpsCombatGuard.hpp"
 #include "../combat/NativeOrderCancellation.hpp"
 #include <cstring>
@@ -63,7 +64,7 @@ bool BlockScriptOrder(wc3::Handle unit,int order,wc3::Handle target=0) {
 }
 int OrderId(int text) {
     using Convert=int (__fastcall*)(int,uintptr_t);
-    return reinterpret_cast<Convert>(gameBase+0x3BAD70)(text,0);
+    return reinterpret_cast<Convert>(gameBase + wc3::Rva(0x3BAD70))(text,0);
 }
 BOOL __cdecl TargetIdHook(wc3::Handle unit,int order,wc3::Handle target) {
     return BlockScriptOrder(unit,order,target) ? FALSE : targetId(unit,order,target);
@@ -97,46 +98,49 @@ float* __fastcall AttackRangeHook(uintptr_t attack,uintptr_t,float* result) {
 }
 }
 void FpsCombatGuard::Install(uintptr_t base,wc3::Handle (*actor)(),bool (*unitPredicate)(uintptr_t),bool (*attackPredicate)(uintptr_t),HookInstaller hook,wc3::Handle (*protectedUnit)()) {
+    // This adapter requires engine internals that are not yet verified on 1.27a.
+    if(wc3::ActiveBuild()==wc3::GameBuildKind::Classic127a) return;
+
     gameBase=base;viewActor=actor;protectedActor=protectedUnit;
     // Verified 1.26a target eligibility: thiscall(attack,target,int*), ret 8. Other versions retain native behavior.
     const unsigned char eligibilitySignature[]={0x83,0xEC,0x18,0x53,0x55,0x56,0x57,0x8B,0xF9};
-    if(!memcmp(reinterpret_cast<void*>(base+0xC93E0),eligibilitySignature,sizeof(eligibilitySignature)))
-        eligibilityVerified=hook(reinterpret_cast<void*>(base+0xC93E0),reinterpret_cast<void*>(EligibilityHook),reinterpret_cast<void**>(&nativeEligibility));
+    if(!memcmp(reinterpret_cast<void*>(base + wc3::Rva(0xC93E0)),eligibilitySignature,sizeof(eligibilitySignature)))
+        eligibilityVerified=hook(reinterpret_cast<void*>(base + wc3::Rva(0xC93E0)),reinterpret_cast<void*>(EligibilityHook),reinterpret_cast<void**>(&nativeEligibility));
     wc3::Log("Unit-view enemy targeting guard installed=%d",eligibilityVerified);
     // The FPS squad supplies its passive policy; normal units continue through the native AI getters.
     passiveUnit=unitPredicate;passiveAttack=attackPredicate;
     const unsigned char targetSignature[]={0x8B,0x41,0x70,0x23,0x41,0x6C};
-    if (memcmp(reinterpret_cast<void*>(base+0x7C2C0),targetSignature,sizeof(targetSignature))) {
+    if (memcmp(reinterpret_cast<void*>(base + wc3::Rva(0x7C2C0)),targetSignature,sizeof(targetSignature))) {
         wc3::Log("FPS native attack signature mismatch; guard not installed");return;
     }
-    targetVerified=hook(reinterpret_cast<void*>(base+0x7C2C0),reinterpret_cast<void*>(AttackTargetHook),reinterpret_cast<void**>(&nativeTarget));
+    targetVerified=hook(reinterpret_cast<void*>(base + wc3::Rva(0x7C2C0)),reinterpret_cast<void*>(AttackTargetHook),reinterpret_cast<void**>(&nativeTarget));
     wc3::Log("FPS native attack target lookup installed=%d",targetVerified);
-    hook(reinterpret_cast<void*>(base+0x276A00),reinterpret_cast<void*>(UnitRangeHook),reinterpret_cast<void**>(&unitRange));
-    hook(reinterpret_cast<void*>(base+0xC6060),reinterpret_cast<void*>(AttackRangeHook),reinterpret_cast<void**>(&attackRange));
+    hook(reinterpret_cast<void*>(base + wc3::Rva(0x276A00)),reinterpret_cast<void*>(UnitRangeHook),reinterpret_cast<void**>(&unitRange));
+    hook(reinterpret_cast<void*>(base + wc3::Rva(0xC6060)),reinterpret_cast<void*>(AttackRangeHook),reinterpret_cast<void**>(&attackRange));
     // Both entry points test the attack-disable counter natively; validate their separate x86 argument layouts.
     const unsigned char checkSignature[]={0x56,0x8B,0xF1,0x8B,0x06,0x8B,0x90,0xA0,0x00,0x00,0x00};
     const unsigned char startSignature[]={0x56,0x8B,0xF1,0x83,0x7E,0x40,0x00};
-    if(memcmp(reinterpret_cast<void*>(base+0xC5E30),checkSignature,sizeof(checkSignature)) ||
-        memcmp(reinterpret_cast<void*>(base+0xC6210),startSignature,sizeof(startSignature))) {
+    if(memcmp(reinterpret_cast<void*>(base + wc3::Rva(0xC5E30)),checkSignature,sizeof(checkSignature)) ||
+        memcmp(reinterpret_cast<void*>(base + wc3::Rva(0xC6210)),startSignature,sizeof(startSignature))) {
         wc3::Log("FPS native attack dispatch signature mismatch; chase guard not installed");return;
     }
-    bool checked=hook(reinterpret_cast<void*>(base+0xC5E30),reinterpret_cast<void*>(CheckOrderHook),reinterpret_cast<void**>(&checkOrder));
-    bool started=hook(reinterpret_cast<void*>(base+0xC6210),reinterpret_cast<void*>(StartOrderHook),reinterpret_cast<void**>(&startOrder));
+    bool checked=hook(reinterpret_cast<void*>(base + wc3::Rva(0xC5E30)),reinterpret_cast<void*>(CheckOrderHook),reinterpret_cast<void**>(&checkOrder));
+    bool started=hook(reinterpret_cast<void*>(base + wc3::Rva(0xC6210)),reinterpret_cast<void*>(StartOrderHook),reinterpret_cast<void**>(&startOrder));
     wc3::Log("FPS native attack dispatch guard check=%d start=%d",checked,started);
     // String and numeric JASS orders have distinct entry points; guard both before a single chase step can run.
     const unsigned char numericSignature[]={0x8B,0x4C,0x24,0x04},textSignature[]={0x8B,0x4C,0x24,0x08,0xE8};
     const unsigned char convertSignature[]={0x56,0x8B,0x35};
-    if(memcmp(reinterpret_cast<void*>(base+0x3C89D0),numericSignature,sizeof(numericSignature)) ||
-        memcmp(reinterpret_cast<void*>(base+0x3C8940),numericSignature,sizeof(numericSignature)) ||
-        memcmp(reinterpret_cast<void*>(base+0x3C8E20),textSignature,sizeof(textSignature)) ||
-        memcmp(reinterpret_cast<void*>(base+0x3C8DA0),textSignature,sizeof(textSignature)) ||
-        memcmp(reinterpret_cast<void*>(base+0x3BAD70),convertSignature,sizeof(convertSignature))) {
+    if(memcmp(reinterpret_cast<void*>(base + wc3::Rva(0x3C89D0)),numericSignature,sizeof(numericSignature)) ||
+        memcmp(reinterpret_cast<void*>(base + wc3::Rva(0x3C8940)),numericSignature,sizeof(numericSignature)) ||
+        memcmp(reinterpret_cast<void*>(base + wc3::Rva(0x3C8E20)),textSignature,sizeof(textSignature)) ||
+        memcmp(reinterpret_cast<void*>(base + wc3::Rva(0x3C8DA0)),textSignature,sizeof(textSignature)) ||
+        memcmp(reinterpret_cast<void*>(base + wc3::Rva(0x3BAD70)),convertSignature,sizeof(convertSignature))) {
         wc3::Log("FPS map attack order signature mismatch; script chase guard not installed");return;
     }
     bool targetNumeric=hook(reinterpret_cast<void*>(wc3::IssueTargetOrderById),reinterpret_cast<void*>(TargetIdHook),reinterpret_cast<void**>(&targetId));
     bool pointNumeric=hook(reinterpret_cast<void*>(wc3::IssuePointOrderById),reinterpret_cast<void*>(PointIdHook),reinterpret_cast<void**>(&pointId));
-    bool targetText=hook(reinterpret_cast<void*>(base+0x3C8E20),reinterpret_cast<void*>(TargetStringHook),reinterpret_cast<void**>(&targetString));
-    bool pointText=hook(reinterpret_cast<void*>(base+0x3C8DA0),reinterpret_cast<void*>(PointStringHook),reinterpret_cast<void**>(&pointString));
+    bool targetText=hook(reinterpret_cast<void*>(base + wc3::Rva(0x3C8E20)),reinterpret_cast<void*>(TargetStringHook),reinterpret_cast<void**>(&targetString));
+    bool pointText=hook(reinterpret_cast<void*>(base + wc3::Rva(0x3C8DA0)),reinterpret_cast<void*>(PointStringHook),reinterpret_cast<void**>(&pointString));
     wc3::Log("FPS map attack order guard targetId=%d pointId=%d targetString=%d pointString=%d",targetNumeric,pointNumeric,targetText,pointText);
 }
 bool FpsCombatGuard::BlocksIncomingAttack(uintptr_t attack,uintptr_t target) {
@@ -144,7 +148,7 @@ bool FpsCombatGuard::BlocksIncomingAttack(uintptr_t attack,uintptr_t target) {
     if(!actor || !attack || !target || target!=wc3::UnitObject(actor))return false;
     // Owner resolution mirrors GetOwningPlayer: the attack's owner unit, then its native player-index virtual.
     auto source=*reinterpret_cast<uintptr_t*>(attack+0x30);
-    if(!source)source=reinterpret_cast<uintptr_t (__thiscall*)(uintptr_t)>(gameBase+0x472890)(attack);
+    if(!source)source=reinterpret_cast<uintptr_t (__thiscall*)(uintptr_t)>(gameBase + wc3::Rva(0x472890))(attack);
     if(!source)return false;
     auto table=*reinterpret_cast<uintptr_t*>(source);
     int player=reinterpret_cast<int (__thiscall*)(uintptr_t)>(*reinterpret_cast<uintptr_t*>(table+0xEC))(source);

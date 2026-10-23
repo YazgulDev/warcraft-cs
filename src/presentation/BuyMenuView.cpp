@@ -1,3 +1,4 @@
+#include "GraphicsApi.hpp"
 #include "BuyMenuView.hpp"
 #include "../combat/UnitScaling.hpp"
 #include "BuyMenuLayout.hpp"

@@ -194,6 +194,11 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.runeAmmoAllWeapons=_stricmp(text("Runes","AmmoWeapons","all").c_str(),"current")!=0;
     auto damageMode=text("Damage","Mode","unit");
     result.heroDamage=_stricmp(damageMode.c_str(),"weapon")!=0;
+    // Experimental hosts may lack the native attack-stat adapter; retain configurable fixed damage as fallback.
+    auto unavailableAttack=text("Damage","UnavailableAttackFallback","weapon");
+    result.unavailableAttackUsesWeaponDamage=_stricmp(unavailableAttack.c_str(),"zero")!=0;
+    if(_stricmp(unavailableAttack.c_str(),"weapon") && _stricmp(unavailableAttack.c_str(),"zero"))
+        wc3::Log("Invalid Damage.UnavailableAttackFallback; using weapon");
     if(_stricmp(damageMode.c_str(),"unit") && _stricmp(damageMode.c_str(),"hero") && _stricmp(damageMode.c_str(),"weapon"))
         wc3::Log("Invalid Damage.Mode; using unit");
     // Missing or malformed settings must not silently enable instant kills; explicit preferences still reload on F8.
@@ -436,7 +441,10 @@ float GameplaySettings::ContactDamage(int slot,bool secondary,float heroAttack) 
     if (slot<0 || slot>=WeaponSlots::Count) return 0;
     // Native average attack works for heroes and creeps, including their active bonuses; heavy melee keeps its ratio.
     float heavy=secondary ? (slot==WeaponSlots::Knife ? 65.0f/40 : slot==WeaponSlots::Sword ? 2.0f : 1.0f) : 1.0f;
-    if (heroDamage && slot!=WeaponSlots::C4 && slot!=WeaponSlots::RPG && !WeaponSlots::Grenade(slot)) return std::max(0.0f,heroAttack)*heroMultiplier[slot]*heavy;
+    if (heroDamage && slot!=WeaponSlots::C4 && slot!=WeaponSlots::RPG && !WeaponSlots::Grenade(slot)) {
+        // Zero is a real unarmed unit; only the negative unavailable sentinel permits configured fallback damage.
+        if(heroAttack>=0 || !unavailableAttackUsesWeaponDamage)return std::max(0.0f,heroAttack)*heroMultiplier[slot]*heavy;
+    }
     return secondary && slot==WeaponSlots::Knife ? knifeSecondaryDamage :
         secondary && slot==WeaponSlots::Sword ? swordSecondaryDamage : damage[slot];
 }

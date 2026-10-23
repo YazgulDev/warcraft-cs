@@ -1,3 +1,4 @@
+#include "GraphicsApi.hpp"
 #include "WeaponSelectionView.hpp"
 #include <gl/GL.h>
 #include <cstdio>

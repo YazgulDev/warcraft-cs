@@ -13,7 +13,11 @@ namespace WarcraftCSLauncher {
                 if (Directory.Exists(directory) && (File.GetAttributes(directory)&FileAttributes.ReparsePoint)!=0)
                     throw new InvalidOperationException("The private game path must not use a junction.");
             }
-            var start=new ProcessStartInfo(Path.Combine(runtime,"war3.exe"),GameEdition.LaunchArguments(edition));
+            // The installed Game.dll selects the renderer, so updates cannot carry over the wrong host's flag.
+            string gameDll=Path.Combine(runtime,"Game.dll");
+            var version=File.Exists(gameDll) ? FileVersionInfo.GetVersionInfo(gameDll) : null;
+            bool direct3D9=version!=null && version.FileMajorPart==1 && version.FileMinorPart==27 && version.FileBuildPart==0 && version.FilePrivatePart==52240;
+            var start=new ProcessStartInfo(Path.Combine(runtime,"war3.exe"),GameEdition.LaunchArguments(edition,direct3D9));
             start.WorkingDirectory=runtime;start.UseShellExecute=false;
             // Apply DPI compatibility before window creation, including when playing an older installed source revision.
             string layers=start.EnvironmentVariables["__COMPAT_LAYER"] ?? "";

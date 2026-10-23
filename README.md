@@ -11,6 +11,11 @@ Neither variant includes game files, models, sounds, maps or saves.
 You need your own Warcraft III installation. CS 1.6 is required only for the full weapon mode.**
 This is an early prototype with known limitations.
 
+**Unreleased source feature:** experimental Warcraft III **1.27a (1.27.0.52240)**
+and **Direct3D 9** support is available in this source branch. Published 0.11.0
+downloads retain their original host support. See [port setup, verification and
+limitations](docs/PORT-1.27.md); real 1.27a gameplay has not yet been verified.
+
 **[Download 0.11.0](https://github.com/YazgulDev/warcraft-cs/releases/tag/v0.11.0)** В·
 [Release Notes](docs/RELEASE-0.11.0.md) В· [Installation](INSTALL.md) В· [Requirements](REQUIREMENTS.md)
 В· [Troubleshooting](TROUBLESHOOTING.md) В· [Discussions](https://github.com/YazgulDev/warcraft-cs/discussions)

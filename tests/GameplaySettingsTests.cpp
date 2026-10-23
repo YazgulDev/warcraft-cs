@@ -11,6 +11,20 @@
 namespace wc3 { void Log(const char*,...) {} }
 int main() {
     GameplaySettings settings;
+    // A missing host adapter permits fixed configured damage; an actual zero-attack creature does not.
+    assert(settings.ContactDamage(0,false,-1)==settings.damage[0]);
+    assert(settings.ContactDamage(0,false,0)==0);
+    settings.unavailableAttackUsesWeaponDamage=false;assert(settings.ContactDamage(0,false,-1)==0);
+    settings.unavailableAttackUsesWeaponDamage=true;
+    // F8 reads a fresh validated snapshot; invalid fallback policy does not turn missing statistics into zero damage.
+    char fallbackDirectory[MAX_PATH]={};GetCurrentDirectoryA(MAX_PATH,fallbackDirectory);
+    std::string fallbackPath=std::string(fallbackDirectory)+"\\warcraft-host-damage-fallback.ini";
+    for(const char* policy:{"zero","weapon","broken",""}) {
+        WritePrivateProfileStringA("Damage","UnavailableAttackFallback",policy,fallbackPath.c_str());
+        auto reloaded=GameplaySettings::Load(fallbackPath);
+        assert(reloaded.unavailableAttackUsesWeaponDamage==(std::string(policy)!="zero"));
+    }
+    DeleteFileA(fallbackPath.c_str());
     // Every firearm reaches visible distant targets, even when an older INI retains a short individual range.
     for(int slot=0;slot<WeaponSlots::Count;++slot)if(WeaponSlots::Firearm(slot))assert(settings.FirearmRange(slot)==30000);
     assert(settings.movement.useNativeUnitCollision);

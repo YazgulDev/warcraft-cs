@@ -1,3 +1,4 @@
+#include "GraphicsApi.hpp"
 #include "Overlay.hpp"
 #include "ScopeView.hpp"
 #include "GrenadeView.hpp"
@@ -213,7 +214,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     // Compact hints reflect the configured keys and wrap before the native minimap.
     auto key=[&](ShortcutAction action) {return controller.Shortcut(action);};
     auto mapLayout=MinimapLayout::Calculate(width,height,controller.Settings().minimapSizePercent);
-    if(controller.MinimapVisible())minimap.Draw(mapLayout);
+    if(controller.MinimapVisible() && !GraphicsBackend::IsD3D9())minimap.Draw(mapLayout);
     std::string controls="Warcraft CS by Yazgul | "+key(ShortcutAction::ToggleFPS)+": RTS | "+key(ShortcutAction::ReloadSettings)+": CONFIG | "+key(ShortcutAction::Minimap)+": MINIMAP | "+key(ShortcutAction::Speed)+": SPEED | "+key(ShortcutAction::Fog)+": FOG";
     // The dedicated key exposes direct entry/RTS exit independently of the active view switch.
     controls+=" | "+key(ShortcutAction::ToggleThirdPerson)+(controller.ThirdPerson() ? ": RTS" : ": THIRD PERSON");
@@ -240,7 +241,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     // Armed F6 shows both the rebindable mode switch and its current session choice.
     if(controller.Settings().squadReticleAttack && !controller.ThirdPerson())
         equipment+=" | "+key(ShortcutAction::SquadOrders)+": RMB "+(controller.SquadOrdersInFPS() ? "ORDERS" : "WEAPON");
-    int hintRight=controller.MinimapVisible() ? mapLayout.x-mapLayout.padding : width-25;
+    int hintRight=(controller.MinimapVisible() && !GraphicsBackend::IsD3D9()) ? mapLayout.x-mapLayout.padding : width-25;
     int columns=std::max(1,(hintRight-25)/hintGlyphWidth_);float hintY=27;
     if(!controller.Buying())for(const auto& group : {controls,equipment,abilities,std::string(squad)}) {
         for(const auto& row : HudHints::Wrap(group,columns)) {Text(25,hintY,row.c_str());hintY+=23;}

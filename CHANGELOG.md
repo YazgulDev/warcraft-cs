@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — experimental 1.27a / D3D9
+
+- Added exact 1.27.0.52240 native bindings and capability guards alongside 1.26a.
+- Added D3D9 output for current weapon/HUD/projectile rendering and host-specific launch selection.
+- Updated setup, launcher validation and host-bound Player packaging.
+- Added configurable weapon damage fallback when native attack statistics are unavailable.
+- Added hidden-device pixel and synthetic host-selection checks. Real 1.27a gameplay remains unverified;
+  [port notes](docs/PORT-1.27.md) list unavailable native and graphics features.
+
 ## 0.11.0 — 2026-10-20
 
 - Added Deagle, Glock, MP5, P90, M249, M3 and XM1014 purchases.

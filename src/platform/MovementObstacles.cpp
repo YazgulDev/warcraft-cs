@@ -1,3 +1,4 @@
+#include "GameBuild.hpp"
 #include "MovementObstacles.hpp"
 #include "../geometry/ModelBounds.hpp"
 #include "../geometry/TreeTrunkMesh.hpp"
@@ -88,7 +89,7 @@ std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle actor, float x, flo
         using Resolve = uintptr_t (__fastcall*)(wc3::Handle, uintptr_t);
         Bounds3 bounds;
         if (Bounds(path(wc3::GetDestructableTypeId(object), true), true,
-            reinterpret_cast<Resolve>(base_ + 0x3BE010)(object, 0), bounds)) {
+            reinterpret_cast<Resolve>(base_ + wc3::Rva(0x3BE010))(object, 0), bounds)) {
             float cx=wc3::Real(wc3::GetDestructableX(object)), cy=wc3::Real(wc3::GetDestructableY(object)), deck=0;
             // Walkable bridges supply their native deck separately; their enclosing model box includes empty space.
             if (!wc3::WalkableSurface(cx, cy, deck)) result.push_back(bounds);

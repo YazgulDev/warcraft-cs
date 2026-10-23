@@ -55,6 +55,8 @@ struct GameplaySettings {
     bool runeAmmoAllWeapons = true;
     // Native attack damage applies to any controlled creature, including non-hero units.
     bool heroDamage = true;
+    // An unavailable host adapter is distinct from a real unit with zero attack damage.
+    bool unavailableAttackUsesWeaponDamage=true;
     bool scaleFireRateFromAttackSpeed=false;
     // Weapon contacts use the controlled unit's native attack effects; F8 may opt out.
     bool enableAttackEffects=true;
