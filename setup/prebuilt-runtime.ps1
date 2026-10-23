@@ -1,5 +1,6 @@
 # Player packages contain only our two x86 modules and their notices, never retail Warcraft libraries.
 . (Join-Path $PSScriptRoot 'host-build.ps1')
+. (Join-Path $PSScriptRoot 'miles-forwarders.ps1')
 function Assert-OrdinaryRuntimePath([string]$Path) {
     for ($part=[IO.Path]::GetFullPath($Path);$part;$part=[IO.Path]::GetDirectoryName($part)) {
         if ((Test-Path -LiteralPath $part) -and ((Get-Item -LiteralPath $part -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
@@ -39,6 +40,13 @@ function Read-RuntimePackage([byte[]]$Bytes,[string]$Revision,[string]$Version) 
         $manifest=[Text.Encoding]::UTF8.GetString($files['runtime.json']).TrimStart([char]65279) | ConvertFrom-Json
         if ($manifest.SourceRevision -cne $Revision -or $manifest.Version -cne $Version -or !(Test-WarcraftHostVersion $manifest.HostVersion) -or
             $manifest.OriginalSoundSha256 -cnotmatch '^[0-9a-f]{64}$') { throw 'Runtime package does not match the source version or supported Warcraft host.' }
+        # New packages adapt only their export-data reservation; older exact-host packages keep their original checks.
+        if($manifest.FormatVersion -and $manifest.FormatVersion -ne 2){throw 'Unsupported runtime package format.'}
+        if($manifest.FormatVersion -eq 2) {
+            if($manifest.SoundProxyKind -cne 'local-export-table-v1' -or @($manifest.HostVersions).Count -ne 2 -or
+                @($manifest.HostVersions | Select-Object -Unique).Count -ne 2 -or
+                @($manifest.HostVersions | Where-Object {!(Test-WarcraftHostVersion $_)}).Count){throw 'Invalid adaptive Player host policy.'}
+        }
         foreach ($name in $allowed | Where-Object { $_ -ne 'runtime.json' }) {
             $expected=$manifest.Files.PSObject.Properties[$name].Value
             if ($expected -cnotmatch '^[0-9a-f]{64}$' -or (Get-RuntimeHash $files[$name]) -cne $expected) { throw "Runtime package checksum mismatch: $name" }
@@ -77,14 +85,17 @@ function Assert-PrebuiltHost([string]$Directory,[string]$Warcraft) {
     $manifest=Get-Content -LiteralPath (Join-Path $Directory 'runtime.json') -Raw -Encoding UTF8 | ConvertFrom-Json
     # The Miles proxy is generated against a specific game's exports, independently of mod DLL compatibility.
     $hostBuild=Get-WarcraftHostBuild $Warcraft
-    if($manifest.HostVersion -cne $hostBuild.Version) { throw 'Player modules target a different Warcraft build. Use Developer mode to build matching modules.' }
+    $adaptive=$manifest.FormatVersion -eq 2 -and $manifest.SoundProxyKind -ceq 'local-export-table-v1'
+    if(($adaptive -and $hostBuild.Version -cnotin $manifest.HostVersions) -or (!$adaptive -and $manifest.HostVersion -cne $hostBuild.Version)) {
+        throw 'Player modules target a different Warcraft build. Use Developer mode to build matching modules.'
+    }
     # The generated Miles forwarders target the exact owned library used for this supported build.
     $original=Join-Path $Warcraft 'WarcraftOriginalMss.dll'
     if (!(Test-Path -LiteralPath $original)) { $original=Join-Path $Warcraft 'Mss32.dll' }
     # A valid game version can still have another Miles build; retain the exact reason in the launcher's backend journal.
     $actualSound=(Get-FileHash -LiteralPath $original -Algorithm SHA256).Hash.ToLowerInvariant()
     Write-Output ("Player host check: expectedSound={0} actualSound={1} source={2}" -f $manifest.OriginalSoundSha256,$actualSound,$manifest.SourceRevision)
-    if ($actualSound -cne $manifest.OriginalSoundSha256) {
+    if (!$adaptive -and $actualSound -cne $manifest.OriginalSoundSha256) {
         throw ("Your Miles library differs from the Player package host. Expected {0}; found {1}. Use Developer mode to generate matching forwarders locally." -f $manifest.OriginalSoundSha256,$actualSound)
     }
     foreach ($name in @('WarcraftCS.mix','Mss32.dll')) {
@@ -95,9 +106,20 @@ function Assert-PrebuiltHost([string]$Directory,[string]$Warcraft) {
 function Install-PrebuiltRuntime([string]$Directory,[string]$Runtime,[string]$Warcraft) {
     Assert-PrebuiltHost $Directory $Warcraft
     if (!(Test-Path -LiteralPath (Join-Path $Runtime '.warcraft-cs-private-runtime'))) { throw 'Prebuilt modules require a marked private runtime.' }
+    $manifest=Get-Content -LiteralPath (Join-Path $Directory 'runtime.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+    $adapted=$null
+    if($manifest.FormatVersion -eq 2 -and $manifest.SoundProxyKind -ceq 'local-export-table-v1') {
+        # Validate and derive all bytes before installing either module. Only our template data is rewritten.
+        $original=Join-Path $Warcraft 'WarcraftOriginalMss.dll'
+        if(!(Test-Path -LiteralPath $original)){$original=Join-Path $Warcraft 'Mss32.dll'}
+        $adapted=Convert-MilesForwarders ([IO.File]::ReadAllBytes((Join-Path $Directory 'Mss32.dll'))) ([IO.File]::ReadAllBytes($original))
+        Assert-X86Module $adapted
+        Write-Output ('Prepared exact local Miles exports for Game.dll '+(Get-WarcraftHostBuild $Warcraft).Version)
+    }
     foreach ($name in @('WarcraftCS.mix','Mss32.dll')) {
         Assert-OrdinaryRuntimePath (Join-Path $Runtime $name)
-        Copy-Item -LiteralPath (Join-Path $Directory $name) -Destination (Join-Path $Runtime $name) -Force
+        if($name -eq 'Mss32.dll' -and $null -ne $adapted){[IO.File]::WriteAllBytes((Join-Path $Runtime $name),$adapted)}
+        else {Copy-Item -LiteralPath (Join-Path $Directory $name) -Destination (Join-Path $Runtime $name) -Force}
     }
     # Keep every bundled third-party notice alongside the installed modules.
     $notices=Join-Path $Runtime 'WarcraftCS/notices';Assert-OrdinaryRuntimePath $notices

@@ -4,7 +4,7 @@ Source feature; the published 0.11.0 package does not include these changes yet.
 
 The default B menu and quick-ammo purchase use a separate CS dollar wallet.
 Each player's wallet starts with $800 once per map, earns $300 per confirmed
-hostile creature killed with CS firearms/melee, HE, C4 or RPG, and holds at most
+hostile creature killed with CS/Half-Life firearms/melee, HE, C4 or RPG, and holds at most
 $16000. Native Warcraft gold, map resource triggers, loot tables and item slots
 are preserved. F6/F7/F9, switching units, free-refill shortcuts and F8 do not
 grant starting money again. Balances are map-local; they are not saved into
@@ -17,8 +17,9 @@ resumes the retained dollar wallet; it does not convert gold or reset funds.
 
 Each eligible kill independently has a **0.5%** weapon-drop chance by default:
 about one drop per 200 kills on average, without a guaranteed interval. The
-pool contains enabled firearms, including the optional RPG only when its owned
-assets are available. Melee weapons, C4 and grenades do not enter this pool.
+pool contains enabled firearms, including optional RPG, Tau and Gluon only when
+their owned assets are available. Duplicate Tau/Gluon pickups supply usable cells
+directly rather than an invisible reserve pool. Melee weapons, C4 and grenades do not enter this pool.
 Allies, neutral non-enemies, buildings, nonlethal contacts and already-dead
 targets cannot award money or roll loot. Native unit attacks, spells and
 squad/RTS kills are outside this initial CS damage reward adapter.

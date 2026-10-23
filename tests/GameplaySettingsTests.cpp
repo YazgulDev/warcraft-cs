@@ -11,6 +11,8 @@
 #include <windows.h>
 namespace wc3 { void Log(const char*,...) {} }
 int main() {
+    // Headless regressions report assertion details to the captured journal instead of a desktop dialog.
+    _set_error_mode(_OUT_TO_STDERR);
     GameplaySettings settings;
     // Missing configs and F8 share the requested defaults; invalid values are rejected at the INI boundary.
     assert(settings.economy.currency==EconomySettings::Currency::Dollars && settings.economy.startingMoney==800);

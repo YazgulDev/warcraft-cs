@@ -40,7 +40,8 @@ public static class LauncherReinstallTests {
             Directory.CreateDirectory(Path.Combine(selected,"launcher"));
             if (!legacy) {
                 Directory.CreateDirectory(Path.Combine(selected,"setup"));
-                foreach (string name in new[] {"warcraft-runtime.ps1","prebuilt-runtime.ps1"})
+                // A modern policy fixture includes the real copy adapter's host/proxy dependencies.
+                foreach (string name in new[] {"warcraft-runtime.ps1","prebuilt-runtime.ps1","host-build.ps1","miles-forwarders.ps1","MilesForwarderBuilder.cs"})
                     File.Copy(Path.Combine(current,"setup",name),Path.Combine(selected,"setup",name));
             }
             // Stub only conversion/module installation. Actual SetupRunner and the production copy adapter

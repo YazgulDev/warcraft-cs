@@ -27,6 +27,7 @@ foreach ($name in $files) {
 }
 # Bind the native bundle to the exact audited source archive and supported forwarder ABI.
 @{Version=(Get-Content -LiteralPath (Join-Path $root 'VERSION') -Raw).Trim();SourceRevision=$SourceRevision;
+    FormatVersion=2;SoundProxyKind='local-export-table-v1';HostVersions=@(Get-WarcraftHostBuilds | ForEach-Object {$_.Version});
     HostVersion=$hostBuild.Version;OriginalSoundSha256=(Get-FileHash -LiteralPath $original -Algorithm SHA256).Hash.ToLowerInvariant();Files=$hashes} |
     ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $package 'runtime.json') -Encoding UTF8
 Add-Type -AssemblyName System.IO.Compression.FileSystem

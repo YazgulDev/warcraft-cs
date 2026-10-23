@@ -11,8 +11,8 @@ Neither variant includes game files, models, sounds, maps or saves.
 You need your own Warcraft III installation. CS 1.6 is required only for the full weapon mode.**
 This is an early prototype with known limitations.
 
-**Unreleased source feature:** experimental Warcraft III **1.27a (1.27.0.52240)**
-and **Direct3D 9** support is available in this source branch. Published 0.11.0
+**Unified launcher preview:** experimental Warcraft III **1.27a (1.27.0.52240)**
+and **Direct3D 9**, the full optional Half-Life arsenal and dollar/loot economy are combined in this branch. The DLL-included preview supports both hosts in Player mode; see [preview installation and changes](docs/UNIFIED-PREVIEW.md). Published 0.11.0
 downloads retain their original host support. See [port setup, verification and
 limitations](docs/PORT-1.27.md); real 1.27a gameplay has not yet been verified.
 

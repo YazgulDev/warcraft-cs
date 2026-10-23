@@ -40,6 +40,11 @@ int main() {
     assert(!drops.Pickup(WeaponSlots::RPG,settings,ammo,reserve));
     auto candidates=WeaponDropRules::Candidates(settings);for(int slot:candidates)assert(WeaponSlots::Firearm(slot) && slot!=WeaponSlots::RPG);
     settings.rpg.available=true;assert(WeaponDropRules::Candidates(settings).back()==WeaponSlots::RPG);
+    // The unified arsenal uses usable energy cells for duplicate drops, with no invisible reserve pool.
+    settings.halfLife.available[1]=settings.halfLife.available[2]=true;
+    ammo=reserve=0;assert(drops.Pickup(WeaponSlots::Tau,settings,ammo,reserve));
+    ammo=95;assert(drops.Pickup(WeaponSlots::Tau,settings,ammo,reserve) && ammo==100 && reserve==0);
+    assert(!drops.Pickup(WeaponSlots::Tau,settings,ammo,reserve));
     settings.warcraftOnly=true;assert(WeaponDropRules::Candidates(settings).empty());settings.warcraftOnly=false;
     // Exhaust the probability boundary without a flaky random sample: .5 percent admits 500 / 100000 buckets.
     int accepted=0;for(int i=0;i<100000;++i)accepted+=WeaponDropRules::Success(settings.weaponDrops,float(i)/1000);

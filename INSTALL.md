@@ -1,7 +1,7 @@
 # Install and play Warcraft CS
 
 This source branch additionally supports experimental Warcraft III **1.27a
-(Game.dll 1.27.0.52240)** through Developer setup, selecting D3D9 at launch.
+(Game.dll 1.27.0.52240)** through unified Player or Developer setup, selecting D3D9 at launch.
 Published 0.11.0 Player modules cannot be reused across host versions. Read
 [port limits and verification status](docs/PORT-1.27.md) before using that host.
 

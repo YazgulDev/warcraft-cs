@@ -1,6 +1,13 @@
 # Changelog
 
-## Unreleased — dollar economy and rare weapon loot
+## Unreleased — unified launcher preview
+
+- Combine the 1.27a/D3D9 port, complete Half-Life arsenal and dollar/loot changes in one launcher. Full preview notes and installation details are in [UNIFIED-PREVIEW.md](docs/UNIFIED-PREVIEW.md).
+- Add format-2 Player bundles for both exact supported hosts. Generate export data from the owner's local Miles library inside a reserved section of the project proxy, preserving named/decorated/alias/ordinal exports without C++ tools or retail DLL redistribution. Retain old exact-host/hash package checks.
+- Add an explicit preview build resource and reviewed preview notes without changing published 0.11.0 notes/version. Startup checks do not offer the preview's published base as an upgrade; explicit public reinstall and newer stable versions remain available.
+- Preserve direct Tau/Gluon cell refills on duplicate loot and route energy beams through the OpenGL/D3D9 adapter. Add real Windows forwarder/dual-host install tests and D3D9 beam pixel/occlusion checks.
+
+### Dollar economy and rare weapon loot
 
 - Default CS purchases to an independent dollar wallet: $800 per player/map, $300 per hostile creature killed with CS firearms/melee, HE, C4 or RPG, capped at $16000. `[Economy] Currency=gold` restores map gold purchases. F8 changes currency/rewards/cap without refilling balances; starting funds apply only on a new map/player wallet. Views and unit switches retain funds.
 - Add `[WeaponDrops] Enabled=true`, `ChancePercent=0.5` (0..100), `LifetimeSeconds=120` (1..3600 simulation seconds), `PickupRadius=160` (16..400 world units), `MaximumDrops=64` (1..256). Each eligible kill rolls once; only enabled firearms enter the pool. Chest markers show a nearby weapon name and E grants a loaded gun or one duplicate ammo pack. Full reserves leave loot intact; native inventory slots are unnecessary. F8 disable removes existing markers; map unload clears loot.
@@ -9,7 +16,7 @@
 - Update money labels in the HUD and buy menu, preserve saved settings on install/update, and add wallet, death attribution, drop/pickup, boundary/reload and migration tests. This feature is source-only until merged and released.
 
 
-## Unreleased
+### Half-Life arsenal
 
 - Fixed Gluon beam origin at the actual nozzle and native/held viewport alignment; added gradual Tau spinner/audio-pitch acceleration and varied Crowbar flesh, structure/destructable and dirt impacts with F8 settings.
 
@@ -20,7 +27,7 @@
 - Added independent asset seals, private models/previews/audio, direct energy-cell purchases, F8 tuning and transition cancellation.
 - See [Half-Life arsenal controls, settings and limits](docs/HALF-LIFE-ARSENAL.md).
 
-## Unreleased — experimental 1.27a / D3D9
+### Experimental 1.27a / D3D9
 
 - Added exact 1.27.0.52240 native bindings and capability guards alongside 1.26a.
 - Added D3D9 output for current weapon/HUD/projectile rendering and host-specific launch selection.

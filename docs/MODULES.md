@@ -405,3 +405,13 @@ The owned converter fits Gluon's front opening in its rigid bone, while `Viewmod
 compensates native versus held aspect and near clipping. Overlay samples one animation
 time for both beam attachment and held geometry. Synthetic aperture/phase/projection
 tests and real XAudio2 pitch/loop tests cover these boundaries.
+
+## Unified Player host adaptation
+`setup/MilesForwarderBuilder.cs` parses PE export metadata and writes only the
+project-owned proxy's reserved `.wcsfwd` section. `miles-forwarders.ps1` supplies
+the existing .NET compilation bridge; `prebuilt-runtime.ps1` verifies package,
+host and module identities before deriving/copying bytes. Format-2 runtime
+packages list both supported hosts. Legacy packages retain exact host/hash checks.
+The original Miles DLL supplies all sound behavior through ordinal forwarders.
+`LauncherVariant.IsPreview` reads a build resource; update selection suppresses
+only the preview's published base, while ordinary stable selection is unchanged.

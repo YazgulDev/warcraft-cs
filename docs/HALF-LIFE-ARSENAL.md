@@ -8,8 +8,8 @@ hides only that weapon. Only Warcraft installations exclude these weapons.
 ## Buying and selection
 
 **B → 9 HALF-LIFE → 1 Crowbar / 2 Tau Cannon / 3 Gluon Gun / 4 RPG**. Defaults cost
-200 / 5000 / 6000 / 4000 gold. RPG moves out of Equipment. Rejected/duplicate purchases
-never charge gold. All carried Half-Life weapons appear in group **6 HALF-LIFE**, in
+$200 / $5000 / $6000 / $4000 with the default dollar economy. RPG moves out of Equipment. Rejected/duplicate purchases
+never spend money. All carried Half-Life weapons appear in group **6 HALF-LIFE**, in
 this order, and in sequential wheel selection. Click to confirm. Turn Tab item numbers
 off to use 1–6 for weapons. Custom bindings and the optional legacy direct-slot mode
 remain available. Crowbar is purchased rather than added to the starting knife/sword
@@ -39,7 +39,7 @@ kit. F12 grants every available weapon; F11 refills owned ones. Existing IDs sta
   Native target/wall tests run at each accepted damage tick; damage is fixed.
 
 Tau and Gluon use **separate** cell pools, capacity 100 each. Their ammo packs cost
-300 gold and add 20 usable cells directly, capped at capacity. R does nothing; full
+$300 by default and add 20 usable cells directly, capped at capacity. R does nothing; full
 pools never charge for ammo. Runes and F11/F12 use the same usable capacity, without
 hidden reserves. RPG's controls/physics are unchanged; its new purchase path is B/9/4
 and carried group 6 (see [RPG settings](HALF-LIFE-RPG.md)).
@@ -81,7 +81,7 @@ ammo. Existing CS/RPG controls and settings are preserved.
 |---|---:|---|
 | Crowbar / Enabled, TauCannon / Enabled, GluonGun / Enabled | true | true/false; still requires owned files |
 | Crowbar / Damage, HeroMultiplier | 10, 1 | fixed damage 0–1000000; hero multiplier 0–1000 |
-| Crowbar / Price | 200 | gold 0–1000000 |
+| Crowbar / Price | 200 | selected currency 0–1000000 |
 | Crowbar / Range | 150 | world units 32–1000 |
 | Crowbar / FireInterval, ContactSeconds | 0.5, 0.1 | seconds 0.1–5 / 0–1; authored clip can extend recovery |
 | Crowbar / SurfaceSounds | true | true/false; false uses simple flesh/hard impacts |
@@ -93,8 +93,8 @@ ammo. Existing CS/RPG controls and settings are preserved.
 | TauCannon / PrimaryCost | 2 | cells 1–100 per primary shot |
 | GluonGun / Damage | 14 | fixed damage per tick 0–1000000 |
 | TauCannon and GluonGun / Magazine | 100 | usable cells 1–1000; reserves always zero |
-| TauCannon / Price, GluonGun / Price | 5000, 6000 | gold 0–1000000 |
-| TauCannon and GluonGun / AmmoPrice, AmmoPack | 300, 20 | gold 0–1000000, cells 1–1000 |
+| TauCannon / Price, GluonGun / Price | 5000, 6000 | selected currency 0–1000000 |
+| TauCannon and GluonGun / AmmoPrice, AmmoPack | 300, 20 | selected currency 0–1000000, cells 1–1000 |
 | TauCannon / FireInterval, GluonGun / FireInterval | 0.2, 0.1 | seconds 0.025–10 |
 | TauCannon and GluonGun / Range | 30000 | world units 100–50000, subject to firearm reach floor |
 | All three / MoveSpeed, ModelScale | 250, 1 | movement 50–500 units/s, viewmodel scale 0.25–2 |

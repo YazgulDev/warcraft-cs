@@ -33,6 +33,11 @@ public:
         if(!settings.WeaponEnabled(slot) || !WeaponSlots::Firearm(slot))return false;
         // A new drop grants one loaded gun; duplicate guns become one ammo pack without consuming a full pickup.
         if(!owned[slot]) {owned[slot]=true;ammo=settings.weapons[slot].magazine;reserve=0;return true;}
+        // Tau/Gluon duplicate drops refill usable cells directly, matching their shop path without a reserve magazine.
+        if(WeaponSlots::Energy(slot)) {
+            int missing=settings.weapons[slot].magazine-ammo;if(missing<=0)return false;
+            ammo+=std::min(missing,settings.ammoPack[slot]);return true;
+        }
         int missing=settings.maxReserve[slot]-reserve;
         if(missing<=0)return false;
         reserve+=std::min(missing,settings.ammoPack[slot]);return true;

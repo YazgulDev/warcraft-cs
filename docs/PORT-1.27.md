@@ -6,7 +6,7 @@ the published 0.11.0 downloads.
 
 ## Installation
 
-Use Developer/source setup with your own complete 1.27a installation and the
+Use Player setup in the unified DLL-included preview, or Developer/source setup, with your own complete 1.27a installation and the
 existing `setup.cmd -WarcraftDirectory ... -CounterStrikeDirectory ...` command.
 Choose a separate installation folder. Warcraft-only setup remains available.
 The original game is never patched on disk.
@@ -16,10 +16,12 @@ retain **OpenGL for 1.26a**. Source launch accepts
 `tools/launch.ps1 -Renderer Auto|OpenGL|D3D9`; Auto is the default, applied on the
 next launch. OpenGL on 1.27a is a diagnostic path, not a verified combination.
 
-Player packages remain bound to the exact game version and original Miles-library
-hash used to generate their forwarders. A 1.26a Player package cannot be installed
-on 1.27a. Use Developer setup or a separately built matching Player package.
-No 1.27a Player binary is supplied by this feature.
+New unified Player packages include the shared 1.26a/1.27a module and an adaptive
+Miles proxy. Setup derives exact export data from the selected owner's original
+sound library, retaining names, aliases and ordinals without shipping that library
+or requiring C++ Build Tools. The original game stays untouched. Legacy published
+0.11.0 packages retain their exact host/hash restriction. See
+[unified preview details](UNIFIED-PREVIEW.md); real 1.27a gameplay remains unverified.
 
 ## Design
 

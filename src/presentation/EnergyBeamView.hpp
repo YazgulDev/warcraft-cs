@@ -1,5 +1,6 @@
 #pragma once
 #include "EnergyBeam.hpp"
+#include "GraphicsApi.hpp" // Use the same OpenGL/D3D9 dispatch as held models and other world effects.
 #include "WorldEffectPass.hpp"
 #include "HudRenderState.hpp"
 #include <algorithm>

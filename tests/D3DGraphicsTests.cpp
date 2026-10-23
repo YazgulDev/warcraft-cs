@@ -1,6 +1,7 @@
 #include "../src/presentation/GraphicsApi.hpp"
 #include "../src/presentation/HudFont.hpp"
 #include "../src/presentation/RenderMatrix.hpp"
+#include "../src/presentation/EnergyBeamView.hpp"
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
@@ -59,6 +60,23 @@ int main() {
     Require(D3DGraphics::BeginFrame(device,dc,320,240),"second frame reuses device resources");
     Require(glIsTexture(texture)==GL_TRUE && font.Valid(),"texture generation survives presentations");
     glDeleteTextures(1,&texture);font.Reset(true);D3DGraphics::EndFrame();
+    // Newly merged Tau/Gluon views must submit real D3D pixels and retain native-world depth occlusion.
+    for(bool gluon:{false,true})for(float depth:{1.f,0.f}) {
+        device->Clear(0,nullptr,D3DCLEAR_TARGET|D3DCLEAR_ZBUFFER,0xFF000000,depth,0);
+        Require(D3DGraphics::BeginFrame(device,dc,320,240),"energy beam frame");
+        WorldLabelView view;view.active=true;view.eye[2]=96;view.aspect=320.f/240;
+        EnergyBeam beam;beam.start={50,-30,96};beam.end={100,30,96};beam.tick=GetTickCount();beam.seconds=1;beam.width=3;beam.gluon=gluon;
+        EnergyBeamView::Draw(beam,view,8,5000);D3DGraphics::EndFrame();
+        IDirect3DSurface9 *target=nullptr,*readback=nullptr;
+        Require(SUCCEEDED(device->GetRenderTarget(0,&target)),"beam target");
+        Require(SUCCEEDED(device->CreateOffscreenPlainSurface(320,240,D3DFMT_A8R8G8B8,D3DPOOL_SYSTEMMEM,&readback,nullptr)),"beam readback");
+        Require(SUCCEEDED(device->GetRenderTargetData(target,readback)),"beam pixels");
+        D3DLOCKED_RECT data={};Require(SUCCEEDED(readback->LockRect(&data,nullptr,D3DLOCK_READONLY)),"beam pixel lock");
+        int ink=0;for(int y=0;y<240;++y)for(int x=0;x<320;++x)
+            ink+=(reinterpret_cast<const DWORD*>(static_cast<const unsigned char*>(data.pBits)+size_t(y)*data.Pitch)[x]&0xFFFFFF)!=0;
+        Require(depth==0 ? ink==0 : ink>50,"Tau/Gluon D3D pixels and world occlusion");
+        readback->UnlockRect();readback->Release();target->Release();
+    }
     ReleaseDC(window,dc);device->Release();api->Release();DestroyWindow(window);
     std::printf("PASS D3D9 actual pixels, atlas coverage, depth, resource lifetime and native state restoration.\n");
 }

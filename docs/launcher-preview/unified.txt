@@ -1,0 +1,8 @@
+- Added experimental Warcraft III 1.27a and Direct3D 9 support alongside 1.26a.
+- Added Player setup for both hosts using exact local Miles export forwarders without C++ Build Tools.
+- Added optional Half-Life Crowbar, Tau Cannon, Gluon Gun and RPG in the B / 9 Half-Life category.
+- Fixed Half-Life chrome skins, complete weapon animations, beam muzzle alignment, Tau charge feedback and varied Crowbar impacts.
+- Changed default purchases to dollars with 800 starting money, 300 per mod weapon kill and a 16000 cap.
+- Added configurable rare weapon drops with a 0.5 percent default chance and E pickup.
+- Changed default RPG blast radius to 525 while retaining 100 peak damage.
+- Preserved custom settings and prevented a local preview from offering its published base as a newer build.
