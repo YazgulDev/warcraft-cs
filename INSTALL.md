@@ -102,10 +102,15 @@ Maps do not need editing. Enable FPS again after changing maps.
 - F6: return to RTS; F10: pause menu; F8: reload configuration.
 
 See [README controls and settings](README.md#controls) for details.
-The default starting kit is a loaded USP, knife and sword. C4 is available to buy for 3000 gold;
+The default starting kit is a loaded USP, knife and sword. C4 is available to buy for $3000;
 `[Loadout] BombCount=0` keeps it out of the starting kit. Existing configs retain their saved count;
-set it to 0 to adopt this default on the next map. Press B to buy firearms with Warcraft
-gold and `.` to buy current-weapon ammunition. Edit `[Loadout]`, `[Buy]`, weapon prices and `[Sky]`
+set it to 0 to adopt this default on the next map. Press B to buy firearms with
+a separate dollar wallet and `.` to buy current-weapon ammunition. Start with $800,
+earn $300 per hostile creature killed with CS weapons, HE, C4 or RPG; the cap is $16000.
+Rare weapon drops default to 0.5%, with E to collect a chest.
+`[Economy] Currency=gold` restores Warcraft gold purchases;
+`[WeaponDrops] Enabled=false` disables drops. See [economy and loot](docs/ECONOMY-AND-LOOT.md).
+Edit `[Economy]`, `[WeaponDrops]`, `[Loadout]`, `[Buy]`, weapon prices and `[Sky]`
 in `Game/WarcraftCS/WarcraftCS.ini`; F8 reloads settings (starting-kit changes apply to the next map).
 The CS-style menu uses 1 pistols, 4 rifles, 6 primary ammo, 7 secondary ammo and 8 equipment.
 Sky replacement is disabled by default. Weapon prices are four times lower; ammo-pack prices are unchanged.

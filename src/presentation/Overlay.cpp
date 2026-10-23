@@ -182,13 +182,14 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     if(unitHudVisible)statusSize=std::max(18,statusSize*2/3);
     Font(statusSize);
     controller.Hits().Draw(float(width), float(height));
-    char status[160]; sprintf_s(status, "HP %.0f   %s   %d / %d   GOLD %d", controller.Health(),
-        controller.WeaponData(index).name, controller.Ammo(), controller.Reserve(),controller.Gold());
+    // Money formatting follows the active purchase currency in both HUD layouts.
+    char status[160]; sprintf_s(status, "HP %.0f   %s   %d / %d   %s", controller.Health(),
+        controller.WeaponData(index).name, controller.Ammo(), controller.Reserve(),controller.MoneyText().c_str());
     // Melee equipment has no magazine; show only its name instead of a misleading empty-ammo counter.
-    if (WeaponSlots::Melee(index)) sprintf_s(status, "HP %.0f   %s   GOLD %d", controller.Health(), controller.WeaponData(index).name,controller.Gold());
+    if (WeaponSlots::Melee(index)) sprintf_s(status, "HP %.0f   %s   %s", controller.Health(), controller.WeaponData(index).name,controller.MoneyText().c_str());
     // Hero combat has no magazine or CS weapon label; expose the mode and live native attack instead.
-    if(controller.ThirdPerson())sprintf_s(status,"HP %.0f   UNIT ATTACK %.0f   GOLD %d",controller.Health(),
-        controller.Status().attackDamage*controller.Settings().thirdPerson.damageMultiplier,controller.Gold());
+    if(controller.ThirdPerson())sprintf_s(status,"HP %.0f   UNIT ATTACK %.0f   %s",controller.Health(),
+        controller.Status().attackDamage*controller.Settings().thirdPerson.damageMultiplier,controller.MoneyText().c_str());
     float statusPad = statusSize * 0.75f, statusY = height - statusPad;
     auto unitLayout=UnitHudLayout::Calculate(width,height,controller.Settings().unitHudScalePercent);
     if(unitHudVisible) {
@@ -196,9 +197,9 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         statusY=float(unitLayout.y-16);
         unitFont_.Ensure(std::clamp(int(unitLayout.portrait*.19f),12,32));
         UnitHudView::Draw(controller.UnitHud(),unitLayout,portrait,[&](float x,float y,const char* label){Text(x,y,label,&unitFont_);});
-        if(controller.ThirdPerson())sprintf_s(status,"UNIT ATTACK %.0f   GOLD %d",controller.Status().attackDamage*controller.Settings().thirdPerson.damageMultiplier,controller.Gold());
-        else if(WeaponSlots::Melee(index))sprintf_s(status,"%s   GOLD %d",controller.WeaponData(index).name,controller.Gold());
-        else sprintf_s(status,"%s   %d / %d   GOLD %d",controller.WeaponData(index).name,controller.Ammo(),controller.Reserve(),controller.Gold());
+        if(controller.ThirdPerson())sprintf_s(status,"UNIT ATTACK %.0f   %s",controller.Status().attackDamage*controller.Settings().thirdPerson.damageMultiplier,controller.MoneyText().c_str());
+        else if(WeaponSlots::Melee(index))sprintf_s(status,"%s   %s",controller.WeaponData(index).name,controller.MoneyText().c_str());
+        else sprintf_s(status,"%s   %d / %d   %s",controller.WeaponData(index).name,controller.Ammo(),controller.Reserve(),controller.MoneyText().c_str());
     }
     glColor4f(1.0f, 0.85f, 0.3f, 1); Text(statusPad, statusY, status, &statusFont_);
     // Installation progress and fuse are independent of which weapon is currently equipped.
@@ -269,7 +270,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         Text(statusPad,statusY-(statusSize+16)*rows,speed,&statusFont_);
     }
     // Ground items advertise interaction without issuing a walk-to-item RTS order.
-    if (controller.ItemNearby()) {controls=key(ShortcutAction::Pickup)+": PICK UP ITEM";Text(width*.5f-120,height*.72f,controls.c_str(),&statusFont_);}
+    if (controller.ItemNearby()) {controls=key(ShortcutAction::Pickup)+": PICK UP "+(controller.NearbyWeaponName().empty() ? "ITEM" : controller.NearbyWeaponName());Text(width*.5f-120,height*.72f,controls.c_str(),&statusFont_);}
     // Explain blocked controls next to the status HUD while the corresponding Warcraft effect lasts.
     if (*controller.Status().Label()) {
         char effect[96]; sprintf_s(effect, "%s", controller.Status().Label());

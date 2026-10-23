@@ -39,7 +39,7 @@ bool NativeGrenades::Detonate(const Charge& charge,float now,GameAudio& audio,wc
         // HE and RPG share native damage attribution, cover, gates and callback-safe map reset handling.
         unsigned generation=generation_;auto obstacles=obstacles_.Snapshot(0,from[0],from[1],settings.heRadius+256,true);
         return NativeBlast::Apply(charge.actor,charge.type,from,charge.damage,settings.heRadius,charge.friendly,obstacles,
-            [&]{return generation_==generation;},"grenade HE");
+            [&]{return generation_==generation;},"grenade HE",onKill_);
     }
     float radius=settings.flashRadius;
     auto obstacles=obstacles_.Snapshot(0,from[0],from[1],radius+256,true);

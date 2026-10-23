@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — dollar economy and rare weapon loot
+
+- Default CS purchases to an independent dollar wallet: $800 per player/map, $300 per hostile creature killed with CS firearms/melee, HE, C4 or RPG, capped at $16000. `[Economy] Currency=gold` restores map gold purchases. F8 changes currency/rewards/cap without refilling balances; starting funds apply only on a new map/player wallet. Views and unit switches retain funds.
+- Add `[WeaponDrops] Enabled=true`, `ChancePercent=0.5` (0..100), `LifetimeSeconds=120` (1..3600 simulation seconds), `PickupRadius=160` (16..400 world units), `MaximumDrops=64` (1..256). Each eligible kill rolls once; only enabled firearms enter the pool. Chest markers show a nearby weapon name and E grants a loaded gun or one duplicate ammo pack. Full reserves leave loot intact; native inventory slots are unnecessary. F8 disable removes existing markers; map unload clears loot.
+- Keep quest gold, native drops and Warcraft item events independent. Allied units, buildings, nonlethal hits, corpses and kills outside CS weapon damage do not award these rewards. Native unit attacks/spells and squad/RTS kills are outside this initial reward adapter.
+- Retain RPG default peak damage 100 and increase blast radius from 375 to 525 world units. `[RPG] BlastVersion=2` migrates the old stock radius once; custom tuning survives. Live rockets retain launch settings.
+- Update money labels in the HUD and buy menu, preserve saved settings on install/update, and add wallet, death attribution, drop/pickup, boundary/reload and migration tests. This feature is source-only until merged and released.
+
+
 ## 0.11.0 — 2026-10-20
 
 - Added Deagle, Glock, MP5, P90, M249, M3 and XM1014 purchases.

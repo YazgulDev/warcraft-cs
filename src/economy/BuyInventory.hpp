@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <limits>
 
-// Pure inventory transactions: callers debit native gold only after a useful purchase succeeds.
+// Pure inventory transactions debit the selected currency only after a useful purchase succeeds.
 class BuyInventory {
 public:
     std::array<bool,WeaponSlots::Count> owned{};
@@ -28,6 +28,14 @@ public:
             // Refilling must never discard paid bombs above the configured free-refill amount.
             ammo[i]=i==WeaponSlots::C4 ? std::max(ammo[i],settings.maxBombs) : magazines[i];reserve[i]=reserves[i];
         }
+    }
+    bool Pickup(int slot,const GameplaySettings& settings,int& ammo,int& reserve) {
+        if(!settings.WeaponEnabled(slot) || !WeaponSlots::Firearm(slot))return false;
+        // A new drop grants one loaded gun; duplicate guns become one ammo pack without consuming a full pickup.
+        if(!owned[slot]) {owned[slot]=true;ammo=settings.weapons[slot].magazine;reserve=0;return true;}
+        int missing=settings.maxReserve[slot]-reserve;
+        if(missing<=0)return false;
+        reserve+=std::min(missing,settings.ammoPack[slot]);return true;
     }
     int Next(int current,int steps,const GameplaySettings* settings=nullptr) const {
         int result=current;

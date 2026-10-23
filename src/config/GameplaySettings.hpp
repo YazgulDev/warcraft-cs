@@ -5,6 +5,8 @@
 #include "ViewmodelSettings.hpp"
 #include "GrenadeSettings.hpp"
 #include "RpgSettings.hpp"
+#include "EconomySettings.hpp"
+#include "WeaponDropSettings.hpp"
 #include "HealthBarSettings.hpp"
 #include "SpellSettings.hpp"
 #include "ArmyAISettings.hpp"
@@ -25,6 +27,8 @@ struct GameplaySettings {
     ViewmodelSettings viewmodel;
     GrenadeSettings grenades;
     RpgSettings rpg;
+    EconomySettings economy;
+    WeaponDropSettings weaponDrops;
     bool weaponSelectionMenu=true; // F6 category preview; false restores immediate legacy shortcuts/wheel.
     float weaponSelectionTimeout=5;
     HealthBarSettings healthBars;
@@ -99,7 +103,7 @@ struct GameplaySettings {
     float squadClearance=100,squadYieldAhead=350;
     unsigned squadOrderIntervalMs=150;
     int squadMaxUnits=24;
-    // Gold economy and loadout are per-map; reloading settings cannot mint another starting kit.
+    // Currency wallets and loadout are per-map; reloading settings cannot mint another starting kit.
     bool startAllWeapons=false;
     // Default starts without C4; a positive configured count opts into starting bombs.
     int startBombs=0,maxBombs=100;
@@ -109,7 +113,7 @@ struct GameplaySettings {
     BuyAccess buyAccess=BuyAccess::Anywhere;
     float buyRadius=600;
     std::string shopTypes="";
-    // The refill shortcut is always free; ordinary purchases still debit native gold.
+    // The refill shortcut is always free; purchases use the selected dollars/gold currency.
     std::array<int,WeaponSlots::Count> weaponPrice={1250,1550,250,2376,0,3000,500,650,400,1500,2350,5750,1700,3000,300,200,300,4000};
     // Reserve excludes the loaded magazine; buying, free refills and runes share this limit.
     std::array<int,WeaponSlots::Count> maxReserve={90,90,100,30,0,0,0,35,120,120,100,200,32,32,0,0,0,5};

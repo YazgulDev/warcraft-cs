@@ -69,6 +69,8 @@ $sources += '"' + (Join-Path $modRoot 'src/platform/NativeCommandCard.cpp') + '"
 $sources += @('input/ShortcutBindings.cpp','config/HeroSpellSlots.cpp','platform/NativeSpellSlots.cpp','platform/SpellAim.cpp','platform/SpellCaster.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 $sources += '"' + (Join-Path $modRoot 'src/platform/MovementObstacles.cpp') + '"'
 $sources += '"' + (Join-Path $modRoot 'src/platform/NativeGrenades.cpp') + '"'
+# Local CS drops own their native markers independently of Warcraft inventory items.
+$sources += '"' + (Join-Path $modRoot 'src/platform/DroppedWeapons.cpp') + '"'
 # RPG flight/damage and rendering remain independent of the gameplay controller.
 $sources += @('platform/NativeBlast.cpp','platform/NativeRockets.cpp','presentation/RocketView.cpp') | ForEach-Object { '"' + (Join-Path $modRoot "src/$_") + '"' }
 $sources += '"' + (Join-Path $modRoot 'src/presentation/GrenadeView.cpp') + '"'
@@ -117,7 +119,7 @@ if ($TestWorldSurfaces) {
     $sources += '"' + (Join-Path $modRoot 'tests/WorldSurfaceScene.cpp') + '"'
     $testDefine += ' /DWCS_SURFACE_TEST'
 }
-$buildDirectory = Join-Path $modRoot 'build'
+$buildDirectory = Join-Path $modRoot 'build/native'
 New-Item -ItemType Directory -Path $buildDirectory -Force | Out-Null
 # Fingerprint the compiled source/config inputs; support logs distinguish same-version test DLLs.
 $fingerprints=@(Get-ChildItem -LiteralPath (Join-Path $modRoot 'src') -Recurse -File | Sort-Object FullName | ForEach-Object {
