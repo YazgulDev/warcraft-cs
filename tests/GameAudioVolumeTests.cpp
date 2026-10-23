@@ -18,11 +18,17 @@ static size_t SoundCount(const char* sound) {
 namespace wc3 {
     void Log(const char* format,...) {
         char text[2048];va_list arguments;va_start(arguments,format);vsnprintf(text,sizeof(text),format,arguments);va_end(arguments);
-        output.emplace_back(text);puts(text);
+        output.emplace_back(text);puts(text);fflush(stdout);
     }
 }
 static void RequireVolume(const GameAudio& audio,float expected) {
     assert(std::abs(audio.VolumePercent()-expected)<0.001f);
+}
+static void RequirePitch(const GameAudio& audio,float expected) {
+    // Real XAudio2 applies source pitch on its next processing pass; wait for the device rather than a setter echo.
+    DWORD deadline=GetTickCount()+250;
+    while(std::abs(audio.LoopPitch("volume-test.wav")-expected)>=.001f && GetTickCount()<deadline)Sleep(1);
+    assert(std::abs(audio.LoopPitch("volume-test.wav")-expected)<.001f);
 }
 int main(int count,char** arguments) {
     assert(count==2);
@@ -75,6 +81,13 @@ int main(int count,char** arguments) {
     auto loopEvents=[&]{return std::count_if(output.begin(),output.end(),[](const std::string& s){return s.find("CS loop=volume-test.wav")==0;});};
     auto loopBefore=loopEvents();audio.SetLoop("volume-test.wav",true,0);audio.SetLoop("volume-test.wav",true,0);
     assert(loopEvents()==loopBefore+1);audio.SetLoop("volume-test.wav",false);assert(loopEvents()==loopBefore+2);
+    // The live motor crosses XAudio's default 2x ceiling without resubmitting the loop or affecting other voices.
+    audio.SetLoop("volume-test.wav",true,0);auto queued=loopEvents();
+    for(float pitch:{1.f,1.25f,1.75f,2.5f,4.f}){audio.SetLoopPitch("volume-test.wav",pitch);RequirePitch(audio,pitch);}
+    assert(loopEvents()==queued);
+    audio.SetLoopPitch("volume-test.wav",100);RequirePitch(audio,4);
+    audio.SetLoopPitch("volume-test.wav",std::numeric_limits<float>::quiet_NaN());RequirePitch(audio,1);
+    audio.SetLoop("volume-test.wav",false);RequirePitch(audio,1);
     // Both authored M3 audio and the missing-event XM fallback play exactly one real source voice per insert.
     size_t before=SoundCount("m3_insertshell.wav");DWORD now=GetTickCount();
     audio.BeginAnimation(WeaponSlots::M3,"insert",now);audio.Tick(now+1000);

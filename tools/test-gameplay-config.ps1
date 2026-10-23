@@ -461,3 +461,14 @@ foreach($oldRadius in @('375','900')) {
         if((Get-FileHash $blastConfig).Hash -ne $blastHash){throw 'RPG stock migration is not idempotent.'}
     }
 }
+
+# New guest defaults merge without resetting opt-outs, custom tuning or unrelated settings.
+$hlConfig=Join-Path $folder 'custom-halflife.ini'
+@('[TauCannon]','Enabled=false','ChargeSeconds=2','Price=1234','SpinEndRate=5','ChargePitchEnd=3','[Crowbar]','SurfaceSounds=false','[HalfLife]','BeamWidth=8','[GluonGun]','Damage=23') | Set-Content -LiteralPath $hlConfig -Encoding ascii
+Update-GameplayConfig $template $hlConfig
+$hlText=Get-Content -LiteralPath $hlConfig -Raw
+foreach($expected in @('Enabled=false','ChargeSeconds=2','Price=1234','BeamWidth=8','Damage=23','[Crowbar]','PrimaryCost=2','AmmoPack=20','SpinStartRate=1','SpinEndRate=5','ChargePitchStart=1','ChargePitchEnd=3','SurfaceSounds=false')) {
+    if(!$hlText.Contains($expected)){throw ('Half-Life update lost '+$expected)}
+}
+$hlHash=(Get-FileHash $hlConfig).Hash;Update-GameplayConfig $template $hlConfig
+if((Get-FileHash $hlConfig).Hash -ne $hlHash){throw 'Half-Life migration is not idempotent.'}

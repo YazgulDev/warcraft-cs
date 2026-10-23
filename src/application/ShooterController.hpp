@@ -1,5 +1,8 @@
 #pragma once
 #include "../combat/ShotgunReload.hpp"
+#include "../combat/HalfLifeEnergy.hpp"
+#include "../presentation/EnergyBeam.hpp"
+#include "../audio/CrowbarContact.hpp"
 #include "../combat/BurstFire.hpp"
 #include "../presentation/ViewmodelMotion.hpp"
 #include "../combat/GrenadeThrow.hpp"
@@ -239,6 +242,7 @@ public:
     size_t BombCount() const { return bombs_.Count(); }
     float PlantProgress() const { return plantProgress_; }
     const HitFeedback& Hits() const { return hits_; }
+    const EnergyBeam& Beam() const {return energyBeam_;}
     void Configure(const char* root, uintptr_t gameBase);
     static const Weapon* const weapons; // Compatibility defaults for private fixtures.
     const Weapon& WeaponData(int slot) const {return settings_.weapons[slot];}
@@ -262,8 +266,13 @@ private:
     void AimAndMove(float dt);
     bool Fire(bool secondary = false,bool burstRound=false,bool interruptReload=false);
     void FireGlock(bool primaryPressed,bool secondaryPressed,DWORD now);
+    void FireEnergy(bool primaryPressed,bool secondaryHeld,DWORD now);
+    void CrowbarImpact(CrowbarContact::Surface surface);
+    void CancelEnergy();
+    HalfLifeEnergy energy_;
+    EnergyBeam energyBeam_;
     BurstFire glockBurst_;
-    void Strike(float yawOffset=0,float pitchOffset=0,float damageScale=1);
+    void Strike(float yawOffset=0,float pitchOffset=0,float damageScale=1,float fixedDamage=-1);
     void Reload();
     ShotgunReload shotgunReload_;
     DWORD shotgunReloadStart_=0;
@@ -383,6 +392,8 @@ private:
     float stepDistance_ = 0;
     unsigned stepIndex_ = 0;
     unsigned knifeSwing_ = 0;
+    unsigned crowbarContacts_=0;
+    int tauFeedbackBand_=-1;
     float animationRate_ = 1;
     DWORD refillTick_ = 0;
     HitFeedback hits_;

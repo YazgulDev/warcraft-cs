@@ -1,4 +1,6 @@
 #include "Overlay.hpp"
+#include "EnergyBeamView.hpp"
+#include "ViewmodelAnchor.hpp"
 #include "ScopeView.hpp"
 #include "GrenadeView.hpp"
 #include "ReticleView.hpp"
@@ -117,28 +119,31 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         if(activeTexture)activeTexture(oldTexture);
         return;
     }
+    // Load the held model before world effects so its actual animated attachment can anchor an energy beam.
+    int index=controller.WeaponIndex();float projectionScale=controller.Settings().weaponModelScale[index];
+    float animationSeconds=controller.AnimationTime(); // Attachment and mesh must sample one identical animation phase.
+    if(!controller.Settings().warcraftOnly && !attempted_[index]) {
+        attempted_[index]=true;loaded_[index]=guns_[index].Load(root_+"\\assets\\"+WeaponSlots::Caches[index]+".wcg");
+    }
     unsigned barCount=0;
     if(!controller.Status().contained && !controller.Status().hidden && !controller.Buying())
         barCount=HealthBarRenderer::Draw(bars,barView,width,height,nearPlane,farPlane);
     if(!controller.Status().contained && !controller.Status().hidden) {
+        if(!controller.ThirdPerson() && !controller.Buying() && WeaponSlots::Energy(index)) {
+            auto beam=controller.Beam();std::array<float,3> anchor;
+            if(beam.tick && loaded_[index] && guns_[index].MuzzlePoint(controller.Animation(),animationSeconds,controller.ShotSerial(),anchor,controller.IdleAnimation()))
+                beam.start=ViewmodelAnchor::World(anchor,controller.WeaponPose(),projectionScale,barView,float(width)/height,nearPlane);
+            EnergyBeamView::Draw(beam,barView,nearPlane,farPlane);
+        }
         grenadeWorld_.Draw(root_,controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
         rocketView_.Draw(root_,controller.RocketVisuals(),controller.LaserVisible(),controller.LaserPoint(),barView,width,height,nearPlane,farPlane);
         GrenadeView::Draw(controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
     }
     glMatrixMode(GL_PROJECTION); glPushMatrix(); glLoadIdentity();
-    int index = controller.WeaponIndex();
     // Slightly tighten USP/AWP framing while preserving the original lower-edge arm origins.
-    const auto& projectionScales=controller.Settings().weaponModelScale;
-    float projectionScale = projectionScales[index];
     float top = std::tan(45.0f * 0.01745329252f) * projectionScale; float side = top * width / height;
     glFrustum(-side, side, -top, top, 1, 200);
     glMatrixMode(GL_MODELVIEW); glPushMatrix(); glLoadIdentity();
-    // Unit-only installations never open even a retained cache from an earlier full install.
-    if (!controller.Settings().warcraftOnly && !attempted_[index]) {
-        attempted_[index] = true;
-        const auto& names=WeaponSlots::Caches;
-        loaded_[index] = guns_[index].Load(root_ + "\\assets\\" + names[index] + ".wcg");
-    }
     bool heldModel=!controller.ThirdPerson() && loaded_[index] && !controller.Status().contained && !controller.Status().hidden && (index!=WeaponSlots::C4 || controller.Ammo()>0);
     const auto& visuals=controller.Settings().viewmodel;
     float flash=muzzleFlash_.Sample(controller.ShotSerial(),heldModel && controller.ShowMuzzleFlash(),GetTickCount(),visuals.flashMilliseconds);
@@ -149,7 +154,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         // Preserve each model's original arm origin instead of exposing detached elbow ends.
         const auto& pose=controller.WeaponPose();
         glTranslatef(pose.x,pose.y,pose.z);glRotatef(pose.roll,0,0,1);
-        guns_[index].Draw(controller.Animation(),controller.AnimationTime(),flash,visuals.flashScale,controller.ShotSerial(),!controller.Scoped(),controller.IdleAnimation());
+        guns_[index].Draw(controller.Animation(),animationSeconds,flash,visuals.flashScale,controller.ShotSerial(),!controller.Scoped(),controller.IdleAnimation());
         glDisable(GL_DEPTH_TEST);
     }
     bool unavailableView = controller.Status().contained || controller.Status().hidden;
@@ -220,7 +225,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     controls+=" | "+key(ShortcutAction::ToggleThirdPerson)+(controller.ThirdPerson() ? ": RTS" : ": THIRD PERSON");
     controls+=" | "+key(ShortcutAction::ToggleView)+(controller.ThirdPerson() ? (controller.Settings().warcraftOnly ? ": UNIT VIEW" : ": FPS") : ": THIRD PERSON");
     controls+=" | "+key(ShortcutAction::ToggleUnitView)+": UNIT VIEW";
-    std::string equipment="WHEEL: WEAPONS | "+key(ShortcutAction::Weapon6)+": C4 | "+key(ShortcutAction::Pickup)+": ITEM | "+key(ShortcutAction::Buy)+": BUY | "+key(ShortcutAction::BuyAmmo)+": AMMO";
+    std::string equipment="WHEEL: WEAPONS | "+(controller.Settings().weaponSelectionMenu ? key(ShortcutAction::Weapon6)+": HALF-LIFE" : key(ShortcutAction::Weapon6)+": C4")+" | "+key(ShortcutAction::Pickup)+": ITEM | "+key(ShortcutAction::Buy)+": BUY | "+key(ShortcutAction::BuyAmmo)+": AMMO";
     // The same control now dispatches the unit's primary melee or ranged attack.
     if(controller.ThirdPerson())equipment="LMB: UNIT ATTACK | WASD: MOVE | WHEEL: CAMERA | "+key(ShortcutAction::Pickup)+": ITEM / SHOP";
     if(controller.Settings().warcraftOnly)equipment="LMB: UNIT ATTACK | WASD: MOVE | WHEEL: CAMERA | "+key(ShortcutAction::Pickup)+": ITEM / SHOP";

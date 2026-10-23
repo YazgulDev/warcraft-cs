@@ -11,7 +11,7 @@ public:
     void Reset(const GameplaySettings& settings,int* ammo,int* reserve,const int* magazines,const int* reserves) {
         for (int i=0;i<WeaponSlots::Count;++i) {
             // C4 enters the starting kit only through an explicit bomb count or the all-weapons option.
-            owned[i]=settings.startAllWeapons || WeaponSlots::Melee(i) || i==WeaponSlots::Pistol ||
+            owned[i]=settings.startAllWeapons || i==WeaponSlots::Knife || i==WeaponSlots::Sword || i==WeaponSlots::Pistol ||
                 (i==WeaponSlots::C4 && settings.startBombs>0);
             if(!settings.WeaponEnabled(i))owned[i]=false;
             ammo[i]=owned[i] ? (i==WeaponSlots::C4 ? settings.startBombs : magazines[i]) : 0;
@@ -59,12 +59,15 @@ public:
         if (bomb && ((!settings.unlimitedBombPurchases && ammo>=settings.maxBombs) ||
             ammo==std::numeric_limits<int>::max())) return Result::Full;
         if(grenade && ammo>=magazine)return Result::Full;
-        if (ammunition && !bomb && !grenade && reserve>=reserveCapacity) return Result::Full;
+        bool energy=WeaponSlots::Energy(slot); // Cells replenish usable energy directly, without R/reload.
+        if(ammunition && energy && ammo>=magazine)return Result::Full;
+        if (ammunition && !bomb && !grenade && !energy && reserve>=reserveCapacity) return Result::Full;
         int cost=ammunition ? settings.ammoPrice[slot] : settings.weaponPrice[slot];
         if (gold<cost) return Result::NoGold;
         // A bomb is one consumable; firearm ammo fills reserves, then R transfers it into a magazine.
         gold-=cost;owned[slot]=true;
         if (bomb || grenade) ++ammo;
+        else if (ammunition && energy)ammo=std::min(magazine,ammo+settings.ammoPack[slot]);
         else if (ammunition) reserve=std::min(reserveCapacity,reserve+settings.ammoPack[slot]);
         else { ammo=magazine;reserve=0; }
         return Result::Bought;
