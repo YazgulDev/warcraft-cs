@@ -120,6 +120,25 @@ int main() {
     Require(falling.FeetZ() < 400 && falling.FeetZ() > 390, "cliff fall must integrate gravity gradually");
     for (int frame = 0; frame < 90; ++frame) { falling.Step({}, 1.f/60, 250); falling.ResolveFloor(0); }
     Require(falling.Grounded() && falling.FeetZ() == 0, "cliff fall must land without penetrating terrain");
+    // Floor contacts must come from a step or a downward crossing, never an overhead snap.
+    const int contactFrameRates[] = {20, 60, 144};
+    for (int fps : contactFrameRates) {
+        MovementPhysics blocked; blocked.Reset(100);
+        blocked.ResolveFloor(300);
+        Require(blocked.FeetZ() == 100, "a grounded contact cannot lift the player onto a tall obstacle");
+        blocked.Step(space, 1.f/fps, 250);
+        for (int frame=1; frame<fps; ++frame) {
+            float before=blocked.FeetZ();
+            blocked.ResolveFloor(300);
+            Require(blocked.FeetZ()==before && !blocked.Grounded(), "an unreachable top cannot catch a descending jump");
+            blocked.Step({}, 1.f/fps, 250);
+        }
+        MovementSettings stepSettings; stepSettings.stepHeight=12; blocked.Configure(stepSettings); blocked.Reset(100);
+        blocked.ResolveFloor(112);
+        Require(blocked.FeetZ()==112 && blocked.Grounded(), "a configured low step remains reachable");
+        blocked.ResolveFloor(125);
+        Require(blocked.FeetZ()==112, "grounded upward snaps obey the configured step height");
+    }
     // F8-style tuning replacement preserves momentum/position; the next step consumes the new cap.
     MovementSettings tuned; tuned.maxBunnySpeed = 300; tuned.jumpBoostPercent = 0;
     float feet = hopping.FeetZ(); hopping.Configure(tuned);

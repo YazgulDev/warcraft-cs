@@ -2,6 +2,7 @@
 #include "../src/platform/DiagnosticLog.hpp"
 #include "../src/platform/UnitCollisionProfile.hpp"
 #include "MovementStrafeInput.hpp"
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -15,6 +16,8 @@ bool drop=false, prop=false, wall=false, slope=false, water=false;
 bool tree=false,canopyBounds=false;
 bool wideCliff=false;
 bool landingLedge=false;
+bool cliffFace=false;float faceYaw=0,faceRise=256;
+float FaceDistance(float x,float y) { return x*std::cos(faceYaw)+y*std::sin(faceYaw); }
 float ledgeYaw=0,cliffRim=144;
 float actorRadius=0;
 bool nativeCliffRim=false;
@@ -25,6 +28,7 @@ wc3::Bits Bits(float value) { wc3::Bits bits;std::memcpy(&bits,&value,4);return 
 wc3::Bits __cdecl X(wc3::Handle) {return Bits(unitX);}
 wc3::Bits __cdecl Y(wc3::Handle) {return Bits(unitY);}
 BOOL __cdecl Blocked(float* x,float* y,int) {
+    if(cliffFace)return FaceDistance(*x,*y)>=8 && FaceDistance(*x,*y)<=184;
     if(landingLedge)return FALSE;
     if(sideContact)return FALSE; // Unit collision/side volumes are independent of the terrain pathing grid.
     // Stock tree pathing retains its trunk footprint while the canopy above remains empty space.
@@ -41,7 +45,7 @@ wc3::Handle __cdecl World() { return 1; }
 wc3::Bits __cdecl Minimum(wc3::Handle) { return Bits(-4096); }
 wc3::Bits __cdecl Maximum(wc3::Handle) { return Bits(4096); }
 void __cdecl Remove(wc3::Handle) {}
-int __cdecl Level(float* x,float*) { return (drop || cliff) && *x>=32 ? (drop ? 1 : 3) : 2; }
+int __cdecl Level(float* x,float* y) { if(cliffFace)return FaceDistance(*x,*y)>=96 ? 3 : 2; return (drop || cliff) && *x>=32 ? (drop ? 1 : 3) : 2; }
 void __cdecl Position(wc3::Handle,float* x,float* y) {
     // A clear center beside a cliff can still trigger native nearest-cell placement for its wider hull.
     if(nativeCliffRim && *x>0 && *x<8){unitX=*x+80;unitY=*y;return;}
@@ -77,7 +81,7 @@ Bits (__cdecl* GetRectMaxX)(Handle)=Maximum;
 Bits (__cdecl* GetRectMaxY)(Handle)=Maximum;
 void (__cdecl* RemoveRect)(Handle)=Remove;
 float Real(Bits bits){float f;std::memcpy(&f,&bits,4);return f;}
-float TerrainGround(float x,float y){return landingLedge ? (x*std::cos(ledgeYaw)+y*std::sin(ledgeYaw)>=32 ? 140.f : 100.f) : slope ? 100.f+x*slopeGradient : drop && x>=32 ? 0.f : cliff && x>=32 ? 180.f : 100.f;}
+float TerrainGround(float x,float y){if(cliffFace)return 100+std::clamp((FaceDistance(x,y)-32)/128,0.f,1.f)*faceRise;return landingLedge ? (x*std::cos(ledgeYaw)+y*std::sin(ledgeYaw)>=32 ? 140.f : 100.f) : slope ? 100.f+x*slopeGradient : drop && x>=32 ? 0.f : cliff && x>=32 ? 180.f : 100.f;}
 float Ground(float x,float y){return TerrainGround(x,y)+(water ? 22.f : 0.f);}
 bool WalkableSurface(float,float y,float& height){
     if(!bridgeAlive || (edge && std::abs(y)>16))return false;
@@ -238,6 +242,35 @@ int main(){
         }
         Require(unitX*cx+unitY*cy<0 && fallingOff && jumper.Grounded() && jumper.FeetZ()==100,"leaving the lip falls and lands without hovering or sticking");
     }
+    // The mesh interpolates a tall native cliff into small rises. Neither walking nor repeated
+    // jumps may treat the blocked face as an unlimited staircase, including diagonal approaches.
+    landingLedge=false;cliffFace=true;actorRadius=0;
+    for(int fps:{20,60,144})for(int heading=0;heading<8;++heading)for(bool hop:{false,true}) {
+        faceYaw=heading*.78539816339f;unitX=unitY=0;jumper.Reset(100);
+        MoveInput toward=forward;toward.yaw=heading*45.f;toward.jump=hop;
+        float cliffPeak=100;
+        for(int frame=0;frame<fps*4;++frame) {
+            jumper.Step(toward,1.f/fps,250);collision.Move(1,jumper,1.f/fps);
+            cliffPeak=std::max(cliffPeak,jumper.FeetZ());
+        }
+        Require(FaceDistance(unitX,unitY)<32, "an interpolated tall cliff cannot be climbed in small steps");
+        Require(cliffPeak<168, "holding jump against a tall cliff cannot gain a new takeoff floor");
+    }
+    // Reachable tops, configured higher jumps and downhill travel remain usable.
+    faceYaw=0;faceRise=40;unitX=-100;unitY=0;jumper.Reset(100);
+    for(int frame=0;frame<60;++frame)jumper.Step(forward,1.f/60,250);
+    jumping.jump=true;
+    for(int frame=0;frame<180;++frame){jumper.Step(jumping,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(unitX>208, "a single ordinary jump can still clear a low interpolated cliff");
+    faceRise=256;unitX=300;unitY=0;jumper.Reset(356);
+    for(int frame=0;frame<180;++frame){jumper.Step(retreat,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(unitX<0 && jumper.Grounded() && jumper.FeetZ()==100, "a tall interpolated cliff still permits a downward fall");
+    MovementSettings highJump;highJump.jumpSpeed=650;jumper.Configure(highJump);
+    unitX=-200;unitY=0;jumper.Reset(100);
+    for(int frame=0;frame<60;++frame)jumper.Step(forward,1.f/60,250);
+    for(int frame=0;frame<120;++frame){jumper.Step(jumping,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(unitX>300, "a custom jump which physically clears the upper terrace remains allowed");
+    jumper.Configure(MovementSettings{});cliffFace=false;
     // Model-backed low props share the same rim support rule as terrain, including a partial landing.
     actorRadius=0;landingLedge=false;prop=true;unitX=48;unitY=0;jumper.Reset(100);
     MoveInput vertical;vertical.jump=true;bool above=false;
