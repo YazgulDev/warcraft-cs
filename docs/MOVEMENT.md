@@ -20,11 +20,6 @@ block takeoff; release Space after recovery. Existing slows still cap movement s
 Jump over low solids when the feet clear their transformed model bounds. Land on their top or continue
 past them. Taller walls, buildings and trees retain collision. Walking or jumping off a ledge keeps the
 current height initially, then gravity accelerates the fall until landing. No fall damage is added.
-An airborne landing requires the feet to cross the top from above during that frame; descending below
-an overhead top cannot pull the player up. Ground rises obey `StepHeight`. Blocked native cliff faces
-use the neighboring upper terrace as their barrier, so their interpolated mesh cannot act as a staircase
-for walking or repeated held-Space jumps. Walkable ramps, reachable low tops and downward falls remain usable.
-The existing `JumpSpeed`, `Gravity` and `StepHeight` settings control reach; there is no extra height boost.
 Landing uses the player's full collision footprint: a foot reaching the top catches the lip before
 the center crosses, and support ends after the trailing foot leaves. Native cliff rims include the
 lower-bank pathing cell; validated movement there avoids Warcraft's nearest-cell relocation.

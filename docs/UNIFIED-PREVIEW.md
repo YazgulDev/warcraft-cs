@@ -82,12 +82,6 @@ Tau/Gluon beam pixels/occlusion. Existing regression and packaging checks cover
 config preservation, ownership, native binding, source/resource integrity and
 launcher reinstall. Report real-game testing separately from these checks.
 
-Movement now rejects landings on tops the feet never reached. Automatic ground rises obey
-`Movement.StepHeight`; blocked interpolated cliff faces require clearing the upper terrace rather than
-climbing their small mesh rises through repeated jumps. Low obstacles, walkable ramps, foot-edge landings
-and downward falls remain supported. Existing jump/gravity tuning remains editable on F8; no setting reset
-is required. Restart after installing this native code correction. See [movement settings](MOVEMENT.md).
-
 <!-- launcher-summary
 - Added experimental Warcraft III 1.27a and Direct3D 9 support alongside 1.26a.
 - Added Player setup for both hosts using exact local Miles export forwarders without C++ Build Tools.
@@ -101,5 +95,4 @@ is required. Restart after installing this native code correction. See [movement
 - Added configurable rare weapon drops with a 0.5 percent default chance and E pickup.
 - Changed default RPG blast radius to 525 while retaining 100 peak damage.
 - Preserved custom settings and prevented a local preview from offering its published base as a newer build.
-- Fixed unreachable obstacle landings and repeated jumping up tall native cliff faces while preserving low jumps and downhill falls.
 -->

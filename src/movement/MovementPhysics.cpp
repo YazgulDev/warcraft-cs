@@ -76,11 +76,6 @@ void MovementPhysics::Step(const MoveInput& input, float dt, float weaponSpeed) 
 void MovementPhysics::ResolveFloor(float floor) {
     // Losing support starts a fall at the current height instead of snapping down the cliff.
     if (grounded_ && feetZ_ - floor > settings_.stepHeight) { grounded_ = false; vz_ = 0; return; }
-    // A ground step is limited by configuration. An airborne landing must cross the surface
-    // from above during this frame; a descending jump below a roof cannot snap onto its top.
-    float reachable = grounded_ ? feetZ_ + settings_.stepHeight : std::max(previousFeetZ_, feetZ_);
-    if (std::isfinite(floor) && floor <= reachable + .01f &&
-        (grounded_ || (vz_ <= 0 && feetZ_ <= floor))) {
-        feetZ_ = floor; vz_ = 0; grounded_ = true;
-    }
+    // Rising players cannot be teleported onto overhead geometry; collision rejects its sides.
+    if (grounded_ || (vz_ <= 0 && feetZ_ <= floor)) { feetZ_ = floor; vz_ = 0; grounded_ = true; }
 }

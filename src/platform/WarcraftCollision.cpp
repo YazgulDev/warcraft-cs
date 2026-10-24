@@ -19,27 +19,16 @@ float ReachableHeight(const MovementPhysics& movement) {
     return movement.Grounded() ? movement.FeetZ() + movement.StepHeight() :
         std::max(movement.FeetZ(), movement.PreviousFeetZ());
 }
-bool CliffCell(float x, float y, float* barrierHeight=nullptr) {
+bool CliffCell(float x, float y) {
     int level=wc3::GetTerrainCliffLevel(&x,&y);
-    bool cliff=false;
-    if(barrierHeight)*barrierHeight=wc3::TerrainGround(x,y);
     // The interpolated face and its blocked lower-bank cell can occupy two terrain cells beyond
     // the native level transition. Probe both rings, including diagonal shoreline corners.
     for(float reach:{128.f,256.f})for(int point=0;point<8;++point) {
         float angle=point*.78539816339f;
         float sx=x+std::round(std::cos(angle))*reach,sy=y+std::round(std::sin(angle))*reach;
-        if(wc3::GetTerrainCliffLevel(&sx,&sy)!=level) {
-            if(!barrierHeight)return true;
-            cliff=true;
-        }
-        // The native cliff face is visually interpolated. Its neighboring terrace is the barrier,
-        // otherwise each tiny swept rise would become another legal step or autojump takeoff.
-        if(barrierHeight) {
-            float height=wc3::TerrainGround(sx,sy);
-            if(std::isfinite(height))*barrierHeight=std::max(*barrierHeight,height);
-        }
+        if(wc3::GetTerrainCliffLevel(&sx,&sy)!=level) return true;
     }
-    return cliff;
+    return false;
 }
 }
 void WarcraftCollision::Blocked(const char* reason, float x, float y, float oldX, float oldY,
@@ -104,13 +93,6 @@ bool WarcraftCollision::Clear(float x, float y, float oldX, float oldY, const Mo
         }
         if (!wc3::IsTerrainPathable(&px, &py, 1)) continue;
         if (wc3::WalkableSurface(px, py, deck) && deck <= bottom + .01f) continue;
-        float cliffTop=terrain;
-        bool cliff=CliffCell(px,py,terrain>oldSample+.01f ? &cliffTop : nullptr);
-        // Ground step tolerance and near-ground airborne tolerance belong to walkable ramps.
-        // A blocked rising cliff requires feet high enough to clear its upper terrace in one jump.
-        if(cliff && terrain>oldSample+.01f && cliffTop>bottom+.01f) {
-            Blocked("uphill-cliff",px,py,oldX,oldY,bottom,cliffTop);return false;
-        }
         bool knownObject = false;
         for (const auto& box : obstacles) if (Overlaps(box, px, py, radius_) &&
             (box.maximum[2] <= bottom + .01f ||
@@ -120,7 +102,7 @@ bool WarcraftCollision::Clear(float x, float y, float oldX, float oldY, const Mo
         if (knownObject) continue;
         // Native cliff cells block walkers even above an edge. Recognize their cliff-level discontinuity,
         // keeping flat unknown blockers closed rather than disabling pathing for every jump.
-        if (cliff || wc3::GetTerrainCliffLevel(&oldX,&oldY)>wc3::GetTerrainCliffLevel(&px,&py)) continue;
+        if (CliffCell(px,py) || wc3::GetTerrainCliffLevel(&oldX,&oldY)>wc3::GetTerrainCliffLevel(&px,&py)) continue;
         Blocked("native-pathing",px,py,oldX,oldY,bottom,terrain);return false;
     }
     return true;

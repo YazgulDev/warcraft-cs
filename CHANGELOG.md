@@ -2,8 +2,6 @@
 
 ## Unreleased
 
-- Prevent jumping/climbing onto unreachable obstacle tops: restrict ground rises to configured StepHeight, require airborne landings to cross a surface from above, and check the upper terrace of a blocked interpolated native cliff rather than treating its face as small steps. Preserve low props, walkable ramps, foot-edge landings, downhill falls and configured higher jumps. Add regressions at 20/60/144 FPS and eight headings.
-
 - Replace the long repository homepage with a short project overview and navigation. Add a documentation index and separate controls, settings and compatibility guides; remove duplicate setup text, stale prices and the outdated contribution-branch reference. Preserve historical release notes and third-party credits.
 
 ## Unreleased — unified launcher preview
