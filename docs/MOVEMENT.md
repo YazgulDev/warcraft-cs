@@ -1,5 +1,7 @@
 # Bunnyhop and airborne movement
 
+[Project home](../README.md) · [Documentation](README.md) · [Controls](CONTROLS.md)
+
 These movement features ship in 0.7.0. Their original feature branches are retained for development history.
 
 The requested reference is LamWarp's [How to Bunny Hop](https://www.youtube.com/watch?v=WschEm9uYao).

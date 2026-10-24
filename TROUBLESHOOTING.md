@@ -1,5 +1,7 @@
 # Troubleshooting
 
+[Project home](README.md) · [Documentation](docs/README.md) · [Installation](INSTALL.md)
+
 Start with the exact error in the launcher and the relevant log below. Check that you are using
 the [latest published launcher](https://github.com/YazgulDev/warcraft-cs/releases/latest) and read
 [Installation](INSTALL.md) and [Requirements](REQUIREMENTS.md). Save your progress before closing

@@ -1,5 +1,7 @@
 # CS-style carried weapon menu
 
+[Project home](../README.md) · [Documentation](README.md) · [Controls](CONTROLS.md)
+
 Armed F6 keeps every supported weapon you own. Selecting another weapon does not discard the
 others or impose a primary/pistol carry limit. The menu previews a choice before equipping it.
 

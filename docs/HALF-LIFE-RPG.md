@@ -1,5 +1,7 @@
 # Optional Half-Life RPG
 
+[Project home](../README.md) · [Documentation](README.md) · [Controls](CONTROLS.md)
+
 The RPG is added only when setup finds the owner's `models/v_rpg.mdl`,
 `models/rpgrocket.mdl` and `sound/weapons/rocketfire1.wav`, `rocket1.wav`,
 `debris1.wav` in the `valve` directory beside the chosen `cstrike` directory.

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Replace the long repository homepage with a short project overview and navigation. Add a documentation index and separate controls, settings and compatibility guides; remove duplicate setup text, stale prices and the outdated contribution-branch reference. Preserve historical release notes and third-party credits.
+
 ## 0.11.0 — 2026-10-20
 
 - Added Deagle, Glock, MP5, P90, M249, M3 and XM1014 purchases.
