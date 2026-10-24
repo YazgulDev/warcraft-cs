@@ -1,3 +1,4 @@
+#include "GraphicsApi.hpp"
 #include "HudFont.hpp"
 #include "HudDiagnostics.hpp"
 #include <cstring>

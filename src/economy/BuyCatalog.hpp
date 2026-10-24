@@ -4,7 +4,7 @@
 
 // One catalog supplies both number-key purchases and CS-style weapon/detail panels.
 namespace BuyCatalog {
-enum class Category { Main, Pistols, Shotguns, SMGs, Rifles, Machineguns, Equipment };
+enum class Category { Main, Pistols, Shotguns, SMGs, Rifles, Machineguns, Equipment, HalfLife };
 struct Entry { int slot,key;Category category;const char* name;const char* cache;const char* caliber; };
 inline constexpr std::array<Entry,WeaponSlots::Count> Entries={{
     {0,1,Category::Rifles,"CV-47 / AK47","ak47","7.62 MM"},
@@ -24,7 +24,10 @@ inline constexpr std::array<Entry,WeaponSlots::Count> Entries={{
     {WeaponSlots::HE,4,Category::Equipment,"HE GRENADE","hegrenade","EXPLOSIVE"},
     {WeaponSlots::Flashbang,5,Category::Equipment,"FLASHBANG","flashbang","FLASH"},
     {WeaponSlots::Smoke,6,Category::Equipment,"SMOKE GRENADE","smokegrenade","SMOKE"},
-    {WeaponSlots::RPG,7,Category::Equipment,"HALF-LIFE RPG","rpg","ROCKET"}
+    {WeaponSlots::Crowbar,1,Category::HalfLife,"CROWBAR","crowbar","MELEE"},
+    {WeaponSlots::Tau,2,Category::HalfLife,"TAU CANNON","gauss","URANIUM"},
+    {WeaponSlots::Gluon,3,Category::HalfLife,"GLUON GUN","egon","URANIUM"},
+    {WeaponSlots::RPG,4,Category::HalfLife,"HALF-LIFE RPG","rpg","ROCKET"}
 }};
 inline const Entry* Find(Category category,int key) {
     for (const auto& item : Entries) if (item.category==category && item.key==key) return &item;

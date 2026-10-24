@@ -4,13 +4,14 @@
 // Preserve original CS category numbers while omitting categories we do not implement.
 class BuyMenu {
 public:
-    enum class Page { Closed, Main, Pistols, Rifles, Equipment, Shotguns, SMGs, Machineguns };
+    enum class Page { Closed, Main, Pistols, Rifles, Equipment, Shotguns, SMGs, Machineguns, HalfLife };
     struct Action { int slot=-1;bool primaryAmmo=false;bool secondaryAmmo=false; };
     Page Current() const { return page_; }
     bool Open() const { return page_!=Page::Closed; }
     void Close() { page_=Page::Closed; }
     void Toggle() { page_=Open() ? Page::Closed : Page::Main; }
     static BuyCatalog::Category Category(Page page) {
+        if(page==Page::HalfLife)return BuyCatalog::Category::HalfLife;
         if(page==Page::Shotguns)return BuyCatalog::Category::Shotguns;
         if(page==Page::SMGs)return BuyCatalog::Category::SMGs;
         if(page==Page::Machineguns)return BuyCatalog::Category::Machineguns;
@@ -30,6 +31,7 @@ public:
             if (key==6) result.primaryAmmo=true;
             if (key==7) result.secondaryAmmo=true;
             if (key==8) page_=Page::Equipment;
+            if (key==9) page_=Page::HalfLife; // Preserve every existing CS purchase key.
         } else if (auto item=BuyCatalog::Find(Category(page_),key)) result.slot=item->slot;
         return result;
     }

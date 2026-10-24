@@ -7,10 +7,52 @@
 #include <filesystem>
 #include <cmath>
 #include <fstream>
+#include <vector>
 #include <windows.h>
 namespace wc3 { void Log(const char*,...) {} }
 int main() {
+    // Headless regressions report assertion details to the captured journal instead of a desktop dialog.
+    _set_error_mode(_OUT_TO_STDERR);
     GameplaySettings settings;
+    // Missing configs and F8 share the requested defaults; invalid values are rejected at the INI boundary.
+    assert(settings.economy.currency==EconomySettings::Currency::Dollars && settings.economy.startingMoney==800);
+    assert(settings.economy.killReward==300 && settings.economy.maximumMoney==16000);
+    assert(settings.weaponDrops.enabled && settings.weaponDrops.chancePercent==.5f);
+    assert(settings.rpg.radius==525 && settings.damage[WeaponSlots::RPG]==100);
+    auto economyPath=(std::filesystem::current_path()/"economy-reload-test.ini").string();
+    {std::ofstream f(economyPath);f<<"[Economy]\nCurrency=gold\nStartingMoney=99999\nMaximumMoney=2000\nKillReward=nan\n[WeaponDrops]\nEnabled=false\nChancePercent=999\nLifetimeSeconds=-2\nPickupRadius=nan\nMaximumDrops=0\n[RPG]\nRadius=nan\nDamage=nan\n";}
+    auto economyReload=GameplaySettings::Load(economyPath);
+    assert(economyReload.economy.currency==EconomySettings::Currency::Gold && economyReload.economy.startingMoney==2000);
+    assert(economyReload.economy.killReward==300 && !economyReload.weaponDrops.enabled);
+    assert(economyReload.weaponDrops.chancePercent==100 && economyReload.weaponDrops.lifetimeSeconds==1);
+    assert(economyReload.weaponDrops.pickupRadius==160 && economyReload.weaponDrops.maximumDrops==1);
+    assert(economyReload.rpg.radius==525 && economyReload.damage[WeaponSlots::RPG]==100);
+    WritePrivateProfileStringA("Economy","Currency","broken",economyPath.c_str());
+    WritePrivateProfileStringA("WeaponDrops","Enabled","broken",economyPath.c_str());
+    WritePrivateProfileStringA("WeaponDrops","ChancePercent","nan",economyPath.c_str());
+    economyReload=GameplaySettings::Load(economyPath);
+    assert(economyReload.economy.currency==EconomySettings::Currency::Dollars && economyReload.weaponDrops.enabled && economyReload.weaponDrops.chancePercent==.5f);
+    // Direct F8 reload upgrades the old stock blast once; a versioned custom radius remains editable.
+    WritePrivateProfileStringA("RPG","Radius","375",economyPath.c_str());
+    assert(GameplaySettings::Load(economyPath).rpg.radius==525);
+    WritePrivateProfileStringA("RPG","BlastVersion","2",economyPath.c_str());
+    assert(GameplaySettings::Load(economyPath).rpg.radius==375);
+    DeleteFileA(economyPath.c_str());
+
+    // A missing host adapter permits fixed configured damage; an actual zero-attack creature does not.
+    assert(settings.ContactDamage(0,false,-1)==settings.damage[0]);
+    assert(settings.ContactDamage(0,false,0)==0);
+    settings.unavailableAttackUsesWeaponDamage=false;assert(settings.ContactDamage(0,false,-1)==0);
+    settings.unavailableAttackUsesWeaponDamage=true;
+    // F8 reads a fresh validated snapshot; invalid fallback policy does not turn missing statistics into zero damage.
+    char fallbackDirectory[MAX_PATH]={};GetCurrentDirectoryA(MAX_PATH,fallbackDirectory);
+    std::string fallbackPath=std::string(fallbackDirectory)+"\\warcraft-host-damage-fallback.ini";
+    for(const char* policy:{"zero","weapon","broken",""}) {
+        WritePrivateProfileStringA("Damage","UnavailableAttackFallback",policy,fallbackPath.c_str());
+        auto reloaded=GameplaySettings::Load(fallbackPath);
+        assert(reloaded.unavailableAttackUsesWeaponDamage==(std::string(policy)!="zero"));
+    }
+    DeleteFileA(fallbackPath.c_str());
     // Every firearm reaches visible distant targets, even when an older INI retains a short individual range.
     for(int slot=0;slot<WeaponSlots::Count;++slot)if(WeaponSlots::Firearm(slot))assert(settings.FirearmRange(slot)==30000);
     assert(settings.movement.useNativeUnitCollision);
@@ -563,6 +605,55 @@ int main() {
         WritePrivateProfileStringA("RPG",key,"nan",rpgPath.c_str());auto g=GameplaySettings::Load(rpgPath).rpg;
         assert(std::isfinite(g.maximumSpeed) && g.radius>=32 && g.lifetime>=1 && g.maxActive>=1);
     }
+    // Independent seals must be checked by the real startup/F8 loader, not just converter tests.
+    const std::vector<std::vector<const char*>> guestFiles={
+        {"crowbar.wcg","crowbar.wca","buy/crowbar.wcg","sounds/hl_cbar_miss1.wav","sounds/hl_cbar_hit1.wav","sounds/hl_cbar_hitbod1.wav",
+        "sounds/hl_cbar_hit2.wav","sounds/hl_cbar_hitbod2.wav","sounds/hl_cbar_hitbod3.wav","sounds/hl_cbar_ground1.wav","sounds/hl_cbar_ground2.wav","sounds/hl_cbar_ground3.wav"},
+        {"gauss.wcg","gauss.wca","buy/gauss.wcg","sounds/hl_gauss2.wav","sounds/hl_gauss_charge.wav"},
+        {"egon.wcg","egon.wca","buy/egon.wcg","sounds/hl_egon_windup2.wav","sounds/hl_egon_run3.wav","sounds/hl_egon_off1.wav"}};
+    const char* seals[]={"crowbar.ready","gauss.ready","egon.ready"};
+    for(int i=0;i<3;++i) {
+        assert(!GameplaySettings::Load(rpgPath).WeaponEnabled(WeaponSlots::Crowbar+i));
+        std::ofstream seal(assets/seals[i],std::ios::binary);seal.write("WHL1",4);
+        for(auto name:guestFiles[i]) {
+            auto output=assets/name;std::filesystem::create_directories(output.parent_path());std::string bytes="synthetic guest asset";
+            {std::ofstream f(output,std::ios::binary);f<<bytes;}
+            uint64_t n=bytes.size(),hash=14695981039346656037ull;for(unsigned char c:bytes){hash^=c;hash*=1099511628211ull;}
+            seal.write(reinterpret_cast<char*>(&n),8);seal.write(reinterpret_cast<char*>(&hash),8);
+        }
+        seal.close();assert(GameplaySettings::Load(rpgPath).WeaponEnabled(WeaponSlots::Crowbar+i));
+    }
+    {std::ofstream f(rpgPath);f<<"[TauCannon]\nChargeSeconds=2\nChargedDamage=777\nMagazine=55\nMaxReserve=999\n[HalfLife]\nBeamWidth=8\n";}
+    auto hl=GameplaySettings::Load(rpgPath);assert(hl.halfLife.tauChargeSeconds==2 && hl.halfLife.tauChargedDamage==777 && hl.halfLife.beamWidth==8);
+    assert(hl.damage[WeaponSlots::Tau]==100 && hl.damage[WeaponSlots::Gluon]==70 && !hl.nativeAttackSound);
+    for(const char* value:{"true","false","broken"}) {
+        WritePrivateProfileStringA("Combat","NativeAttackSound",value,rpgPath.c_str());hl=GameplaySettings::Load(rpgPath);
+        assert(hl.nativeAttackSound==!strcmp(value,"true"));
+    }
+    WritePrivateProfileStringA("HalfLife","BeamEffects","false",rpgPath.c_str());
+    WritePrivateProfileStringA("HalfLife","OwnedSprites","false",rpgPath.c_str());
+    WritePrivateProfileStringA("HalfLife","ImpactSize","999",rpgPath.c_str());hl=GameplaySettings::Load(rpgPath);
+    assert(!hl.halfLife.beamEffects && !hl.halfLife.ownedSprites && hl.halfLife.impactSize==100);
+    WritePrivateProfileStringA("HalfLife","ImpactSize","nan",rpgPath.c_str());hl=GameplaySettings::Load(rpgPath);assert(hl.halfLife.impactSize==18);
+    assert(hl.halfLife.tauSpinStartRate==1 && hl.halfLife.tauSpinEndRate==3 && hl.halfLife.tauPitchStart==1 && hl.halfLife.tauPitchEnd==2.5f && hl.halfLife.crowbarSurfaceSounds);
+    WritePrivateProfileStringA("Crowbar","SurfaceSounds","false",rpgPath.c_str());assert(!GameplaySettings::Load(rpgPath).halfLife.crowbarSurfaceSounds);
+    WritePrivateProfileStringA("TauCannon","SpinEndRate","6",rpgPath.c_str());assert(GameplaySettings::Load(rpgPath).halfLife.tauSpinEndRate==6);
+    assert(hl.weapons[WeaponSlots::Tau].magazine==55 && hl.maxReserve[WeaponSlots::Tau]==0);
+    assert(hl.ContactDamage(WeaponSlots::Tau,false,9999)==100 && hl.ContactDamage(WeaponSlots::Gluon,false,9999)==70);
+    for(auto value:{"nan","inf","bad","","-1","999999"}) {
+        WritePrivateProfileStringA("TauCannon","ChargeSeconds",value,rpgPath.c_str());
+        WritePrivateProfileStringA("HalfLife","BeamWidth",value,rpgPath.c_str());hl=GameplaySettings::Load(rpgPath);
+        for(auto key:{"SpinStartRate","SpinEndRate","ChargePitchStart","ChargePitchEnd"})WritePrivateProfileStringA("TauCannon",key,value,rpgPath.c_str());
+        hl=GameplaySettings::Load(rpgPath);auto feedback=hl.halfLife;
+        assert(std::isfinite(feedback.tauSpinStartRate) && feedback.tauSpinStartRate>=.25f && feedback.tauSpinEndRate>=feedback.tauSpinStartRate && feedback.tauSpinEndRate<=8);
+        assert(std::isfinite(feedback.tauPitchStart) && feedback.tauPitchStart>=.25f && feedback.tauPitchEnd>=feedback.tauPitchStart && feedback.tauPitchEnd<=4);
+        assert(std::isfinite(hl.halfLife.tauChargeSeconds) && hl.halfLife.tauChargeSeconds>=.1f && hl.halfLife.tauChargeSeconds<=10);
+        assert(std::isfinite(hl.halfLife.beamWidth) && hl.halfLife.beamWidth>=.5f && hl.halfLife.beamWidth<=20);
+    }
+    WritePrivateProfileStringA("TauCannon","Enabled","false",rpgPath.c_str());
+    assert(!GameplaySettings::Load(rpgPath).WeaponEnabled(WeaponSlots::Tau));
+    {std::ofstream f(assets/"egon.wcg",std::ios::app);f<<"changed";}
+    hl=GameplaySettings::Load(rpgPath);assert(!hl.WeaponEnabled(WeaponSlots::Gluon) && hl.WeaponEnabled(WeaponSlots::Crowbar));
     // This test owns the freshly created temporary directory exclusively.
     assert(rpgRoot.parent_path()==std::filesystem::current_path());std::filesystem::remove_all(rpgRoot);
     DeleteFileA(path.c_str());return 0;

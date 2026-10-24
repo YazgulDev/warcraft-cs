@@ -76,6 +76,9 @@ public static class LauncherTests {
             "RoC preference not saved");
         Require(GameEdition.LaunchArguments(GameEdition.ReignOfChaos)=="-opengl -classic","RoC launch argument missing");
         Require(GameEdition.LaunchArguments(null)=="-opengl","Legacy launch default wrong");
+        // Host graphics selection must not erase edition choice or retain the legacy OpenGL flag.
+        Require(GameEdition.LaunchArguments(GameEdition.ReignOfChaos,true)=="-classic","1.27a RoC D3D9 arguments wrong");
+        Require(GameEdition.LaunchArguments(GameEdition.FrozenThrone,true)=="","1.27a TFT D3D9 arguments wrong");
         Reject(()=>GameEdition.LaunchArguments("ReignOfChaos; arbitrary command"),"Unvalidated edition reaches launch arguments");
         // Launching an older installed revision still selects RoC and opts out of DPI bitmap scaling.
         foreach (string selected in new[] {GameEdition.FrozenThrone,GameEdition.ReignOfChaos}) {

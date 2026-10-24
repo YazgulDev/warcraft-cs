@@ -1,3 +1,4 @@
+#include "GraphicsApi.hpp"
 #include "TargetMarkerView.hpp"
 #include "HealthBarView.hpp"
 #include <windows.h>

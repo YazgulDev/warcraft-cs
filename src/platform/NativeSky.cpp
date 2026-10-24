@@ -1,3 +1,4 @@
+#include "GameBuild.hpp"
 #include "NativeSky.hpp"
 #include "WarcraftApi.hpp"
 #include <cstring>
@@ -6,8 +7,8 @@ bool NativeSky::Configure(uintptr_t base) {
     // SetSkyModel's verified 1.26a backend owns sprite loading and the native sky update callbacks.
     const unsigned char set[]={0x56,0x8B,0xF1,0x8B,0x8E,0x54,0x03,0x00,0x00};
     const unsigned char get[]={0x8B,0x41,0x08,0x85,0xC0,0x74,0x04,0x8B,0x40,0x1C,0xC3};
-    if (memcmp(reinterpret_cast<void*>(base+0x390590),set,sizeof(set)) ||
-        memcmp(reinterpret_cast<void*>(base+0x4C4630),get,sizeof(get))) return false;
+    if (memcmp(reinterpret_cast<void*>(base + wc3::Rva(0x390590)),set,sizeof(set)) ||
+        memcmp(reinterpret_cast<void*>(base + wc3::Rva(0x4C4630)),get,sizeof(get))) return false;
     base_=base;return true;
 }
 void NativeSky::Reset() {
@@ -21,8 +22,8 @@ void NativeSky::Update(uintptr_t ui, bool enabled, char tileset) {
     if (frame_!=frame) {Reset();frame_=frame;}
     using Set=void (__thiscall*)(uintptr_t,const char*);
     using Get=const char* (__fastcall*)(uintptr_t,uintptr_t);
-    auto set=reinterpret_cast<Set>(base_+0x390590);
-    const char* current=reinterpret_cast<Get>(base_+0x4C4630)(frame+0x348,0);
+    auto set=reinterpret_cast<Set>(base_ + wc3::Rva(0x390590));
+    const char* current=reinterpret_cast<Get>(base_ + wc3::Rva(0x4C4630))(frame+0x348,0);
     // Map scripts may replace our preview during a cinematic; never undo their new sky.
     if (applied_ && (!current || _stricmp(current,model_.c_str()))) applied_=false;
     if (!enabled) {

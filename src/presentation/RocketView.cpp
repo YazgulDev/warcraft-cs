@@ -1,3 +1,4 @@
+#include "GraphicsApi.hpp"
 #include "RocketView.hpp"
 #include "WorldEffectPass.hpp"
 #include "../platform/WarcraftApi.hpp"

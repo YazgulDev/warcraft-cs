@@ -4,6 +4,38 @@ $root=Split-Path -Parent $PSScriptRoot
 $folder=Join-Path $root ('.local/config-merge-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $folder -Force | Out-Null
 $template=Join-Path $root 'config/WarcraftCS.ini'
+# Previous energy stock values upgrade once; later edits back to those values must survive reinstallation.
+foreach($custom in @($false,$true)) {
+    $energyConfig=Join-Path $folder ('energy-'+$custom+'.ini')
+    @('[TauCannon]',$(if($custom){'Damage=123'}else{'Damage=20'}),'ChargedDamage=200','[GluonGun]','Damage=14','[HalfLife]','BeamWidth=8','[Combat]','EnableAttackEffects=true') | Set-Content $energyConfig
+    Update-GameplayConfig $template $energyConfig
+    $energyText=Get-Content $energyConfig -Raw
+    foreach($expected in @($(if($custom){'Damage=123'}else{'Damage=100'}),'ChargedDamage=1000','Damage=70','BeamWidth=8','NativeAttackSound=false','OwnedSprites=true','DamageVersion=2')) {
+        if(!$energyText.Contains($expected)){throw "Energy migration missing $expected"}
+    }
+    $energyHash=(Get-FileHash $energyConfig).Hash;Update-GameplayConfig $template $energyConfig
+    if((Get-FileHash $energyConfig).Hash -ne $energyHash){throw 'Energy migration must be idempotent.'}
+    (Get-Content $energyConfig -Raw).Replace('Damage=70','Damage=14') | Set-Content $energyConfig
+    Update-GameplayConfig $template $energyConfig
+    if(!(Get-Content $energyConfig -Raw).Contains('Damage=14')){throw 'Versioned energy tuning was overwritten.'}
+}
+# Dollars/drop defaults fill older installs without replacing custom economy, RPG or unrelated settings.
+$economyConfig=Join-Path $folder 'dollar-loot.ini'
+@('[Economy]','Currency=gold','StartingMoney=123','[WeaponDrops]','Enabled=false','ChancePercent=0.01','[RPG]','Damage=777','Radius=900','[Sky]','Default=forest') | Set-Content -LiteralPath $economyConfig -Encoding ascii
+Update-GameplayConfig $template $economyConfig
+$economyText=Get-Content -LiteralPath $economyConfig -Raw
+foreach($expected in @('Currency=gold','StartingMoney=123','MaximumMoney=16000','KillReward=300','Enabled=false','ChancePercent=0.01','MaximumDrops=64','Damage=777','Radius=900','Default=forest')) {
+    if(!$economyText.Contains($expected)){throw "Economy/loot migration lost $expected"}
+}
+$economyHash=(Get-FileHash $economyConfig).Hash;Update-GameplayConfig $template $economyConfig
+if((Get-FileHash $economyConfig).Hash -ne $economyHash){throw 'Economy migration must be idempotent.'}
+$freshEconomy=Join-Path $folder 'dollar-defaults.ini'
+@('[Buy]','Radius=720') | Set-Content -LiteralPath $freshEconomy -Encoding ascii
+Update-GameplayConfig $template $freshEconomy
+$freshText=Get-Content -LiteralPath $freshEconomy -Raw
+foreach($expected in @('Currency=dollars','StartingMoney=800','ChancePercent=0.5','Radius=525','Radius=720')) {
+    if(!$freshText.Contains($expected)){throw "Economy/loot default missing: $expected"}
+}
 # Semicolon custom actions survive; only the former squad default migrates to Y.
 foreach($spelling in @('SEMICOLON',';')) {
     $semicolonConfig=Join-Path $folder ('semicolon-'+[guid]::NewGuid().ToString('N')+'.ini')
@@ -431,3 +463,27 @@ foreach($expected in @('Enabled=false','Damage=777','MaximumSpeed=1234','Price=2
 }
 $rpgHash=(Get-FileHash $rpgConfig).Hash;Update-GameplayConfig $template $rpgConfig
 if((Get-FileHash $rpgConfig).Hash -ne $rpgHash){throw 'RPG migration is not idempotent.'}
+# Only the previous stock blast migrates; versioned 375 and custom radii remain intentional choices.
+foreach($oldRadius in @('375','900')) {
+    foreach($versioned in @($false,$true)) {
+        $blastConfig=Join-Path $folder ('rpg-blast-'+$oldRadius+'-'+$versioned+'.ini')
+        @('[RPG]',('Radius='+$oldRadius),'Damage=777',$(if($versioned){'BlastVersion=2'}else{'; old stock format'})) | Set-Content -LiteralPath $blastConfig -Encoding ascii
+        Update-GameplayConfig $template $blastConfig
+        $blastText=Get-Content -LiteralPath $blastConfig -Raw
+        $expected=if($oldRadius -eq '375' -and !$versioned){'525'}else{$oldRadius}
+        if(!$blastText.Contains('Radius='+$expected) -or !$blastText.Contains('BlastVersion=2') -or !$blastText.Contains('Damage=777')){throw 'RPG stock migration lost a custom blast setting.'}
+        $blastHash=(Get-FileHash $blastConfig).Hash;Update-GameplayConfig $template $blastConfig
+        if((Get-FileHash $blastConfig).Hash -ne $blastHash){throw 'RPG stock migration is not idempotent.'}
+    }
+}
+
+# New guest defaults merge without resetting opt-outs, custom tuning or unrelated settings.
+$hlConfig=Join-Path $folder 'custom-halflife.ini'
+@('[TauCannon]','Enabled=false','ChargeSeconds=2','Price=1234','SpinEndRate=5','ChargePitchEnd=3','[Crowbar]','SurfaceSounds=false','[HalfLife]','BeamWidth=8','[GluonGun]','Damage=23') | Set-Content -LiteralPath $hlConfig -Encoding ascii
+Update-GameplayConfig $template $hlConfig
+$hlText=Get-Content -LiteralPath $hlConfig -Raw
+foreach($expected in @('Enabled=false','ChargeSeconds=2','Price=1234','BeamWidth=8','Damage=23','[Crowbar]','PrimaryCost=2','AmmoPack=20','SpinStartRate=1','SpinEndRate=5','ChargePitchStart=1','ChargePitchEnd=3','SurfaceSounds=false')) {
+    if(!$hlText.Contains($expected)){throw ('Half-Life update lost '+$expected)}
+}
+$hlHash=(Get-FileHash $hlConfig).Hash;Update-GameplayConfig $template $hlConfig
+if((Get-FileHash $hlConfig).Hash -ne $hlHash){throw 'Half-Life migration is not idempotent.'}

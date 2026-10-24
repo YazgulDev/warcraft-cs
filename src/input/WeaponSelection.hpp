@@ -10,14 +10,15 @@ public:
     static int Group(int slot) {
         const auto* item=BuyCatalog::Slot(slot);
         if(!item)return 0;
+        if(item->category==BuyCatalog::Category::HalfLife)return 6;
         if(WeaponSlots::Melee(slot))return 3;
         if(WeaponSlots::Grenade(slot))return 4;
         if(slot==WeaponSlots::C4)return 5;
         return item->category==BuyCatalog::Category::Pistols ? 2 : 1;
     }
     static const char* Label(int group) {
-        static const char* labels[]={"","PRIMARY","PISTOLS","MELEE","GRENADES","C4"};
-        return group>=1 && group<=5 ? labels[group] : "";
+        static const char* labels[]={"","PRIMARY","PISTOLS","MELEE","GRENADES","C4","HALF-LIFE"};
+        return group>=1 && group<=WeaponSlots::SelectionGroups ? labels[group] : "";
     }
     static std::vector<int> Items(int group,const Available& available) {
         std::vector<int> items;
@@ -41,7 +42,7 @@ public:
         if(!steps)return;
         Available all;all.fill(true);std::vector<int> order;
         // Follow the displayed groups and their row order, rather than unrelated persistent slot IDs.
-        for(int group=1;group<=5;++group) {
+        for(int group=1;group<=WeaponSlots::SelectionGroups;++group) {
             auto items=Items(group,all);order.insert(order.end(),items.begin(),items.end());
         }
         int base=Open() ? pending_ : equipped,index=-1,count=0;

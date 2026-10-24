@@ -1,3 +1,4 @@
+#include "GameBuild.hpp"
 #include "NativeFloatingText.hpp"
 #include "WarcraftApi.hpp"
 #include "../presentation/WorldLabelVisibility.hpp"
@@ -30,9 +31,12 @@ void __fastcall DrawHook(uintptr_t manager, uintptr_t, uintptr_t tag) {
 }
 }
 bool NativeFloatingText::Install(uintptr_t base, HookInstaller hook) {
+    // This adapter requires engine internals that are not yet verified on 1.27a.
+    if(wc3::ActiveBuild()==wc3::GameBuildKind::Classic127a) return false;
+
     // Verified 1.26a CTextTagManager::DrawTag prologue; refuse different native layouts.
     const unsigned char signature[]={0x83,0xEC,0x2C,0x56,0x8B,0x74,0x24,0x34,0x83,0x7E,0x2C,0x00};
-    void* target=reinterpret_cast<void*>(base+0x4E54B0);
+    void* target=reinterpret_cast<void*>(base + wc3::Rva(0x4E54B0));
     if (std::memcmp(target,signature,sizeof(signature))) {
         wc3::Log("Floating text signature mismatch; native renderer retained");return false;
     }

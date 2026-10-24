@@ -1,3 +1,4 @@
+#include "GraphicsApi.hpp"
 #include "HealthBarRenderer.hpp"
 #include <windows.h>
 #include <gl/GL.h>

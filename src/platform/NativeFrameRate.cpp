@@ -1,6 +1,8 @@
+#include "GameBuild.hpp"
 #include "NativeFrameRate.hpp"
 #include "WarcraftApi.hpp"
 #include <algorithm>
+#include <array>
 #include <cstring>
 
 namespace {
@@ -8,13 +10,21 @@ namespace {
 // Keeping that bit permits more frames without changing game clocks or simulation timers.
 constexpr uintptr_t DemandInstruction=0x62D7F2;
 constexpr unsigned char signature[]={0x8B,0x46,0x44,0xA8,0x04,0x74,0x14,0x83,0xE0,0xFB};
+bool Matches(const unsigned char* bytes,bool changed) {
+    // Preserve exact opcodes while selecting the register/branch encoding of the accepted host.
+    auto expected=std::array<unsigned char,sizeof(signature)>{};std::copy(signature,signature+sizeof(signature),expected.begin());
+    if(wc3::ActiveBuild()==wc3::GameBuildKind::Classic127a){expected[1]=0x47;expected[6]=0x11;}
+    return !std::memcmp(bytes,expected.data(),sizeof(signature)-1) &&
+        (bytes[9]==expected[9] || (changed && bytes[9]==0xFF));
+}
+
 }
 NativeFrameRate::~NativeFrameRate() { if (timer_) CloseHandle(timer_); }
 bool NativeFrameRate::Install(uintptr_t gameBase) {
     unsigned char bytes[sizeof(signature)];SIZE_T got=0;
-    auto address=reinterpret_cast<unsigned char*>(gameBase+DemandInstruction);
+    auto address=reinterpret_cast<unsigned char*>(gameBase+wc3::Rva(DemandInstruction));
     if (!ReadProcessMemory(GetCurrentProcess(),address,bytes,sizeof(bytes),&got) || got!=sizeof(bytes) ||
-        std::memcmp(bytes,signature,sizeof(bytes))) {
+        !Matches(bytes,false)) {
         wc3::Log("Frame-rate signature mismatch; native limiter retained");return false;
     }
     instruction_=address;
@@ -29,7 +39,7 @@ bool NativeFrameRate::Install(uintptr_t gameBase) {
 bool NativeFrameRate::WriteDemand(bool unlocked) {
     unsigned char bytes[sizeof(signature)];SIZE_T got=0;
     if (!ReadProcessMemory(GetCurrentProcess(),instruction_,bytes,sizeof(bytes),&got) || got!=sizeof(bytes) ||
-        std::memcmp(bytes,signature,sizeof(bytes)-1) || (bytes[9]!=0xFB && bytes[9]!=0xFF)) {
+        !Matches(bytes,true)) {
         wc3::LogError("Frame-rate instruction changed; refusing overwrite");return false;
     }
     unsigned char value=unlocked ? 0xFF : 0xFB;

@@ -1,3 +1,4 @@
+#include "GraphicsApi.hpp"
 #include "HudIconCache.hpp"
 #include "../platform/NativeArchive.hpp"
 #include "../platform/SpellIconImage.hpp"

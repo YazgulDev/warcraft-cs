@@ -1,4 +1,4 @@
-param([string]$OutputDirectory='',[string]$WarcraftDirectory='',[switch]$SourceOnly)
+param([string]$OutputDirectory='',[string]$WarcraftDirectory='',[switch]$SourceOnly,[string]$PreviewChangesFile='')
 $ErrorActionPreference='Stop'
 $root=Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'paths.ps1')
@@ -21,6 +21,12 @@ $version=(Get-Content -LiteralPath (Join-Path $root 'VERSION') -Raw).Trim()
 & git -c "safe.directory=$($root.Replace('\','/'))" -C $root diff --quiet -- launcher docs/launcher-changes tools/build-launcher.ps1
 if ($LASTEXITCODE) { throw 'Stage launcher sources and reviewed change lists before building.' }
 $changesFile=Join-Path $root ('docs/launcher-changes/'+$version+'.txt')
+if($PreviewChangesFile) {
+    # Reviewed preview notes override resources only in this local build; published version notes remain immutable.
+    $changesFile=[IO.Path]::GetFullPath($PreviewChangesFile)
+    & git -c "safe.directory=$($root.Replace('\','/'))" -C $root diff --quiet -- $changesFile
+    if($LASTEXITCODE){throw 'Stage reviewed preview notes before building.'}
+}
 if (!(Test-Path -LiteralPath $changesFile)) { throw 'Add a reviewed launcher change list for this version before building.' }
 $changes=(Get-Content -LiteralPath $changesFile -Raw -Encoding UTF8).Trim()
 if (!$changes -or @($changes -split '\r?\n' | Where-Object { $_ -notmatch '^- (Added|Fixed|Changed|Updated|Improved|Removed|Enabled|Disabled|Preserved)\s+.+' }).Count -or
@@ -28,8 +34,10 @@ if (!$changes -or @($changes -split '\r?\n' | Where-Object { $_ -notmatch '^- (A
     throw 'Each launcher change must be one plain English line beginning with - Added, - Fixed, - Changed or another supported change verb.'
 }
 $notesResources=@(Get-ChildItem -LiteralPath (Join-Path $root 'docs/launcher-changes') -Filter '*.txt' -File | ForEach-Object {
-    '/resource:'+ $_.FullName+',WarcraftCS.ReleaseNotes.'+$_.Name
+    $notePath=if($PreviewChangesFile -and $_.Name -eq ($version+'.txt')){$changesFile}else{$_.FullName}
+    '/resource:'+ $notePath+',WarcraftCS.ReleaseNotes.'+$_.Name
 })
+$previewResources=if($PreviewChangesFile){@('/resource:'+$changesFile+',WarcraftCS.Preview.txt')}else{@()}
 $assembly=Join-Path $build 'LauncherVersion.cs'
 ('[assembly: System.Reflection.AssemblyTitle("Warcraft CS by Yazgul Launcher")]'+[Environment]::NewLine+
  '[assembly: System.Reflection.AssemblyVersion("'+$version+'.0")]') | Set-Content -LiteralPath $assembly -Encoding utf8
@@ -37,7 +45,7 @@ $sources=@(Get-ChildItem -LiteralPath (Join-Path $root 'launcher') -Filter '*.cs
 $exe=Join-Path $OutputDirectory 'WarcraftCSLauncher.exe'
 # The primary executable and every public ZIP contain reviewed sources without prebuilt native modules.
 $references=@('/r:System.Windows.Forms.dll','/r:System.Drawing.dll','/r:System.IO.Compression.dll','/r:System.IO.Compression.FileSystem.dll','/r:System.Web.Extensions.dll')
-& $compiler /nologo /target:winexe /platform:x64 /optimize+ "/out:$exe" "/resource:$payload,WarcraftCS.Source.zip" $notesResources $references $assembly $sources
+& $compiler /nologo /target:winexe /platform:x64 /optimize+ "/out:$exe" "/resource:$payload,WarcraftCS.Source.zip" $notesResources $previewResources $references $assembly $sources
 if ($LASTEXITCODE) { throw 'Launcher compilation failed.' }
 Get-Item -LiteralPath $exe | Select-Object FullName,Length
 Get-FileHash -LiteralPath $exe -Algorithm SHA256 | Select-Object Hash
@@ -55,7 +63,7 @@ if (!$SourceOnly) {
     & (Join-Path $PSScriptRoot 'build-runtime-package.ps1') -SourceRevision $sourceHash -OutputFile $runtimeArchive -WarcraftDirectory $WarcraftDirectory
     if ($LASTEXITCODE) { throw 'Runtime packaging failed.' }
     $included=Join-Path $OutputDirectory 'WarcraftCSLauncher_DLL_Included.exe'
-    & $compiler /nologo /target:winexe /platform:x64 /optimize+ "/out:$included" "/resource:$payload,WarcraftCS.Source.zip" "/resource:$runtimeArchive,WarcraftCS.Runtime.zip" $notesResources $references $assembly $sources
+    & $compiler /nologo /target:winexe /platform:x64 /optimize+ "/out:$included" "/resource:$payload,WarcraftCS.Source.zip" "/resource:$runtimeArchive,WarcraftCS.Runtime.zip" $notesResources $previewResources $references $assembly $sources
     if ($LASTEXITCODE) { throw 'DLL-included launcher compilation failed.' }
     $manifest.DllIncludedLauncherSha256=(Get-FileHash -LiteralPath $included -Algorithm SHA256).Hash.ToLowerInvariant()
     $manifest.DllIncludedRuntimeSha256=(Get-FileHash -LiteralPath $runtimeArchive -Algorithm SHA256).Hash.ToLowerInvariant()

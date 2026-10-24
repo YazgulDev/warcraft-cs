@@ -1,4 +1,4 @@
-"""Strip hands from private WCG2 caches for the original-CS-style buy panel."""
+"""Strip hands from private WCG2/WCG3 caches for the original-CS-style buy panel."""
 from __future__ import annotations
 import struct
 from pathlib import Path
@@ -8,25 +8,27 @@ def export_preview(source: Path, destination: Path, texture_names: list[str], ex
     # Material names come from the player's studio model; never ship retail art or guessed silhouettes.
     data = source.read_bytes()
     magic, textures, meshes, sequences, bones = struct.unpack_from('<4s4I', data)
-    if magic != b'WCG2' or textures > 128 or meshes > 256 or not 0 < bones <= 128:
+    modern = magic == b'WCG3'
+    if magic not in (b'WCG2', b'WCG3') or textures > 128 or meshes > 256 or not 0 < bones <= 128:
         raise ValueError('Invalid preview source header')
     # Half-Life hands use named glove materials instead of CS's view_ prefix.
     extra = {name.casefold() for name in excluded_textures}
     excluded = {i for i, name in enumerate(texture_names)
                 if name.casefold().startswith('view_') or name.casefold() == 'silencer.bmp' or name.casefold() in extra}
-    at = 20
+    at = 20 + (bones * 4 if modern else 0)
     for _ in range(textures):
-        width, height = struct.unpack_from('<2I', data, at)
+        width, height = struct.unpack_from('<2I', data, at + (4 if modern else 0))
         if not 0 < width <= 2048 or not 0 < height <= 2048:
             raise ValueError('Invalid preview texture size')
-        at += 8 + width * height * 4
+        at += (12 if modern else 8) + width * height * 4
         if at > len(data):
             raise ValueError('Truncated preview textures')
     textures_end = at
     kept = []
     for _ in range(meshes):
         texture, count = struct.unpack_from('<2I', data, at)
-        end = at + 8 + count * 24
+        # Each retained WCG3 mesh carries its own normal table, so removing hands preserves exact alignment.
+        end = at + 8 + count * (40 if modern else 24)
         if texture >= textures or count > 100000 or count % 3 or end > len(data):
             raise ValueError('Invalid preview mesh')
         if texture not in excluded:
