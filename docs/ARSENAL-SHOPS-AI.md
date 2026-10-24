@@ -1,5 +1,7 @@
 # Arsenal, shops and army assistant
 
+[Project home](../README.md) · [Documentation](README.md) · [Settings](CONFIGURATION.md)
+
 The new paid firearms are Desert Eagle (650 gold), Glock 18 (400), MP5 (1500),
 P90 (2350), M249 (5750), M3 (1700), and XM1014 (3000). Open **B**: 1 pistols,
 2 shotguns, 3 SMGs, 4 rifles, 5 machine guns, 6 primary ammo, 7 pistol ammo,

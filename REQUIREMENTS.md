@@ -1,5 +1,7 @@
 # Warcraft CS requirements
 
+[Project home](README.md) · [Documentation](docs/README.md) · [Installation](INSTALL.md)
+
 Applies to **0.11.0**. See [Release Notes](docs/RELEASE-0.11.0.md) for changes and
 [antivirus troubleshooting](TROUBLESHOOTING.md#antivirus) for unsigned-module detections.
 

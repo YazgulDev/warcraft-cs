@@ -1,5 +1,7 @@
 # Third-person unit control prototype
 
+[Project home](../README.md) · [Documentation](README.md) · [Controls](CONTROLS.md)
+
 Select a living owned mobile unit and press **F7** to enter third person directly.
 Press **F7** again in third person to return to RTS; F7 in FPS switches directly to third person.
 Press **T** again to return to FPS; **F6** returns to RTS from either mode.

@@ -1,5 +1,7 @@
 # Install and play Warcraft CS
 
+[Project home](README.md) · [Documentation](docs/README.md) · [Requirements](REQUIREMENTS.md)
+
 You need your own installed Warcraft III **1.26a x86** (Game.dll **1.26.0.6401**)
 and, for CS weapons, Counter-Strike 1.6. Reforged and other Warcraft patches are unsupported.
 This offline, single-player prototype does not download games or redistribute their content.
@@ -101,14 +103,14 @@ Maps do not need editing. Enable FPS again after changing maps.
 - E: pick up items/runes; H: recruit your units to follow, fight and cast supported spells; O: follow without this module's combat casts; J: release them. Set `[Squad] AutomaticSpells=false` and press F8 to disable the added spell AI.
 - F6: return to RTS; F10: pause menu; F8: reload configuration.
 
-See [README controls and settings](README.md#controls) for details.
+See [controls](docs/CONTROLS.md) and [settings](docs/CONFIGURATION.md) for details.
 The default starting kit is a loaded USP, knife and sword. C4 is available to buy for 3000 gold;
 `[Loadout] BombCount=0` keeps it out of the starting kit. Existing configs retain their saved count;
 set it to 0 to adopt this default on the next map. Press B to buy firearms with Warcraft
 gold and `.` to buy current-weapon ammunition. Edit `[Loadout]`, `[Buy]`, weapon prices and `[Sky]`
 in `Game/WarcraftCS/WarcraftCS.ini`; F8 reloads settings (starting-kit changes apply to the next map).
 The CS-style menu uses 1 pistols, 4 rifles, 6 primary ammo, 7 secondary ammo and 8 equipment.
-Sky replacement is disabled by default. Weapon prices are four times lower; ammo-pack prices are unchanged.
+Sky replacement is disabled by default. Current prices and capacities are in the [annotated INI](config/WarcraftCS.ini).
 Once installed, **Play** does not require download consent or install dependencies.
 
 Use the launcher for either edition so fullscreen rendering uses consistent DPI scaling after Alt-Tab.
