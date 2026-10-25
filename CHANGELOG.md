@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased - local feature preview
+## Unreleased
+
+- Keep purchases available during reload; opening/closing B preserves timing, sound and shell insertion, while buying ammunition adds real reserve without restarting or duplicating transfers.
+- Default ArmyAI.FollowActor to false: U retains economy and defense without rallying ordinary troops to the hero; base reserves require an actual hall. F8 supports opting into the old escort behavior and updates preserve preferences. [Current preview](docs/RELOAD-ARMY-PREVIEW.md). - local feature preview
 
 - Use Headshot for the floating head-contact caption, retaining blood, world anchoring and fading.
 - Raise HE peak damage from 100 to 300; upgrade old stock once with HEGrenade.DamageVersion=2 while preserving custom damage.

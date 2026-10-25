@@ -123,7 +123,8 @@ void ShooterController::UpdateBuyMenu() {
         itemInventory_.ClearInput(); // The weapon catalog and mouse inventory have exclusive cursor ownership.
         if (Buying() || BuyAccess::Allowed(unit_,settings_)) {
             CloseWeaponSelection();buyMenu_.Toggle();mouseLook_.Reset();weaponWheel_.Reset();cameraWheel_.Reset();suppressFire_=true;CancelPlant();meleeContact_=0;
-            reloadEnd_=0;audio_.CancelAnimation();Play("idle");
+            // Shopping preserves an active reload, including its sound and shell insertion timeline.
+            if(!reloadEnd_) {audio_.CancelAnimation();Play("idle");}
         } else Notice("OUTSIDE BUY ZONE");
     }
     if (buyAmmoRequested_) Buy(weapon_,true);
@@ -488,6 +489,27 @@ void ShooterController::Camera() {
         float yaw=ViewYaw()*radians,pitch=ViewPitch()*radians;
         float direction[]={std::cos(pitch)*std::cos(yaw),std::cos(pitch)*std::sin(yaw),std::sin(pitch)};
         itemHover_.Update(unit_,origin,direction,settings_,hitboxes_,destructableHitboxes_,gameBase_);
+    }
+}
+void ShooterController::UpdateReload(DWORD now) {
+    bool shells=weapon_==WeaponSlots::M3 || weapon_==WeaponSlots::XM1014;
+    if(reloadEnd_ && shells && shotgunReloadPerShell_) {
+        int amount=shotgunReload_.LoadCompleted((now-shotgunReloadStart_)*.001f,settings_.weapons[weapon_].magazine,ammo_[weapon_],reserve_[weapon_]);
+        if(amount)wc3::Log("shotgun shell loaded weapon=%s count=%d ammo=%d reserve=%d",settings_.weapons[weapon_].name,amount,ammo_[weapon_],reserve_[weapon_]);
+    }
+    if(reloadEnd_ && now<reloadEnd_ && shells) {
+        auto pose=shotgunReload_.At((now-shotgunReloadStart_)*.001f);
+        if(pose.phase!=shotgunReloadPhase_) {
+            shotgunReloadPhase_=pose.phase;Play(pose.name,shotgunReload_.Rate(),pose.elapsed);
+            wc3::Log("shotgun reload weapon=%s phase=%d animation=%s rate=%.3f",settings_.weapons[weapon_].name,pose.phase,pose.name,shotgunReload_.Rate());
+        }
+    }
+    if (reloadEnd_ && now >= reloadEnd_) {
+        // Per-shell reloads have already moved their rounds; other weapons retain the magazine-at-end policy.
+        int amount = shells && shotgunReloadPerShell_ ? 0 : std::min(settings_.weapons[weapon_].magazine - ammo_[weapon_], reserve_[weapon_]);
+        ammo_[weapon_] += amount; reserve_[weapon_] -= amount; reloadEnd_ = 0;
+        Play("idle"); // The shotgun closing action has already finished inside the locked reload interval.
+        wc3::Log("reload complete: weapon=%s ammo=%d reserve=%d", settings_.weapons[weapon_].name, ammo_[weapon_], reserve_[weapon_]);
     }
 }
 void ShooterController::Reload() {
@@ -1373,6 +1395,8 @@ void ShooterController::Tick(uintptr_t ui) {
     }
     if (allWeaponsRequested_) { allWeaponsRequested_=false;refillRequested_=false;RefillAmmo(true); }
     if (refillRequested_) { refillRequested_ = false; RefillAmmo(); }
+    // Advance before cursor-owned early returns, so B never freezes or delays ammunition transfer.
+    UpdateReload(GetTickCount());
     UpdateBuyMenu();
     if (!Down(VK_LBUTTON) && !Down(VK_RBUTTON)) suppressFire_=false;
     if (Buying()) {
@@ -1416,27 +1440,8 @@ void ShooterController::Tick(uintptr_t ui) {
         scopeLevel_ = (scopeLevel_ + 1) % 3;
         wc3::Log("AWP scope level=%d fov=%.0f", scopeLevel_, scopeLevel_ == 2 ? 10.0f : Scoped() ? 40.0f : 85.0f);
     }
-    // Sample after input may have started a reload; every phase shares one absolute clock, without drift/idle gaps.
+    // Refresh input/fire timing after menu and weapon selection work.
     now=GetTickCount();
-    bool shells=weapon_==WeaponSlots::M3 || weapon_==WeaponSlots::XM1014;
-    if(reloadEnd_ && shells && shotgunReloadPerShell_) {
-        int amount=shotgunReload_.LoadCompleted((now-shotgunReloadStart_)*.001f,settings_.weapons[weapon_].magazine,ammo_[weapon_],reserve_[weapon_]);
-        if(amount)wc3::Log("shotgun shell loaded weapon=%s count=%d ammo=%d reserve=%d",settings_.weapons[weapon_].name,amount,ammo_[weapon_],reserve_[weapon_]);
-    }
-    if(reloadEnd_ && now<reloadEnd_ && shells) {
-        auto pose=shotgunReload_.At((now-shotgunReloadStart_)*.001f);
-        if(pose.phase!=shotgunReloadPhase_) {
-            shotgunReloadPhase_=pose.phase;Play(pose.name,shotgunReload_.Rate(),pose.elapsed);
-            wc3::Log("shotgun reload weapon=%s phase=%d animation=%s rate=%.3f",settings_.weapons[weapon_].name,pose.phase,pose.name,shotgunReload_.Rate());
-        }
-    }
-    if (reloadEnd_ && now >= reloadEnd_) {
-        // Per-shell reloads have already moved their rounds; other weapons retain the magazine-at-end policy.
-        int amount = shells && shotgunReloadPerShell_ ? 0 : std::min(settings_.weapons[weapon_].magazine - ammo_[weapon_], reserve_[weapon_]);
-        ammo_[weapon_] += amount; reserve_[weapon_] -= amount; reloadEnd_ = 0;
-        Play("idle"); // The shotgun closing action has already finished inside the locked reload interval.
-        wc3::Log("reload complete: weapon=%s ammo=%d reserve=%d", settings_.weapons[weapon_].name, ammo_[weapon_], reserve_[weapon_]);
-    }
     // Preserve only our explicit native spell order; normal AI cancellation resumes when it ends.
     spells_.Update();
     if(spellCancelRequested_) {spellCancelRequested_=false;CancelCasting();}

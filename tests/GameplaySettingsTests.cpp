@@ -535,6 +535,12 @@ int main() {
     }
     // New options use the real loader, including malformed/range handling and a saved U action on upgrade.
     {std::ofstream f(path);f<<"[ArmyAI]\nWorkers=99\nIntervalMs=nan\nProductionRetrySeconds=99999\nEnabled=false\nWorker=hpea\nHall=bad\n[Shops]\nRadius=-1\n[Shotguns]\nPellets=0\nSpreadDegrees=99\n[Deagle]\nMagazine=9999\nFireInterval=0\nReloadSeconds=nan\nPrice=777\n[Shortcuts]\nPickup=U\n";}
+    for(auto value:{"true","1","false","0","","bad","nan"}) {
+        WritePrivateProfileStringA("ArmyAI","FollowActor",value,path.c_str());
+        assert(GameplaySettings::Load(path).armyAI.followActor==(!strcmp(value,"true") || !strcmp(value,"1")));
+    }
+    WritePrivateProfileStringA("ArmyAI","FollowActor",nullptr,path.c_str());
+    assert(!GameplaySettings::Load(path).armyAI.followActor);
     auto added=GameplaySettings::Load(path);
     assert(!added.armyAI.enabled && added.armyAI.workers==30 && added.armyAI.intervalMs==1500);
     assert(added.armyAI.productionRetrySeconds==3600);

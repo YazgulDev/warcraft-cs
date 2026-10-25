@@ -78,6 +78,8 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     // The shared reach upgrades saved short gun ranges without rewriting the player's per-weapon choices.
     result.minimumFirearmRange=number("Combat","MinimumFirearmRange",30000,50000);
     auto& ai=result.armyAI;ai.enabled=enabled("ArmyAI","Enabled");
+    // F8 may opt into support movement without changing economy or manual squad membership.
+    ai.followActor=enabled("ArmyAI","FollowActor",false);
     ai.intervalMs=unsigned(std::max(500.f,number("ArmyAI","IntervalMs",1500,10000)));
     ai.productionRetrySeconds=unsigned(std::max(30.f,number("ArmyAI","ProductionRetrySeconds",180,3600)));
     ai.workers=int(number("ArmyAI","Workers",6,30));ai.soldiers=int(number("ArmyAI","Soldiers",24,100));

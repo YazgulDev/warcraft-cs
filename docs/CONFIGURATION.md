@@ -156,6 +156,12 @@ depends on hardware and map load; farther rendering does not reveal fog-hidden u
 caches retain the native sky. F8 applies changes; map/RTS transitions restore the
 map's original state.
 
+## Shopping and army preview
+
+The [current preview](RELOAD-ARMY-PREVIEW.md) keeps reloading active while B is open or ammunition is purchased. Purchasing/equipping a different weapon still cancels the old reload.
+
+`[ArmyAI] FollowActor=false` disables automatic hero escort while retaining economy and defense. Set true to restore escort. Accepts true/false or 1/0; missing, empty and malformed values default to false. F8 applies on the next active AI decision (`IntervalMs`); updates add missing keys once and preserve saved choices. Without a hall, reserve fighters remain in place instead of rallying to the actor. Explicit squad commands are unchanged.
+
 ## Local feature preview settings
 
 The [dual-currency/headshot preview](DUAL-CURRENCY-HEADSHOTS-PREVIEW.md) adds these startup/F8 settings. Installation updates fill missing keys and preserve custom choices. Published 0.12.0 downloads do not yet contain these additions.

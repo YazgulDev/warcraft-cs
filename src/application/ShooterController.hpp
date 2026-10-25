@@ -281,6 +281,7 @@ private:
     BurstFire glockBurst_;
     void Strike(float yawOffset=0,float pitchOffset=0,float damageScale=1,float fixedDamage=-1,bool visualOnly=false);
     void Reload();
+    void UpdateReload(DWORD now);
     ShotgunReload shotgunReload_;
     DWORD shotgunReloadStart_=0;
     int shotgunReloadPhase_=0;

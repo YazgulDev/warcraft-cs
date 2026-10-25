@@ -313,7 +313,7 @@ spell/item callers retain unfiltered ally selection. Ground/destructable occlusi
 `ArmyPlan` owns portable stock-race/custom build plans. `ArmyAI` runs a bounded game-thread
 decision loop through Warcraft's normal construction/training/resource orders. The controller
 supplies exact squad/focus exclusions, while the adapter rechecks local ownership and actor
-availability before enumerating any army. Construction leases and travel identities prevent
+availability before enumerating any army. `ArmyAISettings.followActor` independently controls automatic hero escort (default false); base reserves rally only to a real hall when escort is off. Economy and threat defense remain separate. Construction leases and travel identities prevent
 duplicate sites and stale-handle commands. `ShopAccess` shares live merchant/proximity validation;
 the controller yields native selection, UI and camera during shop interaction and restores the
 captured actor/view on close. `WeaponDefaults` supplies one stable-slot tuning snapshot; validated
@@ -341,6 +341,7 @@ Its full-magazine reference keeps the same insertion speed for partial reloads.
 It also credits each completed insertion once, bounded by actual reserve/capacity;
 interruption preserves those transfers and discards the unfinished insertion.
 The controller snapshots reload policy and uses a fresh, fireable LMB edge to interrupt.
+`UpdateReload` advances the shared absolute clock before buy-menu/inventory early returns. Menu toggles preserve a running animation/audio timeline; ammo transactions only modify reserve, while actual weapon deployment still cancels the previous reload.
 `BurstFire` in combat owns bounded Glock secondary scheduling, cooldown, cancellation
 and late-frame spacing. The controller debits actual ammo and dispatches individual
 contacts, while the presentation starts the burst clip only once.

@@ -8,6 +8,8 @@ The paid firearms are Desert Eagle (650), Glock 18 (400), MP5 (1500),
 P90 (2350), M249 (5750), M3 (1700), and XM1014 (3000). Open **B**: 1 pistols,
 2 shotguns, 3 SMGs, 4 rifles, 5 machine guns, 6 primary ammo, 7 pistol ammo,
 8 equipment. Number keys and mouse rows select the same catalog entries.
+In the [current preview](RELOAD-ARMY-PREVIEW.md), B and quick ammo remain available while reloading. Opening/closing B or buying ammunition preserves the reload clock, sounds and shell insertions; purchasing and equipping a different weapon cancels the old reload. Shotguns keep the number of insertions planned when R was pressed; newly purchased reserves remain available afterward.
+
 Buying grants a loaded magazine; reserve packs cost extra. Duplicates, insufficient
 funds and full packs do not charge either wallet. Inventory slot IDs remain stable. The
 [carried weapon menu](WEAPON-SELECTION.md) uses groups **1–5**, repeated category keys or the wheel
@@ -173,8 +175,7 @@ custom action using U keeps it on upgrade; the new AI binding becomes NONE.
 Only living, available, **owned** units other than the actor and H/O members are
 eligible. Explicit RMB targets take priority. J releases H/O membership, making
 those units eligible again. Units fighting or executing other active orders retain
-their orders. Idle fighters reserve some units at base and send the rest toward
-the actor with native attack-move. Visible base threats call idle units into defense.
+their orders. In the [current preview](RELOAD-ARMY-PREVIEW.md), idle fighters reserve some units at an actual base and leave the rest in place. Visible threats still call idle units into defense. `[ArmyAI] FollowActor=true` restores automatic hero escort; the default is false. Without a hall, reserve units do not rally to the actor either.
 
 Stock workers/halls select a basic human, orc, undead or night elf build plan.
 AI requests a missing hall, supply when food is tight, a basic barracks, workers
@@ -190,6 +191,7 @@ All `[ArmyAI]` settings reload with F8:
 | Key | Default | Range / meaning |
 | --- | --- | --- |
 | Enabled | true | Enables U; automation starts off |
+| FollowActor | false | Preview: true/false or 1/0; automatic hero escort, applied on the next AI decision after F8 |
 | IntervalMs | 1500 | 500–10000 milliseconds between decisions |
 | ProductionRetrySeconds | 180 | 30–3600 active decision seconds before retrying canceled/unobserved training; pauses/background time do not count |
 | Workers | 6 | 0–30 desired workers |

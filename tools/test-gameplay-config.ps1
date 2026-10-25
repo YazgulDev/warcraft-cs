@@ -382,12 +382,21 @@ $arsenal=Join-Path $folder 'custom-arsenal.ini'
 @('[Shortcuts]','Pickup=U','[Deagle]','Price=777','Magazine=13','[Glock]','SecondaryBurstRounds=2','SecondaryBurstInterval=0.08','[Shotguns]','ShellByShellReload=false','InterruptReloadOnFire=false','[ArmyAI]','Workers=9') | Set-Content -LiteralPath $arsenal -Encoding ascii
 Update-GameplayConfig $template $arsenal
 $arsenalText=Get-Content -LiteralPath $arsenal -Raw
-foreach($setting in @('Pickup=U','ArmyAI=NONE','Price=777','Magazine=13','Workers=9','[M249]','[XM1014]','SpreadDegrees=5','[Shops]','Radius=450','SecondaryBurstRounds=2','SecondaryBurstInterval=0.08','SecondaryCooldown=0.5','ShellByShellReload=false','InterruptReloadOnFire=false')) {
+foreach($setting in @('Pickup=U','ArmyAI=NONE','Price=777','Magazine=13','Workers=9','FollowActor=false','[M249]','[XM1014]','SpreadDegrees=5','[Shops]','Radius=450','SecondaryBurstRounds=2','SecondaryBurstInterval=0.08','SecondaryCooldown=0.5','ShellByShellReload=false','InterruptReloadOnFire=false')) {
     if(!$arsenalText.Contains($setting)){throw "Arsenal/AI upgrade lost preference/default: $setting"}
 }
 $arsenalHash=(Get-FileHash -LiteralPath $arsenal).Hash
 Update-GameplayConfig $template $arsenal
 if((Get-FileHash -LiteralPath $arsenal).Hash -ne $arsenalHash){throw 'Arsenal/AI config migration is not idempotent.'}
+
+# A saved hero-escort opt-in survives both update passes; missing keys above receive the new default.
+$escort=Join-Path $folder 'custom-army-escort.ini'
+@('[ArmyAI]','FollowActor=true') | Set-Content -LiteralPath $escort -Encoding ascii
+Update-GameplayConfig $template $escort
+$escortHash=(Get-FileHash -LiteralPath $escort).Hash
+Update-GameplayConfig $template $escort
+$escortText=Get-Content -LiteralPath $escort -Raw
+if(!$escortText.Contains('FollowActor=true') -or [regex]::Matches($escortText,'(?m)^FollowActor=').Count -ne 1 -or (Get-FileHash -LiteralPath $escort).Hash -ne $escortHash){throw 'Army escort preference was lost or duplicated.'}
 
 # Visual preferences survive upgrades while new siblings are inserted only once.
 $viewmodel=Join-Path $folder 'custom-viewmodel.ini'

@@ -42,7 +42,7 @@ Home does not provide horizontal teleportation. A fresh controlled session start
 | Left mouse | Fire or primary melee attack |
 | Right mouse | Weapon action: stronger knife/sword attack, AWP zoom, Glock burst or RPG guidance |
 | R | Reload |
-| B | Open or close the buy menu; choose purchases with numbers or the mouse |
+| B | Open or close the buy menu; choose purchases with numbers or the mouse; preview preserves ongoing reloads |
 | . | Buy an ammo pack using the selected currency and its fallback policy |
 | 1 / 2 / 3 / 4 / 5 | Browse carried primary weapons / pistols / melee / grenades / C4 |
 | Mouse wheel in armed first person | Preview the previous or next carried weapon |
@@ -77,7 +77,7 @@ and [RPG controls](HALF-LIFE-RPG.md) for details and legacy direct-slot bindings
 | Right mouse in F7/F9 | Order available owned mobile units to attack the reticle target |
 | Y in armed first person | Switch right mouse between weapon actions and unit target orders |
 | Q | Enable or disable direct allied targeting |
-| U | Toggle the army assistant for available owned workers, buildings and troops |
+| U | Toggle the army assistant; preview manages economy/base defense without automatic hero escort |
 
 Native mana, cooldowns, immunity and inventory rules apply. F9 remains an unarmed
 view: its unit orders do not give the controlled actor an attack. In the mouse
