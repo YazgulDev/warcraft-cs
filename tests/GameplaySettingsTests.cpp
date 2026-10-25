@@ -411,15 +411,15 @@ int main() {
     assert(ShortcutBindings{}.Key(ShortcutAction::SquadOrders)=='Y');
     // Recovery settings use the same validated F8 snapshot and retain the active motor state.
     assert(ShortcutBindings{}.Key(ShortcutAction::RecoverPosition)==VK_HOME);
-    // The selected mode is a real config/F8 switch; defaults and unknown names select recovery.
-    assert(!MovementSettings{}.classicCollision && MovementSettings{}.platformRecovery);
+    // The selected mode is a real config/F8 switch; defaults and unknown names select classic.
+    assert(MovementSettings{}.classicCollision && !MovementSettings{}.platformRecovery);
     auto missingMode=GameplaySettings::Load(path).movement;
-    assert(!missingMode.classicCollision && missingMode.platformRecovery);
+    assert(missingMode.classicCollision && !missingMode.platformRecovery);
     for(const char* value:{"", "broken", "classic", "CLASSIC", "hull", "HULL", "recovery", "RECOVERY"}) {
         WritePrivateProfileStringA("Movement","Mode",value,path.c_str());
         movement.Configure(GameplaySettings::Load(path).movement);
-        assert(movement.PlatformRecovery()==(_stricmp(value,"classic") && _stricmp(value,"hull")));
-        assert(movement.ClassicCollision()==(!_stricmp(value,"classic")));
+        assert(movement.PlatformRecovery()==(!_stricmp(value,"recovery")));
+        assert(movement.ClassicCollision()==(_stricmp(value,"recovery") && _stricmp(value,"hull")));
         assert(movement.FeetZ()==feet && movement.VerticalVelocity()==vertical);
     }
     WritePrivateProfileStringA("Movement","Mode","classic",path.c_str());
@@ -728,6 +728,18 @@ int main() {
         assert(aiming.hitDetection.preciseModels && aiming.hitDetection.headshots && aiming.itemHover.enabled);
         if(!strcmp(value,"nan") || !strcmp(value,"inf") || !strcmp(value,"bad") || !*value)
             assert(aiming.hitDetection.headshotMultiplier==2 && aiming.itemHover.distance==1200 && aiming.itemHover.radius==32);
+    }
+    // Effects consume the same bounded F8 snapshot; disable flags, signed offsets and custom lifetimes survive loading.
+    {std::ofstream f(path);f<<"[CombatVisuals]\nHeadshotBlood=false\nCriticalText=0\nShellCasings=false\nBloodCount=7\nBloodSeconds=1.2\nShellUp=-20\nShellSpeed=200\nShellMaximum=16\n";}
+    auto cv=GameplaySettings::Load(path).combatVisuals;
+    assert(!cv.headshotBlood && !cv.criticalText && !cv.shellCasings && cv.bloodCount==7 && cv.bloodSeconds==1.2f && cv.shellOffset[1]==-20 && cv.shellSpeed==200 && cv.shellMaximum==16);
+    for(const char* value:{"nan","inf","bad","","-1000","999999"}) {
+        {std::ofstream f(path);f<<"[CombatVisuals]\nBloodCount="<<value<<"\nBloodSeconds="<<value<<"\nShellGravity="<<value<<"\nShellSpeed="<<value<<"\nShellMaximum="<<value<<"\nShellUp="<<value<<"\nCriticalScale="<<value<<"\nShellBounce="<<value<<"\n";}
+        cv=GameplaySettings::Load(path).combatVisuals;
+        assert(cv.bloodCount>=1 && cv.bloodCount<=64 && cv.bloodSeconds>=.1f && cv.bloodSeconds<=3);
+        assert(cv.shellGravity>=50 && cv.shellGravity<=2000 && cv.shellSpeed>=20 && cv.shellSpeed<=500 && cv.shellMaximum>=1 && cv.shellMaximum<=128);
+        assert(cv.shellOffset[1]>=-64 && cv.shellOffset[1]<=64 && cv.criticalScale>=.5f && cv.criticalScale<=2 && cv.shellBounce>=0 && cv.shellBounce<=.9f);
+        if(!strcmp(value,"nan") || !strcmp(value,"inf") || !strcmp(value,"bad") || !*value)assert(cv.shellOffset[1]==-12 && cv.shellSpeed==140 && cv.bloodSeconds==.5f);
     }
     DeleteFileA(path.c_str());return 0;
 }

@@ -37,7 +37,7 @@ void Overlay::ResetGraphics(bool deleteObjects) {
     for (int i = 0; i < WeaponSlots::Count; ++i) { guns_[i].Reset(deleteObjects); loaded_[i] = attempted_[i] = false; }
     // Menu models obey the same context ownership rules as first-person weapons.
     for (int i=0;i<WeaponSlots::Count;++i) { buyPreviews_[i].Reset(deleteObjects);previewLoaded_[i]=previewAttempted_[i]=false; }
-    font_.Reset(deleteObjects);statusFont_.Reset(deleteObjects);spellFont_.Reset(deleteObjects);itemName_.Reset(deleteObjects);
+    font_.Reset(deleteObjects);statusFont_.Reset(deleteObjects);spellFont_.Reset(deleteObjects);itemName_.Reset(deleteObjects);combatView_.Reset(deleteObjects);
 }
 void Overlay::ContextDeleted(HGLRC context) {
     if (context_ != context) return;
@@ -60,7 +60,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     } else if (refreshPending_) {
         // Keep surviving resources: blind deletion after Alt-Tab can touch IDs recycled by the game.
         bool valid=font_.Valid() && statusFont_.Valid() && spellFont_.Valid() && grenadeWorld_.Valid() && rocketView_.Valid();
-        valid=valid && sky_.Valid() && spellHud_.Valid() && inventoryIcons_.Valid() && unitFont_.Valid() && inventoryFont_.Valid() && energyBeamArt_.Valid() && energyImpactArt_.Valid() && itemName_.Valid();
+        valid=valid && sky_.Valid() && spellHud_.Valid() && inventoryIcons_.Valid() && unitFont_.Valid() && inventoryFont_.Valid() && energyBeamArt_.Valid() && energyImpactArt_.Valid() && itemName_.Valid() && combatView_.Valid();
         for (int i=0;i<WeaponSlots::Count;++i) if (loaded_[i] && !guns_[i].TexturesValid()) valid=false;
         for (int i=0;i<WeaponSlots::Count;++i) if (previewLoaded_[i] && !buyPreviews_[i].TexturesValid()) valid=false;
         if (!valid) { ResetGraphics(false); wc3::Log("Overlay lost resources forgotten after focus return"); }
@@ -128,6 +128,9 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     if(!controller.Settings().warcraftOnly && !attempted_[index]) {
         attempted_[index]=true;loaded_[index]=guns_[index].Load(root_+"\\assets\\"+WeaponSlots::Caches[index]+".wcg");
     }
+    // Copied target/casing pools render in world depth, independently of the current weapon's private depth pass.
+    if(!controller.Status().contained && !controller.Status().hidden)
+        combatView_.Draw(controller.Visuals(),barView,width,height,nearPlane,farPlane);
     unsigned barCount=0;
     if(!controller.Status().contained && !controller.Status().hidden && !controller.Buying())
         barCount=HealthBarRenderer::Draw(bars,barView,width,height,nearPlane,farPlane);
@@ -197,7 +200,6 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     controller.Hits().Draw(float(width), float(height));
     if(!unavailableView && !controller.Buying()) {
         itemName_.Draw(controller.HoveredItemName(),width,height,std::clamp(height/45,16,30));
-        if(controller.Hits().Headshot()){glColor4f(1,.65f,.2f,1);Text(width*.5f-4*statusFont_.Advance(),height*.5f-25,"HEADSHOT",&statusFont_);}
     }
 
     // Money formatting follows the active purchase currency in both HUD layouts.

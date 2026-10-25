@@ -1,5 +1,6 @@
 #pragma once
 #include "HitDetectionSettings.hpp"
+#include "CombatVisualSettings.hpp"
 #include "ItemHoverSettings.hpp"
 #include "../combat/WeaponSlots.hpp"
 #include "LoggingSettings.hpp"
@@ -61,6 +62,7 @@ struct GameplaySettings {
 
     MovementSettings movement;
     HitDetectionSettings hitDetection;
+    CombatVisualSettings combatVisuals;
     ItemHoverSettings itemHover;
     float runeAmmoPercent = 40;
     float runePickupRadius = 160;

@@ -2,11 +2,16 @@
 
 ## Unreleased - local feature preview
 
+- Default movement to classic in fresh/missing/invalid config; retain explicit recovery/hull choices and F8 switching.
+- Replace the centered HEADSHOT caption with confirmed world-space blood spray and rising Cyrillic critical text above the target.
+- Add bounded, spinning/falling/bouncing brass and shotgun cases for accepted conventional rounds, configurable with independent visual toggles.
+- Extend copied visual pools/Unicode world captions, actual WGL depth/state checks and config/movement regressions. [Current preview](docs/CLASSIC-BLOOD-CASINGS-PREVIEW.md).
+
 - Add dollar/gold selection in every buy-menu category, both balances and whole-price automatic gold fallback when dollars are insufficient; keep earning dollars while gold is selected.
 - Add configurable direct headshots (default x2) using named skeletal head surfaces on verified 1.26a models, with confirmed amber HUD feedback.
 - Trace posed unit surfaces for firearms to avoid nearby units stealing rays through empty broad bounds; preserve melee/spell/TPS targeting contracts.
 - Show localized item/rune names under the F6/F9 reticle with obstacle occlusion, Unicode captions and configurable distance/tolerance.
-- Add parser, native pose/scene, payment, graphics and settings-migration regression coverage. Movement defaults remain recovery and kill rewards remain $200.
+- Add parser, native pose/scene, payment, graphics and settings-migration regression coverage. Kill rewards remain $200; current movement defaults are described above.
 - Details, upgrade controls and host limitations: [feature preview](docs/DUAL-CURRENCY-HEADSHOTS-PREVIEW.md).
 
 ## 0.12.0 — 2026-10-25

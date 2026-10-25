@@ -6,6 +6,8 @@
 class ItemNameView {
 public:
     void Draw(const std::string& name,int width,int height,int fontSize);
+    // Reuse the Unicode atlas for a centered world caption; nonnegative window depth enables native occlusion.
+    void DrawAt(const std::string& name,int width,int height,int fontSize,float centerX,float top,float alpha,float depth=-1);
     void Reset(bool deleteObjects);
     bool Valid() const {return !texture_ || glIsTexture(texture_)==GL_TRUE;}
 private:

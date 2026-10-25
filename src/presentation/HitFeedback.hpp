@@ -1,7 +1,7 @@
 #pragma once
 #include <windows.h>
 
-// Confirmed hits refresh one neutral marker without blood or particle allocations.
+// Reticle damage confirmation stays separate from the bounded target-local critical/blood pools.
 class HitFeedback {
 public:
     void Record(bool headshot=false);

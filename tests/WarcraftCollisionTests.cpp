@@ -505,7 +505,7 @@ int main(){
     deckPatch=false;
     // Explicit classic must retain the complete pre-24-October strategy independently of the default mode.
     deckPatch=false;slope=true;slopeGradient=0;meshScene=0;actorRadius=0;collision.Reset();
-    MovementSettings classicSettings;Require(!classicSettings.classicCollision && classicSettings.platformRecovery,"recovery is the production default");
+    MovementSettings classicSettings;Require(classicSettings.classicCollision && !classicSettings.platformRecovery,"classic is the production default");
     classicSettings.classicCollision=true;classicSettings.platformRecovery=false;
     jumper.Configure(classicSettings);unitX=unitY=0;jumper.Reset(60);collision.RequestRecovery();collision.Move(1,jumper,0);
     Require(jumper.FeetZ()==100,"classic restores the original native-floor landing resolver");

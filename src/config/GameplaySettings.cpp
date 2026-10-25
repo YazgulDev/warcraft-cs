@@ -180,10 +180,10 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         if (!_stricmp(value.c_str(), "false")) return false;
         return fallback;
     };
-    // Missing/invalid modes use recovery on startup and F8; explicit classic/hull choices survive updates.
-    auto movementMode=text("Movement","Mode","recovery");
-    result.movement.classicCollision=!_stricmp(movementMode.c_str(),"classic");
-    result.movement.platformRecovery=!result.movement.classicCollision && _stricmp(movementMode.c_str(),"hull");
+    // Missing/invalid modes restore classic; explicit recovery/hull preferences remain available.
+    auto movementMode=text("Movement","Mode","classic");
+    result.movement.platformRecovery=!_stricmp(movementMode.c_str(),"recovery");
+    result.movement.classicCollision=!result.movement.platformRecovery && _stricmp(movementMode.c_str(),"hull");
     result.movement.bunnyHop = boolean("BunnyHop", true);
     result.movement.scaleFromUnitMoveSpeed=boolean("ScaleFromUnitMoveSpeed",false);
     result.movement.unitMoveSpeedReference=std::max(1.f,number("Movement","UnitMoveSpeedReference",300,1000));
@@ -386,6 +386,23 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.itemHover.enabled=_stricmp(text("Interface","ItemNames","true").c_str(),"false")!=0;
     result.itemHover.distance=std::max(160.f,number("Interface","ItemNameDistance",1200,5000));
     result.itemHover.radius=std::max(4.f,number("Interface","ItemNameRadius",32,128));
+    // Pool snapshots are visual only; F8 clears active fragments before replacing these bounded settings.
+    auto& cv=result.combatVisuals;
+    cv.headshotBlood=enabled("CombatVisuals","HeadshotBlood");cv.criticalText=enabled("CombatVisuals","CriticalText");
+    cv.bloodSeconds=std::max(.1f,number("CombatVisuals","BloodSeconds",.5f,3));
+    cv.bloodScale=std::max(.25f,number("CombatVisuals","BloodScale",1,4));cv.bloodCount=unsigned(std::max(1.f,number("CombatVisuals","BloodCount",16,64)));
+    cv.criticalSeconds=std::max(.2f,number("CombatVisuals","CriticalSeconds",1,4));cv.criticalRise=number("CombatVisuals","CriticalRise",40,200);
+    cv.bloodSpeed=number("CombatVisuals","BloodSpeed",180,500);cv.bloodGravity=number("CombatVisuals","BloodGravity",400,2000);
+    cv.criticalOffset=number("CombatVisuals","CriticalOffset",24,128);
+    cv.criticalScale=std::max(.5f,number("CombatVisuals","CriticalScale",1,2));
+    cv.shellCasings=enabled("CombatVisuals","ShellCasings");cv.shellSeconds=std::max(.25f,number("CombatVisuals","ShellSeconds",3,10));
+    cv.shellSpeed=std::max(20.f,number("CombatVisuals","ShellSpeed",140,500));cv.shellGravity=std::max(50.f,number("CombatVisuals","ShellGravity",650,2000));
+    cv.shellScale=std::max(.25f,number("CombatVisuals","ShellScale",1,4));cv.shellBounce=number("CombatVisuals","ShellBounce",.35f,.9f);
+    cv.shellMaximum=unsigned(std::max(1.f,number("CombatVisuals","ShellMaximum",64,128)));
+    // Signed ejection offsets use their own parser because ordinary positive tuning deliberately clamps at zero.
+    const char* offsets[]={"ShellRight","ShellUp","ShellForward"};
+    for(int i=0;i<3;++i){auto value=text("CombatVisuals",offsets[i],"");char* end=nullptr;float parsed=std::strtof(value.c_str(),&end);
+        if(!value.empty() && end!=value.c_str() && !*end && std::isfinite(parsed))cv.shellOffset[i]=std::clamp(parsed,-64.f,64.f);}
     // Accurate model contacts and named-head bonuses are optional, validated F8 policies.
     result.hitDetection.preciseModels=_stricmp(text("Combat","PreciseUnitHits","true").c_str(),"false")!=0;
     result.hitDetection.headshots=_stricmp(text("Combat","Headshots","true").c_str(),"false")!=0;

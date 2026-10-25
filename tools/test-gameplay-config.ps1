@@ -255,7 +255,7 @@ Update-GameplayConfig $template $mapConfig
 if ((Get-FileHash -LiteralPath $mapConfig).Hash -ne $mapHash) {throw 'Minimap migration is not idempotent.'}
 if (!$text.Contains('DisableFogOfWar=false')) { throw 'Legacy config lacks the default fog override key.' }
 # Static geometry defaults join older configs, while an explicit opt-out survives updates.
-foreach($key in @('Mode=recovery','ObjectMeshCollision=true','RecoverInvalidPosition=true','RecoveryDistance=512','RecoverPosition=HOME')) {
+foreach($key in @('Mode=classic','ObjectMeshCollision=true','RecoverInvalidPosition=true','RecoveryDistance=512','RecoverPosition=HOME')) {
     if (!(Get-Content -LiteralPath $template -Raw).Contains($key)) {throw ('Missing collision default '+$key)}
 }
 # Movement upgrades retain personal jump tuning and add missing siblings exactly once.
@@ -503,3 +503,14 @@ foreach($expected in @('Currency=gold','FallbackToGold=false','PreciseUnitHits=f
 }
 $aimHash=(Get-FileHash $aimConfig).Hash;Update-GameplayConfig $template $aimConfig
 if((Get-FileHash $aimConfig).Hash -ne $aimHash){throw 'Aiming/currency migration must be idempotent.'}
+
+# Preserve explicit alternate movement and every visual opt-out/custom value; defaults merge exactly once.
+$visualConfig=Join-Path $folder 'classic-blood-cases.ini'
+@('[Movement]','Mode=recovery','[CombatVisuals]','HeadshotBlood=false','CriticalText=false','ShellCasings=false','BloodCount=7','ShellUp=-20','ShellSpeed=222','ShellMaximum=16') | Set-Content -LiteralPath $visualConfig -Encoding ascii
+Update-GameplayConfig $template $visualConfig
+$visualText=Get-Content -LiteralPath $visualConfig -Raw
+foreach($expected in @('Mode=recovery','HeadshotBlood=false','CriticalText=false','ShellCasings=false','BloodCount=7','ShellUp=-20','ShellSpeed=222','ShellMaximum=16','CriticalSeconds=1','ShellBounce=0.35')) {
+    if(!$visualText.Contains($expected)){throw ('Visual/movement update lost '+$expected)}
+}
+$visualHash=(Get-FileHash $visualConfig).Hash;Update-GameplayConfig $template $visualConfig
+if((Get-FileHash $visualConfig).Hash -ne $visualHash){throw 'Visual update is not idempotent.'}

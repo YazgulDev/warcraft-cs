@@ -13,7 +13,7 @@
 | [Compatibility](COMPATIBILITY.md) | Supported versions, map limits and missing features |
 | [Troubleshooting](../TROUBLESHOOTING.md) | Installation, graphics, audio and reporting a problem |
 
-Local feature preview: [dual currency, headshots and item names](DUAL-CURRENCY-HEADSHOTS-PREVIEW.md).
+Current local feature preview: [classic movement, blood criticals and casings](CLASSIC-BLOOD-CASINGS-PREVIEW.md), including [dual currency, headshots and item names](DUAL-CURRENCY-HEADSHOTS-PREVIEW.md).
 
 ## Gameplay guides
 

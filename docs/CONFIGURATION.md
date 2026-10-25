@@ -171,4 +171,8 @@ The [dual-currency/headshot preview](DUAL-CURRENCY-HEADSHOTS-PREVIEW.md) adds th
 | Interface / ItemNameDistance | 1200 | Maximum ray length, 160-5000 world units |
 | Interface / ItemNameRadius | 32 | Spherical aim tolerance, 4-128 world units |
 
-Unsupported model/pose adapters never invent a head location. Experimental 1.27a retains approximate body hits and lacks item labels. Existing dollar rewards and movement settings are unchanged.
+Unsupported model/pose adapters never invent a head location. Experimental 1.27a retains approximate body hits and lacks item labels. Dollar rewards remain unchanged; the current preview movement default is described below.
+
+## Current visual feedback preview
+
+The [classic/blood/casings preview](CLASSIC-BLOOD-CASINGS-PREVIEW.md) changes the fresh/default movement mode to `classic`; explicit `hull` and `recovery` remain available and saved choices survive installation. Its `[CombatVisuals]` keys control confirmed blood/critical text and cosmetic casing pools. All defaults, units, ranges and F8 behavior are listed in that guide and the annotated INI. No centered HEADSHOT word is drawn in this preview.

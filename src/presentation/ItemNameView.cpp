@@ -49,15 +49,20 @@ bool ItemNameView::Build(const std::string& name,int fontSize,int maximumWidth) 
     Reset(true);texture_=texture;name_=name;fontSize_=fontSize;maximumWidth_=maximumWidth;width_=width;height_=height;textureWidth_=tw;textureHeight_=th;return true;
 }
 void ItemNameView::Draw(const std::string& name,int width,int height,int fontSize) {
+    DrawAt(name,width,height,fontSize,width*.5f,height*.5f+fontSize*1.7f,1);
+}
+void ItemNameView::DrawAt(const std::string& name,int width,int height,int fontSize,float centerX,float top,float alpha,float depth) {
     if(name.empty() || width<32 || height<32)return;
     HudRenderState state;int maximum=std::min(1600,width*4/5);
     if((!texture_ || name!=name_ || fontSize!=fontSize_ || maximum!=maximumWidth_) && !Build(name,fontSize,maximum))return;
-    // This scope also works in clean F9 view, without changing its native world projection or revealing the full HUD.
+    // Text uses a copied world projection/depth, with the same scoped Unicode upload state as item names.
     glMatrixMode(GL_PROJECTION);glPushMatrix();glLoadIdentity();glOrtho(0,width,height,0,-1,1);
     glMatrixMode(GL_MODELVIEW);glPushMatrix();glLoadIdentity();glEnable(GL_TEXTURE_2D);glBindTexture(GL_TEXTURE_2D,texture_);
-    glColor4f(1,.9f,.55f,1);float x=(width-width_)*.5f,y=height*.5f+fontSize*1.7f,u=float(width_)/textureWidth_,v=float(height_)/textureHeight_;
-    glBegin(GL_QUADS);glTexCoord2f(0,0);glVertex2f(x,y);glTexCoord2f(u,0);glVertex2f(x+width_,y);
-    glTexCoord2f(u,v);glVertex2f(x+width_,y+height_);glTexCoord2f(0,v);glVertex2f(x,y+height_);glEnd();
+    if(depth>=0){glEnable(GL_DEPTH_TEST);glDepthFunc(GL_LEQUAL);glDepthRange(0,1);}
+    glColor4f(1,depth>=0 ? .3f : .9f,depth>=0 ? .12f : .55f,alpha);
+    float x=centerX-width_*.5f,y=top,u=float(width_)/textureWidth_,v=float(height_)/textureHeight_,z=depth>=0 ? 1-2*depth : 0;
+    glBegin(GL_QUADS);glTexCoord2f(0,0);glVertex3f(x,y,z);glTexCoord2f(u,0);glVertex3f(x+width_,y,z);
+    glTexCoord2f(u,v);glVertex3f(x+width_,y+height_,z);glTexCoord2f(0,v);glVertex3f(x,y+height_,z);glEnd();
     glPopMatrix();glMatrixMode(GL_PROJECTION);glPopMatrix();
 }
 void ItemNameView::Reset(bool deleteObjects) {

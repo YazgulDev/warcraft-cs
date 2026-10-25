@@ -29,7 +29,7 @@ then alternate A with a left mouse turn and D with a right turn.
 See [movement](MOVEMENT.md) and [third-person control](THIRD-PERSON.md).
 
 Select `[Movement] Mode=recovery` and press F8 to enable the latest recovery movement.
-The default `Mode=recovery` enables platform protection and Home recovery. Optional `Mode=classic` restores movement before the 24 October collision redesign and leaves Home inactive.
+The local preview defaults to `Mode=classic`, restoring movement before the 24 October collision redesign and leaving Home inactive. Optional `Mode=recovery` enables platform protection and Home recovery. Published 0.12.0 used recovery by default.
 Recovery uses `[Shortcuts] RecoverPosition=HOME` (`NONE` disables it).
 It rechecks the destination and cannot restore a destroyed platform, rewind across a native
 script relocation or escape cargo, roots/stuns, casting or cursor menus. In valid open ground,
@@ -97,4 +97,4 @@ F6 restores normal Warcraft control. Enable your chosen view again after changin
 
 ## Aiming labels in the local preview
 
-Direct hits on verified named head geometry deal x2 damage by default and show **HEADSHOT** after confirmed damage. Look at a ground item or rune in F6/F9 to see its localized name below the reticle. Settings and host limitations are in the [preview guide](DUAL-CURRENCY-HEADSHOTS-PREVIEW.md).
+Direct hits on verified named head geometry deal x2 damage by default and show blood and floating **КРИТ** above the target after confirmed damage in the current preview. Look at a ground item or rune in F6/F9 to see its localized name below the reticle. Settings and host limitations are in the [preview guide](DUAL-CURRENCY-HEADSHOTS-PREVIEW.md).

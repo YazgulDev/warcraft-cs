@@ -21,6 +21,7 @@
 #include "../platform/NativeFogOfWar.hpp"
 #include "../audio/GameAudio.hpp"
 #include "../presentation/HitFeedback.hpp"
+#include "../presentation/CombatVisuals.hpp"
 #include "../platform/ItemHover.hpp"
 #include "../combat/UnitStatus.hpp"
 #include "../combat/UnitHitboxes.hpp"
@@ -247,6 +248,7 @@ public:
     size_t BombCount() const { return bombs_.Count(); }
     float PlantProgress() const { return plantProgress_; }
     const HitFeedback& Hits() const { return hits_; }
+    const CombatVisuals& Visuals() const {return combatVisuals_;}
     const EnergyBeam& Beam() const {return energyBeam_;}
     void Configure(const char* root, uintptr_t gameBase);
     static const Weapon* const weapons; // Compatibility defaults for private fixtures.
@@ -405,6 +407,7 @@ private:
     float animationRate_ = 1;
     DWORD refillTick_ = 0;
     HitFeedback hits_;
+    CombatVisuals combatVisuals_;
     ItemHover itemHover_;
     UnitHitboxes hitboxes_;
     DestructableHitboxes destructableHitboxes_;

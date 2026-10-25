@@ -1,6 +1,6 @@
 # Dual currency, headshots and item names preview
 
-Local preview based on 0.12.0. The published v0.12.0 download and historical release notes are unchanged.
+Earlier local preview based on 0.12.0. The [current follow-up](CLASSIC-BLOOD-CASINGS-PREVIEW.md) changes the movement default and replaces centered headshot text with target-local effects. The published v0.12.0 download and historical release notes are unchanged.
 
 ## Purchases
 

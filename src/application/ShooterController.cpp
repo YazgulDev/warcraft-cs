@@ -246,7 +246,7 @@ void ShooterController::Disable(bool restoreCamera) {
     nativeSky_.Update(ui_,false,mapTileset_);
     meleeContact_ = meleeReady_ = 0; recoil_.Reset();
     audio_.Stop(); stepDistance_ = 0;
-    hits_.Clear(); refillRequested_ = false; allWeaponsRequested_=false; refillTick_ = 0;
+    hits_.Clear();combatVisuals_.Reset(); refillRequested_ = false; allWeaponsRequested_=false; refillTick_ = 0;
     // Discard pending display taps without losing the session's chosen visibility.
     itemRequested_=settingsRequested_=itemNearby_=speedToggleRequested_=minimapToggleRequested_=false;squadRequested_=0;
     movement_.Stop();
@@ -288,7 +288,7 @@ void ShooterController::ResetMap() {
     audio_.Stop(); stepDistance_ = 0; reloadEnd_ = 0;
     menuRequested_ = false;
     itemRequested_=settingsRequested_=itemNearby_=speedToggleRequested_=minimapToggleRequested_=false;squadRequested_=0;ammoRecovery_.Reset();
-    hits_.Clear(); refillRequested_ = false; allWeaponsRequested_=false; refillTick_ = 0; fixtureTarget_ = 0; blastFixtures_.clear();
+    hits_.Clear();combatVisuals_.Reset(); refillRequested_ = false; allWeaponsRequested_=false; refillTick_ = 0; fixtureTarget_ = 0; blastFixtures_.clear();
     ResetLoadout();
 }
 void ShooterController::Toggle(ControlView initial) {
@@ -585,6 +585,7 @@ void ShooterController::ToggleHealthBars() {
     Notice(saved ? (settings_.healthBars.allies ? "HEALTH BARS ON" : "HEALTH BARS OFF") : "HEALTH BAR SETTINGS COULD NOT BE SAVED");
 }
 void ShooterController::ReloadSettings() {
+    combatVisuals_.Reset(); // F8 drops fragments and labels from the old visual policy.
     itemHover_.Reset(); // F8 cannot retain handles, names or distances from the previous query policy.
     CancelEnergy(); // F8 cannot complete a charge using a different damage or resource snapshot.
     CloseWeaponSelection(); // F8 cannot retain a choice under the previous controls/configuration.
@@ -775,6 +776,14 @@ bool ShooterController::Fire(bool secondary,bool burstRound,bool interruptReload
         return true;
     }
     if(weapon_==WeaponSlots::RPG){recoil_.Shot(weapon_,movement_.Speed(),movement_.Grounded(),movement_.Duck()>=.5f,settings_.weaponKick[weapon_]);return true;}
+    // Exactly one casing per accepted conventional round, including burst rounds and whole shotgun shells.
+    if(settings_.combatVisuals.shellCasings && CombatVisuals::UsesCases(weapon_)) {
+        float eye[3],aim[3];AimRay(eye,aim);
+        float floor=wc3::Ground(eye[0],eye[1]),deck=0;
+        if(wc3::WalkableSurface(eye[0],eye[1],deck) && deck<=eye[2] && deck>floor)floor=deck;
+        combatVisuals_.Eject(weapon_,{eye[0],eye[1],eye[2]},{aim[0],aim[1],aim[2]},
+            {movement_.VelocityX(),movement_.VelocityY(),movement_.VerticalVelocity()},floor,settings_.combatVisuals);
+    }
     // GoldSrc fires with the existing punch angle, then applies the next kick to camera and later bullets.
     if(weapon_==WeaponSlots::M3 || weapon_==WeaponSlots::XM1014) {
         // One shell distributes its configured total damage across a disk of independent pellet contacts.
@@ -919,8 +928,12 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
         if(damage>0)reward.Confirm(rewards);
         float after = life();
         if (after < before) {
-            // The same hit marker confirms damage to every faction, without blood.
+            // The reticle still confirms ordinary damage; headshots additionally receive target-local effects.
             hits_.Record(headshot);
+            // Blood/text require real HP loss; rejected damage and invulnerable targets cannot emit a critical.
+            if(headshot)combatVisuals_.Headshot(target,{x+vx*nearest,y+vy*nearest,z+vz*nearest},
+                {wc3::Real(wc3::GetUnitX(target)),wc3::Real(wc3::GetUnitY(target)),z+vz*nearest+settings_.combatVisuals.criticalOffset},
+                {vx,vy,vz},settings_.combatVisuals);
             if (WeaponSlots::Melee(weapon_) && weapon_!=WeaponSlots::Crowbar) {
                 static const char* contacts[] = {"knife_hit1.wav", "knife_hit2.wav", "knife_hit3.wav", "knife_hit4.wav"};
                 const char* sample = destructable ? "knife_hitwall1.wav" : (weapon_ == WeaponSlots::Sword || meleeAttack_.secondary) ? "knife_stab.wav" : contacts[knifeSwing_ % 4];
@@ -1091,6 +1104,8 @@ void ShooterController::Tick(uintptr_t ui) {
     if(suspended_) {flashWeapon_=-1;viewmodelMotion_.Reset();}
     if(!active_ || suspended_)glockBurst_.Cancel(); // Menus/cinematics cannot resume queued bullets later.
     if (suspended_) { unitLocomotion_.Release();heroAttack_.Cancel();viewToggleRequested_=false;CancelCasting();spellRequested_=-1;spellCancelRequested_=false;CancelPlant(); meleeContact_ = 0;buyMenu_.Close();CloseWeaponSelection();itemInventory_.ClearInput();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1; }
+    // Advance copied visual pools only while the controlled simulation is active; native pause/menu ticks freeze them.
+    if(active_ && !suspended_)combatVisuals_.Step(dt);
     if(Shopping()) {
         if(shopCloseRequested_ || wc3::GetOwningPlayer(unit_)!=wc3::GetLocalPlayer() || !ShopAccess::Nearby(unit_,shop_,settings_.shopInteractionRadius))CloseShop();
         return;
