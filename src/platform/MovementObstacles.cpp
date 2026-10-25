@@ -123,8 +123,9 @@ std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle actor, float x, flo
         if (Bounds(path(wc3::GetDestructableTypeId(object), true), true,
             reinterpret_cast<Resolve>(base_ + wc3::Rva(0x3BE010))(object, 0), bounds,detailed ? &mesh : nullptr)) {
             float cx=wc3::Real(wc3::GetDestructableX(object)), cy=wc3::Real(wc3::GetDestructableY(object)), deck=0;
-            // Walkable bridges supply their native deck separately; their enclosing model box includes empty space.
-            if (!wc3::WalkableSurface(cx, cy, deck)) {result.push_back(bounds);details_.push_back(std::move(mesh));}
+            // Keep verified surfaces for movement even when the native deck is present: a missed
+            // deck query must not delete a real platform. Never substitute an enclosing bridge box.
+            if (!wc3::WalkableSurface(cx, cy, deck) || (detailed && mesh)) {result.push_back(bounds);details_.push_back(std::move(mesh));}
         }
     }
     return result;

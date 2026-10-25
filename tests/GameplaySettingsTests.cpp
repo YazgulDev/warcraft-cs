@@ -409,6 +409,25 @@ int main() {
     }
     DeleteFileA(path.c_str());
     assert(ShortcutBindings{}.Key(ShortcutAction::SquadOrders)=='Y');
+    // Recovery settings use the same validated F8 snapshot and retain the active motor state.
+    assert(ShortcutBindings{}.Key(ShortcutAction::RecoverPosition)==VK_HOME);
+    assert(ShortcutBindings::Parse("HOME")==VK_HOME && ShortcutBindings::Label(VK_HOME)=="HOME");
+    for(const char* value:{"", "broken", "nan", "inf"}) {
+        WritePrivateProfileStringA("Movement","RecoveryDistance",value,path.c_str());
+        WritePrivateProfileStringA("Movement","RecoverInvalidPosition",value,path.c_str());
+        auto recover=GameplaySettings::Load(path).movement;
+        assert(recover.recoverInvalidPosition && recover.recoveryDistance==512);
+    }
+    WritePrivateProfileStringA("Movement","RecoveryDistance","9999",path.c_str());
+    WritePrivateProfileStringA("Movement","RecoverInvalidPosition","false",path.c_str());
+    assert(GameplaySettings::Load(path).movement.recoveryDistance==2048);
+    WritePrivateProfileStringA("Movement","RecoveryDistance","-1",path.c_str());
+    auto recover=GameplaySettings::Load(path);movement.Configure(recover.movement);
+    assert(!movement.RecoverInvalidPosition() && movement.RecoveryDistance()==64);
+    assert(movement.FeetZ()==feet && movement.VerticalVelocity()==vertical);
+    WritePrivateProfileStringA("Shortcuts","RecoverPosition","NONE",path.c_str());
+    assert(GameplaySettings::Load(path).shortcuts.Key(ShortcutAction::RecoverPosition)==0);
+    DeleteFileA(path.c_str());
     assert(ShortcutBindings::Parse("SEMICOLON")==VK_OEM_1 && ShortcutBindings::Parse(";")==VK_OEM_1 && ShortcutBindings::Label(VK_OEM_1)==";");
     {std::ofstream file(path);file<<"[Shortcuts]\nSpeed=SEMICOLON\n";}
     auto oldSemicolon=GameplaySettings::Load(path);assert(oldSemicolon.shortcuts.Key(ShortcutAction::Speed)==VK_OEM_1 && oldSemicolon.shortcuts.Key(ShortcutAction::SquadOrders)=='Y');

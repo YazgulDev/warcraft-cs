@@ -37,6 +37,10 @@ public:
     float MaxWalkSlope() const { return settings_.maxWalkSlope; }
     float HullRadius() const { return settings_.hullRadius; }
     bool ObjectMeshCollision() const { return settings_.objectMeshCollision; }
+    bool RecoverInvalidPosition() const {return settings_.recoverInvalidPosition;}
+    float RecoveryDistance() const {return settings_.recoveryDistance;}
+    // Emergency placement discards fall velocity without changing stance, tuning or held-jump state.
+    void RecoverFloor(float floor) {feetZ_=previousFeetZ_=floor;vx_=vy_=vz_=0;grounded_=true;}
     float BodyHeight() const { return (64-28*duck_)*worldScale+12; }
     bool NativeUnitCollision() const { return settings_.useNativeUnitCollision; }
     float EyeZ() const { return feetZ_ + (64 - 28 * duck_) * worldScale; }

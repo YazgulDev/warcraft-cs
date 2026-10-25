@@ -427,3 +427,8 @@ visibility before publishing any mesh. `ModelBounds` reads owned mounted-map byt
 caches local and transformed static geometry per map, refreshed when the sprite transform changes.
 Only movement opts into the detailed snapshot; grenade/rocket cover keeps the established coarse contract.
 Unsupported poses retain prior bounds, trees retain trunk filtering and native bridge decks remain authoritative.
+
+`MovementRecovery` retains a bounded portable history of visited positions. `WarcraftCollision`
+revalidates support/clearance and native walkability before restoring one, tracks platform rider
+provenance and rejects stale placement history. InputDispatcher queues Home on the controller mailbox;
+the controller filters cargo, disabled/casting and cursor states before requesting game-thread recovery.

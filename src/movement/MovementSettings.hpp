@@ -6,6 +6,9 @@ struct MovementSettings {
     bool useNativeUnitCollision=true;
     // Precise stationary prop surfaces keep arch openings and low column bases usable.
     bool objectMeshCollision=true;
+    // Repair invalid buried states; manual recovery returns only to revalidated visited ground.
+    bool recoverInvalidPosition=true;
+    float recoveryDistance=512;
     // Optional absolute unit-speed scaling replaces the legacy relative slow/haste modifier.
     bool scaleFromUnitMoveSpeed=false;
     float unitMoveSpeedReference=300;

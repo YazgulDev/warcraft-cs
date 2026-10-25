@@ -34,7 +34,12 @@ public:
             float n[3];Normal(triangle,n);
             if(n[2]<minimumNormal)continue;
             float low,high;
-            if(Heights(triangle,x,y,radius,low,high) && high<=reachable+.01f && (!found || high>height)) {
+            // A sloping triangle can cross the feet even when its uphill end is overhead.
+            // Keep the reachable part instead of discarding that entire support surface.
+            Polygon polygon;
+            for(const auto& point:triangle.vertices)polygon.push_back({point[0],point[1],point[2]});
+            polygon=Clip(polygon,reachable+.001f,false);
+            if(Heights(triangle,polygon,x,y,radius,low,high) && (!found || high>height)) {
                 height=high;found=true;
                 if(normal)for(int axis=0;axis<3;++axis)normal[axis]=n[axis];
             }
@@ -129,10 +134,14 @@ private:
         return std::abs(area)>.0001f && !(positive && negative);
     }
     static bool Heights(const Triangle3& triangle,float x,float y,float radius,float& low,float& high) {
-        float n[3];Normal(triangle,n);
-        if(std::abs(n[2])<.0001f)return false;
         Polygon polygon;
         for(const auto& point:triangle.vertices)polygon.push_back({point[0],point[1],point[2]});
+        return Heights(triangle,polygon,x,y,radius,low,high);
+    }
+    static bool Heights(const Triangle3& triangle,const Polygon& polygon,float x,float y,float radius,float& low,float& high) {
+        if(polygon.empty())return false;
+        float n[3];Normal(triangle,n);
+        if(std::abs(n[2])<.0001f)return false;
         bool found=false;low=std::numeric_limits<float>::infinity();high=-low;
         auto take=[&](float px,float py) {
             float z=triangle.vertices[0][2]-(n[0]*(px-triangle.vertices[0][0])+n[1]*(py-triangle.vertices[0][1]))/n[2];
@@ -141,8 +150,8 @@ private:
         // Extrema of a plane over a triangle intersected with a disk occur at a vertex,
         // an edge/circle crossing, or the circle's uphill/downhill tangent point.
         if(Inside(polygon,x,y))take(x,y);
-        for(size_t i=0;i<3;++i) {
-            const auto& a=polygon[i];const auto& b=polygon[(i+1)%3];
+        for(size_t i=0;i<polygon.size();++i) {
+            const auto& a=polygon[i];const auto& b=polygon[(i+1)%polygon.size()];
             if(std::hypot(a[0]-x,a[1]-y)<=radius)take(a[0],a[1]);
             float dx=b[0]-a[0],dy=b[1]-a[1],ox=a[0]-x,oy=a[1]-y;
             float aa=dx*dx+dy*dy,bb=2*(ox*dx+oy*dy),cc=ox*ox+oy*oy-radius*radius;

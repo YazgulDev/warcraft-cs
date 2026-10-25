@@ -27,11 +27,13 @@ float slopeGradient=.3f;
 bool narrowPassage=false;
 bool actorColliding=true;
 int meshScene=0;
+bool deckPatch=false;
 int sideContact=0,sideRelocations=0;bool sideUnit=false;
 wc3::Bits Bits(float value) { wc3::Bits bits;std::memcpy(&bits,&value,4);return bits; }
 wc3::Bits __cdecl X(wc3::Handle) {return Bits(unitX);}
 wc3::Bits __cdecl Y(wc3::Handle) {return Bits(unitY);}
 BOOL __cdecl Blocked(float* x,float* y,int) {
+    if(deckPatch)return FALSE;
     if(meshScene)return *x>=32 && *x<128;
     if(cliffFace)return FaceDistance(*x,*y)>=8 && FaceDistance(*x,*y)<=184;
     if(cornerPathing)return *x>=32 && *x<96 && *y>=0 && *y<64;
@@ -90,7 +92,8 @@ void (__cdecl* RemoveRect)(Handle)=Remove;
 float Real(Bits bits){float f;std::memcpy(&f,&bits,4);return f;}
 float TerrainGround(float x,float y){if(cliffFace)return 100+std::clamp((FaceDistance(x,y)-32)/128,0.f,1.f)*faceRise;return landingLedge ? (x*std::cos(ledgeYaw)+y*std::sin(ledgeYaw)>=32 ? 140.f : 100.f) : slope ? 100.f+x*slopeGradient : drop && x>=32 ? 0.f : cliff && x>=32 ? 180.f : 100.f;}
 float Ground(float x,float y){return TerrainGround(x,y)+(water ? 22.f : 0.f);}
-bool WalkableSurface(float,float y,float& height){
+bool WalkableSurface(float x,float y,float& height){
+    if(deckPatch){height=140;return x>=32 && x<=96;}
     if(!bridgeAlive || (edge && std::abs(y)>16))return false;
     height=invalidDeck ? std::numeric_limits<float>::quiet_NaN() : deckHeight;return !invalidDeck;
 }
@@ -101,7 +104,8 @@ std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,b
     details_.clear();
     if(meshScene) {
         auto mesh=std::make_shared<CylinderMesh>();
-        if(meshScene==2) {
+        if(meshScene==4)AddMeshBox(*mesh,{{-500,-500,180},{500,500,200}});
+        else if(meshScene==2) {
             AddMeshBox(*mesh,{{60,-64,100},{100,64,140}});
             AddMeshBox(*mesh,{{60,40,140},{100,64,400}});
         } else {
@@ -110,6 +114,7 @@ std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,b
             AddMeshBox(*mesh,{{60,-20,meshScene==3 ? 185.f : 240.f},{100,20,350}});
         }
         details_.push_back(detailed ? mesh : nullptr);
+        if(meshScene==4)return {{{-500,-500,180},{500,500,200}}};
         return {{{60,-80,100},{100,80,meshScene==2 ? 400.f : 350.f}}};
     }
     if(ceiling) {
@@ -431,5 +436,55 @@ int main(){
     for(int frame=0;frame<120;++frame){jumper.Step(against,1.f/60,250);collision.Move(1,jumper,1.f/60);against.jump=false;}
     Require(unitX<60 && jumper.FeetZ()==100,"a jump below the plinth top cannot enter and become trapped");
     meshScene=0;actorRadius=0;
+    // Bridge edge support must match model ledges even when only a leading foot crosses its deck.
+    jumper.Configure(MovementSettings{});collision.Reset();deckPatch=true;unitX=20;unitY=0;jumper.Reset(100);
+    vertical={};vertical.jump=true;above=false;
+    for(int frame=0;frame<120;++frame) {
+        jumper.Step(vertical,1.f/60,250);collision.Move(1,jumper,1.f/60);vertical.jump=false;
+        above=above || jumper.FeetZ()>140;if(above && jumper.Grounded())break;
+    }
+    Require(above && jumper.Grounded() && jumper.FeetZ()==140,"leading-foot native deck support catches a descending body before its center crosses");
+    deckPatch=false;
+    // A retained real platform mesh covers a missed native deck query, but removal must still permit a fall.
+    collision.Reset();meshScene=4;bridgeAlive=true;deckHeight=200;unitX=unitY=0;jumper.Reset(200);
+    collision.Move(1,jumper,1.f/60);bridgeAlive=false;
+    for(int frame=0;frame<30;++frame){jumper.Step({},1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(jumper.Grounded() && jumper.FeetZ()==200,"a live platform surface survives native query dropout");
+    meshScene=0;bool genuineFall=false;
+    for(int frame=0;frame<120;++frame){jumper.Step({},1.f/60,250);collision.Move(1,jumper,1.f/60);genuineFall=genuineFall || !jumper.Grounded();}
+    Require(genuineFall && jumper.FeetZ()==100,"destroying the platform removes support rather than creating a cached invisible floor");
+    collision.Reset();bridgeAlive=true;deckHeight=200;unitX=unitY=0;jumper.Reset(200);collision.Move(1,jumper,0);
+    deckHeight=240;jumper.Step({},1.f/60,250);collision.Move(1,jumper,1.f/60);
+    Require(jumper.Grounded() && jumper.FeetZ()==240,"a proven rider recovers when its live platform rises beyond one ordinary step");
+    collision.Reset();jumper.Reset(100);collision.Move(1,jumper,0);
+    Require(jumper.FeetZ()==100,"walking underneath a raised deck must never activate rider recovery");
+    bridgeAlive=false;
+    deckHeight=100;
+    // Invalid buried states previously ignored the floor forever because it lay above previous feet.
+    collision.Reset();unitX=unitY=0;jumper.Reset(60);collision.Move(1,jumper,1.f/60);
+    Require(jumper.FeetZ()==100 && jumper.Grounded() && jumper.VerticalVelocity()==0,"a proven below-terrain state repairs onto unobstructed real ground");
+    auto noRepair=MovementSettings{};noRepair.recoverInvalidPosition=false;jumper.Configure(noRepair);jumper.Reset(60);
+    collision.Move(1,jumper,1.f/60);Require(jumper.FeetZ()==60,"automatic repair respects its F8 opt-out");
+    jumper.Configure(MovementSettings{});
+    collision.Reset();ceiling=true;ceilingZ=185;jumper.Reset(60);collision.Move(1,jumper,0);
+    Require(jumper.FeetZ()==60,"repair cannot push the body into a low ceiling");ceiling=false;
+    // Home returns from a lower pit to actual visited upper ground; it is never an automatic cliff rewind.
+    collision.Reset();drop=true;unitX=-40;unitY=0;jumper.Reset(100);collision.Move(1,jumper,1.f/60);
+    for(int frame=0;frame<30;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(unitX>32 && jumper.FeetZ()<100,"ordinary departures from upper ground remain ordinary falls");
+    collision.RequestRecovery();collision.Move(1,jumper,0);
+    if(unitX!=-40 || jumper.FeetZ()!=100)std::printf("Recovery result x=%.3f z=%.3f speed=%.3f\n",unitX,jumper.FeetZ(),jumper.Speed());
+    Require(unitX==-40 && jumper.FeetZ()==100 && jumper.Speed()==0,"manual recovery returns to revalidated upper ground and clears fall/move velocity");
+    drop=false;
+    // A destroyed raised deck and a native script teleport invalidate old rescue destinations.
+    collision.Reset();bridgeAlive=true;deckHeight=200;unitX=unitY=0;jumper.Reset(200);collision.Move(1,jumper,0);
+    bridgeAlive=false;jumper.Reset(100);collision.RequestRecovery();collision.Move(1,jumper,0);
+    Require(jumper.FeetZ()==100,"recovery must not restore a removed bridge surface");deckHeight=100;
+    unitX=1000;collision.RequestRecovery();collision.Move(1,jumper,0);
+    Require(unitX==1000,"native script relocations discard checkpoints from the previous location");
+    collision.Reset();slope=true;slopeGradient=0;unitX=unitY=0;jumper.Reset(100);collision.Move(1,jumper,0);
+    for(int frame=0;frame<30;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    float validX=unitX;collision.RequestRecovery();collision.Move(1,jumper,0);
+    Require(unitX==validX,"Home cannot act as a horizontal teleport from valid open ground");
     std::puts("Warcraft bridge/collision regressions passed.");
 }

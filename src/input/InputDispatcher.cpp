@@ -55,6 +55,10 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM k
         if(tap)controller_.RequestUnitViewToggle();return 0;
     }
     if(!healthy || !controller_.Visible())return std::nullopt;
+    // Queue recovery for the game thread; the controller rejects cargo, stun, casting and cursor UI states.
+    if(match(ShortcutAction::RecoverPosition) && (down || up)) {
+        if(tap)controller_.RequestPositionRecovery();return 0;
+    }
     // Native pause is always available and regains ordinary RTS input before its system key is forwarded.
     if(key==VK_F10 && (down || up)) {if(tap)controller_.RequestMenu();return 0;}
     // CS selection keeps aiming live: either mouse button owns the menu edge before firing/orders.

@@ -4,6 +4,7 @@
 #include "../geometry/CylinderHull.hpp"
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 namespace {
 bool Overlaps(const Bounds3& box, float x, float y, float padding) {
@@ -101,9 +102,12 @@ MovementSurface WarcraftCollision::Floor(float x, float y, const MovementPhysics
     // Only already-reachable terrain can support us; a tall cliff remains a wall during ascent.
     for(int point=0;point<8;++point) {
         float angle=point*.78539816339f;
-        auto terrain=Terrain(x+std::cos(angle)*radius_,y+std::sin(angle)*radius_,movement);
+        float px=x+std::cos(angle)*radius_,py=y+std::sin(angle)*radius_;
+        auto terrain=Terrain(px,py,movement);
         if(terrain.walkable && std::isfinite(terrain.height) && terrain.height<=reachable+.01f && terrain.height>surface.height)
             surface=terrain;
+        // A bridge edge under the leading/trailing foot supports a landing just like a model lip.
+        if(wc3::WalkableSurface(px,py,deck))support(deck);
     }
     // A low solid prop supports the entire foot too; support ends only after its trailing edge clears.
     for(size_t index=0;index<obstacles.size();++index) {
@@ -231,18 +235,87 @@ bool WarcraftCollision::Clear(float x, float y, float oldX, float oldY, const Mo
     if(modelPath)modelPathing_=true;
     return true;
 }
+bool WarcraftCollision::Safe(float x,float y,float z,const MovementPhysics& movement,const std::vector<Bounds3>& obstacles) const {
+    if(!std::isfinite(z))return false;
+    for(int point=0;point<9;++point) {
+        float angle=(point-1)*.78539816339f;
+        float px=x+(point ? std::cos(angle)*radius_ : 0),py=y+(point ? std::sin(angle)*radius_ : 0),deck=0;
+        float ground=wc3::TerrainGround(px,py);
+        if(!std::isfinite(ground) || ground>z+.01f)return false;
+        // Recovery checkpoints use natively walkable space, not the permissive cliff/model path exceptions.
+        if(wc3::IsTerrainPathable(&px,&py,1) &&
+            !(wc3::WalkableSurface(px,py,deck) && deck<=z+.01f && deck>=z-movement.StepHeight()-.01f))return false;
+        if(wc3::WalkableSurface(px,py,deck) && deck>z+.01f && deck<z+movement.BodyHeight()-.01f)return false;
+    }
+    for(size_t index=0;index<obstacles.size();++index) {
+        const auto& box=obstacles[index];
+        if(!Overlaps(box,x,y,radius_))continue;
+        if(const auto* mesh=obstacles_.Geometry(index)) {
+            if(mesh->Contact(x,y,radius_,z,z+movement.BodyHeight()))return false;
+        } else if(box.maximum[2]>z+.01f && box.minimum[2]<z+movement.BodyHeight()-.01f)return false;
+    }
+    return true;
+}
+void WarcraftCollision::Recover(wc3::Handle unit,float x,float y,MovementPhysics& movement,const std::vector<Bounds3>& obstacles) {
+    auto terrain=Terrain(x,y,movement);
+    float deck=0;
+    // Remember actual support provenance. Someone who walked underneath a bridge is never
+    // lifted onto it; a rider who lost its still-present deck may recover onto that same deck.
+    bool deckHere=wc3::WalkableSurface(x,y,deck);
+    bool lostDeck=ridingDeck_ && deckHere && movement.FeetZ()<deck-.01f && movement.PreviousFeetZ()<deck-.01f;
+    bool buried=!std::isfinite(movement.FeetZ()) || (std::isfinite(terrain.height) &&
+        movement.FeetZ()<terrain.height-.01f && movement.PreviousFeetZ()<terrain.height-.01f);
+    bool manual=recoveryRequested_;recoveryRequested_=false;
+    // Only a proven invalid position is repaired automatically; ordinary drops and pits keep falling normally.
+    if(movement.RecoverInvalidPosition() && lostDeck && Safe(x,y,deck,movement,obstacles)) {
+        wc3::Trace("movement recovery reason=lost-deck x=%.1f y=%.1f fromZ=%.1f toZ=%.1f",x,y,movement.FeetZ(),deck);
+        movement.RecoverFloor(deck);
+    } else if(movement.RecoverInvalidPosition() && buried && terrain.walkable && Safe(x,y,terrain.height,movement,obstacles)) {
+        wc3::Trace("movement recovery reason=below-terrain x=%.1f y=%.1f fromZ=%.1f toZ=%.1f",x,y,movement.FeetZ(),terrain.height);
+        movement.RecoverFloor(terrain.height);
+    } else if(manual || (movement.RecoverInvalidPosition() && (buried || lostDeck))) {
+        MovementRecovery::Point point;
+        // From valid lower ground, Home can return to a recent upper bank. On ordinary open
+        // ground it cannot become a horizontal teleport. Invalid/wedged positions may use any safe height.
+        float minimumRise=Safe(x,y,movement.FeetZ(),movement,obstacles) ?
+            (movement.Grounded() ? movement.StepHeight()+.01f : .01f) : -std::numeric_limits<float>::infinity();
+        auto validate=[&](const MovementRecovery::Point& candidate) {
+            auto probe=movement;probe.RecoverFloor(candidate.z);
+            auto floor=Floor(candidate.x,candidate.y,probe,obstacles);
+            return floor.walkable && std::abs(floor.height-candidate.z)<.01f &&
+                Safe(candidate.x,candidate.y,candidate.z,movement,obstacles);
+        };
+        if(recovery_.Find(x,y,movement.FeetZ(),movement.RecoveryDistance(),minimumRise,validate,point)) {
+            wc3::Trace("movement recovery reason=%s from=%.1f,%.1f,%.1f to=%.1f,%.1f,%.1f",manual ? "manual" : "invalid",x,y,movement.FeetZ(),point.x,point.y,point.z);
+            wc3::SetUnitX(unit,&point.x);wc3::SetUnitY(unit,&point.y);movement.RecoverFloor(point.z);
+            x=point.x;y=point.y;
+        } else if(manual)wc3::Trace("movement recovery unavailable: no revalidated nearby checkpoint");
+    }
+    auto surface=Floor(x,y,movement,obstacles);
+    if(movement.Grounded() && surface.walkable && std::abs(movement.FeetZ()-surface.height)<.01f &&
+        Safe(x,y,movement.FeetZ(),movement,obstacles))
+        recovery_.Record(x,y,movement.FeetZ(),radius_*2);
+    if(movement.Grounded()) {
+        deckHere=wc3::WalkableSurface(x,y,deck);
+        ridingDeck_=deckHere && deck<=movement.FeetZ()+.01f && deck>=movement.FeetZ()-movement.StepHeight()-.01f;
+    }
+    lastX_=x;lastY_=y;havePosition_=true;
+}
 void WarcraftCollision::Move(wc3::Handle unit, MovementPhysics& movement, float dt) {
     dt = std::clamp(dt, 0.f, .05f);
     terrain_.clear();
     modelPathing_=false;
     float x = wc3::Real(wc3::GetUnitX(unit)), y = wc3::Real(wc3::GetUnitY(unit));
+    // Scripted relocations, view changes and actor switches must never reuse a checkpoint from another place.
+    if(actor_!=unit || (havePosition_ && std::hypot(x-lastX_,y-lastY_)>radius_*2)){recovery_.Reset();ridingDeck_=false;}
+    actor_=unit;
     float originalX = x, originalY = y;
     auto body=movement.NativeUnitCollision() ? UnitCollisionProfile::Read(unit,base_) : UnitCollisionProfile{};
     // FPS may disable the actor's native pathing mask. Its known footprint remains valid,
     // unlike non-colliding helper obstacles, and must not suddenly inflate in a narrow corridor.
     radius_=body.known && body.radius>0 ? std::min(body.radius,movement.HullRadius()) : movement.HullRadius();
     float dx = movement.VelocityX() * dt, dy = movement.VelocityY() * dt;
-    auto obstacles = obstacles_.Snapshot(unit, x, y, 600 + std::hypot(dx, dy),movement.NativeUnitCollision(),movement.ObjectMeshCollision());
+    auto obstacles = obstacles_.Snapshot(unit, x, y, std::max(600.f,movement.RecoveryDistance()+radius_) + std::hypot(dx, dy),movement.NativeUnitCollision(),movement.ObjectMeshCollision());
     auto bounds = wc3::GetWorldBounds();
     float minX = wc3::Real(wc3::GetRectMinX(bounds)) + radius_, maxX = wc3::Real(wc3::GetRectMaxX(bounds)) - radius_;
     float minY = wc3::Real(wc3::GetRectMinY(bounds)) + radius_, maxY = wc3::Real(wc3::GetRectMaxY(bounds)) - radius_;
@@ -250,7 +323,7 @@ void WarcraftCollision::Move(wc3::Handle unit, MovementPhysics& movement, float 
     Ceiling(x,y,movement,obstacles);
     if (std::hypot(dx,dy)<.001f) {
         // Standing still needs floor resolution, but no collision rejection or blocked-movement telemetry.
-        movement.ResolveSurface(Floor(x,y,movement,obstacles));return;
+        movement.ResolveSurface(Floor(x,y,movement,obstacles));Recover(unit,x,y,movement,obstacles);return;
     }
     int steps = std::max(1, int(std::ceil(std::hypot(dx, dy) / 8)));
     // Eight-unit swept steps retain thin-wall collision at maximum bunnyhop speed.
@@ -307,4 +380,5 @@ void WarcraftCollision::Move(wc3::Handle unit, MovementPhysics& movement, float 
     x = wc3::Real(wc3::GetUnitX(unit)); y = wc3::Real(wc3::GetUnitY(unit));
     Ceiling(x,y,movement,obstacles);
     movement.ResolveSurface(Floor(x, y,movement,obstacles));
+    Recover(unit,x,y,movement,obstacles);
 }

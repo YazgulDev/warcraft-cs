@@ -108,6 +108,7 @@ public:
     // Explicit spell approach/channeling may use the native motor; idle FPS never does.
     bool NativeCastMovement() const { return Visible() && Casting(); }
     void RequestSettingsReload() { settingsRequested_=true; }
+    void RequestPositionRecovery() {positionRecoveryRequested_=true;}
     // Queue the display switch for the simulation thread, like the other FPS controls.
     void RequestSpeedToggle() { speedToggleRequested_=true; }
     // Fog changes follow the same input-to-simulation mailbox as the speed display.
@@ -322,6 +323,7 @@ private:
     bool ownCameraRequest_ = false;
     int scopeLevel_ = 0;
     bool toggleRequested_ = false, menuRequested_ = false, refillRequested_ = false, allWeaponsRequested_=false;
+    bool positionRecoveryRequested_=false;
     bool itemRequested_=false,settingsRequested_=false,itemNearby_=false;
     bool speedToggleRequested_=false,showSpeed_=false;
     bool minimapToggleRequested_=false,showMinimap_=true;

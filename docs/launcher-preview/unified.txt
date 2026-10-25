@@ -12,3 +12,5 @@
 - Preserved custom settings and prevented a local preview from offering its published base as a newer build.
 - Improved local cliff collision, downhill sliding, round player hulls, narrow passages and crouching head clearance.
 - Improved static prop collision so fitting arch openings stay passable and low parts of tall models can be jumped onto; preserved movement physics and conservative fallback.
+- Fixed platform-edge landings, retained live platform surfaces during native query dropout and preserved reachable sloping mesh support.
+- Added configurable invalid-position protection and Home recovery to revalidated nearby visited ground, preserving ordinary jumps, falls and underpasses.

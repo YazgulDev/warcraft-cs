@@ -291,6 +291,7 @@ void ShooterController::Toggle(ControlView initial) {
     // Begin on the native standing surface, including walkable bridges, independent of the RTS speed cap.
     weaponWheel_.Reset();cameraWheel_.Reset();
     movement_.Reset(wc3::Ground(wc3::Real(wc3::GetUnitX(unit_)), wc3::Real(wc3::GetUnitY(unit_))));
+    collision_.ResetRecovery();positionRecoveryRequested_=false; // A new native placement invalidates visited recovery points.
     wc3::IssueImmediateOrderById(unit_, 851972);  // stop autonomous attack/movement orders
     float zero = 0; wc3::SetCameraTargetController(0, &zero, &zero, FALSE);
     // Keep native UI/portrait anchors intact; FPS suppresses HUD graphics at GL submission.
@@ -345,8 +346,11 @@ SpellAim ShooterController::InventoryAim(int x,int y,int width,int height) {
     return SpellAim::Pick(unit_,origin,direction,settings_.spells.aimDistance,hitboxes_,destructableHitboxes_);
 }
 void ShooterController::AimAndMove(float dt) {
+    // Consume once, even when cargo/status blocks control, so a failed Home tap cannot replay later.
+    bool recover=positionRecoveryRequested_;positionRecoveryRequested_=false;
     // A contained unit belongs to native cargo: changing XY/stance would fake an escape without releasing it.
     if (status_.contained || status_.hidden) { mouseLook_.Reset();movement_.Stop();viewmodelMotion_.Reset(); stepDistance_ = 0; return; }
+    if(recover && !status_.immobilized && !status_.incapacitated && !Casting() && !CursorMode())collision_.RequestRecovery();
     // Mouse capture occurs only in the foreground and only after the player enables FPS.
     float dx=0,dy=0;
     bool sampleMouse=!CursorMode();
@@ -435,6 +439,7 @@ void ShooterController::UpdateStatus() {
     if ((status_.contained || status_.hidden) && !current.contained && !current.hidden) {
         // On unloading/rescue, resume from the actual native position, not the stale pre-swallow eye height.
         movement_.Reset(wc3::Ground(wc3::Real(wc3::GetUnitX(unit_)), wc3::Real(wc3::GetUnitY(unit_))));
+        collision_.ResetRecovery();positionRecoveryRequested_=false; // Unloading starts a new recovery history.
     }
     if (current.contained || current.hidden) scopeLevel_ = 0;
     // Lost attack ownership discards the pending TPS contact even on branches that return early.
@@ -697,6 +702,7 @@ void ShooterController::CloseShop() {
     wc3::ClearSelection();wc3::SelectUnit(unit_,TRUE);
     mouseLook_.Reset();weaponWheel_.Reset();cameraWheel_.Reset();suppressFire_=true;
     movement_.Reset(wc3::Ground(wc3::Real(wc3::GetUnitX(unit_)),wc3::Real(wc3::GetUnitY(unit_))));
+    collision_.ResetRecovery();positionRecoveryRequested_=false; // Native shop placement starts a fresh recovery history.
     std::fill(std::begin(keys_),std::end(keys_),false);
     wc3::Log("shop closed actor=%08X view=%d",unit_,int(view_));
 }

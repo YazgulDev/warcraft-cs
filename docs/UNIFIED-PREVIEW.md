@@ -102,6 +102,17 @@ become false walls; continuous steep faces still cannot supply repeat takeoffs. 
 acceleration and air strafing are unchanged. Synthetic regressions and an owned static wall decode
 passed; native campaign traversal with this updated DLL still needs verification after installation.
 
+Platform support now covers the complete foot, and verified live platform meshes remain available
+when a native deck query is missed. Sloping mesh support keeps the lower reachable part rather than
+discarding the full triangle. `Movement.RecoverInvalidPosition=true` repairs proven buried states
+and lost support for an established platform rider; ordinary falls, underpasses and destroyed-platform
+falls remain possible. Home (`Shortcuts.RecoverPosition=HOME`, NONE disables) requests a revalidated
+visited checkpoint within `Movement.RecoveryDistance=512` horizontal Warcraft units (64–2048).
+Cargo, roots/stuns, casting and cursor menus reject manual rescue; native relocations clear history.
+All three preferences reload on F8 and survive updates. Local physics, geometry and native-adapter
+fixtures pass; the corrected DLL still needs verification in the reported Ancient One campaign fight.
+Save and close Warcraft, install this preview and restart before trying the fix.
+
 <!-- launcher-summary
 - Added experimental Warcraft III 1.27a and Direct3D 9 support alongside 1.26a.
 - Added Player setup for both hosts using exact local Miles export forwarders without C++ Build Tools.
@@ -117,4 +128,6 @@ passed; native campaign traversal with this updated DLL still needs verification
 - Preserved custom settings and prevented a local preview from offering its published base as a newer build.
 - Improved local cliff collision, downhill sliding, round player hulls, narrow passages and crouching head clearance.
 - Improved static prop collision so fitting arch openings stay passable and low parts of tall models can be jumped onto; preserved movement physics and conservative fallback.
+- Fixed platform-edge landings, retained live platform surfaces during native query dropout and preserved reachable sloping mesh support.
+- Added configurable invalid-position protection and Home recovery to revalidated nearby visited ground, preserving ordinary jumps, falls and underpasses.
 -->

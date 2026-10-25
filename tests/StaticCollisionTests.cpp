@@ -64,6 +64,8 @@ int main(int argc,char** argv) {
     float slopeNormal[3]={};
     assert(ramp.Floor(0,0,24,500,.0001f,height,slopeNormal));
     assert(std::abs(height-248)<.01f && slopeNormal[2]<.46f && slopeNormal[0]<-.89f);
+    // The uphill end may exceed the old feet while a lower part still crosses the swept foot.
+    assert(ramp.Floor(0,0,24,220,.0001f,height,slopeNormal) && std::abs(height-220)<.01f);
     pose.matrix[8]=-2;pose.position[2]=500;auto mirrored=arch.Transformed(pose);
     assert(mirrored.Floor(300,0,32,500,.69f,height) && std::abs(height-220)<.001f);
     auto bytes=Model(arch);CylinderMesh decoded;

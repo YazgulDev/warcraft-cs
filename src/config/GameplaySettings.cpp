@@ -200,6 +200,9 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.movement.useNativeUnitCollision = boolean("UseNativeUnitCollision", true);
     // Mesh detail is independent of actor footprints and can be reverted on F8 for custom maps.
     result.movement.objectMeshCollision = boolean("ObjectMeshCollision", true);
+    // Repair tuning and Home's search radius share the existing validated F8 snapshot.
+    result.movement.recoverInvalidPosition=boolean("RecoverInvalidPosition",true);
+    result.movement.recoveryDistance=std::max(64.f,number("Movement","RecoveryDistance",512,2048));
     result.runePickupRadius=number("Runes","PickupRadius",160,400);
     result.runeAmmoAllWeapons=_stricmp(text("Runes","AmmoWeapons","all").c_str(),"current")!=0;
     auto damageMode=text("Damage","Mode","unit");

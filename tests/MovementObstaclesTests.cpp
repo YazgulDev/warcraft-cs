@@ -14,6 +14,7 @@ bool hasUnit=false;
 int unitLoads=0,treeLoads=0;
 UnitCollisionProfile collision;
 bool staticFixture=false;
+bool nativeDeck=false;
 int meshLoads=0;float spriteX=0;
 std::array<unsigned char,0x30> objectMemory={};
 std::array<uintptr_t,0x48/4> spriteTable={};uintptr_t spriteMemory=0;
@@ -53,7 +54,7 @@ uintptr_t UnitObject(Handle) {return 1;}
 std::string UnitModelPath(int) {return "SharedTree.mdl";}
 std::string DestructableModelPath(int) {return staticFixture ? "StaticColumn.mdl" : "SharedTree.mdl";}
 std::vector<Handle> NearbyDestructables(float,float,float) {return {2};}
-bool WalkableSurface(float,float,float&) {return false;}
+bool WalkableSurface(float,float,float& height) {height=40;return nativeDeck;}
 void Log(const char*,...) {}
 }
 // Supply the live-profile boundary without retail process memory; discovery still runs through production code.
@@ -97,5 +98,8 @@ int main() {
     assert(!obstacles.Geometry(0)->Floor(0,0,16,50,.69f,height));
     obstacles.Snapshot(99,0,0,600,true);assert(!obstacles.Geometry(0) && meshLoads==1);
     obstacles.Reset();obstacles.Snapshot(99,0,0,600,true,true);assert(meshLoads==2 && obstacles.Geometry(0));
+    nativeDeck=true;bounds=obstacles.Snapshot(99,0,0,600,true,true);
+    assert(bounds.size()==1 && obstacles.Geometry(0)); // Native decks must not delete verified movement surfaces.
+    bounds=obstacles.Snapshot(99,0,0,600,true);assert(bounds.empty()); // Combat keeps native bridge/deck policy.
     puts("PASS movement obstacle cache: tree-only decoding, shared unit/destructable paths and map reset.");
 }

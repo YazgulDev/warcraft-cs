@@ -77,6 +77,8 @@ simulation step applies the new speed cap. Jump speed applies to the next takeof
 | MaxWalkSlope | 46 | 15–75 degrees; maximum local walkable slope. Blocked native cliff faces remain non-walkable |
 | HullRadius | 24 | 8–64 Warcraft units; maximum player collision radius, preserving smaller native footprints |
 | ObjectMeshCollision | true | true/false; use supported stationary prop surfaces for fit, support and head clearance. false restores conservative whole-model volumes |
+| RecoverInvalidPosition | true | true/false; repair proven below-terrain states and lost deck support for an established rider; ordinary falls and underpasses stay unchanged |
+| RecoveryDistance | 512 | 64–2048 horizontal Warcraft units; maximum search radius for a revalidated visited recovery point |
 
 One GoldSrc unit corresponds to 1.5 Warcraft units. The default jump rises about 67.5 Warcraft units.
 Finite out-of-range numbers are clamped; missing/empty/malformed/non-finite values use the defaults.
@@ -137,3 +139,35 @@ run both with `JumpBoostPercent=0`. Contact logs include speed in both coordinat
 The independent contact model follows the surface-normal, ground-contact and velocity-clipping principles
 illustrated by [Valve's Half-Life SDK movement reference](https://github.com/ValveSoftware/halflife/blob/master/pm_shared/pm_shared.c).
 No SDK implementation is embedded; Warcraft heightfields, native pathing and model bounds are adapted locally.
+
+## Platform support and emergency recovery preview
+
+Native decks now support the same center/eight rim foot samples as terrain and props. A landing
+with only the leading foot over a platform catches its deck. Supported stationary platform meshes
+remain in movement snapshots even when the native deck exists; a missed query no longer deletes
+the physical surface. Combat retains the prior coarse bridge policy. A sloping triangle is clipped
+to the reachable height before querying support, retaining its lower swept contact when its uphill
+end is higher than the previous feet.
+
+`RecoverInvalidPosition=true` repairs a proven below-terrain state only when the body fits above
+the real floor. An established native-platform rider can recover onto its still-present deck if
+its support rises beyond a step or was missed. Someone walking under a bridge has no rider provenance
+and is never lifted onto it. Dead/missing platforms do not become cached invisible floors.
+
+Home (`Shortcuts.RecoverPosition=HOME`, or NONE) requests recovery on the game thread. It checks
+recently visited grounded points within RecoveryDistance, including an upper bank before a fall.
+Every destination is checked again for its current support, native walkability and body/head clearance.
+A destroyed bridge, occupied landing or changed height is rejected. Valid flat ground cannot use Home
+as a horizontal teleport. Recovery clears fall/horizontal velocity while retaining stance and held
+jump/tuning state. Cargo, roots/stuns, casting and cursor menus reject manual requests.
+
+History is bounded to 32 sampled visited positions, reset at map/actor/view entry, native shop return,
+cargo unloading and external native relocations. Automatic repair has an independent F8 opt-out;
+manual Home remains available. Configuration migration adds missing keys and preserves custom values.
+Install and restart to load this native correction.
+
+Regression checks cover platform-edge landings, native-query dropout with a surviving mesh, destroyed
+platforms, a rising deck versus an underpass, buried feet, low headroom, automatic opt-out, upper-bank
+rescue, rejected stale destinations and preserved ordinary falls/hop metrics. Owned ElevatorPuzzle
+and InvisiblePlatform decode to 202 and 2 triangles respectively; no retail model is distributed.
+The reported Ancient One campaign traversal with the corrected DLL has not yet been driven in game.
