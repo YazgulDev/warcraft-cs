@@ -180,6 +180,8 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         if (!_stricmp(value.c_str(), "false")) return false;
         return fallback;
     };
+    // Unknown/missing mode names retain the requested pre-recovery behavior on startup and F8.
+    result.movement.platformRecovery=!_stricmp(text("Movement","Mode","classic").c_str(),"recovery");
     result.movement.bunnyHop = boolean("BunnyHop", true);
     result.movement.scaleFromUnitMoveSpeed=boolean("ScaleFromUnitMoveSpeed",false);
     result.movement.unitMoveSpeedReference=std::max(1.f,number("Movement","UnitMoveSpeedReference",300,1000));

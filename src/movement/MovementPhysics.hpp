@@ -37,6 +37,7 @@ public:
     float MaxWalkSlope() const { return settings_.maxWalkSlope; }
     float HullRadius() const { return settings_.hullRadius; }
     bool ObjectMeshCollision() const { return settings_.objectMeshCollision; }
+    bool PlatformRecovery() const {return settings_.platformRecovery;}
     bool RecoverInvalidPosition() const {return settings_.recoverInvalidPosition;}
     float RecoveryDistance() const {return settings_.recoveryDistance;}
     // Emergency placement discards fall velocity without changing stance, tuning or held-jump state.

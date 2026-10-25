@@ -100,7 +100,7 @@ bool WalkableSurface(float x,float y,float& height){
 }
 bool DiagnosticLog::Due(DWORD&,bool) { return false; }
 // The synthetic world replaces only native discovery; actual swept collision/physics runs unchanged.
-std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,bool,bool detailed) {
+std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,bool,bool detailed,bool retainPlatforms) {
     details_.clear();
     if(meshScene) {
         auto mesh=std::make_shared<CylinderMesh>();
@@ -114,7 +114,7 @@ std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,b
             AddMeshBox(*mesh,{{60,-20,meshScene==3 ? 185.f : 240.f},{100,20,350}});
         }
         details_.push_back(detailed ? mesh : nullptr);
-        if(meshScene==4)return {{{-500,-500,180},{500,500,200}}};
+        if(meshScene==4){if(bridgeAlive && !retainPlatforms){details_.clear();return {};}return {{{-500,-500,180},{500,500,200}}};}
         return {{{60,-80,100},{100,80,meshScene==2 ? 400.f : 350.f}}};
     }
     if(ceiling) {
@@ -437,7 +437,8 @@ int main(){
     Require(unitX<60 && jumper.FeetZ()==100,"a jump below the plinth top cannot enter and become trapped");
     meshScene=0;actorRadius=0;
     // Bridge edge support must match model ledges even when only a leading foot crosses its deck.
-    jumper.Configure(MovementSettings{});collision.Reset();deckPatch=true;unitX=20;unitY=0;jumper.Reset(100);
+    auto recoveryMode=MovementSettings{};recoveryMode.platformRecovery=true;
+    jumper.Configure(recoveryMode);collision.Reset();deckPatch=true;unitX=20;unitY=0;jumper.Reset(100);
     vertical={};vertical.jump=true;above=false;
     for(int frame=0;frame<120;++frame) {
         jumper.Step(vertical,1.f/60,250);collision.Move(1,jumper,1.f/60);vertical.jump=false;
@@ -463,9 +464,9 @@ int main(){
     // Invalid buried states previously ignored the floor forever because it lay above previous feet.
     collision.Reset();unitX=unitY=0;jumper.Reset(60);collision.Move(1,jumper,1.f/60);
     Require(jumper.FeetZ()==100 && jumper.Grounded() && jumper.VerticalVelocity()==0,"a proven below-terrain state repairs onto unobstructed real ground");
-    auto noRepair=MovementSettings{};noRepair.recoverInvalidPosition=false;jumper.Configure(noRepair);jumper.Reset(60);
+    auto noRepair=recoveryMode;noRepair.recoverInvalidPosition=false;jumper.Configure(noRepair);jumper.Reset(60);
     collision.Move(1,jumper,1.f/60);Require(jumper.FeetZ()==60,"automatic repair respects its F8 opt-out");
-    jumper.Configure(MovementSettings{});
+    jumper.Configure(recoveryMode);
     collision.Reset();ceiling=true;ceilingZ=185;jumper.Reset(60);collision.Move(1,jumper,0);
     Require(jumper.FeetZ()==60,"repair cannot push the body into a low ceiling");ceiling=false;
     // Home returns from a lower pit to actual visited upper ground; it is never an automatic cliff rewind.
@@ -486,5 +487,19 @@ int main(){
     for(int frame=0;frame<30;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
     float validX=unitX;collision.RequestRecovery();collision.Move(1,jumper,0);
     Require(unitX==validX,"Home cannot act as a horizontal teleport from valid open ground");
+    // Default classic really restores the old paths, even with individual repair/mesh flags still enabled.
+    slope=false;collision.Reset();jumper.Configure(MovementSettings{});unitX=unitY=0;jumper.Reset(60);
+    collision.RequestRecovery();collision.Move(1,jumper,0);
+    Require(jumper.FeetZ()==60,"classic mode disables both automatic and queued manual recovery");
+    auto speedBefore=jumper.Speed(),verticalBefore=jumper.VerticalVelocity(),feetBefore=jumper.FeetZ();
+    jumper.Configure(recoveryMode);
+    Require(jumper.FeetZ()==feetBefore && jumper.Speed()==speedBefore && jumper.VerticalVelocity()==verticalBefore,"switching modes preserves current movement state");
+    collision.Move(1,jumper,0);
+    Require(jumper.FeetZ()==100,"switching to recovery enables its complete floor repair path");
+    jumper.Configure(MovementSettings{});collision.Reset();deckPatch=true;unitX=20;unitY=0;jumper.Reset(100);
+    vertical={};vertical.jump=true;
+    for(int frame=0;frame<120;++frame){jumper.Step(vertical,1.f/60,250);collision.Move(1,jumper,1.f/60);vertical.jump=false;}
+    Require(jumper.FeetZ()==100,"classic restores center-only native deck support from the selected historical build");
+    deckPatch=false;
     std::puts("Warcraft bridge/collision regressions passed.");
 }

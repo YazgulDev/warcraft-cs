@@ -411,6 +411,15 @@ int main() {
     assert(ShortcutBindings{}.Key(ShortcutAction::SquadOrders)=='Y');
     // Recovery settings use the same validated F8 snapshot and retain the active motor state.
     assert(ShortcutBindings{}.Key(ShortcutAction::RecoverPosition)==VK_HOME);
+    // The selected mode is a real config/F8 switch; unknown names restore the requested earlier default.
+    assert(!MovementSettings{}.platformRecovery);
+    for(const char* value:{"", "broken", "classic", "recovery", "RECOVERY"}) {
+        WritePrivateProfileStringA("Movement","Mode",value,path.c_str());
+        movement.Configure(GameplaySettings::Load(path).movement);
+        assert(movement.PlatformRecovery()==(!_stricmp(value,"recovery")));
+        assert(movement.FeetZ()==feet && movement.VerticalVelocity()==vertical);
+    }
+    WritePrivateProfileStringA("Movement","Mode","classic",path.c_str());
     assert(ShortcutBindings::Parse("HOME")==VK_HOME && ShortcutBindings::Label(VK_HOME)=="HOME");
     for(const char* value:{"", "broken", "nan", "inf"}) {
         WritePrivateProfileStringA("Movement","RecoveryDistance",value,path.c_str());

@@ -65,6 +65,7 @@ simulation step applies the new speed cap. Jump speed applies to the next takeof
 
 | `[Movement]` key | Default | Range and units |
 | --- | --- | --- |
+| Mode | classic | classic/recovery, case-insensitive. classic restores the collision behavior from commit 5578392 (25 October 2026, 06:28 Moscow), before the 17:08 cutoff; recovery enables the later platform/recovery paths. F8 switches without resetting velocity or position |
 | UseNativeUnitCollision | true | true/false; live Warcraft actor/creature footprints. Ignore Locust/pathing-disabled helpers; buildings/trees retain solid model volumes. false restores visual creature boxes and the 24-unit actor footprint |
 | BunnyHop | true | true/false; preserves excess takeoff momentum and enables the optional boost and air speed cap. false clips excess speed to the current weapon's running speed at each takeoff |
 | AutoJump | true | true/false; false requires a new Space press per jump |
@@ -140,7 +141,24 @@ The independent contact model follows the surface-normal, ground-contact and vel
 illustrated by [Valve's Half-Life SDK movement reference](https://github.com/ValveSoftware/halflife/blob/master/pm_shared/pm_shared.c).
 No SDK implementation is embedded; Warcraft heightfields, native pathing and model bounds are adapted locally.
 
+## Selectable movement modes
+
+`[Movement] Mode=classic` is now the default. It restores the movement behavior before the
+17:08 cutoff on 25 October 2026: the 06:28 passage-collision build, commit 5578392.
+This retains its round hull, static prop passage tests and existing movement tuning.
+It restores center-only native deck support, the previous whole-triangle height test, native-only
+bridge snapshots and no automatic/manual position recovery. The latest recovery implementation
+remains available with `Mode=recovery`; it is not deleted or mixed into classic collision.
+
+Save the installed INI and press F8 to switch. Unknown/empty/missing Mode values select classic.
+Updates add the missing classic default and preserve an explicit recovery preference. Switching
+back to classic discards pending Home requests and recovery history. Velocity, stance, position,
+jump/gravity, acceleration and air-strafe settings remain unchanged. The native update itself
+requires installation and restart once. The tests cover both modes and config reload/preservation.
+
 ## Platform support and emergency recovery preview
+
+Everything in this section applies only with `Mode=recovery`.
 
 Native decks now support the same center/eight rim foot samples as terrain and props. A landing
 with only the leading foot over a platform catches its deck. Supported stationary platform meshes

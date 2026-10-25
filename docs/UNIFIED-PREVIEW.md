@@ -113,6 +113,18 @@ All three preferences reload on F8 and survive updates. Local physics, geometry 
 fixtures pass; the corrected DLL still needs verification in the reported Ancient One campaign fight.
 Save and close Warcraft, install this preview and restart before trying the fix.
 
+The default movement mode is now `[Movement] Mode=classic`, restoring the movement behavior from
+the 25 October 2026 06:28 Moscow build (commit 5578392), before the requested 17:08 cutoff.
+`Mode=recovery` preserves the complete later platform support, clipped mesh support and automatic/Home
+recovery implementation. Classic restores the earlier native-only bridge policy, center deck probe
+and whole-triangle height test and discards recovery requests/history. Jump, gravity, acceleration,
+air strafing and custom tuning remain shared and unchanged. Mode values are case-insensitive;
+missing/empty/unknown names use classic. Save the installed INI and press F8 to switch without
+resetting current motion. Updates add a missing classic default and preserve explicit choices.
+The Home/recovery sections above describe the optional recovery mode. Install and restart once
+for the new native mode switch. Regression fixtures exercise both modes; native campaign behavior
+after switching has not been driven in game.
+
 <!-- launcher-summary
 - Added experimental Warcraft III 1.27a and Direct3D 9 support alongside 1.26a.
 - Added Player setup for both hosts using exact local Miles export forwarders without C++ Build Tools.
@@ -130,4 +142,5 @@ Save and close Warcraft, install this preview and restart before trying the fix.
 - Improved static prop collision so fitting arch openings stay passable and low parts of tall models can be jumped onto; preserved movement physics and conservative fallback.
 - Fixed platform-edge landings, retained live platform surfaces during native query dropout and preserved reachable sloping mesh support.
 - Added configurable invalid-position protection and Home recovery to revalidated nearby visited ground, preserving ordinary jumps, falls and underpasses.
+- Changed default movement to the build before the 25 October 17:08 cutoff as classic mode; kept the latest recovery mode selectable on F8 without resetting motion.
 -->

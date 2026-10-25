@@ -16,7 +16,7 @@ show default bindings; `[Shortcuts]` in the INI can change keyboard actions.
 | F10 | Open the Warcraft pause menu and return control to RTS |
 | WASD / mouse | Move / look and aim |
 | Shift / Ctrl / Space | Walk / crouch / jump |
-| Home (development preview) | Emergency return to nearby visited safe ground after a fall or invalid placement |
+| Home (Mode=recovery preview) | Emergency return to nearby visited safe ground after a fall or invalid placement |
 | Mouse wheel in third person | Change camera distance |
 
 With **Only Warcraft modes** installed, T switches between F7 and F9 instead.
@@ -28,7 +28,9 @@ Hold Space to repeat jumps. For air strafing, build speed with W, jump, release 
 then alternate A with a left mouse turn and D with a right turn.
 See [movement](MOVEMENT.md) and [third-person control](THIRD-PERSON.md).
 
-Preview recovery uses `[Shortcuts] RecoverPosition=HOME` (`NONE` disables it).
+Select `[Movement] Mode=recovery` and press F8 to enable the latest recovery movement.
+The default `Mode=classic` restores movement before the latest platform changes and leaves Home inactive.
+Recovery uses `[Shortcuts] RecoverPosition=HOME` (`NONE` disables it).
 It rechecks the destination and cannot restore a destroyed platform, rewind across a native
 script relocation or escape cargo, roots/stuns, casting or cursor menus. In valid open ground,
 Home does not provide horizontal teleportation. A fresh controlled session starts a new history.

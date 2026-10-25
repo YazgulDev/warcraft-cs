@@ -100,6 +100,8 @@ int main() {
     obstacles.Reset();obstacles.Snapshot(99,0,0,600,true,true);assert(meshLoads==2 && obstacles.Geometry(0));
     nativeDeck=true;bounds=obstacles.Snapshot(99,0,0,600,true,true);
     assert(bounds.size()==1 && obstacles.Geometry(0)); // Native decks must not delete verified movement surfaces.
+    bounds=obstacles.Snapshot(99,0,0,600,true,true,false);
+    assert(bounds.empty()); // Classic restores the native-only bridge policy despite enabled mesh detail.
     bounds=obstacles.Snapshot(99,0,0,600,true);assert(bounds.empty()); // Combat keeps native bridge/deck policy.
     puts("PASS movement obstacle cache: tree-only decoding, shared unit/destructable paths and map reset.");
 }

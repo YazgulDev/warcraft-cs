@@ -255,16 +255,16 @@ Update-GameplayConfig $template $mapConfig
 if ((Get-FileHash -LiteralPath $mapConfig).Hash -ne $mapHash) {throw 'Minimap migration is not idempotent.'}
 if (!$text.Contains('DisableFogOfWar=false')) { throw 'Legacy config lacks the default fog override key.' }
 # Static geometry defaults join older configs, while an explicit opt-out survives updates.
-foreach($key in @('ObjectMeshCollision=true','RecoverInvalidPosition=true','RecoveryDistance=512','RecoverPosition=HOME')) {
+foreach($key in @('Mode=classic','ObjectMeshCollision=true','RecoverInvalidPosition=true','RecoveryDistance=512','RecoverPosition=HOME')) {
     if (!(Get-Content -LiteralPath $template -Raw).Contains($key)) {throw ('Missing collision default '+$key)}
 }
 # Movement upgrades retain personal jump tuning and add missing siblings exactly once.
 # Collision geometry defaults join old configs without changing explicit radius/slope preferences.
 $customMovement=Join-Path $folder 'custom-movement.ini'
-@('[Movement]','JumpBoostPercent=15','AutoJump=false','UseNativeUnitCollision=false','MaxWalkSlope=51','HullRadius=17','ObjectMeshCollision=false','RecoverInvalidPosition=false','RecoveryDistance=777','[Shortcuts]','RecoverPosition=NONE','[Damage]','FriendlyFirePercent=0') | Set-Content -LiteralPath $customMovement -Encoding ascii
+@('[Movement]','Mode=recovery','JumpBoostPercent=15','AutoJump=false','UseNativeUnitCollision=false','MaxWalkSlope=51','HullRadius=17','ObjectMeshCollision=false','RecoverInvalidPosition=false','RecoveryDistance=777','[Shortcuts]','RecoverPosition=NONE','[Damage]','FriendlyFirePercent=0') | Set-Content -LiteralPath $customMovement -Encoding ascii
 Update-GameplayConfig $template $customMovement
 $movementText=Get-Content -LiteralPath $customMovement -Raw
-foreach ($required in @('JumpBoostPercent=15','AutoJump=false','UseNativeUnitCollision=false','FriendlyFirePercent=0','MaxBunnySpeed=1000','Gravity=800','BunnyHop=true','MaxWalkSlope=51','HullRadius=17','ObjectMeshCollision=false','RecoverInvalidPosition=false','RecoveryDistance=777','RecoverPosition=NONE')) {
+foreach ($required in @('Mode=recovery','JumpBoostPercent=15','AutoJump=false','UseNativeUnitCollision=false','FriendlyFirePercent=0','MaxBunnySpeed=1000','Gravity=800','BunnyHop=true','MaxWalkSlope=51','HullRadius=17','ObjectMeshCollision=false','RecoverInvalidPosition=false','RecoveryDistance=777','RecoverPosition=NONE')) {
     if (!$movementText.Contains($required)) { throw "Movement migration replaced or omitted: $required" }
 }
 if ([regex]::Matches($movementText,'(?m)^\[Movement\]').Count -ne 1) { throw 'Movement section was duplicated.' }

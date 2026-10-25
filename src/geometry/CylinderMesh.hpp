@@ -28,7 +28,7 @@ public:
         return result;
     }
     // Highest upward-facing surface under any part of the circular foot; never use a remote tower top.
-    bool Floor(float x,float y,float radius,float reachable,float minimumNormal,float& height,float* normal=nullptr) const {
+    bool Floor(float x,float y,float radius,float reachable,float minimumNormal,float& height,float* normal=nullptr,bool clipReachable=true) const {
         bool found=false;
         for(const auto& triangle:triangles) {
             float n[3];Normal(triangle,n);
@@ -38,8 +38,9 @@ public:
             // Keep the reachable part instead of discarding that entire support surface.
             Polygon polygon;
             for(const auto& point:triangle.vertices)polygon.push_back({point[0],point[1],point[2]});
-            polygon=Clip(polygon,reachable+.001f,false);
-            if(Heights(triangle,polygon,x,y,radius,low,high) && (!found || high>height)) {
+            // Keep the historical whole-triangle test when the player selects classic movement.
+            if(clipReachable)polygon=Clip(polygon,reachable+.001f,false);
+            if(Heights(triangle,polygon,x,y,radius,low,high) && (clipReachable || high<=reachable+.01f) && (!found || high>height)) {
                 height=high;found=true;
                 if(normal)for(int axis=0;axis<3;++axis)normal[axis]=n[axis];
             }

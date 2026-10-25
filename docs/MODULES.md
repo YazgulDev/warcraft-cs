@@ -432,3 +432,8 @@ Unsupported poses retain prior bounds, trees retain trunk filtering and native b
 revalidates support/clearance and native walkability before restoring one, tracks platform rider
 provenance and rejects stale placement history. InputDispatcher queues Home on the controller mailbox;
 the controller filters cargo, disabled/casting and cursor states before requesting game-thread recovery.
+
+Movement mode is one validated snapshot field. WarcraftCollision selects center/rim deck support,
+CylinderMesh selects whole/reachable triangle support, and MovementObstacles selects native-only
+or retained platform surfaces. Classic also gates the complete recovery path and discards its history;
+the common acceleration, jump and ground/air motor implementation remains shared.

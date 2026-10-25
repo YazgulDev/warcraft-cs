@@ -84,7 +84,7 @@ bool MovementObstacles::Bounds(const std::string& path, bool destructable, uintp
     }
     return true;
 }
-std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle actor, float x, float y, float radius,bool nativeUnitCollision,bool detailed) {
+std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle actor, float x, float y, float radius,bool nativeUnitCollision,bool detailed,bool retainPlatforms) {
     std::vector<Bounds3> result;
     details_.clear();
     if (!base_) return result;
@@ -125,7 +125,8 @@ std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle actor, float x, flo
             float cx=wc3::Real(wc3::GetDestructableX(object)), cy=wc3::Real(wc3::GetDestructableY(object)), deck=0;
             // Keep verified surfaces for movement even when the native deck is present: a missed
             // deck query must not delete a real platform. Never substitute an enclosing bridge box.
-            if (!wc3::WalkableSurface(cx, cy, deck) || (detailed && mesh)) {result.push_back(bounds);details_.push_back(std::move(mesh));}
+            // Classic mode restores native-only bridge support without discarding the new mesh path.
+            if (!wc3::WalkableSurface(cx, cy, deck) || (retainPlatforms && detailed && mesh)) {result.push_back(bounds);details_.push_back(std::move(mesh));}
         }
     }
     return result;

@@ -107,7 +107,7 @@ MovementSurface WarcraftCollision::Floor(float x, float y, const MovementPhysics
         if(terrain.walkable && std::isfinite(terrain.height) && terrain.height<=reachable+.01f && terrain.height>surface.height)
             surface=terrain;
         // A bridge edge under the leading/trailing foot supports a landing just like a model lip.
-        if(wc3::WalkableSurface(px,py,deck))support(deck);
+        if(movement.PlatformRecovery() && wc3::WalkableSurface(px,py,deck))support(deck);
     }
     // A low solid prop supports the entire foot too; support ends only after its trailing edge clears.
     for(size_t index=0;index<obstacles.size();++index) {
@@ -115,7 +115,7 @@ MovementSurface WarcraftCollision::Floor(float x, float y, const MovementPhysics
         if(!Overlaps(box,x,y,radius_))continue;
         if(const auto* mesh=obstacles_.Geometry(index)) {
             float height=0,normal[3]={};
-            if(mesh->Floor(x,y,radius_,reachable,.0001f,height,normal) && height>=surface.height-.01f) {
+            if(mesh->Floor(x,y,radius_,reachable,.0001f,height,normal,movement.PlatformRecovery()) && height>=surface.height-.01f) {
                 surface.height=height;
                 for(int axis=0;axis<3;++axis)surface.normal[axis]=normal[axis];
                 // Steep prop roofs behave like steep terrain: contact slides downhill instead of falling through.
@@ -257,6 +257,8 @@ bool WarcraftCollision::Safe(float x,float y,float z,const MovementPhysics& move
     return true;
 }
 void WarcraftCollision::Recover(wc3::Handle unit,float x,float y,MovementPhysics& movement,const std::vector<Bounds3>& obstacles) {
+    // Mode selection gates the complete recovery path, not just its automatic repair preference.
+    if(!movement.PlatformRecovery())return;
     auto terrain=Terrain(x,y,movement);
     float deck=0;
     // Remember actual support provenance. Someone who walked underneath a bridge is never
@@ -305,6 +307,8 @@ void WarcraftCollision::Move(wc3::Handle unit, MovementPhysics& movement, float 
     dt = std::clamp(dt, 0.f, .05f);
     terrain_.clear();
     modelPathing_=false;
+    // A mode switch cannot retain an armed Home request, rider flag or checkpoint from recovery mode.
+    if(!movement.PlatformRecovery())ResetRecovery();
     float x = wc3::Real(wc3::GetUnitX(unit)), y = wc3::Real(wc3::GetUnitY(unit));
     // Scripted relocations, view changes and actor switches must never reuse a checkpoint from another place.
     if(actor_!=unit || (havePosition_ && std::hypot(x-lastX_,y-lastY_)>radius_*2)){recovery_.Reset();ridingDeck_=false;}
@@ -315,7 +319,8 @@ void WarcraftCollision::Move(wc3::Handle unit, MovementPhysics& movement, float 
     // unlike non-colliding helper obstacles, and must not suddenly inflate in a narrow corridor.
     radius_=body.known && body.radius>0 ? std::min(body.radius,movement.HullRadius()) : movement.HullRadius();
     float dx = movement.VelocityX() * dt, dy = movement.VelocityY() * dt;
-    auto obstacles = obstacles_.Snapshot(unit, x, y, std::max(600.f,movement.RecoveryDistance()+radius_) + std::hypot(dx, dy),movement.NativeUnitCollision(),movement.ObjectMeshCollision());
+    float search=movement.PlatformRecovery() ? std::max(600.f,movement.RecoveryDistance()+radius_) : 600.f;
+    auto obstacles = obstacles_.Snapshot(unit,x,y,search+std::hypot(dx,dy),movement.NativeUnitCollision(),movement.ObjectMeshCollision(),movement.PlatformRecovery());
     auto bounds = wc3::GetWorldBounds();
     float minX = wc3::Real(wc3::GetRectMinX(bounds)) + radius_, maxX = wc3::Real(wc3::GetRectMaxX(bounds)) - radius_;
     float minY = wc3::Real(wc3::GetRectMinY(bounds)) + radius_, maxY = wc3::Real(wc3::GetRectMaxY(bounds)) - radius_;
