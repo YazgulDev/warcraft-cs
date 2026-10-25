@@ -10,3 +10,4 @@
 - Added configurable rare weapon drops with a 0.5 percent default chance and E pickup.
 - Changed default RPG blast radius to 525 while retaining 100 peak damage.
 - Preserved custom settings and prevented a local preview from offering its published base as a newer build.
+- Improved local cliff collision, downhill sliding, round player hulls, narrow passages and crouching head clearance.

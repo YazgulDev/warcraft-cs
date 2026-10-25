@@ -13,7 +13,7 @@ void Tick(uintptr_t base, const char* root) {
     static WarcraftCollision collision;
     static FirstPersonCamera camera;
     static std::string mode;
-    static float startX=0, startY=0, startZ=0, yaw=0, peakSpeed=0;
+    static float startX=0, startY=0, startZ=0, yaw=0, peakSpeed=0,peakFeet=0;
     // Match the ordinary player's default until the explicit private trial loads its INI snapshot.
     static float drawDistance=RenderSettings{}.drawDistance;
     static int frame=0, duration=600, hops=0;
@@ -44,25 +44,31 @@ void Tick(uintptr_t base, const char* root) {
                 }
             wc3::RemoveRect(bounds); return;
         }
-        if (command!="hop" && command!="strafe" && command!="prop" && command!="walkprop" && command!="wall" && command!="cliff" && command!="ramp") return;
+        if (command!="hop" && command!="strafe" && command!="prop" && command!="walkprop" && command!="wall" && command!="cliff" && command!="ramp" && command!="climb") return;
         if (unit && wc3::GetUnitTypeId(unit)) wc3::RemoveUnit(unit);
         if (prop && wc3::GetDestructableTypeId(prop)) wc3::RemoveDestructable(prop);
         if (wall && wc3::GetUnitTypeId(wall)) wc3::RemoveUnit(wall);
         wall=0;
         prop=0;
         // Explicit requests operate only in a throwaway map: clear a narrow trial corridor, never campaign saves.
-        if(command!="ramp")for (auto object:wc3::NearbyDestructables(x+800,y,1600)) wc3::RemoveDestructable(object);
+        if(command!="ramp" && command!="climb")for (auto object:wc3::NearbyDestructables(x+800,y,1600)) wc3::RemoveDestructable(object);
         float facing=yaw;
         unit=wc3::CreateUnit(wc3::GetLocalPlayer(),0x68666F6F,&x,&y,&facing);
         // Ramp trials preserve every map obstruction and start exactly on the reported terrain, avoiding spawn relocation.
-        if(command=="ramp"){wc3::SetUnitX(unit,&x);wc3::SetUnitY(unit,&y);}
+        if(command=="ramp" || command=="climb"){wc3::SetUnitX(unit,&x);wc3::SetUnitY(unit,&y);}
         wc3::PauseUnit(unit,TRUE);
         startX=wc3::Real(wc3::GetUnitX(unit));startY=wc3::Real(wc3::GetUnitY(unit));
         startZ=wc3::Ground(startX,startY);
         auto settings=GameplaySettings::Load(std::string(root)+"\\WarcraftCS.ini");
         movement.Configure(settings.movement);drawDistance=settings.render.drawDistance;
-        movement.Reset(startZ);collision.Reset();mode=command;frame=hops=0;peakSpeed=0;fell=false;
+        movement.Reset(startZ);collision.Reset();mode=command;frame=hops=0;peakSpeed=0;peakFeet=startZ;fell=false;
         duration=std::clamp(duration,60,1200);
+        // A climb oracle is meaningful only with a genuinely higher native terrace ahead.
+        if(mode=="climb") {
+            float angle=yaw*.01745329252f,high=startZ;
+            for(float reach:{128.f,256.f,384.f})high=std::max(high,wc3::TerrainGround(startX+std::cos(angle)*reach,startY+std::sin(angle)*reach));
+            if(high<startZ+100) {wc3::Log("movement oracle climb INVALID: no tall terrace ahead");mode.clear();return;}
+        }
         if(mode=="prop" || mode=="walkprop") {
             // A scaled native barricade provides real model geometry and a Warcraft pathing footprint.
             float px=std::ceil((startX+200)/64)*64,py=std::round(startY/64)*64,scale=.75f,angle=0;
@@ -84,14 +90,14 @@ void Tick(uintptr_t base, const char* root) {
     }
     if(mode.empty() || !unit) return;
     MoveInput input;input.forward=1;input.yaw=yaw;
-    input.jump=mode=="hop" ? frame>=60 : (mode=="prop" || mode=="wall") && frame>=20 && frame<65;
+    input.jump=mode=="climb" ? frame>=60 : mode=="hop" ? frame>=60 : (mode=="prop" || mode=="wall") && frame>=20 && frame<65;
     // Only the opt-in scene supplies ideal alternating turns; normal FPS remains fully player-controlled.
     if(mode=="strafe" && frame>=60) input=MovementStrafeInput(movement,float(frame-60)/60,yaw);
     bool grounded=movement.Grounded();movement.Step(input,1.f/60,250);
     if(grounded && !movement.Grounded()) ++hops;
     collision.Move(unit,movement,1.f/60);
     float x=wc3::Real(wc3::GetUnitX(unit)), y=wc3::Real(wc3::GetUnitY(unit));
-    peakSpeed=std::max(peakSpeed,movement.Speed());
+    peakSpeed=std::max(peakSpeed,movement.Speed());peakFeet=std::max(peakFeet,movement.FeetZ());
     if (!movement.Grounded() && movement.FeetZ()<startZ-1) fell=true;
     // The oracle camera uses the configuration captured when this disposable trial starts.
     camera.Update(x,y,movement.EyeZ(),input.yaw,-10,85,drawDistance);
@@ -108,8 +114,10 @@ void Tick(uintptr_t base, const char* root) {
             wc3::Log("movement oracle path sample x=%.1f y=%.1f blocked=%d terrain=%.1f",px,py,wc3::IsTerrainPathable(&px,&py,1),wc3::TerrainGround(px,py));
         }
     }
+    // Native climb trials preserve map geometry and report the maximum height, not merely final position.
     if(frame>=duration) {
-        bool passed=mode=="ramp" ? std::hypot(x-startX,y-startY)>300 : mode=="strafe" ? hops>=3 && peakSpeed>450 : mode=="hop" ? hops>=3 && peakSpeed>=374 && peakSpeed<=375.1f : mode=="cliff" ? fell && movement.Grounded() && movement.FeetZ()<startZ-80 : mode=="wall" ? x<wc3::Real(wc3::GetUnitX(wall))-24 : mode=="walkprop" ? x<wc3::Real(wc3::GetDestructableX(prop))-24 : x>wc3::Real(wc3::GetDestructableX(prop))+100;
+        wc3::Log("movement oracle height mode=%s start=%.1f peak=%.1f end=%.1f",mode.c_str(),startZ,peakFeet,movement.FeetZ());
+        bool passed=mode=="climb" ? peakFeet<startZ+80 && movement.FeetZ()<startZ+80 && std::hypot(x-startX,y-startY)>16 : mode=="ramp" ? std::hypot(x-startX,y-startY)>300 : mode=="strafe" ? hops>=3 && peakSpeed>450 : mode=="hop" ? hops>=3 && peakSpeed>=374 && peakSpeed<=375.1f : mode=="cliff" ? fell && movement.Grounded() && movement.FeetZ()<startZ-80 : mode=="wall" ? x<wc3::Real(wc3::GetUnitX(wall))-24 : mode=="walkprop" ? x<wc3::Real(wc3::GetDestructableX(prop))-24 : x>wc3::Real(wc3::GetDestructableX(prop))+100;
         wc3::Log("movement oracle result mode=%s %s distance=%.1f peakSpeed=%.1f hops=%d fell=%d feet=%.1f",mode.c_str(),passed?"PASS":"FAIL",std::hypot(x-startX,y-startY),peakSpeed,hops,fell,movement.FeetZ());
         mode.clear();
     }

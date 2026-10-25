@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Replace distant cliff-height gating with locally sampled walkable surfaces and cylindrical player contacts. Blocked cliff faces cannot supply steps/takeoffs; falls project onto the local face and slide down. Preserve flat ledge support, ordinary ramp momentum and escape from existing overlap. Sweep standing/crouching head clearance against native decks and model undersides, retain crouch under ceilings, require step headroom and slide along contact tangents. Cap large actor hulls to a configurable radius to preserve physically fitting passages. Keep airborne side checks and landing reach consistent for short jumps, preventing entry below an unreachable flat lip. Attribute overhanging native path cells to their intersecting known model after the full body clears that solid, keeping clear adjacent lanes open without expanding every solid to a complete grid cell.
+- Add F8-reloadable `Movement.MaxWalkSlope=46` (15–75 degrees) and `HullRadius=24` (8–64 world units), preserving custom settings during setup. Add radius/normal/walkability diagnostics and production-path regressions across frame rates, headings, repeat jumps, retreat, downhill slides, low cliffs, ceilings, native deck undersides, crouch and reload. Object solids remain transformed authored bounds; unknown models retain conservative native fallback. The disposable native scene adds an opt-in climb oracle, excluded from client builds.
+
 - Replace the long repository homepage with a short project overview and navigation. Add a documentation index and separate controls, settings and compatibility guides; remove duplicate setup text, stale prices and the outdated contribution-branch reference. Preserve historical release notes and third-party credits.
 
 ## Unreleased — unified launcher preview

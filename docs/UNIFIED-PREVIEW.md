@@ -82,6 +82,15 @@ Tau/Gluon beam pixels/occlusion. Existing regression and packaging checks cover
 config preservation, ownership, native binding, source/resource integrity and
 launcher reinstall. Report real-game testing separately from these checks.
 
+Movement collision now uses a round player hull with standing/crouching head clearance and locally
+sampled terrain normals. Repeated jumps cannot create takeoffs on a blocked cliff face; falling onto
+one slides downhill. Flat ledge lips, native ramps, low props, retreat from existing overlap and tangent
+wall sliding are covered by the regression suite. Clear lanes beside a known solid do not inherit its
+overhanging native path cells. There is no distant-terrace height gate.
+`[Movement] MaxWalkSlope=46` (15–75 degrees) and `HullRadius=24` (8–64 world units, a cap retaining smaller
+native footprints) reload on F8 and preserve custom values on updates. Existing jump/gravity settings
+are unchanged. Install and restart for the native code update; see [movement details and geometry limits](MOVEMENT.md).
+
 <!-- launcher-summary
 - Added experimental Warcraft III 1.27a and Direct3D 9 support alongside 1.26a.
 - Added Player setup for both hosts using exact local Miles export forwarders without C++ Build Tools.
@@ -95,4 +104,5 @@ launcher reinstall. Report real-game testing separately from these checks.
 - Added configurable rare weapon drops with a 0.5 percent default chance and E pickup.
 - Changed default RPG blast radius to 525 while retaining 100 peak damage.
 - Preserved custom settings and prevented a local preview from offering its published base as a newer build.
+- Improved local cliff collision, downhill sliding, round player hulls, narrow passages and crouching head clearance.
 -->

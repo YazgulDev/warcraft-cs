@@ -27,6 +27,33 @@ Map bounds and unsupported flat pathing cells remain blocked. Unknown custom mod
 permission to cross blocked pathing. Native cliff levels distinguish cliff faces from ordinary hills.
 Shallow-water support retains Warcraft's native height rather than dropping onto the submerged mesh.
 
+The development preview uses a round upright player hull and local surface contacts. Every swept
+step checks feet, standing/crouching body height and head clearance against the current terrain,
+transformed obstacle bounds and native bridge decks. Jumping directly below an underside stops upward
+velocity; releasing crouch under a low ceiling retains the last fitting stance. A low step is accepted
+only when the raised body also fits. Wall contacts preserve tangent motion, and existing solid overlap
+still allows retreat rather than trapping a spawned/transformed unit.
+A native 32-unit path cell which intersects a known model can overhang its real bounds. A clear
+adjacent lane uses the checked 3D hull instead of inheriting that cell's empty corners; unrelated
+unknown cells retain native blocking.
+
+Terrain normals come from neighboring samples only eight world units away, using one-sided slopes so
+flat ledge lips remain usable. Walkable ramps retain step tolerance and existing hop momentum.
+Flat airborne ledge contacts obey actual jump reach, so a short jump cannot enter below an unreachable
+top and become trapped beneath its floor. A blocked
+native cliff face cannot act as ground or grant another jump; a fall onto its face slides down its local
+plane. No height from a distant terrace blocks an otherwise clear passage. The default local walk angle
+is 46 degrees. Flat lower banks and downhill departures remain usable.
+
+`HullRadius=24` caps the player's native radius (world units); smaller native actors retain their radius.
+The unknown-profile/legacy footprint uses this configured radius. Physical height follows the existing
+stance, 108 world units standing and 66 fully crouched. Ordinary creature solids retain their native
+footprints and authored vertical bounds. Buildings/props retain transformed standing model bounds;
+trees retain decoded trunks rather than foliage. Those object bounds are conservative volumes, not
+animated polygon-perfect geometry. Unknown custom model/pathing blockers retain the conservative native
+fallback; the preview does not invent a height for missing model data.
+
+
 Edit `WarcraftCS/WarcraftCS.ini` in the prepared runtime, then press F8 in FPS. Updates add missing keys
 without replacing custom values. F8 replaces tuning without resetting velocity or position; the next
 simulation step applies the new speed cap. Jump speed applies to the next takeoff.
@@ -41,7 +68,9 @@ simulation step applies the new speed cap. Jump speed applies to the next takeof
 | AirAcceleration | 10 | 0–100 wish-direction acceleration multiplier |
 | JumpSpeed | 268.328 | 1–800 GoldSrc units/s upwards |
 | Gravity | 800 | 100–3000 GoldSrc units/s² downwards |
-| StepHeight | 27 | 0–64 Warcraft units; larger downward steps fall |
+| StepHeight | 27 | 0–64 Warcraft units; automatic rise/drop limit, larger drops fall |
+| MaxWalkSlope | 46 | 15–75 degrees; maximum local walkable slope. Blocked native cliff faces remain non-walkable |
+| HullRadius | 24 | 8–64 Warcraft units; maximum player collision radius, preserving smaller native footprints |
 
 One GoldSrc unit corresponds to 1.5 Warcraft units. The default jump rises about 67.5 Warcraft units.
 Finite out-of-range numbers are clamped; missing/empty/malformed/non-finite values use the defaults.
@@ -59,7 +88,8 @@ input timing and simulation step. Independent eight-second trials with alternati
 These are deterministic physics measurements, not a native-game performance or speed guarantee.
 Ground support is resolved after each swept substep, so fast uphill movement does not reuse the floor
 from the beginning of the frame. Unknown native collision profiles retain conservative bounds.
-The collision preference reloads on F8; updates preserve an explicit opt-out.
+The collision preference, walk angle and hull-radius cap reload on F8; updates preserve custom values.
+The native collision code requires installing this preview and restarting the game; F8 alone cannot replace it.
 Conservative building/prop boxes can still reject narrow passages or irregular props. Native walkable bridge decks
 remain the surface authority rather than the box surrounding the complete bridge mesh.
 
@@ -80,7 +110,7 @@ requests only for development in a disposable custom map copy. It must never run
 Ordinary builds exclude its scene, requests and destructive test fixtures.
 
 For that explicit test build only, write `strafe x y yaw frames`, `hop x y yaw frames`, `prop x y yaw frames`,
-`walkprop x y yaw frames`, `wall x y yaw frames` or `cliff x y yaw frames` to
+`walkprop x y yaw frames`, `wall x y yaw frames`, `cliff x y yaw frames` or `climb x y yaw frames` to
 `WarcraftCS/test-movement.request` inside the runtime. `flat` and `scan` print candidate corridors and
 cliffs to the runtime log. The scene clears destructables around its trial corridor and creates paused
 test actors; it does not save the map. `prop` and `walkprop` compare a scaled native barricade with and
@@ -88,3 +118,7 @@ without jumping, while `wall` attempts the same jump against a native town hall.
 `strafe` runs up for one second and supplies alternating turns without W; it requires three takeoffs
 and a peak above 450 Warcraft units/s. `hop` verifies retained straight-line speed without a bonus;
 run both with `JumpBoostPercent=0`. Contact logs include speed in both coordinate systems and velocity.
+
+The independent contact model follows the surface-normal, ground-contact and velocity-clipping principles
+illustrated by [Valve's Half-Life SDK movement reference](https://github.com/ValveSoftware/halflife/blob/master/pm_shared/pm_shared.c).
+No SDK implementation is embedded; Warcraft heightfields, native pathing and model bounds are adapted locally.

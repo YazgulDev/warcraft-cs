@@ -16,4 +16,7 @@ struct MovementSettings {
     float jumpSpeed = 268.328f;
     float gravity = 800;
     float stepHeight = 27;
+    // Local slope classification and a capped player hull keep Warcraft-sized actors out of narrow-pass checks.
+    float maxWalkSlope = 46;
+    float hullRadius = 24;
 };

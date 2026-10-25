@@ -193,6 +193,9 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.movement.jumpSpeed = std::max(1.0f, number("Movement", "JumpSpeed", 268.328f, 800));
     result.movement.gravity = std::max(100.0f, number("Movement", "Gravity", 800, 3000));
     result.movement.stepHeight = number("Movement", "StepHeight", 27, 64);
+    // Keep geometric tuning validated at the same F8 boundary as jump/gravity settings.
+    result.movement.maxWalkSlope = std::max(15.f,number("Movement","MaxWalkSlope",46,75));
+    result.movement.hullRadius = std::max(8.f,number("Movement","HullRadius",24,64));
     // Live collision may be opted out independently of visual weapon hitboxes and terrain/wall collision.
     result.movement.useNativeUnitCollision = boolean("UseNativeUnitCollision", true);
     result.runePickupRadius=number("Runes","PickupRadius",160,400);

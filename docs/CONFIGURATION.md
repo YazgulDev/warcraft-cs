@@ -58,6 +58,14 @@ and `?` for an unsupported native timer. Warcraft still decides whether a cast o
 item use succeeds. F9 hides the HUD and disables player attacks, casts and inventory
 interaction regardless of these display preferences.
 
+## Movement collision preview
+
+The development preview adds `[Movement] MaxWalkSlope=46` (15–75 degrees) and
+`HullRadius=24` (8–64 world units, the maximum player radius). Smaller native actor
+radii are retained. Both apply on F8 without resetting current position/velocity;
+updates preserve explicit values. Install and restart once for the native hull/terrain
+code. See [movement contacts and geometry limits](MOVEMENT.md).
+
 ## Damage, buying and ammunition
 
 | Section / keys | Defaults and behavior |

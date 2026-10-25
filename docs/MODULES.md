@@ -415,3 +415,8 @@ packages list both supported hosts. Legacy packages retain exact host/hash check
 The original Miles DLL supplies all sound behavior through ordinal forwarders.
 `LauncherVariant.IsPreview` reads a build resource; update selection suppresses
 only the preview's published base, while ordinary stable selection is unchanged.
+
+`CylinderHull` in geometry owns round-footprint overlap and contact normals. `MovementSurface` carries
+local height/normal/walkability into `MovementPhysics`, which owns ground, sliding and head/stance
+responses. `WarcraftCollision` adapts live terrain, pathing, transformed solid bounds and native decks,
+using a per-update sample cache; it never substitutes a remote terrace height for a local contact.

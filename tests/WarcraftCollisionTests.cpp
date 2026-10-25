@@ -2,6 +2,7 @@
 #include "../src/platform/DiagnosticLog.hpp"
 #include "../src/platform/UnitCollisionProfile.hpp"
 #include "MovementStrafeInput.hpp"
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -15,6 +16,9 @@ bool drop=false, prop=false, wall=false, slope=false, water=false;
 bool tree=false,canopyBounds=false;
 bool wideCliff=false;
 bool landingLedge=false;
+bool cliffFace=false;float faceYaw=0,faceRise=256;
+bool ceiling=false,corner=false,stepUnderCeiling=false,cornerPathing=false;float ceilingZ=230,deckHeight=100;
+float FaceDistance(float x,float y) {return x*std::cos(faceYaw)+y*std::sin(faceYaw);}
 float ledgeYaw=0,cliffRim=144;
 float actorRadius=0;
 bool nativeCliffRim=false;
@@ -25,6 +29,9 @@ wc3::Bits Bits(float value) { wc3::Bits bits;std::memcpy(&bits,&value,4);return 
 wc3::Bits __cdecl X(wc3::Handle) {return Bits(unitX);}
 wc3::Bits __cdecl Y(wc3::Handle) {return Bits(unitY);}
 BOOL __cdecl Blocked(float* x,float* y,int) {
+    if(cliffFace)return FaceDistance(*x,*y)>=8 && FaceDistance(*x,*y)<=184;
+    if(cornerPathing)return *x>=32 && *x<96 && *y>=0 && *y<64;
+    if(ceiling || corner)return FALSE;
     if(landingLedge)return FALSE;
     if(sideContact)return FALSE; // Unit collision/side volumes are independent of the terrain pathing grid.
     // Stock tree pathing retains its trunk footprint while the canopy above remains empty space.
@@ -41,7 +48,7 @@ wc3::Handle __cdecl World() { return 1; }
 wc3::Bits __cdecl Minimum(wc3::Handle) { return Bits(-4096); }
 wc3::Bits __cdecl Maximum(wc3::Handle) { return Bits(4096); }
 void __cdecl Remove(wc3::Handle) {}
-int __cdecl Level(float* x,float*) { return (drop || cliff) && *x>=32 ? (drop ? 1 : 3) : 2; }
+int __cdecl Level(float* x,float* y) { if(cliffFace)return FaceDistance(*x,*y)>=96 ? 3 : 2; return (drop || cliff) && *x>=32 ? (drop ? 1 : 3) : 2; }
 void __cdecl Position(wc3::Handle,float* x,float* y) {
     // A clear center beside a cliff can still trigger native nearest-cell placement for its wider hull.
     if(nativeCliffRim && *x>0 && *x<8){unitX=*x+80;unitY=*y;return;}
@@ -77,16 +84,22 @@ Bits (__cdecl* GetRectMaxX)(Handle)=Maximum;
 Bits (__cdecl* GetRectMaxY)(Handle)=Maximum;
 void (__cdecl* RemoveRect)(Handle)=Remove;
 float Real(Bits bits){float f;std::memcpy(&f,&bits,4);return f;}
-float TerrainGround(float x,float y){return landingLedge ? (x*std::cos(ledgeYaw)+y*std::sin(ledgeYaw)>=32 ? 140.f : 100.f) : slope ? 100.f+x*slopeGradient : drop && x>=32 ? 0.f : cliff && x>=32 ? 180.f : 100.f;}
+float TerrainGround(float x,float y){if(cliffFace)return 100+std::clamp((FaceDistance(x,y)-32)/128,0.f,1.f)*faceRise;return landingLedge ? (x*std::cos(ledgeYaw)+y*std::sin(ledgeYaw)>=32 ? 140.f : 100.f) : slope ? 100.f+x*slopeGradient : drop && x>=32 ? 0.f : cliff && x>=32 ? 180.f : 100.f;}
 float Ground(float x,float y){return TerrainGround(x,y)+(water ? 22.f : 0.f);}
 bool WalkableSurface(float,float y,float& height){
     if(!bridgeAlive || (edge && std::abs(y)>16))return false;
-    height=invalidDeck ? std::numeric_limits<float>::quiet_NaN() : 100.f;return !invalidDeck;
+    height=invalidDeck ? std::numeric_limits<float>::quiet_NaN() : deckHeight;return !invalidDeck;
 }
 }
 bool DiagnosticLog::Due(DWORD&,bool) { return false; }
 // The synthetic world replaces only native discovery; actual swept collision/physics runs unchanged.
 std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,bool) {
+    if(ceiling) {
+        std::vector<Bounds3> solids={{{-500,-500,ceilingZ},{500,500,ceilingZ+24}}};
+        if(stepUnderCeiling)solids.push_back({{60,-50,100},{80,50,120}});
+        return solids;
+    }
+    if(corner)return {{{60,20,100},{80,40,300}}};
     if(sideContact) {
         float reach=sideUnit ? 64.f : 4096.f;
         return {{{-reach,sideContact>0 ? 48.f : -64.f,100},{reach,sideContact>0 ? 64.f : -48.f,300}}};
@@ -238,6 +251,108 @@ int main(){
         }
         Require(unitX*cx+unitY*cy<0 && fallingOff && jumper.Grounded() && jumper.FeetZ()==100,"leaving the lip falls and lands without hovering or sticking");
     }
+    // The actual interpolated local cliff mesh, at cardinal/diagonal headings and several actor sizes.
+    // Repeated jump input must never gain a takeoff on its non-walkable face.
+    landingLedge=false;cliffFace=true;
+    for(float radius:{16.f,24.f,32.f})for(int fps:{20,60,144})for(int heading=0;heading<8;++heading)for(bool hop:{false,true}) {
+        actorRadius=radius;faceYaw=heading*.78539816339f;unitX=unitY=0;jumper.Reset(100);
+        MoveInput toward=forward;toward.yaw=heading*45.f;toward.jump=hop;
+        float cliffPeak=100;
+        for(int frame=0;frame<fps*4;++frame) {
+            jumper.Step(toward,1.f/fps,250);collision.Move(1,jumper,1.f/fps);
+            cliffPeak=std::max(cliffPeak,jumper.FeetZ());
+        }
+        Require(FaceDistance(unitX,unitY)<64, "local cliff collision cannot become a staircase through repeated jumps");
+        Require(cliffPeak<168, "a blocked cliff face cannot supply another takeoff");
+        // Retreat must remain possible even after pushing and jumping against the face.
+        toward.jump=false;toward.forward=-1;
+        for(int frame=0;frame<fps;++frame){jumper.Step(toward,1.f/fps,250);collision.Move(1,jumper,1.f/fps);}
+        Require(FaceDistance(unitX,unitY)<-100, "cliff contact must allow walking away without sticking");
+    }
+    faceYaw=0;actorRadius=0;
+    // A fall onto the middle of a cliff must slide down, without providing ground for another jump.
+    unitX=96;unitY=0;jumper.Reset(360);jumper.BeginFall();bool slid=false;
+    for(int frame=0;frame<360;++frame) {
+        jumper.Step({},1.f/60,250);collision.Move(1,jumper,1.f/60);
+        slid=slid || (unitX<90 && !jumper.Grounded());
+    }
+    Require(slid && unitX<32 && jumper.Grounded() && jumper.FeetZ()==100, "falling onto a cliff slides to the lower bank");
+    // Descend from the upper terrace without native relocation, then climb a low reachable cliff in one jump.
+    unitX=300;unitY=0;jumper.Reset(356);
+    for(int frame=0;frame<180;++frame){jumper.Step(retreat,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(unitX<0 && jumper.Grounded() && jumper.FeetZ()==100, "local cliff collision still permits walking off the upper edge");
+    faceRise=40;unitX=-50;unitY=0;jumper.Reset(100);
+    for(int frame=0;frame<60;++frame)jumper.Step(forward,1.f/60,250);
+    MoveInput oneJump=forward;oneJump.jump=true;
+    for(int frame=0;frame<180;++frame){jumper.Step(oneJump,1.f/60,250);collision.Move(1,jumper,1.f/60);oneJump.jump=false;}
+    Require(unitX>208, "a physically reachable low cliff remains traversable with one jump");
+    cliffFace=false;ceiling=true;ceilingZ=230;
+    // Sweep the head while stationary, then test a passage which requires crouching.
+    for(int fps:{20,60,144}) {
+        unitX=unitY=0;jumper.Reset(100);MoveInput vertical;vertical.jump=true;
+        for(int frame=0;frame<fps;++frame) {
+            jumper.Step(vertical,1.f/fps,250);collision.Move(1,jumper,1.f/fps);vertical.jump=false;
+            Require(jumper.FeetZ()+jumper.BodyHeight()<=230.01f, "standing jumps cannot pass through a ceiling");
+        }
+    }
+    ceilingZ=185;unitX=unitY=0;jumper.Reset(100);MoveInput crouched=forward;crouched.duck=true;
+    for(int frame=0;frame<90;++frame){jumper.Step(crouched,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(unitX>100 && jumper.BodyHeight()<85, "crouching fits a passage with enough real headroom");
+    float crouchHeight=jumper.BodyHeight();
+    for(int frame=0;frame<60;++frame){jumper.Step({},1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(jumper.BodyHeight()<=85 && jumper.BodyHeight()>=crouchHeight && jumper.FeetZ()==100, "standing up below a ceiling must not push through it or the floor");
+    // Auto-stepping must test the raised body too, not just the current head and the obstacle top.
+    ceilingZ=220;stepUnderCeiling=true;unitX=unitY=0;jumper.Reset(100);
+    for(int frame=0;frame<60;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(unitX<=36.01f && jumper.FeetZ()==100, "a low step cannot push the standing body into a ceiling");
+    for(int frame=0;frame<120;++frame){jumper.Step(crouched,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(unitX>100, "the same low step is traversable when crouching supplies enough headroom");
+    stepUnderCeiling=false;
+    ceiling=false;bridgeAlive=true;deckHeight=230;unitX=unitY=0;jumper.Reset(100);
+    MoveInput underDeck;underDeck.jump=true;
+    for(int frame=0;frame<60;++frame) {
+        jumper.Step(underDeck,1.f/60,250);collision.Move(1,jumper,1.f/60);underDeck.jump=false;
+        Require(jumper.FeetZ()+jumper.BodyHeight()<=230.01f, "native deck undersides also block upward jumps");
+    }
+    deckHeight=250;
+    for(int frame=0;frame<60;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(unitX>300 && jumper.FeetZ()==100, "a tall passage below a native deck remains open despite deck pathing");
+    bridgeAlive=false;deckHeight=100;
+    // Real reload consumers: a broad Warcraft actor uses the configured human hull in a narrow corridor.
+    narrowPassage=true;actorRadius=64;unitX=unitY=0;jumper.Reset(100);
+    MovementSettings narrowHull;narrowHull.hullRadius=18;jumper.Configure(narrowHull);
+    for(int frame=0;frame<60;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(unitX>300, "HullRadius caps a native actor footprint without rejecting a physically wide enough passage");
+    narrowPassage=false;actorRadius=0;
+    slope=true;slopeGradient=.8f;unitX=unitY=0;jumper.Reset(100);narrowHull.maxWalkSlope=30;jumper.Configure(narrowHull);
+    for(int frame=0;frame<60;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(unitX<32, "the configured walk angle controls ordinary ramp contacts");
+    narrowHull.maxWalkSlope=60;jumper.Configure(narrowHull);
+    for(int frame=0;frame<120;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(unitX>300 && jumper.Grounded(), "live walk-angle reload restores a newly walkable ramp without a reset");
+    slope=false;jumper.Configure(MovementSettings{});
+    ceiling=false;corner=true;unitX=unitY=0;jumper.Reset(100);
+    for(int frame=0;frame<30;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(unitX>80 && std::abs(unitY)>0, "a round hull slides around the empty corner of a solid");
+    // Warcraft path cells extend beyond a visible solid. A physically clear neighboring passage
+    // must use the checked hull rather than enlarging that solid to the whole native path cell.
+    cornerPathing=true;unitX=0;unitY=-10;jumper.Reset(100);
+    for(int frame=0;frame<60;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(unitX>300 && unitY==-10, "a clear lane beside a known solid must not inherit its wider native path cell");
+    cornerPathing=false;
+    corner=false;
+    // Airborne step tolerance belongs only to verified ramps, including with custom jump speed.
+    // A flat lip above the actual apex must block entry rather than trapping the body below its floor.
+    landingLedge=true;ledgeYaw=0;
+    MovementSettings shortJump;shortJump.jumpSpeed=150;jumper.Configure(shortJump);
+    for(int fps:{20,60,144}) {
+        unitX=-50;unitY=0;jumper.Reset(100);
+        for(int frame=0;frame<fps;++frame)jumper.Step(forward,1.f/fps,250);
+        MoveInput shortHop=forward;shortHop.jump=true;
+        for(int frame=0;frame<fps*3;++frame){jumper.Step(shortHop,1.f/fps,250);collision.Move(1,jumper,1.f/fps);shortHop.jump=false;}
+        Require(unitX<32 && jumper.Grounded() && jumper.FeetZ()==100, "an unreachable lip must not admit and then trap a short-jumping body below its floor");
+    }
+    landingLedge=false;jumper.Configure(MovementSettings{});
     // Model-backed low props share the same rim support rule as terrain, including a partial landing.
     actorRadius=0;landingLedge=false;prop=true;unitX=48;unitY=0;jumper.Reset(100);
     MoveInput vertical;vertical.jump=true;bool above=false;

@@ -4,7 +4,7 @@
 
 void MovementPhysics::Reset(float floor) {
     vx_ = vy_ = vz_ = duck_ = 0; feetZ_ = floor;
-    previousFeetZ_ = floor;
+    previousFeetZ_ = floor; previousDuck_=0;
     grounded_ = true; jumpHeld_ = jumpSuppressed_ = false;
 }
 float MovementPhysics::Speed() const { return std::hypot(vx_, vy_); }
@@ -17,6 +17,7 @@ void MovementPhysics::Step(const MoveInput& input, float dt, float weaponSpeed) 
     dt = std::clamp(dt, 0.0f, 0.05f);
     if (!dt) return;
     previousFeetZ_ = feetZ_;
+    previousDuck_=duck_;
     // Smooth stance changes avoid teleporting the camera when Ctrl is pressed.
     float targetDuck = input.duck ? 1.0f : 0.0f;
     // Incapacitation freezes even an in-progress crouch; roots alone still permit stance changes.
@@ -74,8 +75,34 @@ void MovementPhysics::Step(const MoveInput& input, float dt, float weaponSpeed) 
     }
 }
 void MovementPhysics::ResolveFloor(float floor) {
+    MovementSurface surface;surface.height=floor;ResolveSurface(surface);
+}
+void MovementPhysics::ResolveSurface(const MovementSurface& surface) {
+    float floor=surface.height;
+    if(!std::isfinite(floor))return;
     // Losing support starts a fall at the current height instead of snapping down the cliff.
     if (grounded_ && feetZ_ - floor > settings_.stepHeight) { grounded_ = false; vz_ = 0; return; }
-    // Rising players cannot be teleported onto overhead geometry; collision rejects its sides.
-    if (grounded_ || (vz_ <= 0 && feetZ_ <= floor)) { feetZ_ = floor; vz_ = 0; grounded_ = true; }
+    // Land from above. A verified walkable ramp retains near-ground step tolerance during descent;
+    // roofs, props and blocked cliff faces cannot use it to mint another takeoff height.
+    float reachable=grounded_ ? feetZ_+settings_.stepHeight : std::max(feetZ_,previousFeetZ_);
+    if(surface.walkable && surface.ramp && vz_<=0)reachable=std::max(reachable,feetZ_+settings_.stepHeight);
+    if(floor>reachable+.01f || (!grounded_ && (vz_>0 || feetZ_>floor)))return;
+    feetZ_=floor;
+    if(surface.walkable) {vz_=0;grounded_=true;return;}
+    // A steep face is a sliding contact, never ground. Project falling velocity onto its local plane.
+    grounded_=false;
+    float into=vx_*surface.normal[0]+vy_*surface.normal[1]+vz_*surface.normal[2];
+    if(into<0) {vx_-=into*surface.normal[0];vy_-=into*surface.normal[1];vz_-=into*surface.normal[2];}
+}
+void MovementPhysics::ClipHead(float ceiling) {
+    // Standing up in a low passage keeps the previous crouch rather than pushing feet through the floor.
+    if(duck_<previousDuck_ && feetZ_+BodyHeight()>ceiling)duck_=previousDuck_;
+    if(vz_>0 && previousFeetZ_+(64-28*previousDuck_)*worldScale+12<=ceiling+.01f && feetZ_+BodyHeight()>ceiling) {
+        feetZ_=ceiling-BodyHeight();vz_=0;grounded_=false;
+    }
+}
+void MovementPhysics::SlideHorizontal(float nx,float ny) {
+    // Retain tangent momentum along walls instead of stopping both axes at a diagonal contact.
+    float into=vx_*nx+vy_*ny;
+    if(into<0) {vx_-=into*nx;vy_-=into*ny;}
 }

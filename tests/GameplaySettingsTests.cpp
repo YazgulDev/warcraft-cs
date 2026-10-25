@@ -381,6 +381,24 @@ int main() {
     movement.Step(MovementStrafeInput(movement,6),1.f/60,250);
     assert(movement.Speed()<=450.01f);
     DeleteFileA(path.c_str());
+    // Geometry settings use the same real config/F8 path and retain current motion on reload.
+    for(const char* value:{"", "broken", "nan", "inf"}) {
+        WritePrivateProfileStringA("Movement","MaxWalkSlope",value,path.c_str());
+        WritePrivateProfileStringA("Movement","HullRadius",value,path.c_str());
+        auto collision=GameplaySettings::Load(path).movement;
+        assert(collision.maxWalkSlope==46 && collision.hullRadius==24);
+    }
+    WritePrivateProfileStringA("Movement","MaxWalkSlope","999",path.c_str());
+    WritePrivateProfileStringA("Movement","HullRadius","-10",path.c_str());
+    auto hull=GameplaySettings::Load(path).movement;assert(hull.maxWalkSlope==75 && hull.hullRadius==8);
+    WritePrivateProfileStringA("Movement","MaxWalkSlope","-10",path.c_str());
+    WritePrivateProfileStringA("Movement","HullRadius","999",path.c_str());
+    hull=GameplaySettings::Load(path).movement;assert(hull.maxWalkSlope==15 && hull.hullRadius==64);
+    WritePrivateProfileStringA("Movement","MaxWalkSlope","50",path.c_str());
+    WritePrivateProfileStringA("Movement","HullRadius","18",path.c_str());
+    feet=movement.FeetZ();vertical=movement.VerticalVelocity();movement.Configure(GameplaySettings::Load(path).movement);
+    assert(movement.MaxWalkSlope()==50 && movement.HullRadius()==18 && movement.FeetZ()==feet && movement.VerticalVelocity()==vertical);
+    DeleteFileA(path.c_str());
     // New squad parameters use the real INI boundary; live snapshots clamp invalid distances/refresh rates.
     assert(ShortcutBindings{}.Key(ShortcutAction::SquadOrders)=='Y');
     assert(ShortcutBindings::Parse("SEMICOLON")==VK_OEM_1 && ShortcutBindings::Parse(";")==VK_OEM_1 && ShortcutBindings::Label(VK_OEM_1)==";");
