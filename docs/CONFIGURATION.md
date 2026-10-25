@@ -155,3 +155,20 @@ depends on hardware and map load; farther rendering does not reveal fog-hidden u
 `Default=Des` and tileset mappings such as `W=snow` choose cache stems. Missing
 caches retain the native sky. F8 applies changes; map/RTS transitions restore the
 map's original state.
+
+## Local feature preview settings
+
+The [dual-currency/headshot preview](DUAL-CURRENCY-HEADSHOTS-PREVIEW.md) adds these startup/F8 settings. Installation updates fill missing keys and preserve custom choices. Published 0.12.0 downloads do not yet contain these additions.
+
+| Section / key | Default | Meaning / range |
+| --- | --- | --- |
+| Economy / Currency | dollars | Initial and F8 menu choice: dollars or gold; click buttons in B for a session change |
+| Economy / FallbackToGold | true | Pay the whole price in gold when dollars are insufficient; no mixed charge |
+| Combat / PreciseUnitHits | true | Trace verified posed MDX surfaces; false restores old unit volumes |
+| Combat / Headshots | true | Enable direct named-head bonuses and confirmed HUD feedback |
+| Combat / HeadshotMultiplier | 2 | Damage factor, 1-10, before native defenses and allied scaling |
+| Interface / ItemNames | true | Localized reticle names for ground items/runes in F6/F9 |
+| Interface / ItemNameDistance | 1200 | Maximum ray length, 160-5000 world units |
+| Interface / ItemNameRadius | 32 | Spherical aim tolerance, 4-128 world units |
+
+Unsupported model/pose adapters never invent a head location. Experimental 1.27a retains approximate body hits and lacks item labels. Existing dollar rewards and movement settings are unchanged.

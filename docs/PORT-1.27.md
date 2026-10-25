@@ -56,7 +56,9 @@ This is an **experimental partial port**, not feature parity with 1.26a:
   exact terrain/walkable bridge helpers and camera ceiling overrides are
   unavailable. Hitboxes use existing approximate defaults and terrain uses public
   location-height natives. Item/gate interaction and bridge/tree collision do not
-  claim 1.26a behavior.
+  claim 1.26a behavior. The local headshot/item-name preview also needs verified
+  model, pose-clock and item-name adapters; those features are unavailable on 1.27a.
+  Its dollar/gold purchase selection and fallback use public natives on both hosts.
 - Native XP-threshold and inventory-art helpers are unavailable. Public health,
   mana, level, XP and item charges remain available. Internal item activation
   forms are unavailable. Spell helpers retain their own capability guards.

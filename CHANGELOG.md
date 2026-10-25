@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased - local feature preview
+
+- Add dollar/gold selection in every buy-menu category, both balances and whole-price automatic gold fallback when dollars are insufficient; keep earning dollars while gold is selected.
+- Add configurable direct headshots (default x2) using named skeletal head surfaces on verified 1.26a models, with confirmed amber HUD feedback.
+- Trace posed unit surfaces for firearms to avoid nearby units stealing rays through empty broad bounds; preserve melee/spell/TPS targeting contracts.
+- Show localized item/rune names under the F6/F9 reticle with obstacle occlusion, Unicode captions and configurable distance/tolerance.
+- Add parser, native pose/scene, payment, graphics and settings-migration regression coverage. Movement defaults remain recovery and kill rewards remain $200.
+- Details, upgrade controls and host limitations: [feature preview](docs/DUAL-CURRENCY-HEADSHOTS-PREVIEW.md).
+
 ## 0.12.0 — 2026-10-25
 
 - Add experimental exact-host 1.27a/D3D9 support and dual-host Player bundles with adaptive local Miles forwarders.

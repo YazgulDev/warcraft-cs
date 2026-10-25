@@ -1,0 +1,5 @@
+- Added selectable dollar and gold purchases with automatic gold fallback when dollars are insufficient.
+- Added configurable headshot damage and feedback using named animated head geometry on verified 1.26a models.
+- Fixed nearby units intercepting shots through empty model bounds with precise posed surface tracing.
+- Added localized first-person item and rune names under the reticle with obstacle occlusion.
+- Preserved existing movement, native defenses, separate wallets and custom settings on update.

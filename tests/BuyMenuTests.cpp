@@ -4,6 +4,14 @@
 #include <cassert>
 
 int main() {
+    // Currency buttons are available on every page, without purchasing or changing that page.
+    {BuyMenu paymentMenu;paymentMenu.Toggle();
+     assert(paymentMenu.Select(BuyMenu::PayGold,0).currency==1 && paymentMenu.Current()==BuyMenu::Page::Main);
+     paymentMenu.Select(4,0);assert(paymentMenu.Select(BuyMenu::PayDollars,0).currency==0 && paymentMenu.Current()==BuyMenu::Page::Rifles);
+     for(int w:{1024,1920}){int h=w*9/16;BuyMenuLayout layout(w,h);
+      assert(BuyMenuLayout::Key(int(layout.listX+10),int(layout.paymentY+2),w,h,paymentMenu.Current())==BuyMenu::PayDollars);
+      assert(BuyMenuLayout::Key(int(layout.detailX+10),int(layout.paymentY+2),w,h,paymentMenu.Current())==BuyMenu::PayGold);}}
+
     GameplaySettings settings;BuyInventory inventory;
     // Both C4 purchase paths buy one charge for the requested price.
     assert(settings.weaponPrice[WeaponSlots::C4]==3000 && settings.ammoPrice[WeaponSlots::C4]==3000);

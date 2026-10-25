@@ -713,5 +713,21 @@ int main() {
     hl=GameplaySettings::Load(rpgPath);assert(!hl.WeaponEnabled(WeaponSlots::Gluon) && hl.WeaponEnabled(WeaponSlots::Crowbar));
     // This test owns the freshly created temporary directory exclusively.
     assert(rpgRoot.parent_path()==std::filesystem::current_path());std::filesystem::remove_all(rpgRoot);
+    // The production startup/F8 parser preserves both wallets' preferences and bounds new visual/combat tuning.
+    {std::ofstream f(path);f<<"[Economy]\nCurrency=gold\nFallbackToGold=false\n[Combat]\nPreciseUnitHits=false\nHeadshots=false\nHeadshotMultiplier=3\n[Interface]\nItemNames=false\nItemNameDistance=2200\nItemNameRadius=18\n";}
+    auto aiming=GameplaySettings::Load(path);
+    assert(aiming.economy.currency==EconomySettings::Currency::Gold && !aiming.economy.fallbackToGold);
+    assert(!aiming.hitDetection.preciseModels && !aiming.hitDetection.headshots && aiming.hitDetection.headshotMultiplier==3);
+    assert(!aiming.itemHover.enabled && aiming.itemHover.distance==2200 && aiming.itemHover.radius==18);
+    for(const char* value:{"nan","inf","bad","","-1","999999"}) {
+        {std::ofstream f(path);f<<"[Combat]\nHeadshotMultiplier="<<value<<"\n[Interface]\nItemNameDistance="<<value<<"\nItemNameRadius="<<value<<"\n";}
+        aiming=GameplaySettings::Load(path);
+        assert(aiming.hitDetection.headshotMultiplier>=1 && aiming.hitDetection.headshotMultiplier<=10);
+        assert(aiming.itemHover.distance>=160 && aiming.itemHover.distance<=5000 && aiming.itemHover.radius>=4 && aiming.itemHover.radius<=128);
+        assert(aiming.economy.currency==EconomySettings::Currency::Dollars && aiming.economy.fallbackToGold);
+        assert(aiming.hitDetection.preciseModels && aiming.hitDetection.headshots && aiming.itemHover.enabled);
+        if(!strcmp(value,"nan") || !strcmp(value,"inf") || !strcmp(value,"bad") || !*value)
+            assert(aiming.hitDetection.headshotMultiplier==2 && aiming.itemHover.distance==1200 && aiming.itemHover.radius==32);
+    }
     DeleteFileA(path.c_str());return 0;
 }

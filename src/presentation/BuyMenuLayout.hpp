@@ -6,12 +6,13 @@
 
 // Normalized CS panel geometry shares sparse category numbers with mouse hit-testing.
 struct BuyMenuLayout {
-    float x,y,width,height,row,listX,listY,listWidth,detailX,detailWidth,previewY,previewHeight,cancelY;
+    float x,y,width,height,row,listX,listY,listWidth,detailX,detailWidth,previewY,previewHeight,cancelY,paymentY;
     BuyMenuLayout(int w,int h) {
         width=w*.72f;height=h*.86f;x=(w-width)*.5f;y=h*.06f;
         row=height*.064f;listX=x+width*.053f;listY=y+height*.23f;listWidth=width*.31f; // Nine categories fit above Back/Cancel.
         detailX=x+width*.405f;detailWidth=width*.54f;previewY=listY;previewHeight=height*.19f;
         cancelY=y+height*.83f;
+        paymentY=y+height*.15f;
     }
     static std::vector<int> Keys(BuyMenu::Page page,const GameplaySettings* settings=nullptr) {
         if (page==BuyMenu::Page::Closed) return {};
@@ -24,6 +25,11 @@ struct BuyMenuLayout {
     static int Key(int px,int py,int w,int h,BuyMenu::Page page,const GameplaySettings* settings=nullptr) {
         if (page==BuyMenu::Page::Closed) return -1;
         BuyMenuLayout box(w,h);
+        // Match the visible payment buttons before testing the category list below them.
+        if(py>=box.paymentY && py<box.paymentY+box.row*.7f) {
+            if(px>=box.listX && px<=box.listX+box.listWidth)return BuyMenu::PayDollars;
+            if(px>=box.detailX && px<=box.detailX+box.detailWidth)return BuyMenu::PayGold;
+        }
         if (px<box.listX || px>box.listX+box.listWidth) return -1;
         if (py>=box.cancelY && py<box.cancelY+box.row*.63f) return 0;
         const auto keys=Keys(page,settings);

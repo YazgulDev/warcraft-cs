@@ -1,4 +1,6 @@
 #pragma once
+#include "HitDetectionSettings.hpp"
+#include "ItemHoverSettings.hpp"
 #include "../combat/WeaponSlots.hpp"
 #include "LoggingSettings.hpp"
 #include "RenderSettings.hpp"
@@ -58,6 +60,8 @@ struct GameplaySettings {
     bool unitViewPreventEnemyAttacks=true; // F9 alone can opt out of hostile basic-attack targeting.
 
     MovementSettings movement;
+    HitDetectionSettings hitDetection;
+    ItemHoverSettings itemHover;
     float runeAmmoPercent = 40;
     float runePickupRadius = 160;
     bool runeAmmoAllWeapons = true;

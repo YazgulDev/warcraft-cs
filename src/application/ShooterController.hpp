@@ -21,6 +21,7 @@
 #include "../platform/NativeFogOfWar.hpp"
 #include "../audio/GameAudio.hpp"
 #include "../presentation/HitFeedback.hpp"
+#include "../platform/ItemHover.hpp"
 #include "../combat/UnitStatus.hpp"
 #include "../combat/UnitHitboxes.hpp"
 #include "../combat/DestructableHitboxes.hpp"
@@ -153,7 +154,9 @@ public:
     WeaponSelection::Available AvailableWeapons() const;
     int Gold() const { return gold_; }
     int Money() const {return money_;}
-    std::string MoneyText() const {return settings_.warcraftOnly ? std::to_string(gold_)+" GOLD" : CurrencyDisplay::Format(money_,settings_.economy);}
+    int DollarBalance() const {return dollarMoney_;}
+    EconomySettings::Currency PaymentCurrency() const {return paymentCurrency_;}
+    std::string MoneyText() const {return settings_.warcraftOnly ? std::to_string(gold_)+" GOLD" : CurrencyDisplay::Format(money_,paymentCurrency_);}
     std::string NearbyWeaponName() const {return nearbyWeapon_<0 ? "" : settings_.weapons[nearbyWeapon_].name;}
     float ViewYaw() const { return yaw_+(ThirdPerson() ? 0 : recoil_.Yaw()); }
     float ViewPitch() const { return pitch_+(ThirdPerson() ? 0 : recoil_.Pitch()); }
@@ -239,6 +242,7 @@ public:
     bool RefillNotice() const { return refillTick_ && GetTickCount() - refillTick_ < 1600; }
     const char* AmmoMessage() const { return ammoMessage_.c_str(); }
     bool ItemNearby() const { return itemNearby_; }
+    const std::string& HoveredItemName() const {return itemHover_.Name();}
     float BombRemaining() const { return bombs_.Remaining(); }
     size_t BombCount() const { return bombs_.Count(); }
     float PlantProgress() const { return plantProgress_; }
@@ -376,7 +380,9 @@ private:
     BuyInventory inventory_;
     BuyMenu buyMenu_;
     bool buyToggleRequested_=false,buyAmmoRequested_=false,suppressFire_=false;
-    int buyKeyRequested_=-1,gold_=0,money_=0;
+    int buyKeyRequested_=-1,gold_=0,money_=0,dollarMoney_=0;
+    // Menu selection is session-local; startup/F8 restore the editable currency preference.
+    EconomySettings::Currency paymentCurrency_=EconomySettings::Currency::Dollars;
     DollarWallet dollars_;
     DroppedWeapons droppedWeapons_;
     int nearbyWeapon_=-1;
@@ -399,6 +405,7 @@ private:
     float animationRate_ = 1;
     DWORD refillTick_ = 0;
     HitFeedback hits_;
+    ItemHover itemHover_;
     UnitHitboxes hitboxes_;
     DestructableHitboxes destructableHitboxes_;
     BombField bombs_;

@@ -15,6 +15,9 @@
 #include "../economy/BuyAccess.hpp"
 #include "../economy/ShopAccess.hpp"
 #include "../presentation/BuyMenuLayout.hpp"
+#include "../economy/PurchasePayment.hpp"
+#include "../platform/WeaponTrace.hpp"
+#include "../combat/HeadshotPolicy.hpp"
 #include "../presentation/CursorAimRay.hpp"
 #include "../platform/MapEnvironment.hpp"
 #ifdef WCS_GAMEPLAY_TEST
@@ -45,6 +48,7 @@ void ShooterController::Configure(const char* root, uintptr_t gameBase) {
     unitHudReader_.Configure(gameBase); // Verify map-resolved XP and item art before sampling the actor.
     // Native-only clients do not need a CS mixer or any converted cache to initialize.
     settings_=GameplaySettings::Load(root_+"\\WarcraftCS.ini");
+    paymentCurrency_=settings_.economy.currency;
     // Reports must distinguish the active native-only profile from retained CS caches after reinstalling.
     wc3::Log("Installation profile warcraftOnly=%d unitHud=%d spellIcons=%d inventory=%d",settings_.warcraftOnly,settings_.showUnitHud,settings_.showSpellIcons,settings_.showInventory);
     if(!settings_.warcraftOnly)audio_.Configure(root_);
@@ -65,12 +69,14 @@ void ShooterController::RequestBuyClick(int x,int y,int width,int height) {
     if (Buying()) buyKeyRequested_=BuyMenuLayout::Key(x,y,width,height,buyMenu_.Current(),&settings_);
 }
 int ShooterController::PurchaseBalance(wc3::Handle owner) {
-    return !settings_.warcraftOnly && settings_.economy.currency==EconomySettings::Currency::Dollars ? dollars_.Balance(owner,settings_.economy) : wc3::GetPlayerState(owner,1);
+    dollarMoney_=settings_.warcraftOnly ? 0 : dollars_.Balance(owner,settings_.economy);
+    return !settings_.warcraftOnly && paymentCurrency_==EconomySettings::Currency::Dollars ? dollarMoney_ : wc3::GetPlayerState(owner,1);
 }
 void ShooterController::RewardKill(const KillReward& reward) {
     if(settings_.warcraftOnly || reward.owner!=wc3::GetLocalPlayer())return;
     // The CS reward never modifies map gold. The captured owner also survives holstering and unit switching.
-    int added=settings_.economy.currency==EconomySettings::Currency::Dollars ? dollars_.Reward(reward.owner,settings_.economy) : 0;
+    // Both balances coexist: selecting gold never disables earnings in the dollar wallet.
+    int added=dollars_.Reward(reward.owner,settings_.economy);
     money_=PurchaseBalance(reward.owner);
     if(added>0){char message[64];sprintf_s(message,"+$%d ENEMY KILLED",added);Notice(message);}
     float roll=std::uniform_real_distribution<float>(0.f,100.f)(lootRandom_);
@@ -88,18 +94,24 @@ void ShooterController::Buy(int slot,bool ammunition) {
     if (status_.incapacitated || status_.contained || status_.hidden) { Notice("CANNOT BUY WHILE DISABLED");return; }
     if (!BuyAccess::Allowed(unit_,settings_)) { Notice("OUTSIDE BUY ZONE");return; }
     if (slot<0 || slot>=WeaponSlots::Count) return;
-    auto owner=wc3::GetOwningPlayer(unit_);int balance=PurchaseBalance(owner);
+    auto owner=wc3::GetOwningPlayer(unit_);
+    int cost=ammunition ? settings_.ammoPrice[slot] : settings_.weaponPrice[slot];
+    auto payment=PurchasePayment::Choose(paymentCurrency_,dollars_.Balance(owner,settings_.economy),
+        wc3::GetPlayerState(owner,1),cost,settings_.economy.fallbackToGold);
+    int balance=payment.balance;
     auto result=inventory_.Buy(slot,ammunition,settings_,balance,ammo_[slot],reserve_[slot],settings_.weapons[slot].magazine,settings_.maxReserve[slot]);
     // Only the selected currency is charged, after validation on the game thread.
     if (result==BuyInventory::Result::Bought) {
-        if(settings_.economy.currency==EconomySettings::Currency::Dollars)dollars_.Store(owner,balance,settings_.economy);
+        if(payment.currency==EconomySettings::Currency::Dollars)dollars_.Store(owner,balance,settings_.economy);
         else {wc3::SetPlayerState(owner,1,balance);gold_=balance;}
-        money_=balance;Notice(ammunition ? "AMMUNITION PURCHASED" : "WEAPON PURCHASED");
-        wc3::Log("buy weapon=%s ammunition=%d balance=%d ammo=%d reserve=%d",settings_.weapons[slot].name,ammunition,balance,ammo_[slot],reserve_[slot]);
+        money_=PurchaseBalance(owner);
+        auto receipt=std::string(ammunition ? "AMMUNITION: " : "WEAPON: ")+CurrencyDisplay::Format(cost,payment.currency);
+        if(payment.fallback)receipt+=" (DOLLARS LOW)";Notice(receipt.c_str());
+        wc3::Log("buy weapon=%s ammunition=%d currency=%s fallback=%d balance=%d ammo=%d reserve=%d",settings_.weapons[slot].name,ammunition,payment.currency==EconomySettings::Currency::Dollars ? "dollars" : "gold",payment.fallback,balance,ammo_[slot],reserve_[slot]);
         if (!ammunition) SwitchWeapon(slot);
         // Successful CS purchases return directly to play; rejected purchases leave the menu open.
         buyMenu_.Close();CloseWeaponSelection();
-    } else Notice(result==BuyInventory::Result::NoGold ? (settings_.economy.currency==EconomySettings::Currency::Dollars ? "NOT ENOUGH DOLLARS" : "NOT ENOUGH GOLD") : result==BuyInventory::Result::Full ? "AMMUNITION FULL" :
+    } else Notice(result==BuyInventory::Result::NoGold ? (paymentCurrency_==EconomySettings::Currency::Dollars ? (settings_.economy.fallbackToGold ? "NOT ENOUGH DOLLARS OR GOLD" : "NOT ENOUGH DOLLARS") : "NOT ENOUGH GOLD") : result==BuyInventory::Result::Full ? "AMMUNITION FULL" :
         result==BuyInventory::Result::AlreadyOwned ? "ALREADY OWNED" : "NO AMMUNITION FOR THIS WEAPON");
 }
 void ShooterController::UpdateBuyMenu() {
@@ -118,6 +130,10 @@ void ShooterController::UpdateBuyMenu() {
     if (Buying() && !BuyAccess::Allowed(unit_,settings_)) { buyMenu_.Close();CloseWeaponSelection();Notice("LEFT BUY ZONE"); }
     if (Buying() && buyKeyRequested_>=0) {
         auto action=buyMenu_.Select(buyKeyRequested_,weapon_);
+        if(action.currency>=0) {
+            paymentCurrency_=action.currency==0 ? EconomySettings::Currency::Dollars : EconomySettings::Currency::Gold;
+            money_=PurchaseBalance(wc3::GetOwningPlayer(unit_));suppressFire_=true;
+        }
         // Original CS splits primary (rifles) and secondary (pistols) ammunition.
         if (action.primaryAmmo || action.secondaryAmmo) {
             auto category=action.primaryAmmo ? BuyCatalog::Category::Rifles : BuyCatalog::Category::Pistols;
@@ -261,6 +277,7 @@ void ShooterController::ResetMap() {
     weaponWheel_.Reset();cameraWheel_.Reset();
     squad_.Reset();squadOrderMode_.Configure(settings_.squadReticleAttackInFPS); // New maps restore the configured initial F6 mode.
     // Never dereference a unit handle after a map unload: campaign transitions reuse IDs.
+    itemHover_.Reset();
     hitboxes_.Reset(); destructableHitboxes_.Reset(); bombs_.Reset();grenades_.Reset();rockets_.Reset();grenadeThrow_.Reset(); plantProgress_ = 0;
     buyMenu_.Close();CloseWeaponSelection();itemInventory_.ClearInput();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1;suppressFire_=true;
     fixtureGate_ = 0;
@@ -452,7 +469,7 @@ ThirdPersonSettings ShooterController::CameraSettings() const {
 }
 void ShooterController::Camera() {
     // Keep native containment/cinematic positions intact; the overlay explains the unavailable world view.
-    if (status_.contained || status_.hidden) return;
+    if (status_.contained || status_.hidden) {itemHover_.Clear();return;}
     // Presentation follows the same physical eye used by weapon rays.
     // Map RTS camera timers must not overwrite this pass; cinematics still receive control when suspended.
     ownCameraRequest_ = true;
@@ -465,6 +482,13 @@ void ShooterController::Camera() {
             movement_.EyeZ() + wc3::Real(wc3::GetUnitFlyHeight(unit_)), yaw_ + recoil_.Yaw(), std::clamp(pitch_ + recoil_.Pitch(), -65.0f, 65.0f),
             scopeLevel_ == 2 ? 10.0f : Scoped() ? 40.0f : 85.0f, settings_.render.drawDistance);
     ownCameraRequest_ = false;
+    if(ThirdPerson() || Buying() || InventoryInputOpen() || !settings_.itemHover.enabled)itemHover_.Clear();
+    else {
+        float origin[]={wc3::Real(wc3::GetUnitX(unit_)),wc3::Real(wc3::GetUnitY(unit_)),movement_.EyeZ()+wc3::Real(wc3::GetUnitFlyHeight(unit_))};
+        float yaw=ViewYaw()*radians,pitch=ViewPitch()*radians;
+        float direction[]={std::cos(pitch)*std::cos(yaw),std::cos(pitch)*std::sin(yaw),std::sin(pitch)};
+        itemHover_.Update(unit_,origin,direction,settings_,hitboxes_,destructableHitboxes_,gameBase_);
+    }
 }
 void ShooterController::Reload() {
     if(WeaponSlots::Energy(weapon_))return; // Uranium feeds the beam directly; no fabricated reload animation.
@@ -561,10 +585,12 @@ void ShooterController::ToggleHealthBars() {
     Notice(saved ? (settings_.healthBars.allies ? "HEALTH BARS ON" : "HEALTH BARS OFF") : "HEALTH BAR SETTINGS COULD NOT BE SAVED");
 }
 void ShooterController::ReloadSettings() {
+    itemHover_.Reset(); // F8 cannot retain handles, names or distances from the previous query policy.
     CancelEnergy(); // F8 cannot complete a charge using a different damage or resource snapshot.
     CloseWeaponSelection(); // F8 cannot retain a choice under the previous controls/configuration.
     // Replace one complete snapshot; stale fractional credit must not survive a percentage/scope change.
     settings_=GameplaySettings::Load(root_+"\\WarcraftCS.ini");
+    paymentCurrency_=settings_.economy.currency;
     // Record the effective file/profile and HUD switches again on F8, including preserved custom preferences.
     wc3::Log("Settings profile config=%s\\WarcraftCS.ini warcraftOnly=%d unitHud=%d spells=%d inventory=%d",root_.c_str(),settings_.warcraftOnly,settings_.showUnitHud,settings_.showSpellIcons,settings_.showInventory);
     // F8 restores the saved designator preference and cannot leave absent optional content equipped.
@@ -841,44 +867,12 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
     float yaw = (yaw_ + recoil_.Yaw()+yawOffset) * radians, pitch = std::clamp(pitch_ + recoil_.Pitch()+pitchOffset, -65.0f, 65.0f) * radians;
     float vx = std::cos(pitch) * std::cos(yaw), vy = std::cos(pitch) * std::sin(yaw), vz = std::sin(pitch);
     float attackRange = WeaponSlots::Melee(weapon_) ? meleeAttack_.range : settings_.FirearmRange(weapon_);
-    float nearest = attackRange;
-    wc3::Handle group = wc3::CreateGroup(), target = 0, candidate = 0, local = wc3::GetLocalPlayer();
-    // Include models whose surface enters range before their center.
-    float radius = attackRange + 512; wc3::GroupEnumUnitsInRange(group, &x, &y, &radius, 0);
-    while ((candidate = wc3::FirstOfGroup(group)) != 0) {
-        wc3::GroupRemoveUnit(group, candidate);
-        // Disabled allied targeting makes allies transparent before choosing the nearest weapon contact.
-        if (candidate == unit_ || wc3::Real(wc3::GetUnitState(candidate, 0)) <= 0.405f ||
-            !wc3::IsUnitVisible(candidate, local)) continue;
-        if(!settings_.targetAllies && AttackTargetPolicy::Allied(candidate,wc3::GetOwningPlayer(unit_)))continue;
-        // Intersect the rendered model's oriented 3D volume instead of one fixed ground cylinder.
-        float origin[] = {x, y, z}, direction[] = {vx, vy, vz}, entry = 0;
-        float padding = weapon_ == WeaponSlots::Sword ? 28.0f : 0;
-        if (hitboxes_.Intersect(candidate, origin, direction, nearest, entry, padding)) {
-            // Skip native nonphysical effects without shortening the ray before the enemy behind them.
-            if(settings_.ignorePassableInvulnerableObjects && WeaponTargetFilter::PassThrough(candidate,gameBase_)) {
-                if(!visualOnly)wc3::Log("shot pass-through unit=%08X type=%08X entry=%.1f",candidate,wc3::GetUnitTypeId(candidate),entry);
-                continue;
-            }
-            nearest = entry; target = candidate;
-        }
-    }
-    wc3::DestroyGroup(group);
-    // Destructables are widgets, not units: gates must compete with unit surfaces for the nearest ray hit.
-    bool destructable = false;
-    float origin[] = {x,y,z}, direction[] = {vx,vy,vz};
-    for (wc3::Handle object : wc3::NearbyDestructables(x,y,radius)) {
-        if (wc3::Real(wc3::GetDestructableLife(object)) <= .405f) continue;
-        float entry=0;
-        if (destructableHitboxes_.Intersect(object,origin,direction,nearest,entry)) {
-            nearest=entry; target=object; destructable=true;
-        }
-    }
-    // Trace only as far as the nearest contact. Empty long-range firearm rays need no terrain sampling.
-    // Solid terrain/decks still stop hits; melee misses retain their hard-surface contact sound.
-    if(target || WeaponSlots::Melee(weapon_) || WeaponSlots::Energy(weapon_))for(float t=48;t<nearest;t+=48) {
-        if(wc3::AttackSurface(x+vx*t,y+vy*t,settings_.waterBlocksAttacks)>z+vz*t) {nearest=t;target=0;break;}
-    }
+    float origin[]={x,y,z},direction[]={vx,vy,vz};
+    WeaponTrace::Options trace;trace.volumes=WeaponSlots::Melee(weapon_);trace.padding=weapon_==WeaponSlots::Sword ? 28.f : 0;
+    trace.surfaceOnMiss=WeaponSlots::Energy(weapon_);
+    auto contact=WeaponTrace::Cast(unit_,origin,direction,attackRange,settings_,hitboxes_,destructableHitboxes_,gameBase_,trace);
+    float nearest=contact.distance;auto target=contact.target;bool destructable=contact.destructable;
+    bool headshot=HeadshotPolicy::Accepted(weapon_,contact.head,settings_.hitDetection);
     if(WeaponSlots::Energy(weapon_)) {
         // The visible beam terminates at the same solid contact that won the damage trace.
         energyBeam_={{x+vx*24-vy*8,y+vy*24+vx*8,z+vz*24-8},{x+vx*nearest,y+vy*nearest,z+vz*nearest},
@@ -904,6 +898,8 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
         // Hero mode applies the current attack and per-weapon multiplier at contact; friendly reduction follows it.
         float attack=settings_.heroDamage ? wc3::UnitAttackAverage(unit_) : 0;
         float baseDamage=(fixedDamage>=0 ? fixedDamage : settings_.ContactDamage(weapon_,WeaponSlots::Melee(weapon_) && meleeAttack_.secondary,attack))*damageScale;
+        // Named head geometry changes only the accepted direct hit; native defenses and passives remain authoritative.
+        baseDamage=HeadshotPolicy::Damage(baseDamage,headshot,settings_.hitDetection);
         float damage = CombatDamage::Amount(baseDamage,allied,lethal,before,settings_.friendlyFirePercent);
         if (settings_.heroDamage) wc3::Log("hero damage attack=%.1f multiplier=%.2f base=%.1f",attack,settings_.heroMultiplier[weapon_],baseDamage);
         // Confirmed weapon hits dispatch one native attack, including the map's attack effects, without pursuit.
@@ -924,7 +920,7 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
         float after = life();
         if (after < before) {
             // The same hit marker confirms damage to every faction, without blood.
-            hits_.Record();
+            hits_.Record(headshot);
             if (WeaponSlots::Melee(weapon_) && weapon_!=WeaponSlots::Crowbar) {
                 static const char* contacts[] = {"knife_hit1.wav", "knife_hit2.wav", "knife_hit3.wav", "knife_hit4.wav"};
                 const char* sample = destructable ? "knife_hitwall1.wav" : (weapon_ == WeaponSlots::Sword || meleeAttack_.secondary) ? "knife_stab.wav" : contacts[knifeSwing_ % 4];
@@ -932,7 +928,7 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
             }
             wc3::Log("hit feedback=marker");
         }
-        wc3::Log("shot weapon=%s target=%08X damage=%.1f hpBefore=%.1f hpAfter=%.1f allied=%d destructable=%d finishing=%d effects=%d distance=%.1f range=%.1f", w.name, target, damage, before, after,allied,destructable,lethal,effects,nearest,attackRange);
+        wc3::Log("shot weapon=%s target=%08X damage=%.1f hpBefore=%.1f hpAfter=%.1f allied=%d destructable=%d finishing=%d effects=%d distance=%.1f range=%.1f headshot=%d", w.name, target, damage, before, after,allied,destructable,lethal,effects,nearest,attackRange,headshot);
     } else if (WeaponSlots::Melee(weapon_) && nearest < attackRange) {
         // Dirt contact differs from structures; an empty swing still has no contact sample.
         if(weapon_==WeaponSlots::Crowbar)CrowbarImpact(CrowbarContact::Surface::Ground);

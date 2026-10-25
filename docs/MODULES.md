@@ -443,3 +443,9 @@ the common acceleration, jump and ground/air motor implementation remains shared
 its later hull/recovery strategy; one validated mode selects the complete behavior on the game thread.
 The acceleration/jump integrator stays shared. The classic adapter source is compared with 2babf58
 and exercised with the original historical collision regressions in addition to current mode tests.
+
+`PurchasePayment` chooses a single wallet before `BuyInventory` validates a transaction. The controller commits that wallet only on success; `BuyMenuState` copies wallet/selection information for `BuyMenuView`, whose buttons share `BuyMenuLayout` with mouse dispatch.
+
+`AnimatedHitModel` and `MdxPose` decode bounded classic MDX geometry, sample skeletal/geoset visibility tracks and intersect posed triangles. `UnitHitboxes::IntersectShot` owns verified native pose/facing/scale transforms and conservative body fallback; its existing volume method remains available to melee/spells/TPS. `WeaponTrace` owns nearest contact filtering and terrain/destructable occlusion. `HeadshotPolicy` applies direct-firearm eligibility and the configurable multiplier before ordinary native damage.
+
+`ItemHover` owns game-thread ground-item enumeration, read-only occlusion and copied localized names. `GameText` removes Warcraft color/control markup. `ItemNameView` owns a single cached Unicode caption texture per graphics context; no native handles or names are dereferenced by the renderer. F8/map replacement clear hover caches. Project-authored fixtures in `test-precise-shots.ps1` and actual hidden WGL pixels in `test-buy-hover-view.ps1` exercise these modules without controlling the user's game.

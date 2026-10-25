@@ -13,6 +13,8 @@
 | [Compatibility](COMPATIBILITY.md) | Supported versions, map limits and missing features |
 | [Troubleshooting](../TROUBLESHOOTING.md) | Installation, graphics, audio and reporting a problem |
 
+Local feature preview: [dual currency, headshots and item names](DUAL-CURRENCY-HEADSHOTS-PREVIEW.md).
+
 ## Gameplay guides
 
 | Page | What it covers |

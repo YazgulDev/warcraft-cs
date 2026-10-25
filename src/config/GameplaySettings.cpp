@@ -382,6 +382,14 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.squadClearance=std::max(60.f,number("Squad","PlayerClearance",100,300));
     result.squadYieldAhead=std::max(result.squadClearance,number("Squad","YieldAheadDistance",350,1000));
     result.squadOrderIntervalMs=unsigned(std::max(50.f,number("Squad","OrderIntervalMs",150,1000)));
+    // Item naming is independent of inventory ownership; distance/radius bound the reticle query.
+    result.itemHover.enabled=_stricmp(text("Interface","ItemNames","true").c_str(),"false")!=0;
+    result.itemHover.distance=std::max(160.f,number("Interface","ItemNameDistance",1200,5000));
+    result.itemHover.radius=std::max(4.f,number("Interface","ItemNameRadius",32,128));
+    // Accurate model contacts and named-head bonuses are optional, validated F8 policies.
+    result.hitDetection.preciseModels=_stricmp(text("Combat","PreciseUnitHits","true").c_str(),"false")!=0;
+    result.hitDetection.headshots=_stricmp(text("Combat","Headshots","true").c_str(),"false")!=0;
+    result.hitDetection.headshotMultiplier=std::max(1.f,number("Combat","HeadshotMultiplier",2,10));
     // Dollars are isolated from campaign resources; malformed settings retain the documented defaults.
     auto currency=text("Economy","Currency","dollars");
     if(!_stricmp(currency.c_str(),"gold"))result.economy.currency=EconomySettings::Currency::Gold;
@@ -389,6 +397,9 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.economy.maximumMoney=int(number("Economy","MaximumMoney",16000,1000000));
     result.economy.startingMoney=std::min(result.economy.maximumMoney,int(number("Economy","StartingMoney",800,1000000)));
     result.economy.killReward=int(number("Economy","KillReward",200,1000000));
+    // An explicit false disables automatic gold spending; missing/invalid values keep the requested fallback.
+    auto goldFallback=text("Economy","FallbackToGold","true");
+    result.economy.fallbackToGold=_stricmp(goldFallback.c_str(),"false")!=0;
     result.weaponDrops.enabled=enabled("WeaponDrops","Enabled");
     result.weaponDrops.chancePercent=number("WeaponDrops","ChancePercent",.5f,100);
     result.weaponDrops.lifetimeSeconds=std::max(1.f,number("WeaponDrops","LifetimeSeconds",120,3600));

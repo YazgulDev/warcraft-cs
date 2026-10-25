@@ -1,4 +1,5 @@
 #include "../src/economy/DollarWallet.hpp"
+#include "../src/economy/PurchasePayment.hpp"
 #include "../src/economy/CurrencyDisplay.hpp"
 #include "../src/economy/BuyInventory.hpp"
 #include "../src/inventory/WeaponDropRules.hpp"
@@ -20,6 +21,22 @@ static float clockTime=0,health=100;
 static bool enemy=true,building=false,present=true;
 int main() {
     GameplaySettings settings;DollarWallet wallet;BuyInventory inventory;
+    // Prefer the dollar wallet, switch whole-currency only when permitted, never combine insufficient balances.
+    using Currency=EconomySettings::Currency;
+    auto payment=PurchasePayment::Choose(Currency::Dollars,1250,2000,1250,true);
+    assert(payment.currency==Currency::Dollars && payment.balance==1250 && !payment.fallback);
+    payment=PurchasePayment::Choose(Currency::Dollars,800,1300,1250,true);
+    assert(payment.currency==Currency::Gold && payment.balance==1300 && payment.fallback);
+    BuyInventory hybrid;int hybridAmmo=0,hybridReserve=0,remaining=payment.balance;
+    assert(hybrid.Buy(0,false,settings,remaining,hybridAmmo,hybridReserve,30,90)==BuyInventory::Result::Bought);
+    assert(remaining==50 && hybridAmmo==30); // Dollar funds were not part of this debit.
+    payment=PurchasePayment::Choose(Currency::Dollars,800,1000,1250,true);
+    assert(payment.currency==Currency::Dollars && payment.balance==800 && !payment.fallback);
+    payment=PurchasePayment::Choose(Currency::Dollars,800,1300,1250,false);
+    assert(payment.currency==Currency::Dollars && !payment.fallback);
+    payment=PurchasePayment::Choose(Currency::Gold,2000,100,1250,true);
+    assert(payment.currency==Currency::Gold && payment.balance==100 && !payment.fallback);
+
     assert(wallet.Balance(1,settings.economy)==800 && wallet.Balance(2,settings.economy)==800);
     int balance=wallet.Balance(1,settings.economy),ammo=0,reserve=0;
     assert(inventory.Buy(0,false,settings,balance,ammo,reserve,30,90)==BuyInventory::Result::NoGold && balance==800);

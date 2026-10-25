@@ -43,7 +43,7 @@ Home does not provide horizontal teleportation. A fresh controlled session start
 | Right mouse | Weapon action: stronger knife/sword attack, AWP zoom, Glock burst or RPG guidance |
 | R | Reload |
 | B | Open or close the buy menu; choose purchases with numbers or the mouse |
-| . | Buy an ammo pack for the current weapon |
+| . | Buy an ammo pack using the selected currency and its fallback policy |
 | 1 / 2 / 3 / 4 / 5 | Browse carried primary weapons / pistols / melee / grenades / C4 |
 | Mouse wheel in armed first person | Preview the previous or next carried weapon |
 | Left mouse in weapon selection | Equip the highlighted weapon without firing |
@@ -53,7 +53,7 @@ Home does not provide horizontal teleportation. A fresh controlled session start
 
 **Tab toggles item-number mode.** While it is on, 1–6 use inventory slots; switch it
 off to select weapon groups. The default starting kit is USP, knife and sword.
-Buying uses Warcraft gold in this release. Prices and buying zones are configurable.
+Published 0.12.0 defaults to dollars. In the [local feature preview](DUAL-CURRENCY-HEADSHOTS-PREVIEW.md), click DOLLARS or GOLD at the top of B to select payment. Dollars are the default; insufficient dollars automatically fall back to sufficient gold. Prices and buying zones remain configurable.
 
 With a grenade selected, hold left mouse to pull its pin, then release to throw.
 With C4 selected, hold left mouse for three seconds while grounded to plant it.
@@ -94,3 +94,7 @@ See [spell and squad settings](CONFIGURATION.md#spells-and-squads).
 | K | Toggle allied and enemy health bars together and save the choice |
 
 F6 restores normal Warcraft control. Enable your chosen view again after changing maps.
+
+## Aiming labels in the local preview
+
+Direct hits on verified named head geometry deal x2 damage by default and show **HEADSHOT** after confirmed damage. Look at a ground item or rune in F6/F9 to see its localized name below the reticle. Settings and host limitations are in the [preview guide](DUAL-CURRENCY-HEADSHOTS-PREVIEW.md).

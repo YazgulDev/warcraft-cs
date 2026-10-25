@@ -492,3 +492,14 @@ foreach($expected in @('Enabled=false','ChargeSeconds=2','Price=1234','BeamWidth
 }
 $hlHash=(Get-FileHash $hlConfig).Hash;Update-GameplayConfig $template $hlConfig
 if((Get-FileHash $hlConfig).Hash -ne $hlHash){throw 'Half-Life migration is not idempotent.'}
+
+# Reinstall fills the new defaults without overriding saved currency, aiming or label preferences.
+$aimConfig=Join-Path $folder 'dual-currency-headshots.ini'
+@('[Economy]','Currency=gold','FallbackToGold=false','KillReward=200','[Combat]','PreciseUnitHits=false','Headshots=false','HeadshotMultiplier=3','[Interface]','ItemNames=false','ItemNameDistance=2400','ItemNameRadius=18','[Movement]','Mode=recovery') | Set-Content -LiteralPath $aimConfig -Encoding ascii
+Update-GameplayConfig $template $aimConfig
+$aimText=Get-Content -LiteralPath $aimConfig -Raw
+foreach($expected in @('Currency=gold','FallbackToGold=false','PreciseUnitHits=false','Headshots=false','HeadshotMultiplier=3','ItemNames=false','ItemNameDistance=2400','ItemNameRadius=18','KillReward=200','Mode=recovery')) {
+    if(!$aimText.Contains($expected)){throw ('Aiming/currency migration lost '+$expected)}
+}
+$aimHash=(Get-FileHash $aimConfig).Hash;Update-GameplayConfig $template $aimConfig
+if((Get-FileHash $aimConfig).Hash -ne $aimHash){throw 'Aiming/currency migration must be idempotent.'}

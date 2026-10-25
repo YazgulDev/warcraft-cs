@@ -2,12 +2,14 @@
 
 [Project home](../README.md) · [Documentation](README.md) · [Settings](CONFIGURATION.md)
 
-The new paid firearms are Desert Eagle (650 gold), Glock 18 (400), MP5 (1500),
+In the local [dual-currency preview](DUAL-CURRENCY-HEADSHOTS-PREVIEW.md), **B** shows dollar and gold buttons above every category. Click the currency to select it; dollars are the default. When dollars cannot cover the whole price, the purchase uses gold if sufficient (`[Economy] FallbackToGold=true`). The wallets never combine. Selecting gold spends only gold. Both balances stay visible and dollar kill rewards continue in either mode. Native Warcraft shops keep their own gold rules. **F8** restores the saved `Economy.Currency` preference.
+
+The paid firearms are Desert Eagle (650), Glock 18 (400), MP5 (1500),
 P90 (2350), M249 (5750), M3 (1700), and XM1014 (3000). Open **B**: 1 pistols,
 2 shotguns, 3 SMGs, 4 rifles, 5 machine guns, 6 primary ammo, 7 pistol ammo,
 8 equipment. Number keys and mouse rows select the same catalog entries.
 Buying grants a loaded magazine; reserve packs cost extra. Duplicates, insufficient
-funds and full packs do not charge gold. Inventory slot IDs remain stable. The
+funds and full packs do not charge either wallet. Inventory slot IDs remain stable. The
 [carried weapon menu](WEAPON-SELECTION.md) uses groups **1–5**, repeated category keys or the wheel
 to highlight a weapon, then LMB to equip it. Tab toggles item-number routing.
 F11 refills owned weapons; F12 grants all weapons. The initial kit is unchanged.
@@ -15,7 +17,7 @@ Models, sounds and hand-free previews are converted privately from owned CS file
 An optional [Half-Life RPG](HALF-LIFE-RPG.md) appears only with complete owned resources.
 
 The new INI sections `[Deagle]`, `[Glock]`, `[MP5]`, `[P90]`, `[M249]`, `[M3]`,
-`[XM1014]` expose `Price`/`AmmoPrice` in native gold (0–1000000), `AmmoPack`
+`[XM1014]` expose `Price`/`AmmoPrice` in the selected currency (0–1000000), `AmmoPack`
 (1–1000 rounds), `MaxReserve` (0–100000), `Magazine` (1–1000), `Damage`
 (0–1000000, weapon mode) and `HeroMultiplier` (0–1000, hero mode). Shotgun damage
 is a shell total, divided across `[Shotguns] Pellets=8` (1–16), with
@@ -96,8 +98,8 @@ model's barrel attachments; older WCG2 caches use a geometry-derived fallback.
 
 Equipment keys **4 HE, 5 Flashbang, 6 Smoke** append stable slots 15–17. Original
 number keys remain unchanged. Each purchase buys one grenade, including quick
-ammo on a carried grenade. Defaults: HE 300 gold/capacity 1, flash 200/capacity 2,
-smoke 300/capacity 1. Full inventory never charges gold. Fresh standard kits have
+ammo on a carried grenade. Defaults: HE 300/capacity 1, flash 200/capacity 2,
+smoke 300/capacity 1. Full inventory never charges either wallet. Fresh standard kits have
 no grenades; all-weapons grants them and free refill restores carried stacks.
 Grenades have no reserve, magazine reload, hitscan bullet or muzzle flash.
 

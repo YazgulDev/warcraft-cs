@@ -71,3 +71,8 @@ bool ModelBounds::LoadCollision(std::string path,CylinderMesh& mesh) {
     std::vector<unsigned char> bytes;
     return ModelBytes(path+".mdx",bytes) && StaticModelMesh::Load(bytes,mesh);
 }
+bool ModelBounds::ReadModel(std::string path,std::vector<unsigned char>& bytes) {
+    path=path.substr(0,path.find(','));
+    size_t extension=path.find_last_of('.');if(extension!=std::string::npos)path.resize(extension);
+    return !path.empty() && ModelBytes(path+".mdx",bytes);
+}
