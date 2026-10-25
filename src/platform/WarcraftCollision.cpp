@@ -57,16 +57,22 @@ MovementSurface WarcraftCollision::Terrain(float x,float y,const MovementPhysics
     // One-sided local derivatives preserve flat ledge lips. A centered derivative would incorrectly
     // call the top of a step steep merely because its opposite side drops away.
     constexpr float probe=8;
-    float derivatives[2];
+    float derivatives[2],continuation[2];
     for(int axis=0;axis<2;++axis) {
         float dx=axis ? 0 : probe,dy=axis ? probe : 0;
         float before=(surface.height-wc3::TerrainGround(x-dx,y-dy))/probe;
         float after=(wc3::TerrainGround(x+dx,y+dy)-surface.height)/probe;
         derivatives[axis]=std::abs(before)<std::abs(after) ? before : after;
+        // A tiny first sliver of a continuous steep face cannot supply a new takeoff.
+        // Truly flat lips keep the one-sided derivative, while a shallow rim stays shallow on both sides.
+        continuation[axis]=before*after>0 ? std::max(std::abs(before),std::abs(after)) : std::abs(derivatives[axis]);
     }
     float slope=std::hypot(derivatives[0],derivatives[1]),length=std::sqrt(1+slope*slope);
     surface.normal[0]=-derivatives[0]/length;surface.normal[1]=-derivatives[1]/length;surface.normal[2]=1/length;
-    bool cliffFace=slope>.001f && wc3::IsTerrainPathable(&x,&y,1) && CliffCell(x,y);
+    // A near-flat blocked rim is still ground. Only a rise exceeding the configured step
+    // across a native terrain cell denotes a cliff face; tiny heightfield noise cannot close a passage.
+    bool cliffFace=std::hypot(continuation[0],continuation[1])*128>movement.StepHeight()+.01f &&
+        wc3::IsTerrainPathable(&x,&y,1) && CliffCell(x,y);
     surface.walkable=std::isfinite(slope) && !cliffFace &&
         surface.normal[2]>=std::cos(movement.MaxWalkSlope()*.01745329252f);
     surface.ramp=surface.walkable && slope>.001f;
@@ -100,15 +106,32 @@ MovementSurface WarcraftCollision::Floor(float x, float y, const MovementPhysics
             surface=terrain;
     }
     // A low solid prop supports the entire foot too; support ends only after its trailing edge clears.
-    for (const auto& box : obstacles)
-        if (Overlaps(box, x, y, radius_) && box.maximum[2] <= reachable + .01f)
-            support(box.maximum[2]);
+    for(size_t index=0;index<obstacles.size();++index) {
+        const auto& box=obstacles[index];
+        if(!Overlaps(box,x,y,radius_))continue;
+        if(const auto* mesh=obstacles_.Geometry(index)) {
+            float height=0,normal[3]={};
+            if(mesh->Floor(x,y,radius_,reachable,.0001f,height,normal) && height>=surface.height-.01f) {
+                surface.height=height;
+                for(int axis=0;axis<3;++axis)surface.normal[axis]=normal[axis];
+                // Steep prop roofs behave like steep terrain: contact slides downhill instead of falling through.
+                surface.walkable=normal[2]>=std::cos(movement.MaxWalkSlope()*.01745329252f);
+                surface.ramp=surface.walkable && normal[2]<.999999f;
+            }
+        } else if(box.maximum[2]<=reachable+.01f)support(box.maximum[2]);
+    }
     return surface;
 }
 void WarcraftCollision::Ceiling(float x,float y,MovementPhysics& movement,const std::vector<Bounds3>& obstacles) const {
     // Sweep the head even with zero horizontal motion. Model undersides and native decks are two-sided.
-    for(const auto& box:obstacles)if(Overlaps(box,x,y,radius_) && box.minimum[2]>movement.PreviousFeetZ()+.01f)
-        movement.ClipHead(box.minimum[2]-.01f);
+    for(size_t index=0;index<obstacles.size();++index) {
+        const auto& box=obstacles[index];
+        if(!Overlaps(box,x,y,radius_))continue;
+        if(const auto* mesh=obstacles_.Geometry(index)) {
+            float height=0;
+            if(mesh->Ceiling(x,y,radius_,movement.PreviousFeetZ(),height))movement.ClipHead(height-.01f);
+        } else if(box.minimum[2]>movement.PreviousFeetZ()+.01f)movement.ClipHead(box.minimum[2]-.01f);
+    }
     for(int point=0;point<9;++point) {
         float angle=(point-1)*.78539816339f,deck=0;
         float px=x+(point ? std::cos(angle)*radius_ : 0),py=y+(point ? std::sin(angle)*radius_ : 0);
@@ -121,7 +144,19 @@ bool WarcraftCollision::Clear(float x, float y, float oldX, float oldY, const Mo
     auto support=Floor(x,y,movement,obstacles);
     if(movement.Grounded() && support.walkable && support.height<=bottom+.01f)feet=std::max(feet,support.height);
     float top=feet+movement.BodyHeight();
-    for (const auto& box : obstacles) {
+    for(size_t index=0;index<obstacles.size();++index) {
+        const auto& box=obstacles[index];
+        if(const auto* mesh=obstacles_.Geometry(index)) {
+            if(!Overlaps(box,x,y,radius_))continue;
+            float contact[2]={};
+            if(!mesh->Contact(x,y,radius_,std::max(feet,bottom),top,contact))continue;
+            // Existing mesh overlap can recover along its actual outward face, including arch interiors.
+            // Newly raised headroom is never treated as an old overlap.
+            bool existing=mesh->Contact(oldX,oldY,radius_,movement.FeetZ(),movement.FeetZ()+movement.BodyHeight());
+            if(existing && (x-oldX)*contact[0]+(y-oldY)*contact[1]>.001f)continue;
+            if(normal){normal[0]=contact[0];normal[1]=contact[1];}
+            Blocked("solid-mesh",x,y,oldX,oldY,bottom,box.maximum[2]);return false;
+        }
         // Height-aware solid volumes prevent flying through buildings/trees, while low props can be cleared.
         if (Overlaps(box, x, y, radius_) && box.maximum[2] > bottom + .01f && box.minimum[2] < top) {
             // Recover from existing overlap only while approaching an exit; never deepen it or enter a new solid.
@@ -171,7 +206,13 @@ bool WarcraftCollision::Clear(float x, float y, float oldX, float oldY, const Mo
         bool knownObject = false;
         // The full body already cleared every known solid. Do not enlarge one to its native path cell
         // when only an empty corner of that cell overlaps the player's circular foot.
-        for (const auto& box : obstacles) {
+        for(size_t index=0;index<obstacles.size();++index) {
+            const auto& box=obstacles[index];
+            // All occupied surfaces already cleared the entire body. A native cell inside an
+            // enclosing arch/column box must not fill that verified empty opening back in.
+            if(obstacles_.Geometry(index) && ModelPathCell(box,px,py)) {
+                knownObject=true;modelPath=true;continue;
+            }
             if(!Overlaps(box,x,y,radius_) && ModelPathCell(box,px,py)) {
                 knownObject=true;modelPath=true;continue;
             }
@@ -197,10 +238,11 @@ void WarcraftCollision::Move(wc3::Handle unit, MovementPhysics& movement, float 
     float x = wc3::Real(wc3::GetUnitX(unit)), y = wc3::Real(wc3::GetUnitY(unit));
     float originalX = x, originalY = y;
     auto body=movement.NativeUnitCollision() ? UnitCollisionProfile::Read(unit,base_) : UnitCollisionProfile{};
-    // The actor footprint follows native collision too; unknown profiles retain the conservative legacy radius.
-    radius_=body.known && body.colliding ? std::min(body.radius,movement.HullRadius()) : movement.HullRadius();
+    // FPS may disable the actor's native pathing mask. Its known footprint remains valid,
+    // unlike non-colliding helper obstacles, and must not suddenly inflate in a narrow corridor.
+    radius_=body.known && body.radius>0 ? std::min(body.radius,movement.HullRadius()) : movement.HullRadius();
     float dx = movement.VelocityX() * dt, dy = movement.VelocityY() * dt;
-    auto obstacles = obstacles_.Snapshot(unit, x, y, 600 + std::hypot(dx, dy),movement.NativeUnitCollision());
+    auto obstacles = obstacles_.Snapshot(unit, x, y, 600 + std::hypot(dx, dy),movement.NativeUnitCollision(),movement.ObjectMeshCollision());
     auto bounds = wc3::GetWorldBounds();
     float minX = wc3::Real(wc3::GetRectMinX(bounds)) + radius_, maxX = wc3::Real(wc3::GetRectMaxX(bounds)) - radius_;
     float minY = wc3::Real(wc3::GetRectMinY(bounds)) + radius_, maxY = wc3::Real(wc3::GetRectMaxY(bounds)) - radius_;
@@ -249,7 +291,7 @@ void WarcraftCollision::Move(wc3::Handle unit, MovementPhysics& movement, float 
             return Overlaps(box,originalX,originalY,radius_*2) || Overlaps(box,x,y,radius_*2);
         });
         if(checkedCliff && floor<movement.FeetZ()-.01f) movement.BeginFall();
-        bool cappedHull=body.known && body.colliding && body.radius>radius_+.01f;
+        bool cappedHull=body.known && (body.radius>radius_+.01f || !body.colliding);
         if (!movement.Grounded() || movement.FeetZ() - floor > movement.StepHeight() || raised || nearCliff || nearSolid || cappedHull || modelPathing_) {
             // XY-only setters preserve the checked path. Unknown blockers in open space retain native validation below.
             wc3::SetUnitX(unit, &x); wc3::SetUnitY(unit, &y);

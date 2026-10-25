@@ -198,6 +198,8 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.movement.hullRadius = std::max(8.f,number("Movement","HullRadius",24,64));
     // Live collision may be opted out independently of visual weapon hitboxes and terrain/wall collision.
     result.movement.useNativeUnitCollision = boolean("UseNativeUnitCollision", true);
+    // Mesh detail is independent of actor footprints and can be reverted on F8 for custom maps.
+    result.movement.objectMeshCollision = boolean("ObjectMeshCollision", true);
     result.runePickupRadius=number("Runes","PickupRadius",160,400);
     result.runeAmmoAllWeapons=_stricmp(text("Runes","AmmoWeapons","all").c_str(),"current")!=0;
     auto damageMode=text("Damage","Mode","unit");

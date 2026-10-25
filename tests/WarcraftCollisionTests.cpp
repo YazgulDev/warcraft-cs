@@ -2,6 +2,7 @@
 #include "../src/platform/DiagnosticLog.hpp"
 #include "../src/platform/UnitCollisionProfile.hpp"
 #include "MovementStrafeInput.hpp"
+#include "CollisionMeshFixture.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -24,11 +25,14 @@ float actorRadius=0;
 bool nativeCliffRim=false;
 float slopeGradient=.3f;
 bool narrowPassage=false;
+bool actorColliding=true;
+int meshScene=0;
 int sideContact=0,sideRelocations=0;bool sideUnit=false;
 wc3::Bits Bits(float value) { wc3::Bits bits;std::memcpy(&bits,&value,4);return bits; }
 wc3::Bits __cdecl X(wc3::Handle) {return Bits(unitX);}
 wc3::Bits __cdecl Y(wc3::Handle) {return Bits(unitY);}
 BOOL __cdecl Blocked(float* x,float* y,int) {
+    if(meshScene)return *x>=32 && *x<128;
     if(cliffFace)return FaceDistance(*x,*y)>=8 && FaceDistance(*x,*y)<=184;
     if(cornerPathing)return *x>=32 && *x<96 && *y>=0 && *y<64;
     if(ceiling || corner)return FALSE;
@@ -93,7 +97,21 @@ bool WalkableSurface(float,float y,float& height){
 }
 bool DiagnosticLog::Due(DWORD&,bool) { return false; }
 // The synthetic world replaces only native discovery; actual swept collision/physics runs unchanged.
-std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,bool) {
+std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,bool,bool detailed) {
+    details_.clear();
+    if(meshScene) {
+        auto mesh=std::make_shared<CylinderMesh>();
+        if(meshScene==2) {
+            AddMeshBox(*mesh,{{60,-64,100},{100,64,140}});
+            AddMeshBox(*mesh,{{60,40,140},{100,64,400}});
+        } else {
+            AddMeshBox(*mesh,{{60,-80,100},{100,-20,350}});
+            AddMeshBox(*mesh,{{60,20,100},{100,80,350}});
+            AddMeshBox(*mesh,{{60,-20,meshScene==3 ? 185.f : 240.f},{100,20,350}});
+        }
+        details_.push_back(detailed ? mesh : nullptr);
+        return {{{60,-80,100},{100,80,meshScene==2 ? 400.f : 350.f}}};
+    }
     if(ceiling) {
         std::vector<Bounds3> solids={{{-500,-500,ceilingZ},{500,500,ceilingZ+24}}};
         if(stepUnderCeiling)solids.push_back({{60,-50,100},{80,50,120}});
@@ -110,8 +128,8 @@ std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,b
     return {};
 }
 UnitCollisionProfile UnitCollisionProfile::Read(wc3::Handle,uintptr_t) {
-    if(actorRadius>0)return {true,true,actorRadius};
-    return narrowPassage ? UnitCollisionProfile{true,true,16} : UnitCollisionProfile{};
+    if(actorRadius>0)return {true,actorColliding,actorRadius};
+    return narrowPassage ? UnitCollisionProfile{true,actorColliding,16} : UnitCollisionProfile{};
 }
 int main(){
     Require(Walk(true)>300,"living deck crosses blocked terrain beneath the bridge");
@@ -198,6 +216,10 @@ int main(){
     narrowPassage=true;unitX=unitY=0;jumper.Reset(100);jumper.Configure(MovementSettings{});
     for(int frame=0;frame<60;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
     Require(unitX>300,"live native actor footprint fits the narrow native passage");
+    // Temporarily disabling the controlled hero's native mask must not enlarge his footprint.
+    actorColliding=false;unitX=unitY=0;jumper.Reset(100);
+    for(int frame=0;frame<60;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(unitX>300,"pathing-disabled actor retains the known radius in a narrow passage");actorColliding=true;
     auto legacy=MovementSettings{};legacy.useNativeUnitCollision=false;jumper.Configure(legacy);unitX=unitY=0;jumper.Reset(100);
     for(int frame=0;frame<60;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
     Require(unitX==0,"legacy opt-out retains the larger visual footprint");narrowPassage=false;
@@ -263,6 +285,7 @@ int main(){
             cliffPeak=std::max(cliffPeak,jumper.FeetZ());
         }
         Require(FaceDistance(unitX,unitY)<64, "local cliff collision cannot become a staircase through repeated jumps");
+        if(cliffPeak>=168)std::printf("cliff peak=%.3f x=%.3f radius=%.1f fps=%d heading=%d hop=%d\n",cliffPeak,FaceDistance(unitX,unitY),radius,fps,heading,hop);
         Require(cliffPeak<168, "a blocked cliff face cannot supply another takeoff");
         // Retreat must remain possible even after pushing and jumping against the face.
         toward.jump=false;toward.forward=-1;
@@ -286,6 +309,11 @@ int main(){
     MoveInput oneJump=forward;oneJump.jump=true;
     for(int frame=0;frame<180;++frame){jumper.Step(oneJump,1.f/60,250);collision.Move(1,jumper,1.f/60);oneJump.jump=false;}
     Require(unitX>208, "a physically reachable low cliff remains traversable with one jump");
+    // Recorded campaign contacts had normalZ=.995 yet were labelled non-walkable near cliffs.
+    faceRise=12;unitX=unitY=0;jumper.Reset(100);
+    for(int frame=0;frame<120;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(unitX>300 && jumper.Grounded(),"near-flat blocked cliff-rim noise cannot close an otherwise walkable passage");
+    faceRise=256;
     cliffFace=false;ceiling=true;ceilingZ=230;
     // Sweep the head while stationary, then test a passage which requires crouching.
     for(int fps:{20,60,144}) {
@@ -364,5 +392,44 @@ int main(){
     Require(above && jumper.Grounded() && jumper.FeetZ()==140,"the edge of a solid prop must catch a descending foot");
     for(int frame=0;frame<90;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
     Require(unitX>200 && jumper.Grounded() && jumper.FeetZ()==100,"a partial prop landing permits traversal and a clean drop off its far edge");
+    // Static model detail changes fit tests only; acceleration, jump integration and native terrain remain real.
+    prop=false;meshScene=1;actorRadius=16;
+    for(int fps:{20,60,144}) {
+        unitX=unitY=0;jumper.Reset(100);
+        for(int frame=0;frame<fps;++frame){jumper.Step(forward,1.f/fps,250);collision.Move(1,jumper,1.f/fps);}
+        Require(unitX>300 && unitY==0,"a fitting body passes inside an arch despite its full native pathing footprint");
+    }
+    unitX=60;unitY=-40;jumper.Reset(100);MoveInput out=forward;out.forward=-1;
+    for(int frame=0;frame<60;++frame){jumper.Step(out,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(unitX<0,"existing mesh face overlap allows retreat out of the pillar");
+    auto coarse=MovementSettings{};coarse.objectMeshCollision=false;jumper.Configure(coarse);unitX=unitY=0;jumper.Reset(100);
+    for(int frame=0;frame<60;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(unitX<44,"F8 mesh opt-out restores conservative whole-object collision");
+    jumper.Configure(MovementSettings{});actorRadius=24;unitX=unitY=0;jumper.Reset(100);
+    for(int frame=0;frame<60;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(unitX<60,"a body wider than an arch opening must remain blocked");
+    meshScene=3;actorRadius=16;unitX=unitY=0;jumper.Reset(100);
+    for(int frame=0;frame<60;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(unitX<60,"a low mesh lintel blocks the standing head");
+    for(int frame=0;frame<180;++frame){jumper.Step(crouched,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(unitX>200,"crouching passes through the actual mesh opening");
+    // A low plinth beside a tall pillar must be jumpable without clearing the pillar's total height.
+    meshScene=2;actorRadius=0;unitX=48;unitY=0;jumper.Reset(100);vertical={};vertical.jump=true;above=false;
+    for(int frame=0;frame<120;++frame) {
+        jumper.Step(vertical,1.f/60,250);collision.Move(1,jumper,1.f/60);vertical.jump=false;
+        above=above || jumper.FeetZ()>140;
+        if(above && jumper.Grounded())break;
+    }
+    Require(above && jumper.Grounded() && jumper.FeetZ()==140,"a low part of a tall model catches the descending foot");
+    for(int frame=0;frame<90;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(unitX>200 && jumper.FeetZ()==100,"a jump onto the plinth permits continuation and a clean drop off");
+    unitX=0;unitY=60;jumper.Reset(100);MoveInput against=forward;against.jump=true;
+    for(int frame=0;frame<120;++frame){jumper.Step(against,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(unitX<60,"jumping cannot pass through the tall part of the same mesh");
+    unitX=unitY=0;jumper.Reset(100);coarse.jumpSpeed=150;coarse.objectMeshCollision=true;jumper.Configure(coarse);
+    against=forward;against.jump=true;
+    for(int frame=0;frame<120;++frame){jumper.Step(against,1.f/60,250);collision.Move(1,jumper,1.f/60);against.jump=false;}
+    Require(unitX<60 && jumper.FeetZ()==100,"a jump below the plinth top cannot enter and become trapped");
+    meshScene=0;actorRadius=0;
     std::puts("Warcraft bridge/collision regressions passed.");
 }

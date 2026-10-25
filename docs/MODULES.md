@@ -420,3 +420,10 @@ only the preview's published base, while ordinary stable selection is unchanged.
 local height/normal/walkability into `MovementPhysics`, which owns ground, sliding and head/stance
 responses. `WarcraftCollision` adapts live terrain, pathing, transformed solid bounds and native decks,
 using a per-update sample cache; it never substitutes a remote terrace height for a local contact.
+
+`CylinderMesh` owns portable cylinder/triangle contact and disk/plane height extrema.
+`StaticModelMesh` validates classic MDX arrays, stationary Stand tracks, material solidity and geoset
+visibility before publishing any mesh. `ModelBounds` reads owned mounted-map bytes; `MovementObstacles`
+caches local and transformed static geometry per map, refreshed when the sprite transform changes.
+Only movement opts into the detailed snapshot; grenade/rocket cover keeps the established coarse contract.
+Unsupported poses retain prior bounds, trees retain trunk filtering and native bridge decks remain authoritative.

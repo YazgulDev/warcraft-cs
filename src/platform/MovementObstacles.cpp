@@ -6,8 +6,9 @@
 #include "UnitCollisionProfile.hpp"
 #include <algorithm>
 #include <limits>
+#include <cstring>
 
-bool MovementObstacles::Bounds(const std::string& path, bool destructable, uintptr_t object, Bounds3& world) {
+bool MovementObstacles::Bounds(const std::string& path, bool destructable, uintptr_t object, Bounds3& world,std::shared_ptr<const CylinderMesh>* mesh) {
     if (path.empty() || !object) return false;
     auto key=std::make_pair(path,destructable);
     auto found = models_.find(key);
@@ -17,6 +18,7 @@ bool MovementObstacles::Bounds(const std::string& path, bool destructable, uintp
         TreeTrunkMesh trunk;
         // Unit models may also contain EatTree animations; only destructables use standing-trunk rules.
         bool loaded=ModelBounds::Load(path, model, destructable ? &trunk : nullptr);
+        meshAllowed_[key]=loaded && destructable && !trunk.IsTree();
         // A standing tree's visual extents include empty canopy space. Decode its trunk before applying
         // the existing native sprite transform; unreadable trees retain native pathing as the fallback.
         if (!loaded || (trunk.IsTree() && !trunk.Bounds(model))) model = {{0,0,0},{0,0,0}};
@@ -53,10 +55,38 @@ bool MovementObstacles::Bounds(const std::string& path, bool destructable, uintp
         world.minimum[row] = std::min(world.minimum[row], value);
         world.maximum[row] = std::max(world.maximum[row], value);
     }
+    if(mesh && meshAllowed_[key]) {
+        auto local=meshes_.find(key);
+        if(local==meshes_.end()) {
+            // Bound triangle memory as well as object count in the 32-bit host. Eviction
+            // reloads the same model on demand and never changes its collision policy.
+            if(localTriangles_>500000){meshes_.clear();worldMeshes_.clear();localTriangles_=worldTriangles_=0;}
+            auto geometry=std::make_shared<CylinderMesh>();
+            if(!ModelBounds::LoadCollision(path,*geometry))geometry.reset();
+            if(geometry)localTriangles_+=geometry->triangles.size();
+            wc3::Log("movement static mesh model=%s triangles=%u",path.c_str(),geometry ? unsigned(geometry->triangles.size()) : 0);
+            local=meshes_.emplace(key,std::move(geometry)).first;
+        }
+        if(local->second) {
+            // Cache transformed vertices until this object's pose/scale changes. Bound retained instances
+            // during long maps; eviction changes only work performed, never collision geometry.
+            if(worldMeshes_.size()>1024 || worldTriangles_>500000){worldMeshes_.clear();worldTriangles_=0;}
+            auto& cached=worldMeshes_[object];
+            if(cached.source!=local->second || !cached.geometry ||
+                std::memcmp(cached.transform.matrix,transform.matrix,sizeof(transform.matrix)) ||
+                std::memcmp(cached.transform.position,transform.position,sizeof(transform.position))) {
+                if(cached.geometry)worldTriangles_-=cached.geometry->triangles.size();
+                cached={transform,local->second,std::make_shared<CylinderMesh>(local->second->Transformed(transform))};
+                worldTriangles_+=cached.geometry->triangles.size();
+            }
+            *mesh=cached.geometry;
+        }
+    }
     return true;
 }
-std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle actor, float x, float y, float radius,bool nativeUnitCollision) {
+std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle actor, float x, float y, float radius,bool nativeUnitCollision,bool detailed) {
     std::vector<Bounds3> result;
+    details_.clear();
     if (!base_) return result;
     // Native definition lookup is relatively expensive: cache model names by type only until map unload.
     auto path = [&](int type, bool destructable) -> const std::string& {
@@ -81,6 +111,7 @@ std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle actor, float x, flo
                 bounds.minimum[1]=cy-collision.radius;bounds.maximum[1]=cy+collision.radius;
             }
             result.push_back(bounds);
+            details_.push_back(nullptr);
         }
     }
     wc3::DestroyGroup(group);
@@ -88,11 +119,12 @@ std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle actor, float x, flo
         if (wc3::Real(wc3::GetDestructableLife(object)) <= 0) continue;
         using Resolve = uintptr_t (__fastcall*)(wc3::Handle, uintptr_t);
         Bounds3 bounds;
+        std::shared_ptr<const CylinderMesh> mesh;
         if (Bounds(path(wc3::GetDestructableTypeId(object), true), true,
-            reinterpret_cast<Resolve>(base_ + wc3::Rva(0x3BE010))(object, 0), bounds)) {
+            reinterpret_cast<Resolve>(base_ + wc3::Rva(0x3BE010))(object, 0), bounds,detailed ? &mesh : nullptr)) {
             float cx=wc3::Real(wc3::GetDestructableX(object)), cy=wc3::Real(wc3::GetDestructableY(object)), deck=0;
             // Walkable bridges supply their native deck separately; their enclosing model box includes empty space.
-            if (!wc3::WalkableSurface(cx, cy, deck)) result.push_back(bounds);
+            if (!wc3::WalkableSurface(cx, cy, deck)) {result.push_back(bounds);details_.push_back(std::move(mesh));}
         }
     }
     return result;

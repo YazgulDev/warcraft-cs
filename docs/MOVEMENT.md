@@ -48,10 +48,15 @@ is 46 degrees. Flat lower banks and downhill departures remain usable.
 `HullRadius=24` caps the player's native radius (world units); smaller native actors retain their radius.
 The unknown-profile/legacy footprint uses this configured radius. Physical height follows the existing
 stance, 108 world units standing and 66 fully crouched. Ordinary creature solids retain their native
-footprints and authored vertical bounds. Buildings/props retain transformed standing model bounds;
-trees retain decoded trunks rather than foliage. Those object bounds are conservative volumes, not
-animated polygon-perfect geometry. Unknown custom model/pathing blockers retain the conservative native
-fallback; the preview does not invent a height for missing model data.
+footprints and authored vertical bounds. Static non-tree destructables use transformed triangles from a supported stationary Stand pose.
+The cylinder tests the occupied height, so an arch opening stays open and a low plinth beside a tall
+column has its own reachable top. Circle/triangle intersection supplies floor and ceiling heights
+across the whole footprint, including partial landings. Opaque/cutout faces collide; additive glow
+cards do not. Stand animation, unsupported materials/formats and unreadable models retain conservative
+standing bounds/native pathing. Buildings and moving units retain their existing bounds/profiles;
+trees retain decoded trunks rather than foliage. This is static surface detail, not animated
+polygon-perfect collision. The player uses the configured physical hull, not weapon/cape visual extents.
+A known actor radius remains valid when FPS temporarily disables its native pathing mask.
 
 
 Edit `WarcraftCS/WarcraftCS.ini` in the prepared runtime, then press F8 in FPS. Updates add missing keys
@@ -71,6 +76,7 @@ simulation step applies the new speed cap. Jump speed applies to the next takeof
 | StepHeight | 27 | 0–64 Warcraft units; automatic rise/drop limit, larger drops fall |
 | MaxWalkSlope | 46 | 15–75 degrees; maximum local walkable slope. Blocked native cliff faces remain non-walkable |
 | HullRadius | 24 | 8–64 Warcraft units; maximum player collision radius, preserving smaller native footprints |
+| ObjectMeshCollision | true | true/false; use supported stationary prop surfaces for fit, support and head clearance. false restores conservative whole-model volumes |
 
 One GoldSrc unit corresponds to 1.5 Warcraft units. The default jump rises about 67.5 Warcraft units.
 Finite out-of-range numbers are clamped; missing/empty/malformed/non-finite values use the defaults.
@@ -90,8 +96,11 @@ Ground support is resolved after each swept substep, so fast uphill movement doe
 from the beginning of the frame. Unknown native collision profiles retain conservative bounds.
 The collision preference, walk angle and hull-radius cap reload on F8; updates preserve custom values.
 The native collision code requires installing this preview and restarting the game; F8 alone cannot replace it.
-Conservative building/prop boxes can still reject narrow passages or irregular props. Native walkable bridge decks
-remain the surface authority rather than the box surrounding the complete bridge mesh.
+Unsupported animated/custom props and buildings retain conservative bounds and may still reject irregular openings.
+Native walkable bridge decks remain the surface authority. `ObjectMeshCollision` reloads on F8 without
+resetting current motion; setup adds a missing true default and preserves a saved false opt-out.
+Almost-flat blocked cliff rims are walkable when their local rise across a terrain cell fits StepHeight.
+A continuous steep face remains non-walkable even at its first shallow sliver, preventing repeat takeoffs.
 
 The tree-collision test branch replaces canopy-sized standing extents with decoded trunk bounds,
 reusing the shooting mesh parser. Native tree pathing and solid-trunk contact remain enforced;
@@ -104,7 +113,13 @@ expanded footprint face, including the trailing native pathing samples; entering
 moving deeper into the current solid remains blocked.
 
 Independent checks: `tools/test-movement.ps1`, `tools/test-warcraft-collision.ps1`,
-`tools/test-gameplay-settings.ps1` and `tools/test-gameplay-config.ps1`.
+`tools/test-gameplay-settings.ps1`, `tools/test-gameplay-config.ps1` and `tools/test-static-collision.ps1`.
+Static geometry tests cover arch width/headroom, partial plinth support, rotated/scaled/mirrored models,
+malformed MDX and stationary versus animated Stand poses. Native collision tests retain the previous
+uphill-hop measurements (distance 1814.3, peak speed 710.7) and add pathing-disabled actor fit,
+shallow blocked rims, mesh opt-out, crouching through an arch and reachable/unreachable plinth jumps.
+An owned IceCrownWall900 model decodes to 24 triangles; an animated IceCrownGate retains conservative
+fallback. These checks do not establish native campaign verification of the new DLL.
 The opt-in `tools/build.ps1 -TestMovement` includes `tests/MovementScene.cpp`, which accepts explicit
 requests only for development in a disposable custom map copy. It must never run in campaign saves.
 Ordinary builds exclude its scene, requests and destructive test fixtures.

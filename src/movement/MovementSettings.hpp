@@ -4,6 +4,8 @@
 struct MovementSettings {
     // Live creature footprints replace oversized visual extents; solid buildings/trees keep model geometry.
     bool useNativeUnitCollision=true;
+    // Precise stationary prop surfaces keep arch openings and low column bases usable.
+    bool objectMeshCollision=true;
     // Optional absolute unit-speed scaling replaces the legacy relative slow/haste modifier.
     bool scaleFromUnitMoveSpeed=false;
     float unitMoveSpeedReference=300;

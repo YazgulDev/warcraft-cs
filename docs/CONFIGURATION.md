@@ -63,7 +63,10 @@ interaction regardless of these display preferences.
 The development preview adds `[Movement] MaxWalkSlope=46` (15–75 degrees) and
 `HullRadius=24` (8–64 world units, the maximum player radius). Smaller native actor
 radii are retained. Both apply on F8 without resetting current position/velocity;
-updates preserve explicit values. Install and restart once for the native hull/terrain
+updates preserve explicit values. `ObjectMeshCollision=true` (true/false) uses supported stationary
+prop surfaces for actual-height fit, floor and head clearance; false restores coarse object volumes.
+It also reloads on F8 and survives updates. Unknown/animated geometry retains conservative fallback.
+Install and restart once for the native hull/terrain
 code. See [movement contacts and geometry limits](MOVEMENT.md).
 
 ## Damage, buying and ammunition

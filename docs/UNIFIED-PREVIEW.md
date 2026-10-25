@@ -91,6 +91,17 @@ overhanging native path cells. There is no distant-terrace height gate.
 native footprints) reload on F8 and preserve custom values on updates. Existing jump/gravity settings
 are unchanged. Install and restart for the native code update; see [movement details and geometry limits](MOVEMENT.md).
 
+Static non-tree props with a supported stationary Stand pose now use their actual transformed surfaces.
+Arch openings, partial low-plinth landings and crouched headroom no longer inherit the complete model
+box. Standing height remains 108, crouched height 66 and the default radius cap 24 world units.
+`[Movement] ObjectMeshCollision=true` (true/false, F8 reload) enables this detail; false restores coarse
+volumes. Setup preserves the preference. Trees, moving units, buildings, unsupported animated/material
+formats and unreadable custom data retain their previous conservative checks; native decks stay authoritative.
+Known actor radii remain valid with native pathing disabled. Almost-flat blocked cliff rims no longer
+become false walls; continuous steep faces still cannot supply repeat takeoffs. Jump speed, gravity,
+acceleration and air strafing are unchanged. Synthetic regressions and an owned static wall decode
+passed; native campaign traversal with this updated DLL still needs verification after installation.
+
 <!-- launcher-summary
 - Added experimental Warcraft III 1.27a and Direct3D 9 support alongside 1.26a.
 - Added Player setup for both hosts using exact local Miles export forwarders without C++ Build Tools.
@@ -105,4 +116,5 @@ are unchanged. Install and restart for the native code update; see [movement det
 - Changed default RPG blast radius to 525 while retaining 100 peak damage.
 - Preserved custom settings and prevented a local preview from offering its published base as a newer build.
 - Improved local cliff collision, downhill sliding, round player hulls, narrow passages and crouching head clearance.
+- Improved static prop collision so fitting arch openings stay passable and low parts of tall models can be jumped onto; preserved movement physics and conservative fallback.
 -->

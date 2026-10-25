@@ -26,7 +26,8 @@ std::vector<Handle> NearbyDestructables(float,float,float){return {10};}
 }
 void GameAudio::Play(const char*,float){++sounds;}
 void GameAudio::SetLoop(const char*,bool,float){}
-std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,bool nativeCollision){collisionFilters.push_back(nativeCollision);return cover;}
+// Combat must retain coarse cover snapshots when movement opts into static mesh detail.
+std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,bool nativeCollision,bool detailed){assert(!detailed);collisionFilters.push_back(nativeCollision);return cover;}
 int main() {
     wc3::CreateTimer=[]()->wc3::Handle{return 1;};wc3::TimerStart=[](wc3::Handle,float*,BOOL,wc3::Handle){};
     wc3::TimerGetElapsed=[](wc3::Handle){return Bits(clockSeconds);};

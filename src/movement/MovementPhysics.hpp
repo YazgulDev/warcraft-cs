@@ -36,6 +36,7 @@ public:
     float StepHeight() const { return settings_.stepHeight; }
     float MaxWalkSlope() const { return settings_.maxWalkSlope; }
     float HullRadius() const { return settings_.hullRadius; }
+    bool ObjectMeshCollision() const { return settings_.objectMeshCollision; }
     float BodyHeight() const { return (64-28*duck_)*worldScale+12; }
     bool NativeUnitCollision() const { return settings_.useNativeUnitCollision; }
     float EyeZ() const { return feetZ_ + (64 - 28 * duck_) * worldScale; }

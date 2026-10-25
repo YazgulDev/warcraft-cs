@@ -400,6 +400,14 @@ int main() {
     assert(movement.MaxWalkSlope()==50 && movement.HullRadius()==18 && movement.FeetZ()==feet && movement.VerticalVelocity()==vertical);
     DeleteFileA(path.c_str());
     // New squad parameters use the real INI boundary; live snapshots clamp invalid distances/refresh rates.
+    // Mesh detail reloads through the existing snapshot without resetting airborne motion.
+    for(const char* value:{"", "broken", "true", "false", "TRUE"}) {
+        WritePrivateProfileStringA("Movement","ObjectMeshCollision",value,path.c_str());
+        movement.Configure(GameplaySettings::Load(path).movement);
+        assert(movement.ObjectMeshCollision()==(std::strcmp(value,"false")!=0));
+        assert(movement.FeetZ()==feet && movement.VerticalVelocity()==vertical);
+    }
+    DeleteFileA(path.c_str());
     assert(ShortcutBindings{}.Key(ShortcutAction::SquadOrders)=='Y');
     assert(ShortcutBindings::Parse("SEMICOLON")==VK_OEM_1 && ShortcutBindings::Parse(";")==VK_OEM_1 && ShortcutBindings::Label(VK_OEM_1)==";");
     {std::ofstream file(path);file<<"[Shortcuts]\nSpeed=SEMICOLON\n";}
