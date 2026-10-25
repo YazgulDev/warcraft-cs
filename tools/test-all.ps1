@@ -2,8 +2,9 @@ $ErrorActionPreference='Stop'
 $root=Split-Path -Parent $PSScriptRoot
 # Standalone checkouts start without build output; each numerical regression runs without game files.
 New-Item -ItemType Directory -Path (Join-Path $root 'build') -Force | Out-Null
-# Fog restoration is a platform-adapter contract with synthetic native switches.
-foreach ($name in @('window-input','fog-of-war','diagnostic-log','native-frame-rate','native-frame-presentation','native-camera-far-clip','movement','movement-obstacles','warcraft-collision','fullscreen-view','minimap-layout','native-minimap','fps-projection','world-labels','mouse-look','hitboxes','melee','combat-damage','gameplay-settings','recoil')) {
+# Camera edge ownership and static mesh contacts join the synthetic adapter suites;
+# none of these checks controls an active Warcraft game or campaign.
+foreach ($name in @('window-input','fog-of-war','diagnostic-log','native-frame-rate','native-frame-presentation','native-camera-far-clip','map-camera-guard','movement','movement-obstacles','static-collision','warcraft-collision','fullscreen-view','minimap-layout','native-minimap','fps-projection','world-labels','mouse-look','hitboxes','melee','combat-damage','gameplay-settings','recoil')) {
     & (Join-Path $PSScriptRoot "test-$name.ps1")
 }
 & (Join-Path $PSScriptRoot 'test-tree-and-wheel.ps1')
