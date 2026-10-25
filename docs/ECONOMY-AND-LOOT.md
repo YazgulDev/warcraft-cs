@@ -3,7 +3,7 @@
 Source feature; the published 0.11.0 package does not include these changes yet.
 
 The default B menu and quick-ammo purchase use a separate CS dollar wallet.
-Each player's wallet starts with $800 once per map, earns $300 per confirmed
+Each player's wallet starts with $800 once per map, earns $200 per confirmed
 hostile creature killed with CS/Half-Life firearms/melee, HE, C4 or RPG, and holds at most
 $16000. Native Warcraft gold, map resource triggers, loot tables and item slots
 are preserved. F6/F7/F9, switching units, free-refill shortcuts and F8 do not
@@ -40,7 +40,7 @@ to reload. Updates add missing keys and preserve custom values.
 | --- | --- | --- |
 | Economy / Currency | dollars | dollars or gold; F8 |
 | Economy / StartingMoney | 800 | Whole dollars, 0..1000000, limited by MaximumMoney; next new map/player wallet |
-| Economy / KillReward | 300 | Whole dollars, 0..1000000; subsequent kills after F8 |
+| Economy / KillReward | 200 | Whole dollars, 0..1000000; subsequent kills after F8 |
 | Economy / MaximumMoney | 16000 | Whole dollars, 0..1000000; F8 clamps existing balances, increasing it grants no money |
 | WeaponDrops / Enabled | true | true/false; F8 disable removes ground drops |
 | WeaponDrops / ChancePercent | 0.5 | 0..100 percent per eligible kill; zero disables future rolls |

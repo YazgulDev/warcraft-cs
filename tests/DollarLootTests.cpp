@@ -23,6 +23,8 @@ int main() {
     assert(wallet.Balance(1,settings.economy)==800 && wallet.Balance(2,settings.economy)==800);
     int balance=wallet.Balance(1,settings.economy),ammo=0,reserve=0;
     assert(inventory.Buy(0,false,settings,balance,ammo,reserve,30,90)==BuyInventory::Result::NoGold && balance==800);
+    // Three $200 rewards raise the $800 start enough to buy the $1250 rifle.
+    assert(wallet.Reward(1,settings.economy)==200);
     wallet.Reward(1,settings.economy);wallet.Reward(1,settings.economy);balance=wallet.Balance(1,settings.economy);
     assert(inventory.Buy(0,false,settings,balance,ammo,reserve,30,90)==BuyInventory::Result::Bought);
     wallet.Store(1,balance,settings.economy);assert(wallet.Balance(1,settings.economy)==150 && wallet.Balance(2,settings.economy)==800);

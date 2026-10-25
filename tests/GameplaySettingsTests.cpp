@@ -16,14 +16,14 @@ int main() {
     GameplaySettings settings;
     // Missing configs and F8 share the requested defaults; invalid values are rejected at the INI boundary.
     assert(settings.economy.currency==EconomySettings::Currency::Dollars && settings.economy.startingMoney==800);
-    assert(settings.economy.killReward==300 && settings.economy.maximumMoney==16000);
+    assert(settings.economy.killReward==200 && settings.economy.maximumMoney==16000);
     assert(settings.weaponDrops.enabled && settings.weaponDrops.chancePercent==.5f);
     assert(settings.rpg.radius==525 && settings.damage[WeaponSlots::RPG]==100);
     auto economyPath=(std::filesystem::current_path()/"economy-reload-test.ini").string();
     {std::ofstream f(economyPath);f<<"[Economy]\nCurrency=gold\nStartingMoney=99999\nMaximumMoney=2000\nKillReward=nan\n[WeaponDrops]\nEnabled=false\nChancePercent=999\nLifetimeSeconds=-2\nPickupRadius=nan\nMaximumDrops=0\n[RPG]\nRadius=nan\nDamage=nan\n";}
     auto economyReload=GameplaySettings::Load(economyPath);
     assert(economyReload.economy.currency==EconomySettings::Currency::Gold && economyReload.economy.startingMoney==2000);
-    assert(economyReload.economy.killReward==300 && !economyReload.weaponDrops.enabled);
+    assert(economyReload.economy.killReward==200 && !economyReload.weaponDrops.enabled);
     assert(economyReload.weaponDrops.chancePercent==100 && economyReload.weaponDrops.lifetimeSeconds==1);
     assert(economyReload.weaponDrops.pickupRadius==160 && economyReload.weaponDrops.maximumDrops==1);
     assert(economyReload.rpg.radius==525 && economyReload.damage[WeaponSlots::RPG]==100);

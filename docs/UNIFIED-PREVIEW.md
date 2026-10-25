@@ -58,7 +58,7 @@ Tau's default damage is now **100 primary / 1000 fully charged**; Gluon deals
 still apply. `DamageVersion=2` migrates the previous 20/200 and 14 stock values once;
 custom damage is preserved, including later edits back to the former values.
 
-The default dollar wallet starts with **$800**, pays **$300** for a hostile creature
+The default dollar wallet starts with **$800**, pays **$200** for a hostile creature
 killed by mod weapons/HE/C4/RPG, and caps at **$16000**. Native unit/spell/RTS kills
 are outside the initial reward adapter. `[Economy] Currency=gold` restores native
 gold purchases. The wallet is map-local; changing views or pressing F8 cannot
@@ -151,7 +151,7 @@ Explicit classic/hull/recovery choices survive updates; F8 reload preserves curr
 - Changed default Tau damage to 100 / 1000 charged and Gluon damage to 70 per tick, preserving custom settings.
 - Disabled native hero weapon contact sounds during FPS attacks by default while retaining native attack effects.
 - Fixed residual ranged attack audio from native instant-hit art during FPS weapon contacts, preserving spell and passive effects.
-- Changed default purchases to dollars with 800 starting money, 300 per mod weapon kill and a 16000 cap.
+- Changed default purchases to dollars with 800 starting money, 200 per mod weapon kill and a 16000 cap.
 - Added configurable rare weapon drops with a 0.5 percent default chance and E pickup.
 - Changed default RPG blast radius to 525 while retaining 100 peak damage.
 - Preserved custom settings and prevented a local preview from offering its published base as a newer build.

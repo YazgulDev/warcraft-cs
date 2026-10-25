@@ -24,7 +24,7 @@ $economyConfig=Join-Path $folder 'dollar-loot.ini'
 @('[Economy]','Currency=gold','StartingMoney=123','[WeaponDrops]','Enabled=false','ChancePercent=0.01','[RPG]','Damage=777','Radius=900','[Sky]','Default=forest') | Set-Content -LiteralPath $economyConfig -Encoding ascii
 Update-GameplayConfig $template $economyConfig
 $economyText=Get-Content -LiteralPath $economyConfig -Raw
-foreach($expected in @('Currency=gold','StartingMoney=123','MaximumMoney=16000','KillReward=300','Enabled=false','ChancePercent=0.01','MaximumDrops=64','Damage=777','Radius=900','Default=forest')) {
+foreach($expected in @('Currency=gold','StartingMoney=123','MaximumMoney=16000','KillReward=200','Enabled=false','ChancePercent=0.01','MaximumDrops=64','Damage=777','Radius=900','Default=forest')) {
     if(!$economyText.Contains($expected)){throw "Economy/loot migration lost $expected"}
 }
 $economyHash=(Get-FileHash $economyConfig).Hash;Update-GameplayConfig $template $economyConfig

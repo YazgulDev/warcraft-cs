@@ -388,7 +388,7 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     else if(_stricmp(currency.c_str(),"dollars"))wc3::Log("Invalid Economy.Currency; using dollars");
     result.economy.maximumMoney=int(number("Economy","MaximumMoney",16000,1000000));
     result.economy.startingMoney=std::min(result.economy.maximumMoney,int(number("Economy","StartingMoney",800,1000000)));
-    result.economy.killReward=int(number("Economy","KillReward",300,1000000));
+    result.economy.killReward=int(number("Economy","KillReward",200,1000000));
     result.weaponDrops.enabled=enabled("WeaponDrops","Enabled");
     result.weaponDrops.chancePercent=number("WeaponDrops","ChancePercent",.5f,100);
     result.weaponDrops.lifetimeSeconds=std::max(1.f,number("WeaponDrops","LifetimeSeconds",120,3600));

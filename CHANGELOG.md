@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased — creature kill reward
+
+- Set Economy.KillReward to $200 by default, including missing/invalid config fallback. Apply to subsequent confirmed hostile creature kills on F8, retain map gold and preserve custom rewards during setup.
+
 ## Unreleased — recovery default
 
 - Set Movement.Mode=recovery as the shipped, in-memory and missing/empty/invalid config default. Keep explicit classic/hull/recovery preferences during setup and preserve motion on F8. Cover defaults, invalid values, reload and older-mode preservation with the existing config/collision regressions.
