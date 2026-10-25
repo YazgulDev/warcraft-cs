@@ -29,7 +29,7 @@ then alternate A with a left mouse turn and D with a right turn.
 See [movement](MOVEMENT.md) and [third-person control](THIRD-PERSON.md).
 
 Select `[Movement] Mode=recovery` and press F8 to enable the latest recovery movement.
-The default `Mode=classic` restores movement before the 24 October collision redesign and leaves Home inactive.
+The default `Mode=recovery` enables platform protection and Home recovery. Optional `Mode=classic` restores movement before the 24 October collision redesign and leaves Home inactive.
 Recovery uses `[Shortcuts] RecoverPosition=HOME` (`NONE` disables it).
 It rechecks the destination and cannot restore a destroyed platform, rewind across a native
 script relocation or escape cargo, roots/stuns, casting or cursor menus. In valid open ground,

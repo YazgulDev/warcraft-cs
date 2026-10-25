@@ -14,5 +14,5 @@
 - Improved static prop collision so fitting arch openings stay passable and low parts of tall models can be jumped onto; preserved movement physics and conservative fallback.
 - Fixed platform-edge landings, retained live platform surfaces during native query dropout and preserved reachable sloping mesh support.
 - Added configurable invalid-position protection and Home recovery to revalidated nearby visited ground, preserving ordinary jumps, falls and underpasses.
-- Changed default classic movement to the original behavior before the 24 October collision redesign; preserved optional hull and recovery modes selectable on F8.
+- Changed default movement to recovery with platform protection and Home rescue; preserved classic and hull choices and F8 switching.
 - Fixed FPS camera separation at native camera edges and repaired out-of-world actor positions in every movement mode.

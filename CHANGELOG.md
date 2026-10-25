@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased — recovery default
+
+- Set Movement.Mode=recovery as the shipped, in-memory and missing/empty/invalid config default. Keep explicit classic/hull/recovery preferences during setup and preserve motion on F8. Cover defaults, invalid values, reload and older-mode preservation with the existing config/collision regressions.
+
 ## Unreleased
 
 - Restore movement before the 24 October jump/collision redesign as default Mode=classic, using the original 2babf58 native adapter and floor resolver. Keep Mode=recovery for the latest implementation and Mode=hull for the intermediate round-hull build. The earlier default selected a too-recent 25 October build; classic now excludes all later slope/ceiling/mesh/rescue restrictions. Preserve shared acceleration/jump tuning, F8 switching, saved preferences and unrelated gameplay. Compare the restored adapter with historical source and run its original collision regressions alongside the current mode/config suites.

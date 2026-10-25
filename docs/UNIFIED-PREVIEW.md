@@ -113,13 +113,13 @@ All three preferences reload on F8 and survive updates. Local physics, geometry 
 fixtures pass; the corrected DLL still needs verification in the reported Ancient One campaign fight.
 Save and close Warcraft, install this preview and restart before trying the fix.
 
-The default `[Movement] Mode=classic` now restores movement before the 24 October 2026
+The optional `[Movement] Mode=classic` restores movement before the 24 October 2026
 jump/collision redesign, using the 2babf58 adapter and original native-floor landing resolver.
 It restores the old actor radius, model box overlap, axis sliding and native bridge handling,
 without the later slope/head/mesh restrictions or rescue behavior. This corrects the earlier
 choice of the too-recent 25 October build. `Mode=recovery` retains all the latest hull/platform/Home
 features, and `Mode=hull` retains the intermediate round-hull version. Missing/unknown/empty modes
-use classic; saved explicit preferences survive setup and reload on F8 without resetting motion.
+use recovery; saved explicit preferences survive setup and reload on F8 without resetting motion.
 Weapons, economy and host support remain unchanged. Source comparison and the original historical
 collision tests verify the restored strategy; modern mode/config/physics regressions also pass.
 Install/restart once for this correction. Native campaign traversal has not been driven in game.
@@ -132,11 +132,15 @@ cinematics and unrelated cameras retain their native behavior. The clamp hook is
 gated and is not enabled on the unverified 1.27a internal ABI. Every movement mode repairs an
 already out-of-world actor before idle/floor resolution and after native placement, preserving
 tangential and inward motion. This changes only boundary ownership in classic; the original
-terrain/object/jump strategy and default remain in place. Synthetic adapter tests cover repeated
+terrain/object/jump strategy remains available. Synthetic adapter tests cover repeated
 render clamps, rotated bounds, all edges, yaw/pitch changes, RTS/unrelated cameras and signature
 refusal; collision tests cover idle repair, jumping, edge sliding and retreat in all modes.
 Install Player and restart after saving to load the corrected DLL. The active campaign was
 observed without driving it; native traversal with the new DLL has not yet been tested.
+
+The current default is `[Movement] Mode=recovery` for fresh installs and missing, empty or
+invalid mode names. It enables the latest platform support and automatic/Home recovery.
+Explicit classic/hull/recovery choices survive updates; F8 reload preserves current movement.
 
 <!-- launcher-summary
 - Added experimental Warcraft III 1.27a and Direct3D 9 support alongside 1.26a.
@@ -155,6 +159,6 @@ observed without driving it; native traversal with the new DLL has not yet been 
 - Improved static prop collision so fitting arch openings stay passable and low parts of tall models can be jumped onto; preserved movement physics and conservative fallback.
 - Fixed platform-edge landings, retained live platform surfaces during native query dropout and preserved reachable sloping mesh support.
 - Added configurable invalid-position protection and Home recovery to revalidated nearby visited ground, preserving ordinary jumps, falls and underpasses.
-- Changed default classic movement to the original behavior before the 24 October collision redesign; preserved optional hull and recovery modes selectable on F8.
+- Changed default movement to recovery with platform protection and Home rescue; preserved classic and hull choices and F8 switching.
 - Fixed FPS camera separation at native camera edges and repaired out-of-world actor positions in every movement mode.
 -->

@@ -11,8 +11,8 @@
 #include <limits>
 
 namespace {
-// The retained hull strategy has its own fixture default; production defaults select the older classic strategy.
-struct HullSettings : MovementSettings {HullSettings(){classicCollision=false;}};
+// Keep the hull fixture explicit so changing the production default cannot alter its regression coverage.
+struct HullSettings : MovementSettings {HullSettings(){classicCollision=false;platformRecovery=false;}};
 float unitX=0,unitY=0;
 bool bridgeAlive=true,edge=false,nativeBlocked=false,cliff=false,invalidDeck=false;
 bool drop=false, prop=false, wall=false, slope=false, water=false;
@@ -503,9 +503,10 @@ int main(){
     for(int frame=0;frame<120;++frame){jumper.Step(vertical,1.f/60,250);collision.Move(1,jumper,1.f/60);vertical.jump=false;}
     Require(jumper.FeetZ()==100,"hull restores center-only native deck support from the selected historical build");
     deckPatch=false;
-    // Production default classic must use the complete pre-24-October strategy, not the hull fixture.
+    // Explicit classic must retain the complete pre-24-October strategy independently of the default mode.
     deckPatch=false;slope=true;slopeGradient=0;meshScene=0;actorRadius=0;collision.Reset();
-    MovementSettings classicSettings;Require(classicSettings.classicCollision,"classic is the production default");
+    MovementSettings classicSettings;Require(!classicSettings.classicCollision && classicSettings.platformRecovery,"recovery is the production default");
+    classicSettings.classicCollision=true;classicSettings.platformRecovery=false;
     jumper.Configure(classicSettings);unitX=unitY=0;jumper.Reset(60);collision.RequestRecovery();collision.Move(1,jumper,0);
     Require(jumper.FeetZ()==100,"classic restores the original native-floor landing resolver");
     ceiling=true;ceilingZ=230;jumper.Reset(100);vertical={};vertical.jump=true;float oldPeak=100;

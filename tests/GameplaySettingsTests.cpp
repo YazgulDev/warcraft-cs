@@ -411,13 +411,15 @@ int main() {
     assert(ShortcutBindings{}.Key(ShortcutAction::SquadOrders)=='Y');
     // Recovery settings use the same validated F8 snapshot and retain the active motor state.
     assert(ShortcutBindings{}.Key(ShortcutAction::RecoverPosition)==VK_HOME);
-    // The selected mode is a real config/F8 switch; unknown names restore the requested earlier default.
-    assert(MovementSettings{}.classicCollision && !MovementSettings{}.platformRecovery);
-    for(const char* value:{"", "broken", "classic", "hull", "HULL", "recovery", "RECOVERY"}) {
+    // The selected mode is a real config/F8 switch; defaults and unknown names select recovery.
+    assert(!MovementSettings{}.classicCollision && MovementSettings{}.platformRecovery);
+    auto missingMode=GameplaySettings::Load(path).movement;
+    assert(!missingMode.classicCollision && missingMode.platformRecovery);
+    for(const char* value:{"", "broken", "classic", "CLASSIC", "hull", "HULL", "recovery", "RECOVERY"}) {
         WritePrivateProfileStringA("Movement","Mode",value,path.c_str());
         movement.Configure(GameplaySettings::Load(path).movement);
-        assert(movement.PlatformRecovery()==(!_stricmp(value,"recovery")));
-        assert(movement.ClassicCollision()==(_stricmp(value,"recovery") && _stricmp(value,"hull")));
+        assert(movement.PlatformRecovery()==(_stricmp(value,"classic") && _stricmp(value,"hull")));
+        assert(movement.ClassicCollision()==(!_stricmp(value,"classic")));
         assert(movement.FeetZ()==feet && movement.VerticalVelocity()==vertical);
     }
     WritePrivateProfileStringA("Movement","Mode","classic",path.c_str());

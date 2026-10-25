@@ -33,8 +33,8 @@ RTS camera limits do not define a walking wall. On verified 1.26a, FPS eye place
 unit through those camera edges on native render updates too, without expanding mission or
 minimap bounds. The render clamp adapter remains unavailable on unverified 1.27a internals.
 
-The default classic mode uses the original pre-rework collision. The following round hull and local
-surface features apply to optional hull/recovery modes. Every swept
+The optional classic mode uses the original pre-rework collision. The following round hull and local
+surface features apply to hull/recovery modes; recovery is the default. Every swept
 step checks feet, standing/crouching body height and head clearance against the current terrain,
 transformed obstacle bounds and native bridge decks. Jumping directly below an underside stops upward
 velocity; releasing crouch under a low ceiling retains the last fitting stance. A low step is accepted
@@ -72,7 +72,7 @@ simulation step applies the new speed cap. Jump speed applies to the next takeof
 
 | `[Movement]` key | Default | Range and units |
 | --- | --- | --- |
-| Mode | classic | classic/hull/recovery, case-insensitive. classic restores 24 October pre-rework movement (2babf58); hull retains the intermediate 25 October round-hull build; recovery retains the latest platform/Home behavior. F8 switches without resetting motion |
+| Mode | recovery | classic/hull/recovery, case-insensitive. classic restores 24 October pre-rework movement (2babf58); hull retains the intermediate 25 October round-hull build; recovery retains the latest platform/Home behavior. F8 switches without resetting motion |
 | UseNativeUnitCollision | true | true/false; live Warcraft actor/creature footprints. Ignore Locust/pathing-disabled helpers; buildings/trees retain solid model volumes. false restores visual creature boxes and the 24-unit actor footprint |
 | BunnyHop | true | true/false; preserves excess takeoff momentum and enables the optional boost and air speed cap. false clips excess speed to the current weapon's running speed at each takeoff |
 | AutoJump | true | true/false; false requires a new Space press per jump |
@@ -150,7 +150,8 @@ No SDK implementation is embedded; Warcraft heightfields, native pathing and mod
 
 ## Selectable movement modes
 
-`[Movement] Mode=classic` is the default. It restores the movement from before the 24 October
+`[Movement] Mode=recovery` is the default, enabling the latest platform protection and Home recovery.
+The optional `Mode=classic` restores the movement from before the 24 October
 jump/collision rework, using the owned 2babf58 collision adapter and original floor-landing rules.
 This is the version before yesterday's redesign, not the later 25 October passage-collision build.
 Classic retains the old native actor radius, box overlap/axis sliding, native bridge handling and
@@ -160,11 +161,11 @@ head clipping and automatic/Home rescue do not run in this mode.
 `Mode=recovery` keeps the complete latest round-hull, platform and recovery implementation.
 `Mode=hull` also retains the intermediate 25 October build without platform recovery. Modes share
 acceleration, jump/gravity, air-strafe tuning and status ownership. Save the installed INI and press
-F8 to switch. Unknown/empty/missing names select classic; updates preserve explicit selections.
+F8 to switch. Unknown/empty/missing names select recovery; updates preserve explicit selections, including classic and hull.
 Classic clears queued rescue/checkpoints without resetting velocity, stance or position.
 
 The original historical collision tests pass against the restored production strategy, and source
-comparison confirms the adapter matches 2babf58 except its class and explicit resolver names.
+comparison retains the 2babf58 terrain/object/jump strategy, with the later shared world-boundary correction.
 Current regression tests separately exercise classic, hull and recovery routing. Install/restart
 once for this corrected native mode selection; campaign traversal still needs in-game verification.
 

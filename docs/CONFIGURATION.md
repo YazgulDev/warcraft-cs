@@ -60,9 +60,10 @@ interaction regardless of these display preferences.
 
 ## Movement collision preview
 
-The development preview defaults to `[Movement] Mode=classic`, restoring the movement
-before the 24 October jump/collision redesign (2babf58). Set `Mode=recovery` to keep the latest platform
-support and Home rescue. `Mode=hull` retains the intermediate round-hull build. Mode names are case-insensitive; unknown/empty/missing values use classic.
+The development preview defaults to `[Movement] Mode=recovery`, enabling the latest round-hull,
+platform support and Home rescue. Set `Mode=classic` for movement before the 24 October
+jump/collision redesign (2babf58). `Mode=hull` retains the intermediate round-hull build.
+Mode names are case-insensitive; unknown/empty/missing values use recovery.
 Save and press F8 to switch without resetting motion. Updates preserve an explicit mode.
 
 Optional hull/recovery modes use `[Movement] MaxWalkSlope=46` (15–75 degrees) and
