@@ -517,5 +517,23 @@ int main(){
     narrowPassage=false;actorRadius=0;slope=true;slopeGradient=0;meshScene=1;unitX=unitY=0;jumper.Reset(100);
     for(int frame=0;frame<60;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
     Require(unitX<44,"classic uses the historical coarse object bounds instead of later arch mesh collision");
+    // Boundary ownership is shared by every strategy, including idle actors already
+    // beyond the world and momentum tangential to an edge. Other collision stays historical.
+    meshScene=0;actorRadius=0;slope=true;slopeGradient=0;bridgeAlive=false;
+    for(int mode=0;mode<3;++mode) {
+        MovementSettings setting;setting.classicCollision=mode==0;setting.platformRecovery=mode==2;
+        jumper.Configure(setting);collision.Reset();unitX=5000;unitY=-5000;jumper.Reset(100);
+        collision.Move(1,jumper,0);
+        Require(unitX==4072 && unitY==-4072,"idle out-of-world actors return within their footprint boundary");
+        MoveInput along;along.right=1;along.yaw=0;unitY=0;
+        for(int frame=0;frame<45;++frame){jumper.Step(along,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+        Require(unitX==4072 && std::abs(unitY)>100,"world edge preserves tangential movement");
+        MoveInput outside;outside.forward=1;outside.jump=true;
+        for(int frame=0;frame<45;++frame){jumper.Step(outside,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+        Require(unitX<=4072,"jumping cannot carry the actor beyond the world boundary");
+        outside.forward=-1;outside.jump=false;
+        for(int frame=0;frame<60;++frame){jumper.Step(outside,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+        Require(unitX<3972,"retreat from the map edge remains usable");
+    }
     std::puts("Warcraft classic/hull/recovery collision regressions passed.");
 }

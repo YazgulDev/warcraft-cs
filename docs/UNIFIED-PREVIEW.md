@@ -124,6 +124,20 @@ Weapons, economy and host support remain unchanged. Source comparison and the or
 collision tests verify the restored strategy; modern mode/config/physics regressions also pass.
 Install/restart once for this correction. Native campaign traversal has not been driven in game.
 
+The 1.26a FPS camera now retains the controlled unit's physical eye position at RTS camera
+edges. Native field changes are applied before the final eye target, and the verified native
+position clamp is relaxed during each live FPS camera update, including later render updates.
+Its authored bounds are immediately restored after each call; mission/minimap bounds, RTS,
+cinematics and unrelated cameras retain their native behavior. The clamp hook is signature
+gated and is not enabled on the unverified 1.27a internal ABI. Every movement mode repairs an
+already out-of-world actor before idle/floor resolution and after native placement, preserving
+tangential and inward motion. This changes only boundary ownership in classic; the original
+terrain/object/jump strategy and default remain in place. Synthetic adapter tests cover repeated
+render clamps, rotated bounds, all edges, yaw/pitch changes, RTS/unrelated cameras and signature
+refusal; collision tests cover idle repair, jumping, edge sliding and retreat in all modes.
+Install Player and restart after saving to load the corrected DLL. The active campaign was
+observed without driving it; native traversal with the new DLL has not yet been tested.
+
 <!-- launcher-summary
 - Added experimental Warcraft III 1.27a and Direct3D 9 support alongside 1.26a.
 - Added Player setup for both hosts using exact local Miles export forwarders without C++ Build Tools.
@@ -142,4 +156,5 @@ Install/restart once for this correction. Native campaign traversal has not been
 - Fixed platform-edge landings, retained live platform surfaces during native query dropout and preserved reachable sloping mesh support.
 - Added configurable invalid-position protection and Home recovery to revalidated nearby visited ground, preserving ordinary jumps, falls and underpasses.
 - Changed default classic movement to the original behavior before the 24 October collision redesign; preserved optional hull and recovery modes selectable on F8.
+- Fixed FPS camera separation at native camera edges and repaired out-of-world actor positions in every movement mode.
 -->

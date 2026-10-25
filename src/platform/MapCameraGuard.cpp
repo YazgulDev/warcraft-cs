@@ -21,6 +21,8 @@ Field field = nullptr;
 Follow follow = nullptr;
 Orient orient = nullptr;
 Position position = nullptr;
+using ClampPosition = float* (__thiscall*)(uintptr_t, float*, const float*);
+ClampPosition clampPosition = nullptr;
 Setup setup = nullptr;
 SetupTimed setupTimed = nullptr;
 SetupZ setupZ = nullptr;
@@ -30,6 +32,23 @@ PanTimedZ panTimedZ = nullptr;
 Reset reset = nullptr;
 bool (*blocked)() = nullptr;
 unsigned blockedWrites = 0;
+uintptr_t LiveCamera() {
+    using GetUI = uintptr_t (__fastcall*)(int,int);
+    uintptr_t ui = reinterpret_cast<GetUI>(gameBase + wc3::Rva(0x300710))(1,0);
+    return ui ? *reinterpret_cast<uintptr_t*>(ui + 0x254) : 0;
+}
+float* __fastcall ClampPositionHook(uintptr_t camera, uintptr_t, float* result, const float* requested) {
+    if (!blocked || !blocked() || camera != LiveCamera()) return clampPosition(camera,result,requested);
+    float saved[4]; auto limits = reinterpret_cast<float*>(camera + 0x4CC);
+    memcpy(saved,limits,sizeof(saved));
+    // The render update repeats this clamp after SetCameraPosition. Bypass it only
+    // for the live FPS camera, retaining native transforms, terrain sampling and RTS bounds.
+    limits[0]=limits[1]=-1000000.0f; limits[2]=limits[3]=1000000.0f;
+    float* value = nullptr;
+    __try { value=clampPosition(camera,result,requested); }
+    __finally { memcpy(limits,saved,sizeof(saved)); }
+    return value;
+}
 bool Block() {
     if (!blocked || !blocked()) return false;
     // Sparse diagnostics prove periodic RTS timers were intercepted without logging every frame.
@@ -52,9 +71,7 @@ void __cdecl ResetHook(float* t) { if (!Block()) reset(t); }
 
 void MapCameraGuard::PositionEyeTarget(float* x, float* y) {
     if (!cameraLayoutVerified) { wc3::SetCameraPosition(x,y); return; }
-    using GetUI = uintptr_t (__fastcall*)(int,int);
-    uintptr_t ui = reinterpret_cast<GetUI>(gameBase + wc3::Rva(0x300710))(1,0);
-    uintptr_t camera = ui ? *reinterpret_cast<uintptr_t*>(ui + 0x254) : 0;
+    uintptr_t camera = LiveCamera();
     if (!camera) return;
     float saved[4]; auto limits = reinterpret_cast<float*>(camera + 0x4CC);
     memcpy(saved,limits,sizeof(saved));
@@ -75,6 +92,14 @@ void MapCameraGuard::Install(uintptr_t base, bool (*shouldBlock)(), HookInstalle
     cameraLayoutVerified = !memcmp(reinterpret_cast<void*>(base + wc3::Rva(0x2F5ED0)),cameraGetter,sizeof(cameraGetter)) &&
         !memcmp(reinterpret_cast<void*>(base + wc3::Rva(0x3B4C62)),minXGetter,sizeof(minXGetter));
     wc3::Log("FPS transient camera clamp verified=%d; mission/minimap bounds retained",cameraLayoutVerified);
+    // This helper is verified only on 1.26a. Never apply its ABI/prologue to an untranslated build.
+    const unsigned char clampEntry[] = {0x83,0xEC,0x14,0xD9,0xEE,0x8B,0x44,0x24,0x1C};
+    const unsigned char clampMinX[] = {0xD9,0x81,0xD0,0x04,0x00,0x00};
+    bool renderClamp = cameraLayoutVerified && wc3::ActiveBuild()==wc3::GameBuildKind::Classic126a &&
+        !memcmp(reinterpret_cast<void*>(base+0x303070),clampEntry,sizeof(clampEntry)) &&
+        !memcmp(reinterpret_cast<void*>(base+0x303107),clampMinX,sizeof(clampMinX));
+    if(renderClamp) renderClamp=hook(reinterpret_cast<void*>(base+0x303070),reinterpret_cast<void*>(ClampPositionHook),reinterpret_cast<void**>(&clampPosition));
+    wc3::Log("FPS render camera clamp installed=%d; eye follows controlled unit at map camera edges",renderClamp);
     // These 1.26a native entry points use the verified JASS cdecl signatures, including all camera setups.
     hook(reinterpret_cast<void*>(base + wc3::Rva(0x3B48B0)), reinterpret_cast<void*>(FieldHook), reinterpret_cast<void**>(&field));
     hook(reinterpret_cast<void*>(base + wc3::Rva(0x3CD760)), reinterpret_cast<void*>(FollowHook), reinterpret_cast<void**>(&follow));

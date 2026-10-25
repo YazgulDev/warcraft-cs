@@ -1,5 +1,6 @@
 #include "WarcraftCollision.hpp"
 #include "DiagnosticLog.hpp"
+#include "MovementWorldBounds.hpp"
 #include "UnitCollisionProfile.hpp"
 #include "../geometry/CylinderHull.hpp"
 #include <algorithm>
@@ -321,13 +322,13 @@ void WarcraftCollision::Move(wc3::Handle unit, MovementPhysics& movement, float 
     // FPS may disable the actor's native pathing mask. Its known footprint remains valid,
     // unlike non-colliding helper obstacles, and must not suddenly inflate in a narrow corridor.
     radius_=body.known && body.radius>0 ? std::min(body.radius,movement.HullRadius()) : movement.HullRadius();
+    auto bounds=MovementWorldBounds::Read(radius_);
+    bounds.Constrain(unit,movement,x,y);
+    originalX=x;originalY=y;
+    float minX=bounds.minX,maxX=bounds.maxX,minY=bounds.minY,maxY=bounds.maxY;
     float dx = movement.VelocityX() * dt, dy = movement.VelocityY() * dt;
     float search=movement.PlatformRecovery() ? std::max(600.f,movement.RecoveryDistance()+radius_) : 600.f;
     auto obstacles = obstacles_.Snapshot(unit,x,y,search+std::hypot(dx,dy),movement.NativeUnitCollision(),movement.ObjectMeshCollision(),movement.PlatformRecovery());
-    auto bounds = wc3::GetWorldBounds();
-    float minX = wc3::Real(wc3::GetRectMinX(bounds)) + radius_, maxX = wc3::Real(wc3::GetRectMaxX(bounds)) - radius_;
-    float minY = wc3::Real(wc3::GetRectMinY(bounds)) + radius_, maxY = wc3::Real(wc3::GetRectMaxY(bounds)) - radius_;
-    wc3::RemoveRect(bounds);
     Ceiling(x,y,movement,obstacles);
     if (std::hypot(dx,dy)<.001f) {
         // Standing still needs floor resolution, but no collision rejection or blocked-movement telemetry.
@@ -386,6 +387,7 @@ void WarcraftCollision::Move(wc3::Handle unit, MovementPhysics& movement, float 
         }
     }
     x = wc3::Real(wc3::GetUnitX(unit)); y = wc3::Real(wc3::GetUnitY(unit));
+    bounds.Constrain(unit,movement,x,y);
     Ceiling(x,y,movement,obstacles);
     movement.ResolveSurface(Floor(x, y,movement,obstacles));
     Recover(unit,x,y,movement,obstacles);

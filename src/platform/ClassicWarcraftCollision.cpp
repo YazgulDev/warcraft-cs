@@ -1,6 +1,7 @@
 // Restore the owned pre-rework movement adapter from 2babf58; keep later collision in its separate strategy.
 #include "ClassicWarcraftCollision.hpp"
 #include "DiagnosticLog.hpp"
+#include "MovementWorldBounds.hpp"
 #include "UnitCollisionProfile.hpp"
 #include <algorithm>
 #include <cmath>
@@ -115,12 +116,12 @@ void ClassicWarcraftCollision::Move(wc3::Handle unit, MovementPhysics& movement,
     auto body=movement.NativeUnitCollision() ? UnitCollisionProfile::Read(unit,base_) : UnitCollisionProfile{};
     // The actor footprint follows native collision too; unknown profiles retain the conservative legacy radius.
     radius_=body.known && body.colliding ? body.radius : 24;
+    auto bounds=MovementWorldBounds::Read(radius_);
+    bounds.Constrain(unit,movement,x,y);
+    originalX=x;originalY=y;
+    float minX=bounds.minX,maxX=bounds.maxX,minY=bounds.minY,maxY=bounds.maxY;
     float dx = movement.VelocityX() * dt, dy = movement.VelocityY() * dt;
     auto obstacles = obstacles_.Snapshot(unit, x, y, 600 + std::hypot(dx, dy),movement.NativeUnitCollision());
-    auto bounds = wc3::GetWorldBounds();
-    float minX = wc3::Real(wc3::GetRectMinX(bounds)) + radius_, maxX = wc3::Real(wc3::GetRectMaxX(bounds)) - radius_;
-    float minY = wc3::Real(wc3::GetRectMinY(bounds)) + radius_, maxY = wc3::Real(wc3::GetRectMaxY(bounds)) - radius_;
-    wc3::RemoveRect(bounds);
     if (std::hypot(dx,dy)<.001f) {
         // Standing still needs floor resolution, but no collision rejection or blocked-movement telemetry.
         movement.ResolveClassicFloor(Floor(x,y,movement,obstacles));return;
@@ -168,5 +169,6 @@ void ClassicWarcraftCollision::Move(wc3::Handle unit, MovementPhysics& movement,
         }
     }
     x = wc3::Real(wc3::GetUnitX(unit)); y = wc3::Real(wc3::GetUnitY(unit));
+    bounds.Constrain(unit,movement,x,y);
     movement.ResolveClassicFloor(Floor(x, y, movement, obstacles));
 }

@@ -27,6 +27,12 @@ Map bounds and unsupported flat pathing cells remain blocked. Unknown custom mod
 permission to cross blocked pathing. Native cliff levels distinguish cliff faces from ordinary hills.
 Shallow-water support retains Warcraft's native height rather than dropping onto the submerged mesh.
 
+World boundaries include the actor radius in every mode. An actor already outside is clamped
+back before floor resolution even while idle; motion along the edge and inward remains usable.
+RTS camera limits do not define a walking wall. On verified 1.26a, FPS eye placement follows the
+unit through those camera edges on native render updates too, without expanding mission or
+minimap bounds. The render clamp adapter remains unavailable on unverified 1.27a internals.
+
 The default classic mode uses the original pre-rework collision. The following round hull and local
 surface features apply to optional hull/recovery modes. Every swept
 step checks feet, standing/crouching body height and head clearance against the current terrain,

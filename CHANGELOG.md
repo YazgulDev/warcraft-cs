@@ -15,6 +15,8 @@
 
 ## Unreleased — unified launcher preview
 
+- Fix 1.26a FPS eye/body separation at native camera edges: write the final eye target after camera fields, and guard the verified native position clamp during subsequent FPS render updates while immediately restoring authored mission/minimap limits. Retain RTS/cinematic/unrelated camera behavior and fail closed on unverified clamp code. Repair already out-of-world actors before idle/floor handling and after placement in all movement modes; preserve edge sliding, inward motion, the classic default and its original terrain/object/jump rules. Add synthetic native-camera and all-mode world-boundary regressions.
+
 - Fix the remaining native ranged audio path: an instant attack also creates ordinary unit attack art, whose embedded sound events survived contact-sound muting. Guard only its two verified 1.26a call sites during a silent FPS impact; retain passive/spell art, reentrant attacks by other units, TPS and RTS. Add actual x86 call-site regression thunks and adapter diagnostics. The existing `Combat.NativeAttackSound` preference controls both ordinary attack sources; installing the DLL correction requires a game restart after saving.
 
 - Silence the controlled unit's native weapon contact audio during FPS attacks by default with `[Combat] NativeAttackSound=false`, retaining native crits/orbs/passives and ordinary TPS audio. Guard the verified 1.26a sound field, restore it after synchronous contacts and keep callback lifecycle checks.
