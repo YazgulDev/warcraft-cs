@@ -26,7 +26,8 @@ std::vector<Handle> NearbyDestructables(float,float,float){return {10};}
 }
 void GameAudio::Play(const char*,float){++sounds;}
 void GameAudio::SetLoop(const char*,bool,float){}
-std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,bool nativeCollision){collisionFilters.push_back(nativeCollision);return cover;}
+// Combat must retain coarse cover snapshots when movement opts into static mesh detail.
+std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,bool nativeCollision,bool detailed,bool){assert(!detailed);collisionFilters.push_back(nativeCollision);return cover;}
 int main() {
     wc3::CreateTimer=[]()->wc3::Handle{return 1;};wc3::TimerStart=[](wc3::Handle,float*,BOOL,wc3::Handle){};
     wc3::TimerGetElapsed=[](wc3::Handle){return Bits(clockSeconds);};
@@ -49,6 +50,8 @@ int main() {
     wc3::GetDestructableLife=[](wc3::Handle u){return Bits(hp[u]);};wc3::GetDestructableX=[](wc3::Handle){return Bits(20);};wc3::GetDestructableY=[](wc3::Handle){return Bits(0);};
     GameplaySettings settings;settings.grenades.fuse=.2f;settings.grenades.throwSpeed=50;settings.grenades.gravity=50;settings.friendlyFirePercent=0;
     NativeGrenades field;GameAudio audio;Scene();
+    // The production HE/blast path reports each killed hostile once, including delayed detonations.
+    int rewards=0;field.SetKillSink([&](const KillReward& reward){assert(reward.owner==1);++rewards;});
     assert(field.Throw(1,WeaponSlots::HE,{0,0,100},{1,0,0},{0,0,0},settings));
     settings.damage[WeaponSlots::HE]=9999; // A later F8 snapshot cannot change the launched charge.
     field.Tick(audio,1,{0,0,100},{1,0,0});assert(damages==0);
@@ -94,5 +97,17 @@ int main() {
     assert(rockets.Visuals().size()==1);auto pausedFlight=rockets.Visuals()[0].position;
     rockets.Tick(audio,1,false,{0,0,96},{1,0,0},3000);assert(rockets.Visuals()[0].position==pausedFlight);
     rockets.Reset();rpg.rpg.available=false;assert(!rockets.Launch(1,{0,0,96},{1,0,0},{},rpg));
+    // Real HE/RPG adapters credit each lethal victim once, with no reward for their planter or repeated ticks.
+    field.Reset();Scene();settings=GameplaySettings{};settings.grenades.fuse=.2f;settings.friendlyFirePercent=0;
+    hp[2]=hp[3]=1;rewards=0;
+    assert(field.Throw(1,WeaponSlots::HE,{0,0,100},{1,0,0},{},settings));clockSeconds=.3f;
+    field.Tick(audio,1,{0,0,100},{1,0,0});assert(rewards==2);
+    field.Tick(audio,1,{0,0,100},{1,0,0});assert(rewards==2);
+    rockets.Reset();Scene();hp[2]=hp[3]=1;rewards=0;rpg=GameplaySettings{};rpg.rpg.available=true;rpg.friendlyFirePercent=0;
+    rockets.SetKillSink([&](const KillReward& reward){assert(reward.owner==1);++rewards;});
+    cover={Bounds3{{60,-100,0},{62,100,300}}};
+    assert(rockets.Launch(1,{0,0,96},{1,0,0},{},rpg));clockSeconds=.3f;
+    rockets.Tick(audio,1,false,{0,0,96},{1,0,0},3000);assert(rewards==2);
+    clockSeconds=1;rockets.Tick(audio,1,false,{0,0,96},{1,0,0},3000);assert(rewards==2);
     std::puts("PASS native clock, single detonation, damage/friendly/cover/gate policy, F8 snapshots, flash leases and smoke expiry.");
 }

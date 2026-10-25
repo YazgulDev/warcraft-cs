@@ -51,6 +51,10 @@ public static class LauncherUpdateTests {
             UpdateSelection.Select(update,"0.3.0",update.Manifest.Revision,null,true,true)==update,
             "Legacy same-version checks and explicit repair are not separated");
         update.Manifest.Validate("v0.3.0");
+        // Preview checks retain local features; explicit public reinstall and a newer stable release remain available.
+        Require(UpdateSelection.Select(update,"0.3.0","preview",null,false,false,true)==null,"Preview offered its published base as an upgrade");
+        Require(UpdateSelection.Select(update,"0.3.0","preview",null,false,true,true)==update,"Preview blocked explicit public reinstall");
+        Require(UpdateSelection.Select(update,"0.2.0","preview",null,false,false,true)==update,"Preview skipped a newer stable release");
         Require(update.Manifest.IsNewer("0.2.0",update.Manifest.Revision,null),"New release skipped");
         Require(!update.Manifest.IsNewer("0.4.0","old",null),"Downgrade allowed");
         Require(!update.Manifest.IsNewer("0.3.0",update.Manifest.Revision,update.Manifest.Revision),"Same build loops");

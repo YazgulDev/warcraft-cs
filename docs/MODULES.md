@@ -1,5 +1,12 @@
 # Source modules
 
+`GameBuild` owns exact host identity and address translation for 1.26a/experimental 1.27a.
+Unavailable internal adapters retain native behavior instead of installing legacy addresses.
+`D3DHooks` owns D3D9 interception. `GraphicsApi` adapts current presentation calls;
+`D3DGraphics` owns draw/state/matrix isolation, `D3DTextures` owns texture lifetime,
+and `RenderMatrix` owns portable matrix math. Gameplay and layout keep their existing
+modules. Native GL minimap/portrait capture remains separate. See `PORT-1.27.md`.
+
 `HudDiagnostics` samples phase-specific GL state independently of drawing, preserves
 queried texture state and the GL error queue, and records labelled font lifecycle
 events. The existing platform `DiagnosticLog` still owns serialization and rotation.
@@ -367,3 +374,72 @@ immunity; flash leases remain in `NativeGrenades`. `RocketView` owns original tr
 glow and airburst effects plus the private model, sharing `WorldEffectPass` with
 grenade world rendering. Overlay alone owns OpenGL context replacement. The controller
 coordinates accepted shots/reload/laser input rather than implementing projectile physics.
+
+Dollar economy and loot: `economy/DollarWallet` owns per-player map balances;
+`CurrencyDisplay` formats UI money. `inventory/WeaponDropRules` selects eligible
+content, while `platform/KillReward` snapshots confirmed CS damage deaths and
+`DroppedWeapons` owns pause-aware native chest effects. `BuyInventory::Pickup`
+applies ownership/ammo rules. The application wires explicit death callbacks from
+firearms, HE/C4 and RPG; callbacks never overwrite native gold or item inventories.
+
+## Half-Life energy weapons
+`HalfLifeEnergy` owns portable charge/channel lifecycle, cadence and cell expenditure. The controller translates its accepted events into the existing native Strike contact and GameAudio paths. `EnergyBeam` is a read-only contact snapshot; `EnergyBeamView` draws project-authored depth-tested geometry before held-weapon depth clearing. The common GunMesh bob/muzzle/animation path remains shared. `OptionalWeaponAssets` verifies independent seals; export_halflife_weapons converts only owned local/PAK data and publishes each seal last. BuyCatalog registers all four Half-Life weapons once for buying and group 6 selection.
+
+The energy beam samples GunMesh's shared interpolated muzzle anchor; ViewmodelAnchor compensates held/native FOV while preserving bob/roll and camera heading/pitch. EnergyBeamView tapers the near end. Portable projection and actual WGL attachment/pixel/state regressions accompany authorized native mouse purchases, damage/cell/charge/channel/mode/resource checks in an isolated map; ordinary builds exclude fixtures.
+
+Crowbar, Tau and Gluon opt into private WCG3 conversion. It preserves material flags,
+normal bones, parent indices, local animation poses and sequence loop flags.
+`StudioPose` interpolates local rigid transforms before composing the hierarchy;
+`StudioSkin` derives chrome coordinates from animated camera-space normals.
+`GunMesh` shares the composed pose between geometry, preview and muzzle attachments.
+WCG2 remains supported with its original sampling behavior; RPG and CS conversion
+retain that format. Synthetic conversion and hidden-WGL regressions cover both
+formats, chrome movement, loop seams and complete terminal action frames.
+
+`TauChargeFeedback` integrates the charge speed ramp as an absolute animation phase;
+the existing energy state exposes elapsed charge time without changing resource rules.
+`GameAudio` changes a reserved live loop voice's pitch rather than restarting buffers.
+`CrowbarContact` owns impact sample selection; the controller supplies native creature,
+structure/destructable or terrain classification independently of damage immunity.
+The owned converter fits Gluon's front opening in its rigid bone, while `ViewmodelAnchor`
+compensates native versus held aspect and near clipping. Overlay samples one animation
+time for both beam attachment and held geometry. Synthetic aperture/phase/projection
+tests and real XAudio2 pitch/loop tests cover these boundaries.
+
+## Unified Player host adaptation
+`setup/MilesForwarderBuilder.cs` parses PE export metadata and writes only the
+project-owned proxy's reserved `.wcsfwd` section. `miles-forwarders.ps1` supplies
+the existing .NET compilation bridge; `prebuilt-runtime.ps1` verifies package,
+host and module identities before deriving/copying bytes. Format-2 runtime
+packages list both supported hosts. Legacy packages retain exact host/hash checks.
+The original Miles DLL supplies all sound behavior through ordinal forwarders.
+`LauncherVariant.IsPreview` reads a build resource; update selection suppresses
+only the preview's published base, while ordinary stable selection is unchanged.
+
+`CylinderHull` in geometry owns round-footprint overlap and contact normals. `MovementSurface` carries
+local height/normal/walkability into `MovementPhysics`, which owns ground, sliding and head/stance
+responses. `WarcraftCollision` adapts live terrain, pathing, transformed solid bounds and native decks,
+using a per-update sample cache; it never substitutes a remote terrace height for a local contact.
+
+`CylinderMesh` owns portable cylinder/triangle contact and disk/plane height extrema.
+`StaticModelMesh` validates classic MDX arrays, stationary Stand tracks, material solidity and geoset
+visibility before publishing any mesh. `ModelBounds` reads owned mounted-map bytes; `MovementObstacles`
+caches local and transformed static geometry per map, refreshed when the sprite transform changes.
+Only movement opts into the detailed snapshot; grenade/rocket cover keeps the established coarse contract.
+Unsupported poses retain prior bounds, trees retain trunk filtering and native bridge decks remain authoritative.
+
+`MovementRecovery` retains a bounded portable history of visited positions. `WarcraftCollision`
+revalidates support/clearance and native walkability before restoring one, tracks platform rider
+provenance and rejects stale placement history. InputDispatcher queues Home on the controller mailbox;
+the controller filters cargo, disabled/casting and cursor states before requesting game-thread recovery.
+
+Movement mode is one validated snapshot field. WarcraftCollision selects center/rim deck support,
+CylinderMesh selects whole/reachable triangle support, and MovementObstacles selects native-only
+or retained platform surfaces. Classic also gates the complete recovery path and discards its history;
+the common acceleration, jump and ground/air motor implementation remains shared.
+
+`ClassicWarcraftCollision` preserves the owned pre-24-October-rework adapter and calls the original
+`ResolveClassicFloor` landing rules. WarcraftCollision composes this concrete classic strategy with
+its later hull/recovery strategy; one validated mode selects the complete behavior on the game thread.
+The acceleration/jump integrator stays shared. The classic adapter source is compared with 2babf58
+and exercised with the original historical collision regressions in addition to current mode tests.

@@ -25,6 +25,10 @@ inline const std::array<Weapon,WeaponSlots::Count> Weapons={{
     {"HE GRENADE","hegrenade-1.wav",1,0,100,0,0,350,false},
     {"FLASHBANG","flashbang-1.wav",2,0,0,0,0,1000,false},
     {"SMOKE GRENADE","sg_explode.wav",1,0,0,0,0,300,false},
-    {"RPG","hl_rpg_fire.wav",1,5,100,1.5f,2,30000,false}
+    {"RPG","hl_rpg_fire.wav",1,5,100,1.5f,2,30000,false},
+    // Energy cells feed the weapon directly: these two guns never use magazine reloads.
+    {"CROWBAR","hl_cbar_miss1.wav",0,0,10,.5f,0,150,true},
+    {"TAU CANNON","hl_gauss2.wav",100,0,20,.2f,0,30000,false},
+    {"GLUON GUN","hl_egon_run3.wav",100,0,14,.1f,0,30000,true}
 }};
 }

@@ -1,3 +1,4 @@
+#include "GraphicsApi.hpp"
 #include "ScopeView.hpp"
 #include "ReticleView.hpp"
 #include <windows.h>

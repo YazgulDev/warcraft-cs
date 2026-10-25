@@ -34,7 +34,7 @@ an older installation may retain different saved choices.
 
 `[Shortcuts]` remaps movement, weapon groups, spells, buying, squads and display
 switches. Use English physical keys: `A-Z`, `0-9`, `F1-F12`, `SPACE`, `CTRL`,
-`SHIFT`, `ALT`, `TAB`, `PERIOD`, `SEMICOLON`, or `NONE` to disable an optional action.
+`SHIFT`, `ALT`, `TAB`, `HOME`, `PERIOD`, `SEMICOLON`, or `NONE` to disable an optional action.
 Keys must be unique; change conflicting bindings together. Invalid layouts fall
 back to defaults and log the reason. Escape/F10 are reserved, and F6 remains the
 FPS recovery key. Mouse actions and buy-menu row numbers remain fixed.
@@ -57,6 +57,27 @@ HUD spell markers are `LV0` for unlearned, `PASS` for passive, `EMPTY` for unmap
 and `?` for an unsupported native timer. Warcraft still decides whether a cast or
 item use succeeds. F9 hides the HUD and disables player attacks, casts and inventory
 interaction regardless of these display preferences.
+
+## Movement collision preview
+
+The development preview defaults to `[Movement] Mode=recovery`, enabling the latest round-hull,
+platform support and Home rescue. Set `Mode=classic` for movement before the 24 October
+jump/collision redesign (2babf58). `Mode=hull` retains the intermediate round-hull build.
+Mode names are case-insensitive; unknown/empty/missing values use recovery.
+Save and press F8 to switch without resetting motion. Updates preserve an explicit mode.
+
+Optional hull/recovery modes use `[Movement] MaxWalkSlope=46` (15–75 degrees) and
+`HullRadius=24` (8–64 world units, the maximum player radius). Smaller native actor
+radii are retained. Both apply on F8 without resetting current position/velocity;
+updates preserve explicit values. `ObjectMeshCollision=true` (true/false) uses supported stationary
+prop surfaces for actual-height fit, floor and head clearance; false restores coarse object volumes.
+It also reloads on F8 and survives updates. Unknown/animated geometry retains conservative fallback.
+In `Mode=recovery`, `RecoverInvalidPosition=true` (true/false) repairs proven buried states and lost support for
+an established platform rider. It never promotes someone walking below a bridge onto its deck.
+`RecoveryDistance=512` (64–2048 horizontal Warcraft units) bounds the search through visited
+checkpoints. Both reload on F8; updates preserve explicit values. In recovery mode, Home remains available
+when automatic repair is disabled, unless `Shortcuts.RecoverPosition=NONE`.
+Install and restart once for the native hull/terrain code. See [movement contacts and geometry limits](MOVEMENT.md).
 
 ## Damage, buying and ammunition
 

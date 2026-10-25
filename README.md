@@ -8,6 +8,8 @@ quests and combat rules. Third-person and unarmed first-person views are also av
 [Install and play](INSTALL.md) · [Documentation](docs/README.md) ·
 [Discussions](https://github.com/YazgulDev/warcraft-cs/discussions)
 
+**Development preview:** experimental 1.27a/D3D9, the optional Half-Life arsenal and dollar economy are combined in this branch. See [preview installation and changes](docs/UNIFIED-PREVIEW.md) and [1.27a verification limits](docs/PORT-1.27.md).
+
 ## Start here
 
 - [Installation](INSTALL.md): choose a launcher, prepare your game and start playing.

@@ -1,6 +1,7 @@
 #pragma once
 #include "GrenadeWorldView.hpp"
 #include "RocketView.hpp"
+#include "EnergySpriteCache.hpp"
 #include "../combat/WeaponSlots.hpp"
 #include "GunMesh.hpp"
 #include "../application/ShooterController.hpp"
@@ -44,4 +45,5 @@ private:
     SkyView sky_;
     GrenadeWorldView grenadeWorld_;
     RocketView rocketView_;
+    EnergySpriteCache energyBeamArt_,energyImpactArt_;
 };

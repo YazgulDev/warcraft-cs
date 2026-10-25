@@ -13,6 +13,42 @@ function Update-GameplayConfig([string]$Template,[string]$Destination) {
     $lines=[Collections.Generic.List[string]]::new()
     $lines.AddRange([string[]]@(Get-Content -LiteralPath $Destination))
     $changed=$false
+    # Upgrade only previous stock energy values once. User tuning, including explicit zero, remains authoritative.
+    $energySection='';$energyVersion='1';$energyVersionIndex=-1;$energyValues=@{}
+    for($i=0;$i -lt $lines.Count;$i++) {
+        if($lines[$i] -match '^\s*\[([^\]]+)\]\s*$'){$energySection=$Matches[1];continue}
+        if($lines[$i] -match '^\s*(Damage|ChargedDamage|DamageVersion)\s*=\s*(.*?)\s*$') {
+            $key=$Matches[1];$value=$Matches[2].Trim()
+            if($energySection -eq 'HalfLife' -and $key -eq 'DamageVersion'){$energyVersion=$value;$energyVersionIndex=$i}
+            if($energySection -in @('TauCannon','GluonGun')){$energyValues[$energySection+'.'+$key]=@($i,$value)}
+        }
+    }
+    if($energyVersion -in @('','1')) {
+        foreach($upgrade in @(@('TauCannon.Damage',20,100),@('TauCannon.ChargedDamage',200,1000),@('GluonGun.Damage',14,70))) {
+            $saved=$energyValues[$upgrade[0]];[double]$oldValue=0
+            if($saved -and [double]::TryParse($saved[1],[Globalization.NumberStyles]::Float,[Globalization.CultureInfo]::InvariantCulture,[ref]$oldValue) -and $oldValue -eq $upgrade[1]) {
+                $lines[$saved[0]]=($upgrade[0] -split '\.')[1]+'='+$upgrade[2];$changed=$true
+            }
+        }
+        if($energyVersionIndex -ge 0){$lines[$energyVersionIndex]='DamageVersion=2';$changed=$true}
+    }
+    # Migrate only the former RPG stock radius once; preserve every other custom blast and damage value.
+    $rpgSection=$false;$radiusIndex=-1;$blastIndex=-1;$blastVersion='1'
+    for($i=0;$i -lt $lines.Count;$i++) {
+        if($lines[$i] -match '^\s*\[([^\]]+)\]\s*$'){$rpgSection=$Matches[1] -eq 'RPG';continue}
+        if($rpgSection -and $lines[$i] -match '^\s*(Radius|BlastVersion)\s*=\s*(.*?)\s*$') {
+            if($Matches[1] -eq 'Radius'){$radiusIndex=$i}else{$blastIndex=$i;$blastVersion=$Matches[2].Trim()}
+        }
+    }
+    if($blastVersion -in @('','1')) {
+        if($radiusIndex -ge 0) {
+            [double]$oldRadius=0
+            if([double]::TryParse(($lines[$radiusIndex] -split '=',2)[1].Trim(),[Globalization.NumberStyles]::Float,[Globalization.CultureInfo]::InvariantCulture,[ref]$oldRadius) -and $oldRadius -eq 375) {
+                $lines[$radiusIndex]='Radius=525';$changed=$true
+            }
+        }
+        if($blastIndex -ge 0){$lines[$blastIndex]='BlastVersion=2';$changed=$true}
+    }
     # Upgrade the complete old stock trajectory once; every custom speed/gravity pair remains intact.
     $grenadeSection=$false;$throwIndex=-1;$gravityIndex=-1;$trajectoryIndex=-1;$trajectoryVersion='1'
     for($i=0;$i -lt $lines.Count;$i++) {

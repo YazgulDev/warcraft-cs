@@ -1,6 +1,7 @@
 #include "ModelBounds.hpp"
 #include "../platform/WarcraftApi.hpp"
 #include "TreeTrunkMesh.hpp"
+#include "StaticModelMesh.hpp"
 #include <cstring>
 #include <vector>
 
@@ -61,4 +62,12 @@ bool ModelBounds::Load(std::string path, Bounds3& result, TreeTrunkMesh* tree) {
     // Decode trunk surfaces from the same active-map model snapshot used for broad bounds.
     if (tree) tree->Load(path,bytes,result);
     return true;
+}
+bool ModelBounds::LoadCollision(std::string path,CylinderMesh& mesh) {
+    // Reuse the mounted-map lookup; collision must follow custom imported geometry too.
+    path=path.substr(0,path.find(','));
+    size_t extension=path.find_last_of('.');
+    if(extension!=std::string::npos)path.resize(extension);
+    std::vector<unsigned char> bytes;
+    return ModelBytes(path+".mdx",bytes) && StaticModelMesh::Load(bytes,mesh);
 }

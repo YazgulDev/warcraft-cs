@@ -2,6 +2,11 @@
 
 [Project home](README.md) · [Documentation](docs/README.md) · [Requirements](REQUIREMENTS.md)
 
+This source branch additionally supports experimental Warcraft III **1.27a
+(Game.dll 1.27.0.52240)** through unified Player or Developer setup, selecting D3D9 at launch.
+Published 0.11.0 Player modules cannot be reused across host versions. Read
+[port limits and verification status](docs/PORT-1.27.md) before using that host.
+
 You need your own installed Warcraft III **1.26a x86** (Game.dll **1.26.0.6401**)
 and, for CS weapons, Counter-Strike 1.6. Reforged and other Warcraft patches are unsupported.
 This offline, single-player prototype does not download games or redistribute their content.
@@ -104,10 +109,15 @@ Maps do not need editing. Enable FPS again after changing maps.
 - F6: return to RTS; F10: pause menu; F8: reload configuration.
 
 See [controls](docs/CONTROLS.md) and [settings](docs/CONFIGURATION.md) for details.
-The default starting kit is a loaded USP, knife and sword. C4 is available to buy for 3000 gold;
+The default starting kit is a loaded USP, knife and sword. C4 is available to buy for $3000;
 `[Loadout] BombCount=0` keeps it out of the starting kit. Existing configs retain their saved count;
-set it to 0 to adopt this default on the next map. Press B to buy firearms with Warcraft
-gold and `.` to buy current-weapon ammunition. Edit `[Loadout]`, `[Buy]`, weapon prices and `[Sky]`
+set it to 0 to adopt this default on the next map. Press B to buy firearms with
+a separate dollar wallet and `.` to buy current-weapon ammunition. Start with $800,
+earn $300 per hostile creature killed with CS weapons, HE, C4 or RPG; the cap is $16000.
+Rare weapon drops default to 0.5%, with E to collect a chest.
+`[Economy] Currency=gold` restores Warcraft gold purchases;
+`[WeaponDrops] Enabled=false` disables drops. See [economy and loot](docs/ECONOMY-AND-LOOT.md).
+Edit `[Economy]`, `[WeaponDrops]`, `[Loadout]`, `[Buy]`, weapon prices and `[Sky]`
 in `Game/WarcraftCS/WarcraftCS.ini`; F8 reloads settings (starting-kit changes apply to the next map).
 The CS-style menu uses 1 pistols, 4 rifles, 6 primary ammo, 7 secondary ammo and 8 equipment.
 Sky replacement is disabled by default. Current prices and capacities are in the [annotated INI](config/WarcraftCS.ini).
@@ -132,6 +142,15 @@ Use **0–100**: 0 mutes CS and 100 preserves the old levels; fractional values 
 Press **F8 in FPS** to apply it immediately, including sounds already playing. Warcraft's own
 music/effects are unaffected. For source installs, edit the prepared runtime's `WarcraftCS/WarcraftCS.ini`.
 Updates add this key to older configs without replacing an existing custom value.
+
+The unified preview mutes native hero weapon contact sounds in FPS by default while
+retaining attack effects. `[Combat] NativeAttackSound=true` restores them with F8.
+Reinstall with the same CS/Half-Life path to convert optional Gluon effect sprites.
+`[HalfLife] BeamEffects=true`, `OwnedSprites=true`, `ImpactSize=18` control animated
+beam/impact presentation (radius 0..100 world units; zero disables the flare), all
+F8 reloadable. Default Tau damage is 100 primary/1000 full charge, Gluon 70 per tick;
+updates migrate previous stock values once and preserve custom damage. See
+[Half-Life tuning](docs/HALF-LIFE-ARSENAL.md) for bounds and controls.
 
 Half-Life-style movement uses the same settings file. Run up with **W**, jump,
 release W, then alternate **A + mouse left / D + mouse right**. Hold **Space** to chain landings.

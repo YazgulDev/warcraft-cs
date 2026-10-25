@@ -27,5 +27,7 @@ When adding or changing weapons, apply
 private previews and configuration stay synchronized.
 
 Supported host: offline Warcraft III 1.26a x86 (Game.dll 1.26.0.6401).
+Experimental source host: 1.27a x86 (1.27.0.52240), using D3D9 by default.
+Read docs/PORT-1.27.md for limits; claim real 1.27a verification only after testing that owned build.
 Never test fixtures in the user's campaign. Preserve the latest progress before restarting
 an active game. Native opt-in verification scenes are excluded from ordinary builds.

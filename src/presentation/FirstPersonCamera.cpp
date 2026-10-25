@@ -21,8 +21,10 @@ void FirstPersonCamera::Update(float eyeX, float eyeY, float eyeZ, float yaw, fl
     float targetX = eyeX + horizontal * std::cos(yaw * radians);
     float targetY = eyeY + horizontal * std::sin(yaw * radians);
     float offsetZ = eyeZ + distance * std::sin(pitch * radians) - terrainBaseline;
-    MapCameraGuard::PositionEyeTarget(&targetX, &targetY);
     wc3::SetCameraField(1, &farZ, &zero); wc3::SetCameraField(2, &angle, &zero);
     wc3::SetCameraField(3, &fov, &zero); wc3::SetCameraField(4, &zero, &zero);
     wc3::SetCameraField(5, &rotation, &zero); wc3::SetCameraField(6, &offsetZ, &zero);
+    // Orientation/field refreshes may revalidate the target. Commit the physical eye
+    // after those writes, then let the FPS-only render guard retain it until the next tick.
+    MapCameraGuard::PositionEyeTarget(&targetX, &targetY);
 }
