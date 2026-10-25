@@ -97,4 +97,4 @@ F6 restores normal Warcraft control. Enable your chosen view again after changin
 
 ## Aiming labels in the local preview
 
-Direct hits on verified named head geometry deal x2 damage by default and show blood and floating **КРИТ** above the target after confirmed damage in the current preview. Look at a ground item or rune in F6/F9 to see its localized name below the reticle. Settings and host limitations are in the [preview guide](DUAL-CURRENCY-HEADSHOTS-PREVIEW.md).
+Direct hits on verified named head geometry deal x2 damage by default and show blood and floating **Headshot** above the target after confirmed damage in the current preview. Look at a ground item or rune in F6/F9 to see its localized name below the reticle. Settings and host limitations are in the [preview guide](DUAL-CURRENCY-HEADSHOTS-PREVIEW.md).

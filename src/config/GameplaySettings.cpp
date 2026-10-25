@@ -55,6 +55,9 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     grenades.flashRadius=std::max(32.f,number("Flashbang","Radius",1000,3000));
     grenades.flashSeconds=number("Flashbang","BlindSeconds",3,10);
     grenades.flashUnitStunSeconds=number("Flashbang","UnitStunSeconds",2,10);
+    // Separate victim eligibility from duration: all exposed creatures get a full stun by default.
+    grenades.flashStunAllUnits=enabled("Flashbang","StunAllUnits");
+    grenades.flashStunDistanceFalloff=enabled("Flashbang","StunDistanceFalloff",false);
     grenades.smokeRadius=std::max(32.f,number("SmokeGrenade","Radius",300,1000));
     grenades.smokeSeconds=std::max(1.f,number("SmokeGrenade","DurationSeconds",18,60));
     grenades.smokeOpacity=number("SmokeGrenade","Opacity",.85f,1);
@@ -521,6 +524,9 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
             weapon.interval=std::max(.1f,number(sections[slot],"FireInterval",.5f,5));
         }
     }
+    // Upgrade the previous unversioned stock HE once; versioned 100 and every custom value remain deliberate.
+    if(GetPrivateProfileIntA("HEGrenade","DamageVersion",1,filename.c_str())<2 && result.damage[WeaponSlots::HE]==100)
+        result.damage[WeaponSlots::HE]=300;
     result.knifeSecondaryDamage=number("Knife","SecondaryDamage",65,1000000);
     result.swordSecondaryDamage=number("Sword","SecondaryDamage",240,1000000);
     return result;

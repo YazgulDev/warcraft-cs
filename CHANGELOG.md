@@ -2,10 +2,15 @@
 
 ## Unreleased - local feature preview
 
+- Use Headshot for the floating head-contact caption, retaining blood, world anchoring and fading.
+- Raise HE peak damage from 100 to 300; upgrade old stock once with HEGrenade.DamageVersion=2 while preserving custom damage.
+- Stun all exposed flashbang creatures, including allies and the controlled actor, for a full two seconds by default; retain cover and safe pause leases.
+- Add configurable enemy-only targeting and distance-based stun time; verify native victim/overlap/lifecycle policy and config upgrade behavior. [Current grenade preview](docs/HEADSHOT-GRENADES-PREVIEW.md).
+
 - Default movement to classic in fresh/missing/invalid config; retain explicit recovery/hull choices and F8 switching.
-- Replace the centered HEADSHOT caption with confirmed world-space blood spray and rising Cyrillic critical text above the target.
+- Replace the centered HEADSHOT caption with confirmed world-space blood spray and rising Headshot text above the target.
 - Add bounded, spinning/falling/bouncing brass and shotgun cases for accepted conventional rounds, configurable with independent visual toggles.
-- Extend copied visual pools/Unicode world captions, actual WGL depth/state checks and config/movement regressions. [Current preview](docs/CLASSIC-BLOOD-CASINGS-PREVIEW.md).
+- Extend copied visual pools/Unicode world captions, actual WGL depth/state checks and config/movement regressions. [Earlier visual preview](docs/CLASSIC-BLOOD-CASINGS-PREVIEW.md).
 
 - Add dollar/gold selection in every buy-menu category, both balances and whole-price automatic gold fallback when dollars are insufficient; keep earning dollars while gold is selected.
 - Add configurable direct headshots (default x2) using named skeletal head surfaces on verified 1.26a models, with confirmed amber HUD feedback.

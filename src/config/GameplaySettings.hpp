@@ -138,7 +138,8 @@ struct GameplaySettings {
     bool nativeSky=true;
     std::string defaultSky="Des";
     std::array<std::string,256> tilesetSky{};
-    std::array<float, WeaponSlots::Count> damage = {36,33,34,115,40,2500,120,54,25,26,21,32,104,80,100,0,0,100,10,100,70};
+    // HE uses a fixed 300 peak independently of the controlled creature's native attack.
+    std::array<float, WeaponSlots::Count> damage = {36,33,34,115,40,2500,120,54,25,26,21,32,104,80,300,0,0,100,10,100,70};
     std::array<float, WeaponSlots::Count> heroMultiplier = {1,1,1,3,1,1,3,1.6f,.75f,.8f,.65f,1,3,2.4f,0,0,0,0,1,0,0};
     float knifeSecondaryDamage = 65, swordSecondaryDamage = 240;
     static GameplaySettings Load(const std::string& filename);

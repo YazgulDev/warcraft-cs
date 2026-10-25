@@ -514,3 +514,16 @@ foreach($expected in @('Mode=recovery','HeadshotBlood=false','CriticalText=false
 }
 $visualHash=(Get-FileHash $visualConfig).Hash;Update-GameplayConfig $template $visualConfig
 if((Get-FileHash $visualConfig).Hash -ne $visualHash){throw 'Visual update is not idempotent.'}
+
+# Only former unversioned stock HE upgrades. Later returns to 100 and custom damage/flash opt-outs survive.
+foreach($case in @(@('100','','300'),@('100','1','300'),@('100','2','100'),@('0','','0'),@('777','','777'))) {
+    $heConfig=Join-Path $folder ('he-damage-'+[guid]::NewGuid().ToString('N')+'.ini')
+    @('[HEGrenade]',('Damage='+$case[0]),$(if($case[1]){'DamageVersion='+$case[1]}),'[Flashbang]','StunAllUnits=false','StunDistanceFalloff=true','UnitStunSeconds=4','[Movement]','Mode=classic') | Set-Content -LiteralPath $heConfig -Encoding ascii
+    Update-GameplayConfig $template $heConfig
+    $heText=Get-Content $heConfig -Raw
+    foreach($expected in @(('Damage='+$case[2]),'DamageVersion=2','StunAllUnits=false','StunDistanceFalloff=true','UnitStunSeconds=4','Mode=classic')) {
+        if(!$heText.Contains($expected)){throw ('HE/flash migration lost '+$expected)}
+    }
+    $heHash=(Get-FileHash $heConfig).Hash;Update-GameplayConfig $template $heConfig
+    if((Get-FileHash $heConfig).Hash -ne $heHash){throw 'HE migration is not idempotent.'}
+}

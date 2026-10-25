@@ -41,5 +41,5 @@ int main(){
         effects.Reset();Clear(1);renderer.Draw(effects,view,width,height,8,2000);assert(Pixels()==hidden);
         renderer.Reset(true);wglMakeCurrent(nullptr,nullptr);wglDeleteContext(context);
     }
-    ReleaseDC(window,dc);DestroyWindow(window);std::puts("Real WGL: world blood, brass cases, Cyrillic critical text, native-depth occlusion, raster restoration and context replacement passed.");
+    ReleaseDC(window,dc);DestroyWindow(window);std::puts("Real WGL: world blood, brass cases, floating Headshot caption, native-depth occlusion, raster restoration and context replacement passed.");
 }

@@ -741,5 +741,20 @@ int main() {
         assert(cv.shellOffset[1]>=-64 && cv.shellOffset[1]<=64 && cv.criticalScale>=.5f && cv.criticalScale<=2 && cv.shellBounce>=0 && cv.shellBounce<=.9f);
         if(!strcmp(value,"nan") || !strcmp(value,"inf") || !strcmp(value,"bad") || !*value)assert(cv.shellOffset[1]==-12 && cv.shellSpeed==140 && cv.bloodSeconds==.5f);
     }
+    // Stock HE migrates once in the actual startup/F8 loader; custom, zero and versioned 100 remain intentional.
+    for(const char* config:{"", "[HEGrenade]\nDamage=100\n", "[HEGrenade]\nDamage=100.0\nDamageVersion=1\n"}) {
+        {std::ofstream f(path);f<<config;}assert(GameplaySettings::Load(path).damage[WeaponSlots::HE]==300);
+    }
+    for(int damage:{0,100,777}) {
+        {std::ofstream f(path);f<<"[HEGrenade]\nDamage="<<damage<<"\nDamageVersion=2\n[Flashbang]\nStunAllUnits=false\nStunDistanceFalloff=true\n";}
+        auto explosive=GameplaySettings::Load(path);assert(explosive.damage[WeaponSlots::HE]==damage);
+        assert(!explosive.grenades.flashStunAllUnits && explosive.grenades.flashStunDistanceFalloff);
+    }
+    for(const char* value:{"", "broken", "true", "false", "0", "1"}) {
+        {std::ofstream f(path);f<<"[Flashbang]\nStunAllUnits="<<value<<"\nStunDistanceFalloff="<<value<<"\n";}
+        auto flash=GameplaySettings::Load(path).grenades;
+        assert(flash.flashStunAllUnits==(strcmp(value,"false") && strcmp(value,"0")));
+        assert(flash.flashStunDistanceFalloff==(!strcmp(value,"true") || !strcmp(value,"1")));
+    }
     DeleteFileA(path.c_str());return 0;
 }

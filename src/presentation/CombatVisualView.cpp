@@ -39,11 +39,12 @@ void CombatVisualView::Draw(const CombatVisuals& effects,const WorldLabelView& v
             Case(p.size,p.shotgun);glPopMatrix();
         }
     }
+    // The requested Headshot caption remains above its accepted world contact, never centered on the reticle.
     auto projection=view;projection.maximumDistance=farPlane;
     for(const auto& c:effects.Criticals()){
         UnitHealthBar anchor={{c.position[0],c.position[1],c.position[2]+c.age*c.rise},1,1,false};HealthBarPlacement at;
         if(HealthBarView::Project(anchor,projection,float(width),float(height),nearPlane,farPlane,at))
-            caption_.DrawAt(u8"\u041a\u0420\u0418\u0422",width,height,int(std::clamp(height/45,16,30)*c.scale),at.x,at.y,
+            caption_.DrawAt("Headshot",width,height,int(std::clamp(height/45,16,30)*c.scale),at.x,at.y,
                 1-c.age/c.lifetime,at.depth);
     }
 }

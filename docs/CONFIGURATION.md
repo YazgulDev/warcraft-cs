@@ -176,3 +176,7 @@ Unsupported model/pose adapters never invent a head location. Experimental 1.27a
 ## Current visual feedback preview
 
 The [classic/blood/casings preview](CLASSIC-BLOOD-CASINGS-PREVIEW.md) changes the fresh/default movement mode to `classic`; explicit `hull` and `recovery` remain available and saved choices survive installation. Its `[CombatVisuals]` keys control confirmed blood/critical text and cosmetic casing pools. All defaults, units, ranges and F8 behavior are listed in that guide and the annotated INI. No centered HEADSHOT word is drawn in this preview.
+
+## Stronger grenades preview
+
+The [current grenade preview](HEADSHOT-GRENADES-PREVIEW.md) defaults HE to `Damage=300`, with one-time `HEGrenade.DamageVersion=2` migration preserving custom/versioned damage. `[Flashbang] StunAllUnits=true` and `StunDistanceFalloff=false` apply the full existing `UnitStunSeconds=2` to every exposed creature, including the controlled actor and allies. False on the first option restores enemy-only targeting; true on the second enables distance falloff. Both booleans accept true/false or 1/0. F8 applies damage and these policies to subsequent throws; installation updates preserve saved choices. The floating caption now reads Headshot under the existing `CombatVisuals.CriticalText` option.

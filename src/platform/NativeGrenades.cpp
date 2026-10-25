@@ -48,8 +48,10 @@ bool NativeGrenades::Detonate(const Charge& charge,float now,GameAudio& audio,wc
         float duration=settings.flashSeconds*exposure;
         if(duration>0 && now+duration>flashStart_+flashDuration_){flashStart_=now;flashDuration_=duration;wc3::Log("grenade viewer flash exposure=%.3f seconds=%.3f",exposure,duration);}
     }
-    if(wc3::GetUnitTypeId(charge.actor)!=charge.type)return false;
-    unsigned generation=generation_;auto owner=wc3::GetOwningPlayer(charge.actor);
+    // Area disorientation survives a removed thrower. Only legacy enemy filtering needs a valid owner lookup.
+    bool actorValid=wc3::GetUnitTypeId(charge.actor)==charge.type;
+    if(!settings.flashStunAllUnits && !actorValid)return false;
+    unsigned generation=generation_;auto owner=actorValid ? wc3::GetOwningPlayer(charge.actor) : 0;
     auto group=wc3::CreateGroup();if(!group)return false;
     wc3::GroupEnumUnitsInRange(group,&from[0],&from[1],&radius,0);std::vector<wc3::Handle> targets;
     for(auto target=wc3::FirstOfGroup(group);target;target=wc3::FirstOfGroup(group)){wc3::GroupRemoveUnit(group,target);targets.push_back(target);}
@@ -62,9 +64,11 @@ bool NativeGrenades::Detonate(const Charge& charge,float now,GameAudio& audio,wc
         float before=wc3::Real(wc3::GetUnitState(target,0));if(before<=.405f)continue;
         GrenadePoint point={wc3::Real(wc3::GetUnitX(target)),wc3::Real(wc3::GetUnitY(target)),0};point[2]=wc3::Ground(point[0],point[1])+wc3::Real(wc3::GetUnitFlyHeight(target))+32;
         float falloff=GrenadeProjectile::Falloff(Distance(from,point),radius);if(falloff<=0 || Covered(from,point,obstacles))continue;
-        if(target!=viewer && settings.flashUnitStunSeconds>0 && wc3::IsUnitEnemy(target,owner) && !wc3::IsUnitType(target,2)) {
+        // Pause the controlled actor as well: its normal UnitStatus path then blocks movement, attacks and casting.
+        bool eligible=settings.flashStunAllUnits || (target!=viewer && wc3::IsUnitEnemy(target,owner));
+        if(eligible && settings.flashUnitStunSeconds>0 && !wc3::IsUnitType(target,2)) {
             auto found=std::find_if(stuns_.begin(),stuns_.end(),[&](const Stun& item){return item.unit==target;});
-            float until=now+settings.flashUnitStunSeconds*falloff;
+            float until=now+settings.flashUnitStunSeconds*(settings.flashStunDistanceFalloff ? falloff : 1.f);
             if(found!=stuns_.end())found->until=std::max(found->until,until);
             else if(!wc3::IsUnitPaused(target)) {wc3::PauseUnit(target,TRUE);stuns_.push_back({target,wc3::GetUnitTypeId(target),until});wc3::Log("grenade flash disoriented target=%08X seconds=%.2f",target,until-now);}
         }

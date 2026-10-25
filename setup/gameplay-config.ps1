@@ -13,6 +13,21 @@ function Update-GameplayConfig([string]$Template,[string]$Destination) {
     $lines=[Collections.Generic.List[string]]::new()
     $lines.AddRange([string[]]@(Get-Content -LiteralPath $Destination))
     $changed=$false
+    # Upgrade only the former HE stock peak once; keep custom damage, explicit zero and versioned stock choices.
+    $heSection=$false;$heDamageIndex=-1;$heVersionIndex=-1;$heVersion='1'
+    for($i=0;$i -lt $lines.Count;$i++) {
+        if($lines[$i] -match '^\s*\[([^\]]+)\]\s*$'){$heSection=$Matches[1] -eq 'HEGrenade';continue}
+        if($heSection -and $lines[$i] -match '^\s*(Damage|DamageVersion)\s*=\s*(.*?)\s*$') {
+            if($Matches[1] -eq 'Damage'){$heDamageIndex=$i}else{$heVersionIndex=$i;$heVersion=$Matches[2].Trim()}
+        }
+    }
+    if($heVersion -in @('','1')) {
+        [double]$oldHE=0
+        if($heDamageIndex -ge 0 -and [double]::TryParse(($lines[$heDamageIndex] -split '=',2)[1].Trim(),[Globalization.NumberStyles]::Float,[Globalization.CultureInfo]::InvariantCulture,[ref]$oldHE) -and $oldHE -eq 100) {
+            $lines[$heDamageIndex]='Damage=300';$changed=$true
+        }
+        if($heVersionIndex -ge 0){$lines[$heVersionIndex]='DamageVersion=2';$changed=$true}
+    }
     # Upgrade only previous stock energy values once. User tuning, including explicit zero, remains authoritative.
     $energySection='';$energyVersion='1';$energyVersionIndex=-1;$energyValues=@{}
     for($i=0;$i -lt $lines.Count;$i++) {

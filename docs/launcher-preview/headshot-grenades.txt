@@ -1,0 +1,10 @@
+- Added selectable dollar and gold purchases with automatic gold fallback when dollars are insufficient.
+- Added configurable headshot damage, blood spray and floating Headshot text on verified 1.26a head contacts.
+- Fixed nearby units intercepting shots through empty model bounds with precise posed surface tracing.
+- Added localized first-person item and rune names under the reticle with obstacle occlusion.
+- Changed the default movement physics to classic while retaining optional recovery and hull modes.
+- Added falling, spinning cartridge cases for conventional firearms, including burst rounds and shotgun shells.
+- Preserved native defenses, separate wallets and custom settings on update.
+- Changed the default HE grenade peak damage from 100 to 300 with one-time stock configuration migration.
+- Changed flashbangs to stun every exposed creature for two seconds, including allies and the controlled actor.
+- Added configurable enemy-only flash targeting and optional distance-based stun duration.

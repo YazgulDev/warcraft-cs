@@ -119,10 +119,7 @@ units and buildings using swept hulls. This calibrates launch reach; Warcraft
 collision responses and the existing detonation/effect rules remain adaptations. HE has fixed peak damage, linear 3D falloff, cover checks and the
 existing friendly-fire percentage; neutral buildings and destructable gates
 retain native quest immunity. Flash blinds the controlled view according to
-distance, facing and cover. As a Warcraft adaptation, nearby hostile mobile
-units briefly pause; already paused units and the controlled actor are excluded,
-and only pauses acquired by this feature are released. Set UnitStunSeconds=0 to
-disable that adaptation. Smoke is a visual volume with depth-tested soft puffs,
+distance, facing and cover. Published 0.12.0 briefly paused nearby hostile mobile units and excluded the controlled actor. The current local preview stuns every exposed creature, including allies and the controlled actor, for the full UnitStunSeconds by default. Pre-paused map units are not leased, and only pauses acquired by this feature are released. StunAllUnits=false restores the former enemy-only filter; UnitStunSeconds=0 disables creature stuns. Smoke is a visual volume with depth-tested soft puffs,
 near-eye density and fade; it does not block bullets or alter native AI sight.
 Thrown bodies use the owner's original `w_hegrenade.mdl`, `w_flashbang.mdl` and
 `w_smokegrenade.mdl` with their textures, real perspective and world occlusion.
@@ -217,3 +214,7 @@ garrisons remain counted. Canceled/unobserved training eventually retries at the
 decision-time limit. Map callbacks are followed by a fresh ownership/exclusion check before
 the next order. Reinforcements stop within SupportDistance while fighting units retain combat.
 Changing the retry duration applies to newly accepted training reservations.
+
+## Grenade balance in the current local preview
+
+The [Headshot/grenades preview](HEADSHOT-GRENADES-PREVIEW.md) raises HE peak damage to 300 while retaining its 350-unit radius and cover/distance/native-defense rules. The stock 100 upgrades once; custom damage and versioned 100 survive updates. Flashbangs stun all exposed living creatures, including allies and the controlled actor, for two seconds by default. `StunAllUnits=false` and `StunDistanceFalloff=true` restore the optional older filtering/falloff behavior. Already-flying grenades retain their settings; F8 applies to new throws.
