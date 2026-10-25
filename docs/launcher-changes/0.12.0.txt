@@ -1,0 +1,18 @@
+- Added experimental Warcraft III 1.27a and Direct3D 9 support alongside 1.26a.
+- Added Player setup for both hosts using exact local Miles export forwarders without C++ Build Tools.
+- Added optional Half-Life Crowbar, Tau Cannon, Gluon Gun and RPG in the B / 9 Half-Life category.
+- Fixed Half-Life chrome skins, complete weapon animations, beam muzzle alignment, Tau charge feedback and varied Crowbar impacts.
+- Fixed delayed Gluon beam aiming and added animated energy strands, impact glow and optional owned Half-Life effect textures.
+- Changed default Tau damage to 100 / 1000 charged and Gluon damage to 70 per tick, preserving custom settings.
+- Disabled native hero weapon contact sounds during FPS attacks by default while retaining native attack effects.
+- Fixed residual ranged attack audio from native instant-hit art during FPS weapon contacts, preserving spell and passive effects.
+- Changed default purchases to dollars with 800 starting money, 200 per mod weapon kill and a 16000 cap.
+- Added configurable rare weapon drops with a 0.5 percent default chance and E pickup.
+- Changed default RPG blast radius to 525 while retaining 100 peak damage.
+- Preserved custom settings and source/runtime integrity through Player install, reinstall and release updates.
+- Improved local cliff collision, downhill sliding, round player hulls, narrow passages and crouching head clearance.
+- Improved static prop collision so fitting arch openings stay passable and low parts of tall models can be jumped onto; preserved movement physics and conservative fallback.
+- Fixed platform-edge landings, retained live platform surfaces during native query dropout and preserved reachable sloping mesh support.
+- Added configurable invalid-position protection and Home recovery to revalidated nearby visited ground, preserving ordinary jumps, falls and underpasses.
+- Changed default movement to recovery with platform protection and Home rescue; preserved classic and hull choices and F8 switching.
+- Fixed FPS camera separation at native camera edges and repaired out-of-world actor positions in every movement mode.

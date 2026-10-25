@@ -105,7 +105,7 @@ These are deterministic physics measurements, not a native-game performance or s
 Ground support is resolved after each swept substep, so fast uphill movement does not reuse the floor
 from the beginning of the frame. Unknown native collision profiles retain conservative bounds.
 The collision preference, walk angle and hull-radius cap reload on F8; updates preserve custom values.
-The native collision code requires installing this preview and restarting the game; F8 alone cannot replace it.
+The native collision code requires installing 0.12.0 and restarting the game; F8 alone cannot replace it.
 Unsupported animated/custom props and buildings retain conservative bounds and may still reject irregular openings.
 Native walkable bridge decks remain the surface authority. `ObjectMeshCollision` reloads on F8 without
 resetting current motion; setup adds a missing true default and preserves a saved false opt-out.
@@ -169,7 +169,7 @@ comparison retains the 2babf58 terrain/object/jump strategy, with the later shar
 Current regression tests separately exercise classic, hull and recovery routing. Install/restart
 once for this corrected native mode selection; campaign traversal still needs in-game verification.
 
-## Platform support and emergency recovery preview
+## Platform support and emergency recovery
 
 Everything in this section applies only with `Mode=recovery`.
 

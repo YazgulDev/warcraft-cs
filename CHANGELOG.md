@@ -1,69 +1,17 @@
 # Changelog
 
-## Unreleased — creature kill reward
+## 0.12.0 — 2026-10-25
 
-- Set Economy.KillReward to $200 by default, including missing/invalid config fallback. Apply to subsequent confirmed hostile creature kills on F8, retain map gold and preserve custom rewards during setup.
-
-## Unreleased — recovery default
-
-- Set Movement.Mode=recovery as the shipped, in-memory and missing/empty/invalid config default. Keep explicit classic/hull/recovery preferences during setup and preserve motion on F8. Cover defaults, invalid values, reload and older-mode preservation with the existing config/collision regressions.
-
-## Unreleased
-
-- Restore movement before the 24 October jump/collision redesign as default Mode=classic, using the original 2babf58 native adapter and floor resolver. Keep Mode=recovery for the latest implementation and Mode=hull for the intermediate round-hull build. The earlier default selected a too-recent 25 October build; classic now excludes all later slope/ceiling/mesh/rescue restrictions. Preserve shared acceleration/jump tuning, F8 switching, saved preferences and unrelated gameplay. Compare the restored adapter with historical source and run its original collision regressions alongside the current mode/config suites.
-
-- Fix native platform edge support and retain verified static platform surfaces when a native deck exists; keep combat cover policy unchanged. Clip sloping triangles to reachable height before floor queries. Add provenance-based platform rider protection and below-terrain repair, plus Home recovery to revalidated nearby visited ground with stale-history and clearance checks. Preserve ordinary falls, underpasses, jump physics and cargo/status ownership. Add F8 settings `Movement.RecoverInvalidPosition=true`, `RecoveryDistance=512` (64–2048 horizontal world units), and remappable `Shortcuts.RecoverPosition=HOME`/NONE with migration preservation and regression coverage.
-
-- Add stationary non-tree prop mesh collision for circular body fit, local floor/ceiling heights, arch openings and low plinths beside tall columns. Cache mounted-map model triangles and transformed instances; reject unsupported animation/materials or malformed data to the previous conservative fallback. Preserve trees, native bridges, unit/building profiles and explosive-cover snapshots. Add F8-reloadable `Movement.ObjectMeshCollision=true`, preserving explicit opt-outs during setup. Retain known actor radii with native pathing disabled, and distinguish shallow blocked cliff rims from continuous steep faces. Keep acceleration, gravity, jump and air-strafe rules unchanged; add geometry/config/production-collision regressions.
-
-- Replace distant cliff-height gating with locally sampled walkable surfaces and cylindrical player contacts. Blocked cliff faces cannot supply steps/takeoffs; falls project onto the local face and slide down. Preserve flat ledge support, ordinary ramp momentum and escape from existing overlap. Sweep standing/crouching head clearance against native decks and model undersides, retain crouch under ceilings, require step headroom and slide along contact tangents. Cap large actor hulls to a configurable radius to preserve physically fitting passages. Keep airborne side checks and landing reach consistent for short jumps, preventing entry below an unreachable flat lip. Attribute overhanging native path cells to their intersecting known model after the full body clears that solid, keeping clear adjacent lanes open without expanding every solid to a complete grid cell.
-- Add F8-reloadable `Movement.MaxWalkSlope=46` (15–75 degrees) and `HullRadius=24` (8–64 world units), preserving custom settings during setup. Add radius/normal/walkability diagnostics and production-path regressions across frame rates, headings, repeat jumps, retreat, downhill slides, low cliffs, ceilings, native deck undersides, crouch and reload. Object solids remain transformed authored bounds; unknown models retain conservative native fallback. The disposable native scene adds an opt-in climb oracle, excluded from client builds.
-
-- Replace the long repository homepage with a short project overview and navigation. Add a documentation index and separate controls, settings and compatibility guides; remove duplicate setup text, stale prices and the outdated contribution-branch reference. Preserve historical release notes and third-party credits.
-
-## Unreleased — unified launcher preview
-
-- Fix 1.26a FPS eye/body separation at native camera edges: write the final eye target after camera fields, and guard the verified native position clamp during subsequent FPS render updates while immediately restoring authored mission/minimap limits. Retain RTS/cinematic/unrelated camera behavior and fail closed on unverified clamp code. Repair already out-of-world actors before idle/floor handling and after placement in all movement modes; preserve edge sliding, inward motion, the classic default and its original terrain/object/jump rules. Add synthetic native-camera and all-mode world-boundary regressions.
-
-- Fix the remaining native ranged audio path: an instant attack also creates ordinary unit attack art, whose embedded sound events survived contact-sound muting. Guard only its two verified 1.26a call sites during a silent FPS impact; retain passive/spell art, reentrant attacks by other units, TPS and RTS. Add actual x86 call-site regression thunks and adapter diagnostics. The existing `Combat.NativeAttackSound` preference controls both ordinary attack sources; installing the DLL correction requires a game restart after saving.
-
-- Silence the controlled unit's native weapon contact audio during FPS attacks by default with `[Combat] NativeAttackSound=false`, retaining native crits/orbs/passives and ordinary TPS audio. Guard the verified 1.26a sound field, restore it after synchronous contacts and keep callback lifecycle checks.
-- Update Gluon endpoint traces on every game frame without spending extra cells or applying damage. Add continuously animated energy strands/core and depth-tested contact flares, plus private optional conversion of owned Half-Life xbeam1/XSpark1 sprite frames with procedural fallback and graphics-context cleanup.
-- Increase stock Tau primary/fully charged damage from 20/200 to 100/1000 and Gluon from 14 to 70 per tick. Add one-time stock migration preserving custom values and F8-reloadable `HalfLife.BeamEffects`, `OwnedSprites`, and `ImpactSize` (default true/true/18, radius 0..100 world units).
-
-- Combine the 1.27a/D3D9 port, complete Half-Life arsenal and dollar/loot changes in one launcher. Full preview notes and installation details are in [UNIFIED-PREVIEW.md](docs/UNIFIED-PREVIEW.md).
-- Add format-2 Player bundles for both exact supported hosts. Generate export data from the owner's local Miles library inside a reserved section of the project proxy, preserving named/decorated/alias/ordinal exports without C++ tools or retail DLL redistribution. Retain old exact-host/hash package checks.
-- Add an explicit preview build resource and reviewed preview notes without changing published 0.11.0 notes/version. Startup checks do not offer the preview's published base as an upgrade; explicit public reinstall and newer stable versions remain available.
-- Preserve direct Tau/Gluon cell refills on duplicate loot and route energy beams through the OpenGL/D3D9 adapter. Add real Windows forwarder/dual-host install tests and D3D9 beam pixel/occlusion checks.
-
-### Dollar economy and rare weapon loot
-
-- Default CS purchases to an independent dollar wallet: $800 per player/map, $300 per hostile creature killed with CS firearms/melee, HE, C4 or RPG, capped at $16000. `[Economy] Currency=gold` restores map gold purchases. F8 changes currency/rewards/cap without refilling balances; starting funds apply only on a new map/player wallet. Views and unit switches retain funds.
-- Add `[WeaponDrops] Enabled=true`, `ChancePercent=0.5` (0..100), `LifetimeSeconds=120` (1..3600 simulation seconds), `PickupRadius=160` (16..400 world units), `MaximumDrops=64` (1..256). Each eligible kill rolls once; only enabled firearms enter the pool. Chest markers show a nearby weapon name and E grants a loaded gun or one duplicate ammo pack. Full reserves leave loot intact; native inventory slots are unnecessary. F8 disable removes existing markers; map unload clears loot.
-- Keep quest gold, native drops and Warcraft item events independent. Allied units, buildings, nonlethal hits, corpses and kills outside CS weapon damage do not award these rewards. Native unit attacks/spells and squad/RTS kills are outside this initial reward adapter.
-- Retain RPG default peak damage 100 and increase blast radius from 375 to 525 world units. `[RPG] BlastVersion=2` migrates the old stock radius once; custom tuning survives. Live rockets retain launch settings.
-- Update money labels in the HUD and buy menu, preserve saved settings on install/update, and add wallet, death attribution, drop/pickup, boundary/reload and migration tests. This feature is source-only until merged and released.
-
-
-### Half-Life arsenal
-
-- Fixed Gluon beam origin at the actual nozzle and native/held viewport alignment; added gradual Tau spinner/audio-pitch acceleration and varied Crowbar flesh, structure/destructable and dirt impacts with F8 settings.
-
-- Fixed Half-Life Crowbar/Tau/Gluon chrome textures and rigid skeleton interpolation, complete action frames, charge transitions and firing clips; RPG unchanged.
-
-- Added optional owned Half-Life Crowbar, Tau Cannon (primary and charged secondary) and continuous Gluon Gun.
-- Added a separate Half-Life purchase category on B/9 and carried selection group 6, including RPG.
-- Added independent asset seals, private models/previews/audio, direct energy-cell purchases, F8 tuning and transition cancellation.
-- See [Half-Life arsenal controls, settings and limits](docs/HALF-LIFE-ARSENAL.md).
-
-### Experimental 1.27a / D3D9
-
-- Added exact 1.27.0.52240 native bindings and capability guards alongside 1.26a.
-- Added D3D9 output for current weapon/HUD/projectile rendering and host-specific launch selection.
-- Updated setup, launcher validation and host-bound Player packaging.
-- Added configurable weapon damage fallback when native attack statistics are unavailable.
-- Added hidden-device pixel and synthetic host-selection checks. Real 1.27a gameplay remains unverified;
-  [port notes](docs/PORT-1.27.md) list unavailable native and graphics features.
+- Add experimental exact-host 1.27a/D3D9 support and dual-host Player bundles with adaptive local Miles forwarders.
+- Add optional Half-Life Crowbar, Tau Cannon and Gluon Gun, a dedicated weapon category, corrected chrome/animation/muzzle alignment, charge feedback and continuous beam effects.
+- Default Tau damage to 100/1000 charged and Gluon to 70 per tick; migrate previous stock damage once while preserving custom values.
+- Silence native FPS contact/instant-art attack audio by default while preserving native passives, other units and TPS/RTS presentation.
+- Default purchases to a separate dollar wallet: $800 starting funds, $200 per eligible mod weapon kill and a $16000 cap. Add configurable 0.5 percent rare firearm drops and E pickup.
+- Keep RPG peak damage 100 and increase blast radius by 150 to 525; migrate the former stock radius once.
+- Default Movement.Mode to recovery, retaining optional classic and hull modes. Improve local cliff/ceiling/round hull/static prop contacts and narrow passages; add platform support, invalid-position protection and validated Home recovery.
+- Fix FPS camera/body separation at 1.26a camera edges and repair already out-of-world actors in every mode while preserving movement tuning.
+- Split the repository homepage into focused documentation, retain source-only publication/notices and extend native-independent, graphics, installation, config and package regressions.
+- Full settings, upgrade steps, complete verification and 1.27a/campaign limitations: [Release 0.12.0](docs/RELEASE-0.12.0.md).
 
 ## 0.11.0 — 2026-10-20
 

@@ -1,12 +1,12 @@
 # Experimental Warcraft III 1.27a support
 
-This source feature targets **Game.dll 1.27.0.52240, x86** alongside the existing
-**1.26.0.6401** host. Reforged and other builds are rejected. This work is not in
-the published 0.11.0 downloads.
+Release **0.12.0** adds experimental **Game.dll 1.27.0.52240, x86** support alongside
+the existing **1.26.0.6401** host. Reforged and other builds are rejected. Older
+published 0.11.0 downloads do not contain this port.
 
 ## Installation
 
-Use Player setup in the unified DLL-included preview, or Developer/source setup, with your own complete 1.27a installation and the
+Use Player setup in the 0.12.0 DLL-included launcher, or Developer/source setup, with your own complete 1.27a installation and the
 existing `setup.cmd -WarcraftDirectory ... -CounterStrikeDirectory ...` command.
 Choose a separate installation folder. Warcraft-only setup remains available.
 The original game is never patched on disk.
@@ -21,7 +21,7 @@ Miles proxy. Setup derives exact export data from the selected owner's original
 sound library, retaining names, aliases and ordinals without shipping that library
 or requiring C++ Build Tools. The original game stays untouched. Legacy published
 0.11.0 packages retain their exact host/hash restriction. See
-[unified preview details](UNIFIED-PREVIEW.md); real 1.27a gameplay remains unverified.
+[complete release details](RELEASE-0.12.0.md); real 1.27a gameplay remains unverified.
 
 ## Design
 

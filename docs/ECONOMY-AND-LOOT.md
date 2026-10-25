@@ -1,6 +1,6 @@
 # Dollar economy and rare weapon loot
 
-Source feature; the published 0.11.0 package does not include these changes yet.
+Available in release 0.12.0. Older 0.11.0 packages do not include this economy.
 
 The default B menu and quick-ammo purchase use a separate CS dollar wallet.
 Each player's wallet starts with $800 once per map, earns $200 per confirmed
@@ -62,4 +62,4 @@ to explicitly choose 375, retain version 2 and set `Radius=375`.
 Automated checks exercise production wallet transactions, probability boundaries,
 native death filtering and marker lifecycles with synthetic game APIs, actual INI
 reload and config migration. A live-map screenshot and manual pickup/buy-menu check
-remain necessary before claiming in-game validation of this source feature.
+remain necessary before claiming in-game validation on a particular map.

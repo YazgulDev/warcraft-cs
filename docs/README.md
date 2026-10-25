@@ -20,6 +20,9 @@
 | [Movement](MOVEMENT.md) | Air strafing, bunnyhopping, speed and collision settings |
 | [Weapon selection](WEAPON-SELECTION.md) | Carried groups, wheel preview and item-number mode |
 | [Arsenal, shops and army AI](ARSENAL-SHOPS-AI.md) | Buying, weapon tuning, grenades and army assistance |
+| [Half-Life arsenal](HALF-LIFE-ARSENAL.md) | Crowbar, Tau, Gluon, private conversion and tuning |
+| [Dollars and rare loot](ECONOMY-AND-LOOT.md) | Kill rewards, wallet, drops, pickup and gold opt-in |
+| [Experimental 1.27a](PORT-1.27.md) | D3D9, exact host versions and unverified native capabilities |
 | [Half-Life RPG](HALF-LIFE-RPG.md) | Owned asset conversion, rockets, guidance and settings |
 | [Third-person control](THIRD-PERSON.md) | Native attacks, camera zoom and target indicators |
 
@@ -38,7 +41,7 @@
 
 Read the [changelog](../CHANGELOG.md) for the full history and
 [GitHub Releases](https://github.com/YazgulDev/warcraft-cs/releases) for downloads.
-Detailed notes: [0.11.0](RELEASE-0.11.0.md), [0.10.0](RELEASE-0.10.0.md),
+Detailed notes: [0.12.0](RELEASE-0.12.0.md), [0.11.0](RELEASE-0.11.0.md), [0.10.0](RELEASE-0.10.0.md),
 [0.9.1](RELEASE-0.9.1.md), [0.9.0](RELEASE-0.9.0.md), [0.8.0](RELEASE-0.8.0.md),
 [0.7.0](RELEASE-0.7.0.md), [0.6.1](RELEASE-0.6.1.md), [0.6.0](RELEASE-0.6.0.md),
 [0.5.1](RELEASE-0.5.1.md).

@@ -16,7 +16,7 @@ show default bindings; `[Shortcuts]` in the INI can change keyboard actions.
 | F10 | Open the Warcraft pause menu and return control to RTS |
 | WASD / mouse | Move / look and aim |
 | Shift / Ctrl / Space | Walk / crouch / jump |
-| Home (Mode=recovery preview) | Emergency return to nearby visited safe ground after a fall or invalid placement |
+| Home (Mode=recovery) | Emergency return to nearby visited safe ground after a fall or invalid placement |
 | Mouse wheel in third person | Change camera distance |
 
 With **Only Warcraft modes** installed, T switches between F7 and F9 instead.

@@ -1,5 +1,7 @@
 # Unified launcher preview after 0.11.0
 
+Historical local preview notes. These features are now included in [release 0.12.0](RELEASE-0.12.0.md); use its downloads and current defaults.
+
 This local feature build combines the previously separate 1.27a/D3D9, Half-Life
 arsenal and dollar/loot branches. It retains base version 0.11.0 and is labelled
 **preview**. It is not a new published release. Use **Install — Player** for the

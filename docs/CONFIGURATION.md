@@ -58,9 +58,9 @@ and `?` for an unsupported native timer. Warcraft still decides whether a cast o
 item use succeeds. F9 hides the HUD and disables player attacks, casts and inventory
 interaction regardless of these display preferences.
 
-## Movement collision preview
+## Movement collision
 
-The development preview defaults to `[Movement] Mode=recovery`, enabling the latest round-hull,
+Release 0.12.0 defaults to `[Movement] Mode=recovery`, enabling the latest round-hull,
 platform support and Home rescue. Set `Mode=classic` for movement before the 24 October
 jump/collision redesign (2babf58). `Mode=hull` retains the intermediate round-hull build.
 Mode names are case-insensitive; unknown/empty/missing values use recovery.
