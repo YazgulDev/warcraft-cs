@@ -77,6 +77,12 @@ void MovementPhysics::Step(const MoveInput& input, float dt, float weaponSpeed) 
 void MovementPhysics::ResolveFloor(float floor) {
     MovementSurface surface;surface.height=floor;ResolveSurface(surface);
 }
+void MovementPhysics::ResolveClassicFloor(float floor) {
+    // The original landing/step behavior belongs to classic collision only; do not apply
+    // later slope, ceiling or reachable-height rules to the restored movement strategy.
+    if(grounded_ && feetZ_-floor>settings_.stepHeight){grounded_=false;vz_=0;return;}
+    if(grounded_ || (vz_<=0 && feetZ_<=floor)){feetZ_=floor;vz_=0;grounded_=true;}
+}
 void MovementPhysics::ResolveSurface(const MovementSurface& surface) {
     float floor=surface.height;
     if(!std::isfinite(floor))return;

@@ -20,6 +20,7 @@ public:
     void Configure(const MovementSettings& settings) { settings_ = settings; }
     void Step(const MoveInput& input, float dt, float weaponSpeed);
     void ResolveFloor(float floor);
+    void ResolveClassicFloor(float floor);
     void ResolveSurface(const MovementSurface& surface);
     void ClipHead(float ceiling);
     void SlideHorizontal(float nx,float ny);
@@ -38,6 +39,7 @@ public:
     float HullRadius() const { return settings_.hullRadius; }
     bool ObjectMeshCollision() const { return settings_.objectMeshCollision; }
     bool PlatformRecovery() const {return settings_.platformRecovery;}
+    bool ClassicCollision() const {return settings_.classicCollision;}
     bool RecoverInvalidPosition() const {return settings_.recoverInvalidPosition;}
     float RecoveryDistance() const {return settings_.recoveryDistance;}
     // Emergency placement discards fall velocity without changing stance, tuning or held-jump state.

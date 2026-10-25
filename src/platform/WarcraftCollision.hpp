@@ -2,12 +2,13 @@
 #include "WarcraftApi.hpp"
 #include "../movement/MovementPhysics.hpp"
 #include "MovementObstacles.hpp"
+#include "ClassicWarcraftCollision.hpp"
 #include "../movement/MovementRecovery.hpp"
 
 class WarcraftCollision {
 public:
-    void Configure(uintptr_t base) { base_=base;obstacles_.Configure(base); }
-    void Reset() { obstacles_.Reset(); terrain_.clear(); modelPathing_=false; blockedLog_ = 0;ResetRecovery(); }
+    void Configure(uintptr_t base) { base_=base;obstacles_.Configure(base);classic_.Configure(base); }
+    void Reset() { obstacles_.Reset();classic_.Reset();terrain_.clear();modelPathing_=false;blockedLog_=0;ResetRecovery(); }
     void RequestRecovery() {recoveryRequested_=true;}
     void ResetRecovery() {recovery_.Reset();actor_=0;havePosition_=false;recoveryRequested_=false;ridingDeck_=false;}
     void Move(wc3::Handle unit, MovementPhysics& movement, float dt);
@@ -21,6 +22,7 @@ private:
     bool Safe(float x,float y,float z,const MovementPhysics& movement,const std::vector<Bounds3>& obstacles) const;
     void Recover(wc3::Handle unit,float x,float y,MovementPhysics& movement,const std::vector<Bounds3>& obstacles);
     MovementObstacles obstacles_;
+    ClassicWarcraftCollision classic_;
     uintptr_t base_=0;
     float radius_=24;
     mutable DWORD blockedLog_ = 0;

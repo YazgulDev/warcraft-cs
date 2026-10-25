@@ -60,12 +60,12 @@ interaction regardless of these display preferences.
 
 ## Movement collision preview
 
-The development preview defaults to `[Movement] Mode=classic`, restoring the 25 October 06:28
-movement build before the requested 17:08 cutoff. Set `Mode=recovery` to keep the latest platform
-support and Home rescue. Mode names are case-insensitive; unknown/empty/missing values use classic.
+The development preview defaults to `[Movement] Mode=classic`, restoring the movement
+before the 24 October jump/collision redesign (2babf58). Set `Mode=recovery` to keep the latest platform
+support and Home rescue. `Mode=hull` retains the intermediate round-hull build. Mode names are case-insensitive; unknown/empty/missing values use classic.
 Save and press F8 to switch without resetting motion. Updates preserve an explicit mode.
 
-The development preview adds `[Movement] MaxWalkSlope=46` (15–75 degrees) and
+Optional hull/recovery modes use `[Movement] MaxWalkSlope=46` (15–75 degrees) and
 `HullRadius=24` (8–64 world units, the maximum player radius). Smaller native actor
 radii are retained. Both apply on F8 without resetting current position/velocity;
 updates preserve explicit values. `ObjectMeshCollision=true` (true/false) uses supported stationary

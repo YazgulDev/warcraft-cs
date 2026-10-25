@@ -11,6 +11,8 @@
 #include <limits>
 
 namespace {
+// The retained hull strategy has its own fixture default; production defaults select the older classic strategy.
+struct HullSettings : MovementSettings {HullSettings(){classicCollision=false;}};
 float unitX=0,unitY=0;
 bool bridgeAlive=true,edge=false,nativeBlocked=false,cliff=false,invalidDeck=false;
 bool drop=false, prop=false, wall=false, slope=false, water=false;
@@ -68,7 +70,7 @@ void __cdecl Position(wc3::Handle,float* x,float* y) {
 void Require(bool ok,const char* message) {if(!ok){std::fprintf(stderr,"FAIL: %s\n",message);std::exit(1);}}
 float Walk(bool alive,bool atEdge=false,bool obstruction=false,bool highCliff=false,bool invalid=false) {
     unitX=unitY=0;bridgeAlive=alive;edge=atEdge;nativeBlocked=obstruction;cliff=highCliff;invalidDeck=invalid;
-    MovementPhysics movement;movement.Reset(100);WarcraftCollision collision;MoveInput input;input.forward=1;
+    MovementPhysics movement;movement.Configure(HullSettings{});movement.Reset(100);WarcraftCollision collision;MoveInput input;input.forward=1;
     for(int frame=0;frame<60;++frame){movement.Step(input,1.f/60,250);collision.Move(1,movement,1.f/60);}
     Require(std::abs(movement.FeetZ()-wc3::Ground(unitX,unitY))<.01f,"feet follow native bridge deck height");
     return unitX;
@@ -144,7 +146,7 @@ int main(){
     Require(Walk(true,false,false,true)<32,"bridge support does not permit a vertical cliff step");
     Require(Walk(true,false,false,false,true)<32,"invalid surface samples fail closed");
     unitX=unitY=0; bridgeAlive=false; edge=nativeBlocked=cliff=invalidDeck=false; drop=true;
-    MovementPhysics falling; falling.Reset(100); WarcraftCollision collision; MoveInput forward; forward.forward=1;
+    MovementPhysics falling;falling.Configure(HullSettings{});falling.Reset(100); WarcraftCollision collision; MoveInput forward; forward.forward=1;
     bool fell=false;
     for (int frame=0;frame<100;++frame) {
         falling.Step(forward,1.f/60,250); collision.Move(1,falling,1.f/60);
@@ -165,7 +167,7 @@ int main(){
     nativeCliffRim=false;
     wideCliff=false;
     drop=false;prop=true;unitX=-50;unitY=0;
-    MovementPhysics jumper;jumper.Reset(100);MoveInput jumping=forward;jumping.jump=true;
+    MovementPhysics jumper;jumper.Configure(HullSettings{});jumper.Reset(100);MoveInput jumping=forward;jumping.jump=true;
     // Approach at running speed so the jump has enough range to clear the prop's full footprint.
     for(int frame=0;frame<60;++frame) jumper.Step(forward,1.f/60,250);
     for(int frame=0;frame<70;++frame){jumper.Step(jumping,1.f/60,250);collision.Move(1,jumper,1.f/60);}
@@ -186,14 +188,14 @@ int main(){
     Require(unitX>1000 && peak>450,"landing on a gentle uphill slope preserves accelerating hop momentum");
     // At the fastest supported setting, one frame travels farther than a thin wall's full width.
     // Actual swept collision must stop the player instead of sampling only the destination.
-    MovementSettings fast; fast.maxBunnySpeed = 2000; fast.jumpBoostPercent = 100;
+    HullSettings fast; fast.maxBunnySpeed = 2000; fast.jumpBoostPercent = 100;
     jumper.Configure(fast); jumper.Reset(100);
     for(int frame=0;frame<360;++frame){jumper.Step(jumping,1.f/60,250);jumper.ResolveFloor(100);}
     Require(jumper.Speed()>2900,"high-speed collision trial must approach the supported maximum");
     slope=false;wall=true;unitX=unitY=0;
     collision.Move(1,jumper,.05f);
     Require(unitX<36,"swept collision must reject a thin wall at maximum bunnyhop speed");
-    wall=false;slope=true;jumper.Configure(MovementSettings{});
+    wall=false;slope=true;jumper.Configure(HullSettings{});
     // Water support from GetLocationZ is independent of a native walkable bridge deck.
     water=true;unitX=unitY=0;jumper.Reset(122);jumping.jump=false;
     for(int frame=0;frame<60;++frame){jumper.Step(jumping,1.f/60,250);collision.Move(1,jumper,1.f/60);}
@@ -218,18 +220,18 @@ int main(){
     Require(unitX==90,"existing overlap must not permit entering deeper into a trunk");
     tree=false;
     // Warcraft's 16-unit actor fits a narrow walkable corridor that the legacy 24-unit footprint blocks.
-    narrowPassage=true;unitX=unitY=0;jumper.Reset(100);jumper.Configure(MovementSettings{});
+    narrowPassage=true;unitX=unitY=0;jumper.Reset(100);jumper.Configure(HullSettings{});
     for(int frame=0;frame<60;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
     Require(unitX>300,"live native actor footprint fits the narrow native passage");
     // Temporarily disabling the controlled hero's native mask must not enlarge his footprint.
     actorColliding=false;unitX=unitY=0;jumper.Reset(100);
     for(int frame=0;frame<60;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
     Require(unitX>300,"pathing-disabled actor retains the known radius in a narrow passage");actorColliding=true;
-    auto legacy=MovementSettings{};legacy.useNativeUnitCollision=false;jumper.Configure(legacy);unitX=unitY=0;jumper.Reset(100);
+    auto legacy=HullSettings{};legacy.useNativeUnitCollision=false;jumper.Configure(legacy);unitX=unitY=0;jumper.Reset(100);
     for(int frame=0;frame<60;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
     Require(unitX==0,"legacy opt-out retains the larger visual footprint");narrowPassage=false;
     // At 20 FPS a frame contains multiple sweep steps. Resolve support between them on uphill/downhill travel.
-    slope=true;slopeGradient=.8f;jumper.Configure(MovementSettings{});unitX=unitY=0;jumper.Reset(100);
+    slope=true;slopeGradient=.8f;jumper.Configure(HullSettings{});unitX=unitY=0;jumper.Reset(100);
     for(int frame=0;frame<20;++frame){jumper.Step(forward,.05f,250);collision.Move(1,jumper,.05f);}
     Require(unitX>300 && jumper.Grounded(),"fast grounded sweeps traverse a steep native ramp uphill");
     retreat=forward;retreat.forward=-1;
@@ -353,7 +355,7 @@ int main(){
     bridgeAlive=false;deckHeight=100;
     // Real reload consumers: a broad Warcraft actor uses the configured human hull in a narrow corridor.
     narrowPassage=true;actorRadius=64;unitX=unitY=0;jumper.Reset(100);
-    MovementSettings narrowHull;narrowHull.hullRadius=18;jumper.Configure(narrowHull);
+    HullSettings narrowHull;narrowHull.hullRadius=18;jumper.Configure(narrowHull);
     for(int frame=0;frame<60;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
     Require(unitX>300, "HullRadius caps a native actor footprint without rejecting a physically wide enough passage");
     narrowPassage=false;actorRadius=0;
@@ -363,7 +365,7 @@ int main(){
     narrowHull.maxWalkSlope=60;jumper.Configure(narrowHull);
     for(int frame=0;frame<120;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
     Require(unitX>300 && jumper.Grounded(), "live walk-angle reload restores a newly walkable ramp without a reset");
-    slope=false;jumper.Configure(MovementSettings{});
+    slope=false;jumper.Configure(HullSettings{});
     ceiling=false;corner=true;unitX=unitY=0;jumper.Reset(100);
     for(int frame=0;frame<30;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
     Require(unitX>80 && std::abs(unitY)>0, "a round hull slides around the empty corner of a solid");
@@ -377,7 +379,7 @@ int main(){
     // Airborne step tolerance belongs only to verified ramps, including with custom jump speed.
     // A flat lip above the actual apex must block entry rather than trapping the body below its floor.
     landingLedge=true;ledgeYaw=0;
-    MovementSettings shortJump;shortJump.jumpSpeed=150;jumper.Configure(shortJump);
+    HullSettings shortJump;shortJump.jumpSpeed=150;jumper.Configure(shortJump);
     for(int fps:{20,60,144}) {
         unitX=-50;unitY=0;jumper.Reset(100);
         for(int frame=0;frame<fps;++frame)jumper.Step(forward,1.f/fps,250);
@@ -385,7 +387,7 @@ int main(){
         for(int frame=0;frame<fps*3;++frame){jumper.Step(shortHop,1.f/fps,250);collision.Move(1,jumper,1.f/fps);shortHop.jump=false;}
         Require(unitX<32 && jumper.Grounded() && jumper.FeetZ()==100, "an unreachable lip must not admit and then trap a short-jumping body below its floor");
     }
-    landingLedge=false;jumper.Configure(MovementSettings{});
+    landingLedge=false;jumper.Configure(HullSettings{});
     // Model-backed low props share the same rim support rule as terrain, including a partial landing.
     actorRadius=0;landingLedge=false;prop=true;unitX=48;unitY=0;jumper.Reset(100);
     MoveInput vertical;vertical.jump=true;bool above=false;
@@ -407,10 +409,10 @@ int main(){
     unitX=60;unitY=-40;jumper.Reset(100);MoveInput out=forward;out.forward=-1;
     for(int frame=0;frame<60;++frame){jumper.Step(out,1.f/60,250);collision.Move(1,jumper,1.f/60);}
     Require(unitX<0,"existing mesh face overlap allows retreat out of the pillar");
-    auto coarse=MovementSettings{};coarse.objectMeshCollision=false;jumper.Configure(coarse);unitX=unitY=0;jumper.Reset(100);
+    auto coarse=HullSettings{};coarse.objectMeshCollision=false;jumper.Configure(coarse);unitX=unitY=0;jumper.Reset(100);
     for(int frame=0;frame<60;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
     Require(unitX<44,"F8 mesh opt-out restores conservative whole-object collision");
-    jumper.Configure(MovementSettings{});actorRadius=24;unitX=unitY=0;jumper.Reset(100);
+    jumper.Configure(HullSettings{});actorRadius=24;unitX=unitY=0;jumper.Reset(100);
     for(int frame=0;frame<60;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
     Require(unitX<60,"a body wider than an arch opening must remain blocked");
     meshScene=3;actorRadius=16;unitX=unitY=0;jumper.Reset(100);
@@ -437,7 +439,7 @@ int main(){
     Require(unitX<60 && jumper.FeetZ()==100,"a jump below the plinth top cannot enter and become trapped");
     meshScene=0;actorRadius=0;
     // Bridge edge support must match model ledges even when only a leading foot crosses its deck.
-    auto recoveryMode=MovementSettings{};recoveryMode.platformRecovery=true;
+    auto recoveryMode=HullSettings{};recoveryMode.platformRecovery=true;
     jumper.Configure(recoveryMode);collision.Reset();deckPatch=true;unitX=20;unitY=0;jumper.Reset(100);
     vertical={};vertical.jump=true;above=false;
     for(int frame=0;frame<120;++frame) {
@@ -487,19 +489,33 @@ int main(){
     for(int frame=0;frame<30;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
     float validX=unitX;collision.RequestRecovery();collision.Move(1,jumper,0);
     Require(unitX==validX,"Home cannot act as a horizontal teleport from valid open ground");
-    // Default classic really restores the old paths, even with individual repair/mesh flags still enabled.
-    slope=false;collision.Reset();jumper.Configure(MovementSettings{});unitX=unitY=0;jumper.Reset(60);
+    // The retained hull mode restores the pre-recovery paths, even with individual repair/mesh flags still enabled.
+    slope=false;collision.Reset();jumper.Configure(HullSettings{});unitX=unitY=0;jumper.Reset(60);
     collision.RequestRecovery();collision.Move(1,jumper,0);
-    Require(jumper.FeetZ()==60,"classic mode disables both automatic and queued manual recovery");
+    Require(jumper.FeetZ()==60,"hull mode disables both automatic and queued manual recovery");
     auto speedBefore=jumper.Speed(),verticalBefore=jumper.VerticalVelocity(),feetBefore=jumper.FeetZ();
     jumper.Configure(recoveryMode);
     Require(jumper.FeetZ()==feetBefore && jumper.Speed()==speedBefore && jumper.VerticalVelocity()==verticalBefore,"switching modes preserves current movement state");
     collision.Move(1,jumper,0);
     Require(jumper.FeetZ()==100,"switching to recovery enables its complete floor repair path");
-    jumper.Configure(MovementSettings{});collision.Reset();deckPatch=true;unitX=20;unitY=0;jumper.Reset(100);
+    jumper.Configure(HullSettings{});collision.Reset();deckPatch=true;unitX=20;unitY=0;jumper.Reset(100);
     vertical={};vertical.jump=true;
     for(int frame=0;frame<120;++frame){jumper.Step(vertical,1.f/60,250);collision.Move(1,jumper,1.f/60);vertical.jump=false;}
-    Require(jumper.FeetZ()==100,"classic restores center-only native deck support from the selected historical build");
+    Require(jumper.FeetZ()==100,"hull restores center-only native deck support from the selected historical build");
     deckPatch=false;
-    std::puts("Warcraft bridge/collision regressions passed.");
+    // Production default classic must use the complete pre-24-October strategy, not the hull fixture.
+    deckPatch=false;slope=true;slopeGradient=0;meshScene=0;actorRadius=0;collision.Reset();
+    MovementSettings classicSettings;Require(classicSettings.classicCollision,"classic is the production default");
+    jumper.Configure(classicSettings);unitX=unitY=0;jumper.Reset(60);collision.RequestRecovery();collision.Move(1,jumper,0);
+    Require(jumper.FeetZ()==100,"classic restores the original native-floor landing resolver");
+    ceiling=true;ceilingZ=230;jumper.Reset(100);vertical={};vertical.jump=true;float oldPeak=100;
+    for(int frame=0;frame<120;++frame){jumper.Step(vertical,1.f/60,250);collision.Move(1,jumper,1.f/60);vertical.jump=false;oldPeak=std::max(oldPeak,jumper.FeetZ());}
+    Require(oldPeak>160,"classic does not inherit later stationary head-clipping behavior");ceiling=false;
+    narrowPassage=true;slope=false;actorRadius=64;unitX=unitY=0;jumper.Reset(100);
+    for(int frame=0;frame<60;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(unitX==0,"classic restores the original native actor radius without the later human hull cap");
+    narrowPassage=false;actorRadius=0;slope=true;slopeGradient=0;meshScene=1;unitX=unitY=0;jumper.Reset(100);
+    for(int frame=0;frame<60;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(unitX<44,"classic uses the historical coarse object bounds instead of later arch mesh collision");
+    std::puts("Warcraft classic/hull/recovery collision regressions passed.");
 }

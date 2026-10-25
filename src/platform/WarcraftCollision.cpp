@@ -304,6 +304,9 @@ void WarcraftCollision::Recover(wc3::Handle unit,float x,float y,MovementPhysics
     lastX_=x;lastY_=y;havePosition_=true;
 }
 void WarcraftCollision::Move(wc3::Handle unit, MovementPhysics& movement, float dt) {
+    // Select the complete pre-rework strategy, including its original landing resolver,
+    // rather than approximating old movement by disabling individual recovery features.
+    if(movement.ClassicCollision()){ResetRecovery();classic_.Move(unit,movement,dt);return;}
     dt = std::clamp(dt, 0.f, .05f);
     terrain_.clear();
     modelPathing_=false;

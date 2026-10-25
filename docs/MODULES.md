@@ -437,3 +437,9 @@ Movement mode is one validated snapshot field. WarcraftCollision selects center/
 CylinderMesh selects whole/reachable triangle support, and MovementObstacles selects native-only
 or retained platform surfaces. Classic also gates the complete recovery path and discards its history;
 the common acceleration, jump and ground/air motor implementation remains shared.
+
+`ClassicWarcraftCollision` preserves the owned pre-24-October-rework adapter and calls the original
+`ResolveClassicFloor` landing rules. WarcraftCollision composes this concrete classic strategy with
+its later hull/recovery strategy; one validated mode selects the complete behavior on the game thread.
+The acceleration/jump integrator stays shared. The classic adapter source is compared with 2babf58
+and exercised with the original historical collision regressions in addition to current mode tests.

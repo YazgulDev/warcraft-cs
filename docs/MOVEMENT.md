@@ -27,7 +27,8 @@ Map bounds and unsupported flat pathing cells remain blocked. Unknown custom mod
 permission to cross blocked pathing. Native cliff levels distinguish cliff faces from ordinary hills.
 Shallow-water support retains Warcraft's native height rather than dropping onto the submerged mesh.
 
-The development preview uses a round upright player hull and local surface contacts. Every swept
+The default classic mode uses the original pre-rework collision. The following round hull and local
+surface features apply to optional hull/recovery modes. Every swept
 step checks feet, standing/crouching body height and head clearance against the current terrain,
 transformed obstacle bounds and native bridge decks. Jumping directly below an underside stops upward
 velocity; releasing crouch under a low ceiling retains the last fitting stance. A low step is accepted
@@ -65,7 +66,7 @@ simulation step applies the new speed cap. Jump speed applies to the next takeof
 
 | `[Movement]` key | Default | Range and units |
 | --- | --- | --- |
-| Mode | classic | classic/recovery, case-insensitive. classic restores the collision behavior from commit 5578392 (25 October 2026, 06:28 Moscow), before the 17:08 cutoff; recovery enables the later platform/recovery paths. F8 switches without resetting velocity or position |
+| Mode | classic | classic/hull/recovery, case-insensitive. classic restores 24 October pre-rework movement (2babf58); hull retains the intermediate 25 October round-hull build; recovery retains the latest platform/Home behavior. F8 switches without resetting motion |
 | UseNativeUnitCollision | true | true/false; live Warcraft actor/creature footprints. Ignore Locust/pathing-disabled helpers; buildings/trees retain solid model volumes. false restores visual creature boxes and the 24-unit actor footprint |
 | BunnyHop | true | true/false; preserves excess takeoff momentum and enables the optional boost and air speed cap. false clips excess speed to the current weapon's running speed at each takeoff |
 | AutoJump | true | true/false; false requires a new Space press per jump |
@@ -75,9 +76,9 @@ simulation step applies the new speed cap. Jump speed applies to the next takeof
 | JumpSpeed | 268.328 | 1–800 GoldSrc units/s upwards |
 | Gravity | 800 | 100–3000 GoldSrc units/s² downwards |
 | StepHeight | 27 | 0–64 Warcraft units; automatic rise/drop limit, larger drops fall |
-| MaxWalkSlope | 46 | 15–75 degrees; maximum local walkable slope. Blocked native cliff faces remain non-walkable |
-| HullRadius | 24 | 8–64 Warcraft units; maximum player collision radius, preserving smaller native footprints |
-| ObjectMeshCollision | true | true/false; use supported stationary prop surfaces for fit, support and head clearance. false restores conservative whole-model volumes |
+| MaxWalkSlope | 46 | Hull/recovery only; 15–75 degrees; maximum local walkable slope. Blocked native cliff faces remain non-walkable |
+| HullRadius | 24 | Hull/recovery only; 8–64 Warcraft units; maximum player collision radius, preserving smaller native footprints |
+| ObjectMeshCollision | true | Hull/recovery only; true/false; use supported stationary prop surfaces for fit, support and head clearance. false restores conservative whole-model volumes |
 | RecoverInvalidPosition | true | true/false; repair proven below-terrain states and lost deck support for an established rider; ordinary falls and underpasses stay unchanged |
 | RecoveryDistance | 512 | 64–2048 horizontal Warcraft units; maximum search radius for a revalidated visited recovery point |
 
@@ -143,18 +144,23 @@ No SDK implementation is embedded; Warcraft heightfields, native pathing and mod
 
 ## Selectable movement modes
 
-`[Movement] Mode=classic` is now the default. It restores the movement behavior before the
-17:08 cutoff on 25 October 2026: the 06:28 passage-collision build, commit 5578392.
-This retains its round hull, static prop passage tests and existing movement tuning.
-It restores center-only native deck support, the previous whole-triangle height test, native-only
-bridge snapshots and no automatic/manual position recovery. The latest recovery implementation
-remains available with `Mode=recovery`; it is not deleted or mixed into classic collision.
+`[Movement] Mode=classic` is the default. It restores the movement from before the 24 October
+jump/collision rework, using the owned 2babf58 collision adapter and original floor-landing rules.
+This is the version before yesterday's redesign, not the later 25 October passage-collision build.
+Classic retains the old native actor radius, box overlap/axis sliding, native bridge handling and
+original step/landing resolver. Later slope restrictions, round hull cap, static prop meshes,
+head clipping and automatic/Home rescue do not run in this mode.
 
-Save the installed INI and press F8 to switch. Unknown/empty/missing Mode values select classic.
-Updates add the missing classic default and preserve an explicit recovery preference. Switching
-back to classic discards pending Home requests and recovery history. Velocity, stance, position,
-jump/gravity, acceleration and air-strafe settings remain unchanged. The native update itself
-requires installation and restart once. The tests cover both modes and config reload/preservation.
+`Mode=recovery` keeps the complete latest round-hull, platform and recovery implementation.
+`Mode=hull` also retains the intermediate 25 October build without platform recovery. Modes share
+acceleration, jump/gravity, air-strafe tuning and status ownership. Save the installed INI and press
+F8 to switch. Unknown/empty/missing names select classic; updates preserve explicit selections.
+Classic clears queued rescue/checkpoints without resetting velocity, stance or position.
+
+The original historical collision tests pass against the restored production strategy, and source
+comparison confirms the adapter matches 2babf58 except its class and explicit resolver names.
+Current regression tests separately exercise classic, hull and recovery routing. Install/restart
+once for this corrected native mode selection; campaign traversal still needs in-game verification.
 
 ## Platform support and emergency recovery preview
 
