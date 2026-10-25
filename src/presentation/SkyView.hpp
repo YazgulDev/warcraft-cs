@@ -1,6 +1,6 @@
 #pragma once
 #include "../platform/WarcraftApi.hpp"
-#include <gl/GL.h>
+#include "GraphicsApi.hpp"
 #include <string>
 
 // Render CS art into untouched far-depth pixels; terrain/buildings keep their native depth and textures.

@@ -1,3 +1,4 @@
+#include "GraphicsApi.hpp"
 #include "ReticleView.hpp"
 #include "ReticleDiagnostics.hpp"
 #include <windows.h>

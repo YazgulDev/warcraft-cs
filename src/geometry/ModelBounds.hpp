@@ -4,4 +4,8 @@
 
 // Both unit and destructable hitboxes use the currently mounted map's authored model volumes.
 class TreeTrunkMesh;
-namespace ModelBounds { bool Load(std::string path, Bounds3& bounds, TreeTrunkMesh* tree = nullptr); }
+class CylinderMesh;
+namespace ModelBounds {
+bool Load(std::string path, Bounds3& bounds, TreeTrunkMesh* tree = nullptr);
+bool LoadCollision(std::string path,CylinderMesh& mesh);
+}

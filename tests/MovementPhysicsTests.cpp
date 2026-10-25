@@ -120,6 +120,15 @@ int main() {
     Require(falling.FeetZ() < 400 && falling.FeetZ() > 390, "cliff fall must integrate gravity gradually");
     for (int frame = 0; frame < 90; ++frame) { falling.Step({}, 1.f/60, 250); falling.ResolveFloor(0); }
     Require(falling.Grounded() && falling.FeetZ() == 0, "cliff fall must land without penetrating terrain");
+    // A high reported floor cannot pull either a grounded or descending body onto an unreachable top.
+    MovementPhysics blocked;blocked.Reset(100);blocked.ResolveFloor(300);
+    Require(blocked.FeetZ()==100,"ground support obeys the configured step height");
+    blocked.Step(space,1.f/60,250);
+    for(int frame=0;frame<120;++frame) {
+        float before=blocked.FeetZ();blocked.ResolveFloor(300);
+        Require(blocked.FeetZ()==before && !blocked.Grounded(),"overhead surfaces cannot catch a jump from below");
+        blocked.Step({},1.f/60,250);
+    }
     // F8-style tuning replacement preserves momentum/position; the next step consumes the new cap.
     MovementSettings tuned; tuned.maxBunnySpeed = 300; tuned.jumpBoostPercent = 0;
     float feet = hopping.FeetZ(); hopping.Configure(tuned);

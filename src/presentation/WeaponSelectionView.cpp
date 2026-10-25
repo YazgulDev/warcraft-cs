@@ -1,3 +1,4 @@
+#include "GraphicsApi.hpp"
 #include "WeaponSelectionView.hpp"
 #include <gl/GL.h>
 #include <cstdio>
@@ -13,7 +14,7 @@ void WeaponSelectionView::Draw(const ShooterController& controller,int width,int
     // Start below the existing four-line command hints, keeping the complete primary stack above the HUD.
     float x=width*.025f,y=height*.16f,column=width*.12f,header=height*.047f,row=height*.066f;
     auto available=controller.AvailableWeapons();
-    for(int g=1;g<=5;++g) {
+    for(int g=1;g<=WeaponSlots::SelectionGroups;++g) {
         float gx=x+(g-1)*column;
         glColor4f(0,0,0,.8f);Rect(gx,y,column-3,header);
         glColor4f(1,.72f,.22f,1);char label[80];

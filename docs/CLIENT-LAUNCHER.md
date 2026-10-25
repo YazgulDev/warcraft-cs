@@ -1,5 +1,7 @@
 # Windows client launcher
 
+[Project home](../README.md) · [Documentation](README.md) · [Installation](../INSTALL.md)
+
 `WarcraftCSLauncher.exe` is a standalone launcher/installer for Windows 10/11 x64.
 It uses the .NET Framework and Windows PowerShell included with supported Windows installs.
 The standard EXE embeds audited project source without native DLLs and compiles locally after consent.
@@ -42,7 +44,7 @@ repairing clients whose older installer omitted the folder. No audio codec is em
 Warcraft opens in fullscreen. Choose **Single Player → Custom Game** or **Campaign**,
 start a map, select your own living unit and press **F6**. Repeat after changing maps.
 Use WASD/mouse to move/aim, left mouse to shoot, R to reload, 1–7 to select weapons,
-and F6 to return to RTS. See the [complete controls](../README.md#controls).
+and F6 to return to RTS. See the [complete controls](CONTROLS.md).
 
 After a Windows restart requested by Microsoft setup, open this EXE again, select the
 same folders, accept the agreement and retry **Install**. Successful installation

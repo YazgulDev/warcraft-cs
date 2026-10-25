@@ -1,7 +1,28 @@
 # Contribution and release workflow
 
 Read [the workflow skill](skills/feature-release-workflow/SKILL.md) and [AGENTS.md](AGENTS.md).
-Current release branch: `release/0.7.0`. Code layout: `src`, `tests`, `tools`, `setup`, `config`, `launcher`.
+Use the current `release/<version>` branch; the version is recorded in [VERSION](VERSION).
+See the [documentation index](docs/README.md) for player and development guides.
+Code layout: `src`, `tests`, `tools`, `setup`, `config`, `launcher`.
+
+## Source setup and checks
+
+Follow [manual source setup](INSTALL.md#manual-source-setup) with your
+own game files. Keep downloaded dependencies, private runtimes and converted assets
+outside the published source tree. Module responsibilities are in [docs/MODULES.md](docs/MODULES.md).
+
+```powershell
+.\tools\test-all.ps1
+.\tools\test-cs-audio.ps1
+python .\tools\audit_sources.py --revision HEAD
+```
+
+Run checks relevant to the change. The audio check needs a working Windows audio
+device and uses a silent synthetic WAV. See [validation notes](docs/VALIDATION.md)
+for recorded coverage. Documentation changes require checking local links and anchors;
+they do not require recompiling the mod.
+
+## Branches and releases
 
 Start one branch per feature prompt from the current release:
 

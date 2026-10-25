@@ -56,7 +56,7 @@ bool NativeRockets::Tick(GameAudio& audio,wc3::Handle viewer,bool guide,const Gr
         audio.Play("hl_rpg_explode.wav",1);bursts_.push_back({from,now,charge.flight.settings.radius*.3f});
         auto effect=wc3::Effect("Objects\\Spawnmodels\\Other\\NeutralBuildingExplosion\\NeutralBuildingExplosion.mdl",from[0],from[1]);if(effect)wc3::DestroyEffect(effect);
         auto boxes=obstacles_.Snapshot(0,from[0],from[1],charge.flight.settings.radius+256);
-        hit=NativeBlast::Apply(charge.actor,charge.type,from,charge.damage,charge.flight.settings.radius,charge.friendly,boxes,[&]{return generation_==generation;},"RPG") || hit;
+        hit=NativeBlast::Apply(charge.actor,charge.type,from,charge.damage,charge.flight.settings.radius,charge.friendly,boxes,[&]{return generation_==generation;},"RPG",onKill_) || hit;
     }
     if(generation_!=generation)return hit;
     bursts_.erase(std::remove_if(bursts_.begin(),bursts_.end(),[&](const Burst& b){return now-b.born>=.65f;}),bursts_.end());

@@ -1,5 +1,6 @@
 #pragma once
 #include "MovementSettings.hpp"
+#include "MovementSurface.hpp"
 
 struct MoveInput {
     float forward = 0, right = 0, yaw = 0;
@@ -19,6 +20,10 @@ public:
     void Configure(const MovementSettings& settings) { settings_ = settings; }
     void Step(const MoveInput& input, float dt, float weaponSpeed);
     void ResolveFloor(float floor);
+    void ResolveClassicFloor(float floor);
+    void ResolveSurface(const MovementSurface& surface);
+    void ClipHead(float ceiling);
+    void SlideHorizontal(float nx,float ny);
     void BlockX() { vx_ = 0; }
     void BlockY() { vy_ = 0; }
     void Stop() { vx_ = vy_ = 0; }
@@ -30,6 +35,16 @@ public:
     float PreviousFeetZ() const { return previousFeetZ_; }
     float VerticalVelocity() const { return vz_; }
     float StepHeight() const { return settings_.stepHeight; }
+    float MaxWalkSlope() const { return settings_.maxWalkSlope; }
+    float HullRadius() const { return settings_.hullRadius; }
+    bool ObjectMeshCollision() const { return settings_.objectMeshCollision; }
+    bool PlatformRecovery() const {return settings_.platformRecovery;}
+    bool ClassicCollision() const {return settings_.classicCollision;}
+    bool RecoverInvalidPosition() const {return settings_.recoverInvalidPosition;}
+    float RecoveryDistance() const {return settings_.recoveryDistance;}
+    // Emergency placement discards fall velocity without changing stance, tuning or held-jump state.
+    void RecoverFloor(float floor) {feetZ_=previousFeetZ_=floor;vx_=vy_=vz_=0;grounded_=true;}
+    float BodyHeight() const { return (64-28*duck_)*worldScale+12; }
     bool NativeUnitCollision() const { return settings_.useNativeUnitCollision; }
     float EyeZ() const { return feetZ_ + (64 - 28 * duck_) * worldScale; }
     float Duck() const { return duck_; }
@@ -37,6 +52,7 @@ public:
 private:
     float vx_ = 0, vy_ = 0, vz_ = 0, feetZ_ = 0, duck_ = 0;
     float previousFeetZ_ = 0;
+    float previousDuck_ = 0;
     MovementSettings settings_;
     bool grounded_ = true, jumpHeld_ = false, jumpSuppressed_ = false;
 };

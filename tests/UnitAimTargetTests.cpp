@@ -44,7 +44,7 @@ namespace NativeWeaponAttack {
 int PrimaryKind(wc3::Handle){return kind;}
 float PrimaryRange(wc3::Handle){return reach;}
 int AttackType(wc3::Handle){return 0;}
-bool Apply(wc3::Handle,wc3::Handle,float,float){return false;}
+bool Apply(wc3::Handle,wc3::Handle,float,float,bool){return false;}
 bool Launch(wc3::Handle,wc3::Handle target,float,float){++launches;launchedTarget=target;return launchHandled;}
 }
 bool WeaponTargetFilter::PassThrough(wc3::Handle,uintptr_t){return transparent;}

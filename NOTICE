@@ -184,4 +184,23 @@ Native attack preparation/impact/cleanup and attack-component layout were resear
 DracoL1ch's WC3Memory native entry-point references, then independently disassembled and tested in
 the owner's Warcraft III 1.26a. NativeWeaponAttack is project-authored scoped dispatch and guarded
 base-roll substitution; no WC3Memory implementation or proprietary game code is redistributed.
+The scoped instant-attack art/audio filter and its two caller checks were independently
+verified in the owner's 1.26a engine; no native disassembly is included in source packages.
 https://github.com/DracoL1ch/WC3Memory/blob/master/war3map.j
+
+Half-Life Crowbar/Tau/Gluon controls, model sequence names and numerical timing were researched from ValveSoftware/halflife dlls/crowbar.cpp, dlls/gauss.cpp, dlls/egon.cpp and cl_dll/ev_hldm.cpp. The SDK license is not this project's code license: no SDK implementation is copied or redistributed. Charge/channel logic, contact orchestration, beam geometry and optional converters are independently authored. Owned models/samples are read locally or from owned PAK files; public source/packages contain no retail data.
+https://github.com/ValveSoftware/halflife
+
+Optional energy-effect resource names were verified against Valve's dlls/egon.cpp.
+The bounded GoldSrc additive-sprite reader, private WES1 cache writer, animated beam
+geometry and context-owned texture loader are independently authored here. The
+owner's xbeam1.spr/XSpark1.spr pixels remain local; neither Valve SDK code nor retail
+sprite files are distributed.
+
+Experimental Warcraft III 1.27a support adapts native-address research, table
+generation and D3D9 frame interception from niceqwer55555's Warcraft CS fork,
+referenced through TTT-ux-max/warcraft-cs at 571fdec95a3059935545ab4c5a1b916fe5ea4866.
+That fork retains the project's MIT OR Apache-2.0 licensing and upstream notices.
+The shared presentation adapter is project-authored. No game binary, proprietary
+implementation, registration dump or converted game asset is included.
+https://github.com/TTT-ux-max/warcraft-cs

@@ -1,3 +1,4 @@
+#include "GraphicsApi.hpp"
 #include "InventoryHudView.hpp"
 #include <cstdio>
 namespace {

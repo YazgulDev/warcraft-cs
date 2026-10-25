@@ -1,0 +1,12 @@
+- Added Deagle, Glock, MP5, P90, M249, M3 and XM1014 purchases.
+- Added native shops on E and optional army economy and support AI on U.
+- Added a CS-style carried weapon menu with sequential wheel selection.
+- Added HE, flash and smoke grenades with original thrown models.
+- Added an optional Half-Life RPG with real rockets and laser guidance.
+- Added movement of hands and animated muzzle flashes.
+- Changed firearm reach to cover the visible world by default.
+- Fixed shotgun reload timing and sounds with interruptible per-shell loading.
+- Added single-shot and right-click burst actions for the Glock.
+- Fixed ledge traversal and camera collapse inside bridge model bounds.
+- Fixed inherited OpenGL state hiding the flat HUD.
+- Added bounded HUD, font, installation profile and DLL diagnostics.

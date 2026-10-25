@@ -35,6 +35,9 @@ int main() {
     glMatrixMode(GL_MODELVIEW);glLoadIdentity();
     Fixture("muzzle-authored.wcg",0);Fixture("muzzle-legacy.wcg",-1);Fixture("muzzle-invalid.wcg",1);
     GunMesh mesh;Require(mesh.Load("muzzle-authored.wcg"),"Authored cache failed");
+    std::array<float,3> anchor;
+    Require(mesh.MuzzlePoint("idle",.5f,1,anchor) && anchor[0]==10 && anchor[1]==0 && anchor[2]==-20,
+        "Beam attachment did not share the flash's interpolated pose");
     Clear();mesh.Draw("idle",0,0,1,1,false);Require(Ink(Pixels())==0,"Idle emitted a flash");
     mesh.Draw("idle",0,1,1,1,false);auto first=Pixels();
     Require(Ink(first)>15 && Ink(first,148,116,172,140)==Ink(first),"Authored barrel anchor projected incorrectly");

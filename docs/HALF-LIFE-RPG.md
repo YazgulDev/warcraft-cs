@@ -1,5 +1,7 @@
 # Optional Half-Life RPG
 
+[Project home](../README.md) · [Documentation](README.md) · [Controls](CONTROLS.md)
+
 The RPG is added only when setup finds the owner's `models/v_rpg.mdl`,
 `models/rpgrocket.mdl` and `sound/weapons/rocketfire1.wav`, `rocket1.wav`,
 `debris1.wav` in the `valve` directory beside the chosen `cstrike` directory.
@@ -12,9 +14,9 @@ preview, world rocket and three sounds are complete. Startup/F8 checks their siz
 and fingerprints. Partial, changed or missing resources cannot unlock purchases,
 free grants or selection. Unit-only installations always exclude RPG.
 
-In armed F6, buy **B → 8 Equipment → 7 RPG** (4000 gold), then use group **1** or the
+In armed F6, buy **B → 9 Half-Life → 4 RPG** ($4000 by default), then use group **6** or the
 wheel and LMB confirmation as for other carried primaries. Buying grants one loaded
-rocket; reserve packs cost 500 gold for one, up to five in reserve. Duplicates and
+rocket; reserve packs cost $500 for one, up to five in reserve. Duplicates and
 full packs never charge. Free refill restores owned RPG; all-weapons grants it only
 when resources are available. Rune ammo follows the same ownership/cap rules.
 
@@ -43,8 +45,8 @@ missing keys and preserve saved prices, tuning and opt-outs.
 | --- | --- | --- |
 | Enabled / GuidanceByDefault | true / true | true/false; resources remain required |
 | Magazine / MaxReserve | 1 / 5 | 1–1000 loaded / 0–100000 reserve |
-| Price / AmmoPrice / AmmoPack | 4000 / 500 / 1 | 0–1000000 gold / 1–1000 rockets |
-| Damage / Radius | 100 / 375 | 0–1000000 fixed peak damage / 32–3000 world units |
+| Price / AmmoPrice / AmmoPack | 4000 / 500 / 1 | 0–1000000 selected currency / 1–1000 rockets |
+| Damage / Radius | 100 / 525 | 0–1000000 fixed peak damage / 32–3000 world units |
 | FireInterval / ReloadSeconds | 1.5 / 2 | .025–10 / .1–30 seconds |
 | Range | 30000 | 100–50000 world units, subject to common MinimumFirearmRange |
 | LaunchSpeed / MaximumSpeed | 375 / 3000 | 50–6000 / 100–10000 world units/s |

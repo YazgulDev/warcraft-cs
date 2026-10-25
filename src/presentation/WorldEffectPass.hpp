@@ -1,7 +1,7 @@
 #pragma once
 #include "WorldLabelView.hpp"
 #include <windows.h>
-#include <gl/GL.h>
+#include "GraphicsApi.hpp"
 #include <cmath>
 
 // Shared world-space projection/depth scope for private projectile meshes and their effects.
