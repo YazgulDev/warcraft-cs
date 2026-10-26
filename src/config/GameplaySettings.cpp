@@ -462,7 +462,7 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     // Optional RPG defaults use the same bounded F8 snapshot, while availability comes only from owned caches.
     auto& rpg=result.rpg;rpg.enabled=enabled("RPG","Enabled");rpg.guidance=enabled("RPG","GuidanceByDefault");
     rpg.available=!result.warcraftOnly && OptionalWeaponAssets::Rpg(std::filesystem::path(filename).parent_path());
-    rpg.radius=std::max(32.f,number("RPG","Radius",525,3000));
+    rpg.radius=std::max(32.f,number("RPG","Radius",600,3000));
     // Upgrade only the former stock blast, including an old config loaded directly with F8.
     auto blastVersion=text("RPG","BlastVersion","1");
     if((blastVersion=="1" || blastVersion.empty()) && rpg.radius==375)rpg.radius=525;
@@ -529,6 +529,16 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     // Upgrade the previous unversioned stock HE once; versioned 100 and every custom value remain deliberate.
     if(GetPrivateProfileIntA("HEGrenade","DamageVersion",1,filename.c_str())<2 && result.damage[WeaponSlots::HE]==100)
         result.damage[WeaponSlots::HE]=300;
+    // Each balance marker upgrades only the prior stock value; F8 and setup preserve explicit newer choices.
+    auto upgradeStock=[&](const char* section,const char* marker,int current,float previous,float next,float& value) {
+        int version=GetPrivateProfileIntA(section,marker,1,filename.c_str());
+        if(version<current && value==previous)value=next;
+    };
+    upgradeStock("RPG","DamageVersion",2,100,1800,result.damage[WeaponSlots::RPG]);
+    upgradeStock("RPG","BlastVersion",3,525,600,rpg.radius);
+    upgradeStock("HEGrenade","DamageVersion",3,300,600,result.damage[WeaponSlots::HE]);
+    upgradeStock("M3","MultiplierVersion",2,3,6,result.heroMultiplier[WeaponSlots::M3]);
+    upgradeStock("XM1014","MultiplierVersion",2,2.4f,4.8f,result.heroMultiplier[WeaponSlots::XM1014]);
     result.knifeSecondaryDamage=number("Knife","SecondaryDamage",65,1000000);
     result.swordSecondaryDamage=number("Sword","SecondaryDamage",240,1000000);
     return result;

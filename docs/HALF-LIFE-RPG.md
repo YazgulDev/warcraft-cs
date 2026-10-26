@@ -2,6 +2,8 @@
 
 [Project home](../README.md) · [Documentation](README.md) · [Controls](CONTROLS.md)
 
+The [current local balance preview](WEAPON-BALANCE-PREVIEW.md) defaults RPG to **1800** fixed peak damage and **600** world-unit blast radius. `[RPG] Damage` (0–1000000) and `Radius` (32–3000) reload with F8 for new launches. Prior stock damage 100 and radius 525 migrate once; custom values and already-flying rockets retain their tuning.
+
 The RPG is added only when setup finds the owner's `models/v_rpg.mdl`,
 `models/rpgrocket.mdl` and `sound/weapons/rocketfire1.wav`, `rocket1.wav`,
 `debris1.wav` in the `valve` directory beside the chosen `cstrike` directory.

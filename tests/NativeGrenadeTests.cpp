@@ -58,7 +58,7 @@ int main() {
     assert(field.Throw(1,WeaponSlots::HE,{0,0,100},{1,0,0},{0,0,0},settings));
     settings.damage[WeaponSlots::HE]=9999; // A later F8 snapshot cannot change the launched charge.
     field.Tick(audio,1,{0,0,100},{1,0,0});assert(damages==0);
-    clockSeconds=.3f;assert(field.Tick(audio,1,{0,0,100},{1,0,0}));assert(hp[1]==1000 && hp[2]<1000 && hp[2]>700 && hp[2]<900 && hp[10]<1000);
+    clockSeconds=.3f;assert(field.Tick(audio,1,{0,0,100},{1,0,0}));assert(hp[1]==1000 && hp[2]<1000 && hp[2]>400 && hp[2]<800 && hp[10]<1000);
     unsigned saved=damages;clockSeconds=1;field.Tick(audio,1,{0,0,100},{1,0,0});assert(damages==saved);
     field.Reset();Scene();assert(field.Throw(1,WeaponSlots::Flashbang,{0,0,100},{1,0,0},{},settings));
     // F8 changes after release cannot rewrite the already flying grenade's eligibility/duration snapshot.
@@ -120,8 +120,10 @@ int main() {
     NativeRockets rockets;GameplaySettings rpg;rpg.rpg.available=true;rpg.friendlyFirePercent=0;rpg.rpg.maxActive=1;
     Scene();collisionFilters.clear();cover={Bounds3{{60,-100,0},{62,100,300}}};
     assert(rockets.Launch(1,{0,0,96},{1,0,0},{},rpg));assert(!rockets.Launch(1,{0,0,96},{1,0,0},{},rpg));
-    rpg.damage[WeaponSlots::RPG]=9999;clockSeconds=.3f;assert(rockets.Tick(audio,1,false,{0,0,96},{1,0,0},3000));
-    assert(hp[1]==1000 && hp[2]<1000 && hp[2]>900 && hp[10]<1000 && !rockets.Active(1));
+    // Later F8 damage/radius edits cannot alter the already launched 1800/600 blast snapshot.
+    assert(rpg.damage[WeaponSlots::RPG]==1800 && rpg.rpg.radius==600);
+    rpg.damage[WeaponSlots::RPG]=9999;rpg.rpg.radius=32;clockSeconds=.3f;assert(rockets.Tick(audio,1,false,{0,0,96},{1,0,0},3000));
+    assert(hp[1]==1000 && hp[2]<1000 && hp[2]>-800 && hp[2]<100 && hp[10]<1000 && !rockets.Active(1));
     // Pathing-texture buildings may have zero native unit radius; rocket queries must still retain their model.
     assert(!collisionFilters.empty() && std::none_of(collisionFilters.begin(),collisionFilters.end(),[](bool value){return value;}));
     saved=damages;clockSeconds=2;rockets.Tick(audio,1,false,{0,0,96},{1,0,0},3000);assert(damages==saved);

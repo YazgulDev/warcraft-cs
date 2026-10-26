@@ -186,3 +186,11 @@ The [classic/blood/casings preview](CLASSIC-BLOOD-CASINGS-PREVIEW.md) changes th
 ## Stronger grenades preview
 
 The [current grenade preview](HEADSHOT-GRENADES-PREVIEW.md) defaults HE to `Damage=300`, with one-time `HEGrenade.DamageVersion=2` migration preserving custom/versioned damage. `[Flashbang] StunAllUnits=true` and `StunDistanceFalloff=false` apply the full existing `UnitStunSeconds=2` to every exposed creature, including the controlled actor and allies. False on the first option restores enemy-only targeting; true on the second enables distance falloff. Both booleans accept true/false or 1/0. F8 applies damage and these policies to subsequent throws; installation updates preserve saved choices. The floating caption now reads Headshot under the existing `CombatVisuals.CriticalText` option.
+
+## Current weapon balance preview
+
+The [current local build](WEAPON-BALANCE-PREVIEW.md) defaults to `[RPG] Damage=1800`, `Radius=600`; `[M3] HeroMultiplier=6`; `[XM1014] HeroMultiplier=4.8`; `[HEGrenade] Damage=600`. Shotgun multipliers apply to the whole shell in unit/hero damage mode, with the result divided among pellets. Fixed weapon-mode shell damage remains 104/80. Flash and smoke remain non-damaging.
+
+Startup/F8 loads the same validated values as fresh installation. Damage accepts 0–1000000, RPG radius 32–3000 world units, and multipliers 0–1000. F8 applies to new shots/launches/throws; active projectiles keep their original snapshot.
+
+Setup and the loader upgrade former stock values once: RPG 100 damage and 525 radius (or unversioned 375), M3 x3, XM1014 x2.4, and HE 300 (or unversioned 100). Custom values, explicit zero and other preserved versioned settings remain authoritative. `[RPG] DamageVersion=2` / `BlastVersion=3`, each shotgun's `MultiplierVersion=2`, and `[HEGrenade] DamageVersion=3` record the current balance. After an update, editing values back to older stock numbers with those markers retains them. Prior version-2 HE 100 and RPG radius 375 are also preserved. Missing keys are inserted once; repeated upgrades do not duplicate/reset them.

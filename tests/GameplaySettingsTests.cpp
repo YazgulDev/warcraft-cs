@@ -8,6 +8,7 @@
 #include <cmath>
 #include <fstream>
 #include <vector>
+#include <tuple>
 #include <windows.h>
 namespace wc3 { void Log(const char*,...) {} }
 int main() {
@@ -18,7 +19,10 @@ int main() {
     assert(settings.economy.currency==EconomySettings::Currency::Dollars && settings.economy.startingMoney==800);
     assert(settings.economy.killReward==200 && settings.economy.maximumMoney==16000);
     assert(settings.weaponDrops.enabled && settings.weaponDrops.chancePercent==.5f);
-    assert(settings.rpg.radius==525 && settings.damage[WeaponSlots::RPG]==100);
+    assert(settings.rpg.radius==600 && settings.damage[WeaponSlots::RPG]==1800);
+    assert(settings.damage[WeaponSlots::HE]==600 && settings.heroMultiplier[WeaponSlots::M3]==6 && settings.heroMultiplier[WeaponSlots::XM1014]==4.8f);
+    assert(settings.ContactDamage(WeaponSlots::M3,false,100)==600 && std::abs(settings.ContactDamage(WeaponSlots::XM1014,false,100)-480)<.001f);
+    assert(settings.ContactDamage(WeaponSlots::RPG,false,100)==1800 && settings.ContactDamage(WeaponSlots::HE,false,100)==600);
     auto economyPath=(std::filesystem::current_path()/"economy-reload-test.ini").string();
     {std::ofstream f(economyPath);f<<"[Economy]\nCurrency=gold\nStartingMoney=99999\nMaximumMoney=2000\nKillReward=nan\n[WeaponDrops]\nEnabled=false\nChancePercent=999\nLifetimeSeconds=-2\nPickupRadius=nan\nMaximumDrops=0\n[RPG]\nRadius=nan\nDamage=nan\n";}
     auto economyReload=GameplaySettings::Load(economyPath);
@@ -26,7 +30,7 @@ int main() {
     assert(economyReload.economy.killReward==200 && !economyReload.weaponDrops.enabled);
     assert(economyReload.weaponDrops.chancePercent==100 && economyReload.weaponDrops.lifetimeSeconds==1);
     assert(economyReload.weaponDrops.pickupRadius==160 && economyReload.weaponDrops.maximumDrops==1);
-    assert(economyReload.rpg.radius==525 && economyReload.damage[WeaponSlots::RPG]==100);
+    assert(economyReload.rpg.radius==600 && economyReload.damage[WeaponSlots::RPG]==1800);
     WritePrivateProfileStringA("Economy","Currency","broken",economyPath.c_str());
     WritePrivateProfileStringA("WeaponDrops","Enabled","broken",economyPath.c_str());
     WritePrivateProfileStringA("WeaponDrops","ChancePercent","nan",economyPath.c_str());
@@ -34,7 +38,7 @@ int main() {
     assert(economyReload.economy.currency==EconomySettings::Currency::Dollars && economyReload.weaponDrops.enabled && economyReload.weaponDrops.chancePercent==.5f);
     // Direct F8 reload upgrades the old stock blast once; a versioned custom radius remains editable.
     WritePrivateProfileStringA("RPG","Radius","375",economyPath.c_str());
-    assert(GameplaySettings::Load(economyPath).rpg.radius==525);
+    assert(GameplaySettings::Load(economyPath).rpg.radius==600);
     WritePrivateProfileStringA("RPG","BlastVersion","2",economyPath.c_str());
     assert(GameplaySettings::Load(economyPath).rpg.radius==375);
     DeleteFileA(economyPath.c_str());
@@ -747,9 +751,32 @@ int main() {
         assert(cv.shellOffset[1]>=-64 && cv.shellOffset[1]<=64 && cv.criticalScale>=.5f && cv.criticalScale<=2 && cv.shellBounce>=0 && cv.shellBounce<=.9f);
         if(!strcmp(value,"nan") || !strcmp(value,"inf") || !strcmp(value,"bad") || !*value)assert(cv.shellOffset[1]==-12 && cv.shellSpeed==140 && cv.bloodSeconds==.5f);
     }
+    // Startup/F8 upgrades old stock and preserves custom, disabled and explicit newer-version values.
+    for(const auto& tuning:std::vector<std::tuple<const char*,const char*,const char*,int,int,float,float>>{
+        {"RPG","Damage","DamageVersion",2,WeaponSlots::RPG,100,1800},
+        {"RPG","Radius","BlastVersion",3,-1,525,600},
+        {"HEGrenade","Damage","DamageVersion",3,WeaponSlots::HE,300,600},
+        {"M3","HeroMultiplier","MultiplierVersion",2,-2,3,6},
+        {"XM1014","HeroMultiplier","MultiplierVersion",2,-3,2.4f,4.8f}}) {
+        auto [section,key,marker,current,slot,oldValue,newValue]=tuning;
+        for(int version:{1,current-1,current})for(float chosen:{-1.f,0.f,oldValue,777.f,2000000.f}) {
+            {std::ofstream f(path);f<<"["<<section<<"]\n"<<key<<"="<<chosen<<"\n"<<marker<<"="<<version<<"\n";}
+            auto balance=GameplaySettings::Load(path);
+            float actual=slot>=0 ? balance.damage[slot] : slot==-1 ? balance.rpg.radius : balance.heroMultiplier[slot==-2 ? WeaponSlots::M3 : WeaponSlots::XM1014];
+            float expected=chosen==oldValue && version<current ? newValue : chosen;
+            expected=std::clamp(expected,slot==-1 ? 32.f : 0.f,slot>=0 ? 1000000.f : slot==-1 ? 3000.f : 1000.f);
+            assert(std::abs(actual-expected)<.001f);
+        }
+        for(const char* invalid:{"nan","broken",""}) {
+            {std::ofstream f(path);f<<"["<<section<<"]\n"<<key<<"="<<invalid<<"\n";}
+            auto balance=GameplaySettings::Load(path);
+            float actual=slot>=0 ? balance.damage[slot] : slot==-1 ? balance.rpg.radius : balance.heroMultiplier[slot==-2 ? WeaponSlots::M3 : WeaponSlots::XM1014];
+            assert(std::abs(actual-newValue)<.001f);
+        }
+    }
     // Stock HE migrates once in the actual startup/F8 loader; custom, zero and versioned 100 remain intentional.
     for(const char* config:{"", "[HEGrenade]\nDamage=100\n", "[HEGrenade]\nDamage=100.0\nDamageVersion=1\n"}) {
-        {std::ofstream f(path);f<<config;}assert(GameplaySettings::Load(path).damage[WeaponSlots::HE]==300);
+        {std::ofstream f(path);f<<config;}assert(GameplaySettings::Load(path).damage[WeaponSlots::HE]==600);
     }
     for(int damage:{0,100,777}) {
         {std::ofstream f(path);f<<"[HEGrenade]\nDamage="<<damage<<"\nDamageVersion=2\n[Flashbang]\nStunAllUnits=false\nStunDistanceFalloff=true\n";}

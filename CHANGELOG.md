@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Default RPG to 1800 fixed peak damage and a 600-unit blast radius; double whole-shell native attack multipliers to M3 x6 and XM1014 x4.8, and raise HE peak damage to 600.
+- Make the native grenade test runner reject signed abort/crash exit codes, and extend RPG/HE launch-snapshot checks to the new balance.
+- Migrate prior stock balance once at setup/startup/F8 while preserving custom values and newer-version opt-backs. Future shots/throws consume the new snapshot; active projectiles retain their tuning. [Current balance preview](docs/WEAPON-BALANCE-PREVIEW.md).
+
 - Keep purchases available during reload; opening/closing B preserves timing, sound and shell insertion, while buying ammunition adds real reserve without restarting or duplicating transfers.
 - Default ArmyAI.FollowActor to false: U retains economy and defense without rallying ordinary troops to the hero; base reserves require an actual hall. F8 supports opting into the old escort behavior and updates preserve preferences. [Current preview](docs/RELOAD-ARMY-PREVIEW.md). - local feature preview
 

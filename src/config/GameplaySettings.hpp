@@ -138,9 +138,9 @@ struct GameplaySettings {
     bool nativeSky=true;
     std::string defaultSky="Des";
     std::array<std::string,256> tilesetSky{};
-    // HE uses a fixed 300 peak independently of the controlled creature's native attack.
-    std::array<float, WeaponSlots::Count> damage = {36,33,34,115,40,2500,120,54,25,26,21,32,104,80,300,0,0,100,10,100,70};
-    std::array<float, WeaponSlots::Count> heroMultiplier = {1,1,1,3,1,1,3,1.6f,.75f,.8f,.65f,1,3,2.4f,0,0,0,0,1,0,0};
+    // Explosives use fixed peaks (HE 600, RPG 1800); shotgun multipliers scale the unit's native attack.
+    std::array<float, WeaponSlots::Count> damage = {36,33,34,115,40,2500,120,54,25,26,21,32,104,80,600,0,0,1800,10,100,70};
+    std::array<float, WeaponSlots::Count> heroMultiplier = {1,1,1,3,1,1,3,1.6f,.75f,.8f,.65f,1,6,4.8f,0,0,0,0,1,0,0};
     float knifeSecondaryDamage = 65, swordSecondaryDamage = 240;
     static GameplaySettings Load(const std::string& filename);
     // Config alone cannot grant optional content; the private resource seal is checked on startup/F8.

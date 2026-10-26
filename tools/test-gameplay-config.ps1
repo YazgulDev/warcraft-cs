@@ -33,7 +33,7 @@ $freshEconomy=Join-Path $folder 'dollar-defaults.ini'
 @('[Buy]','Radius=720') | Set-Content -LiteralPath $freshEconomy -Encoding ascii
 Update-GameplayConfig $template $freshEconomy
 $freshText=Get-Content -LiteralPath $freshEconomy -Raw
-foreach($expected in @('Currency=dollars','StartingMoney=800','ChancePercent=0.5','Radius=525','Radius=720')) {
+foreach($expected in @('Currency=dollars','StartingMoney=800','ChancePercent=0.5','Radius=600','Damage=1800','Radius=720')) {
     if(!$freshText.Contains($expected)){throw "Economy/loot default missing: $expected"}
 }
 # Semicolon custom actions survive; only the former squad default migrates to Y.
@@ -484,8 +484,8 @@ foreach($oldRadius in @('375','900')) {
         @('[RPG]',('Radius='+$oldRadius),'Damage=777',$(if($versioned){'BlastVersion=2'}else{'; old stock format'})) | Set-Content -LiteralPath $blastConfig -Encoding ascii
         Update-GameplayConfig $template $blastConfig
         $blastText=Get-Content -LiteralPath $blastConfig -Raw
-        $expected=if($oldRadius -eq '375' -and !$versioned){'525'}else{$oldRadius}
-        if(!$blastText.Contains('Radius='+$expected) -or !$blastText.Contains('BlastVersion=2') -or !$blastText.Contains('Damage=777')){throw 'RPG stock migration lost a custom blast setting.'}
+        $expected=if($oldRadius -eq '375' -and !$versioned){'600'}else{$oldRadius}
+        if(!$blastText.Contains('Radius='+$expected) -or !$blastText.Contains('BlastVersion=3') -or !$blastText.Contains('Damage=777')){throw 'RPG stock migration lost a custom blast setting.'}
         $blastHash=(Get-FileHash $blastConfig).Hash;Update-GameplayConfig $template $blastConfig
         if((Get-FileHash $blastConfig).Hash -ne $blastHash){throw 'RPG stock migration is not idempotent.'}
     }
@@ -525,14 +525,40 @@ $visualHash=(Get-FileHash $visualConfig).Hash;Update-GameplayConfig $template $v
 if((Get-FileHash $visualConfig).Hash -ne $visualHash){throw 'Visual update is not idempotent.'}
 
 # Only former unversioned stock HE upgrades. Later returns to 100 and custom damage/flash opt-outs survive.
-foreach($case in @(@('100','','300'),@('100','1','300'),@('100','2','100'),@('0','','0'),@('777','','777'))) {
+foreach($case in @(@('100','','600'),@('100','1','600'),@('300','2','600'),@('300','3','300'),@('100','2','100'),@('0','','0'),@('777','','777'))) {
     $heConfig=Join-Path $folder ('he-damage-'+[guid]::NewGuid().ToString('N')+'.ini')
     @('[HEGrenade]',('Damage='+$case[0]),$(if($case[1]){'DamageVersion='+$case[1]}),'[Flashbang]','StunAllUnits=false','StunDistanceFalloff=true','UnitStunSeconds=4','[Movement]','Mode=classic') | Set-Content -LiteralPath $heConfig -Encoding ascii
     Update-GameplayConfig $template $heConfig
     $heText=Get-Content $heConfig -Raw
-    foreach($expected in @(('Damage='+$case[2]),'DamageVersion=2','StunAllUnits=false','StunDistanceFalloff=true','UnitStunSeconds=4','Mode=classic')) {
+    foreach($expected in @(('Damage='+$case[2]),'DamageVersion=3','StunAllUnits=false','StunDistanceFalloff=true','UnitStunSeconds=4','Mode=classic')) {
         if(!$heText.Contains($expected)){throw ('HE/flash migration lost '+$expected)}
     }
     $heHash=(Get-FileHash $heConfig).Hash;Update-GameplayConfig $template $heConfig
     if((Get-FileHash $heConfig).Hash -ne $heHash){throw 'HE migration is not idempotent.'}
 }
+
+# Current balance upgrades migrate only stock, preserve custom/versioned opt-backs and never repeat.
+foreach($spec in @(
+    @('RPG','Damage','DamageVersion',2,'100','1800'),
+    @('RPG','Radius','BlastVersion',3,'525','600'),
+    @('HEGrenade','Damage','DamageVersion',3,'300','600'),
+    @('M3','HeroMultiplier','MultiplierVersion',2,'3','6'),
+    @('XM1014','HeroMultiplier','MultiplierVersion',2,'2.4','4.8'))) {
+    foreach($saved in @($spec[4],'0','777')) {
+        foreach($version in @('',[string]($spec[3]-1),[string]$spec[3])) {
+            $balanceFile=Join-Path $folder ('balance-'+[guid]::NewGuid().ToString('N')+'.ini')
+            @(('['+$spec[0]+']'),($spec[1]+'='+$saved),$(if($version){$spec[2]+'='+$version}),'[Audio]','CSVolumePercent=30') | Set-Content -LiteralPath $balanceFile -Encoding ascii
+            Update-GameplayConfig $template $balanceFile
+            $text=Get-Content -LiteralPath $balanceFile -Raw
+            $expected=if($saved -eq $spec[4] -and (!$version -or [int]$version -lt $spec[3])){$spec[5]}else{$saved}
+            $sectionPattern='(?ms)^\['+[regex]::Escape($spec[0])+'\]\s*\r?\n(.*?)(?=^\[|\z)'
+            $sectionText=[regex]::Match($text,$sectionPattern).Groups[1].Value
+            if($sectionText -notmatch ('(?m)^'+$spec[1]+'='+[regex]::Escape($expected)+'\s*$') -or $sectionText -notmatch ('(?m)^'+$spec[2]+'='+$spec[3]+'\s*$') -or !$text.Contains('CSVolumePercent=30')){throw 'Balance update changed a custom setting or missed a stock upgrade.'}
+            $balanceHash=(Get-FileHash -LiteralPath $balanceFile).Hash
+            Update-GameplayConfig $template $balanceFile
+            if((Get-FileHash -LiteralPath $balanceFile).Hash -ne $balanceHash){throw 'Balance update is not idempotent.'}
+        }
+    }
+}
+
+Write-Output 'PASS current RPG/HE/shotgun balance, custom/versioned choices, audio preservation and repeated updates.'

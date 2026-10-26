@@ -4,6 +4,8 @@
 
 In the local [dual-currency preview](DUAL-CURRENCY-HEADSHOTS-PREVIEW.md), **B** shows dollar and gold buttons above every category. Click the currency to select it; dollars are the default. When dollars cannot cover the whole price, the purchase uses gold if sufficient (`[Economy] FallbackToGold=true`). The wallets never combine. Selecting gold spends only gold. Both balances stay visible and dollar kill rewards continue in either mode. Native Warcraft shops keep their own gold rules. **F8** restores the saved `Economy.Currency` preference.
 
+The [current balance preview](WEAPON-BALANCE-PREVIEW.md) doubles whole-shell native attack multipliers: M3 **x6**, XM1014 **x4.8**. These apply in `Damage.Mode=unit`/`hero`; the fixed weapon-mode shell damage stays 104/80. HE now defaults to **600** peak damage; flash and smoke still deal zero health damage. F8 applies to subsequent shots/throws, and updates preserve custom tuning.
+
 The paid firearms are Desert Eagle (650), Glock 18 (400), MP5 (1500),
 P90 (2350), M249 (5750), M3 (1700), and XM1014 (3000). Open **B**: 1 pistols,
 2 shotguns, 3 SMGs, 4 rifles, 5 machine guns, 6 primary ammo, 7 pistol ammo,
