@@ -33,6 +33,7 @@ Initial source-only publication may bootstrap an empty master commit, create `re
 
 ## Complete Release Notes
 
+- Begin the visible GitHub release body and the matching release document with a **Download and upgrade** section, before the change list, overview or technical details. Put direct Markdown download links first: `WarcraftCSLauncher_DLL_Included.exe` (Player, bundled modules), `WarcraftCSLauncher.exe` (Developer/source install), and `WarcraftCS-<version>-dist.zip` (standard launcher and sources), when included in that release. Use the actual release tag/version and asset filenames; verify that each link matches an uploaded release asset. Follow the links with brief upgrade instructions, then the full release notes.
 - Every release must have Release Notes covering **all changes included in that release**, not just the last task or commit.
 - Compare the immutable previous published tag with the new release tree and inspect the included commits/merges. A release branch may have advanced since publication; do not use its moving tip as the baseline.
 - Include every added feature/parameter, changed default or behavior, fix, relevant source/packaging/skill/documentation change, upgrade instructions and known limitations. Explain config keys, units/ranges and reload timing when parameters are added.
