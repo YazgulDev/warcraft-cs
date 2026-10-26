@@ -58,9 +58,9 @@ and `?` for an unsupported native timer. Warcraft still decides whether a cast o
 item use succeeds. F9 hides the HUD and disables player attacks, casts and inventory
 interaction regardless of these display preferences.
 
-## Movement collision preview
+## Movement collision
 
-The development preview defaults to `[Movement] Mode=recovery`, enabling the latest round-hull,
+Release 0.12.0 defaults to `[Movement] Mode=recovery`, enabling the latest round-hull,
 platform support and Home rescue. Set `Mode=classic` for movement before the 24 October
 jump/collision redesign (2babf58). `Mode=hull` retains the intermediate round-hull build.
 Mode names are case-insensitive; unknown/empty/missing values use recovery.
@@ -155,3 +155,42 @@ depends on hardware and map load; farther rendering does not reveal fog-hidden u
 `Default=Des` and tileset mappings such as `W=snow` choose cache stems. Missing
 caches retain the native sky. F8 applies changes; map/RTS transitions restore the
 map's original state.
+
+## Shopping and army preview
+
+The [current preview](RELOAD-ARMY-PREVIEW.md) keeps reloading active while B is open or ammunition is purchased. Purchasing/equipping a different weapon still cancels the old reload.
+
+`[ArmyAI] FollowActor=false` disables automatic hero escort while retaining economy and defense. Set true to restore escort. Accepts true/false or 1/0; missing, empty and malformed values default to false. F8 applies on the next active AI decision (`IntervalMs`); updates add missing keys once and preserve saved choices. Without a hall, reserve fighters remain in place instead of rallying to the actor. Explicit squad commands are unchanged.
+
+## Local feature preview settings
+
+The [dual-currency/headshot preview](DUAL-CURRENCY-HEADSHOTS-PREVIEW.md) adds these startup/F8 settings. Installation updates fill missing keys and preserve custom choices. Published 0.12.0 downloads do not yet contain these additions.
+
+| Section / key | Default | Meaning / range |
+| --- | --- | --- |
+| Economy / Currency | dollars | Initial and F8 menu choice: dollars or gold; click buttons in B for a session change |
+| Economy / FallbackToGold | true | Pay the whole price in gold when dollars are insufficient; no mixed charge |
+| Combat / PreciseUnitHits | true | Trace verified posed MDX surfaces; false restores old unit volumes |
+| Combat / Headshots | true | Enable direct named-head bonuses and confirmed HUD feedback |
+| Combat / HeadshotMultiplier | 2 | Damage factor, 1-10, before native defenses and allied scaling |
+| Interface / ItemNames | true | Localized reticle names for ground items/runes in F6/F9 |
+| Interface / ItemNameDistance | 1200 | Maximum ray length, 160-5000 world units |
+| Interface / ItemNameRadius | 32 | Spherical aim tolerance, 4-128 world units |
+
+Unsupported model/pose adapters never invent a head location. Experimental 1.27a retains approximate body hits and lacks item labels. Dollar rewards remain unchanged; the current preview movement default is described below.
+
+## Current visual feedback preview
+
+The [classic/blood/casings preview](CLASSIC-BLOOD-CASINGS-PREVIEW.md) changes the fresh/default movement mode to `classic`; explicit `hull` and `recovery` remain available and saved choices survive installation. Its `[CombatVisuals]` keys control confirmed blood/critical text and cosmetic casing pools. All defaults, units, ranges and F8 behavior are listed in that guide and the annotated INI. No centered HEADSHOT word is drawn in this preview.
+
+## Stronger grenades preview
+
+The [current grenade preview](HEADSHOT-GRENADES-PREVIEW.md) defaults HE to `Damage=300`, with one-time `HEGrenade.DamageVersion=2` migration preserving custom/versioned damage. `[Flashbang] StunAllUnits=true` and `StunDistanceFalloff=false` apply the full existing `UnitStunSeconds=2` to every exposed creature, including the controlled actor and allies. False on the first option restores enemy-only targeting; true on the second enables distance falloff. Both booleans accept true/false or 1/0. F8 applies damage and these policies to subsequent throws; installation updates preserve saved choices. The floating caption now reads Headshot under the existing `CombatVisuals.CriticalText` option.
+
+## Current weapon balance preview
+
+The [current local build](WEAPON-BALANCE-PREVIEW.md) defaults to `[RPG] Damage=1800`, `Radius=600`; `[M3] HeroMultiplier=6`; `[XM1014] HeroMultiplier=4.8`; `[HEGrenade] Damage=600`. Shotgun multipliers apply to the whole shell in unit/hero damage mode, with the result divided among pellets. Fixed weapon-mode shell damage remains 104/80. Flash and smoke remain non-damaging.
+
+Startup/F8 loads the same validated values as fresh installation. Damage accepts 0–1000000, RPG radius 32–3000 world units, and multipliers 0–1000. F8 applies to new shots/launches/throws; active projectiles keep their original snapshot.
+
+Setup and the loader upgrade former stock values once: RPG 100 damage and 525 radius (or unversioned 375), M3 x3, XM1014 x2.4, and HE 300 (or unversioned 100). Custom values, explicit zero and other preserved versioned settings remain authoritative. `[RPG] DamageVersion=2` / `BlastVersion=3`, each shotgun's `MultiplierVersion=2`, and `[HEGrenade] DamageVersion=3` record the current balance. After an update, editing values back to older stock numbers with those markers retains them. Prior version-2 HE 100 and RPG radius 375 are also preserved. Missing keys are inserted once; repeated upgrades do not duplicate/reset them.

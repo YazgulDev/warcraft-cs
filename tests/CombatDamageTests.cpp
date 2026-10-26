@@ -1,4 +1,5 @@
 #include "../src/combat/CombatDamage.hpp"
+#include "../src/combat/HeadshotPolicy.hpp"
 #include <cstdio>
 #include <cstdlib>
 
@@ -26,5 +27,15 @@ int main() {
     Require(CombatDamage::Amount(36,true,false,420,200)==36,"allied percentage clamps at full damage");
     Require(CombatDamage::Amount(2500,false,false,5000,0)==2500,"enemy C4 independent of allied percent");
     Require(CombatDamage::Amount(115,false,true,5000,0)>5000,"enemy AWP finishing independent of allied percent");
+    HitDetectionSettings head;
+    Require(HeadshotPolicy::Accepted(WeaponSlots::Pistol,true,head),"named firearm head contact accepted");
+    Require(!HeadshotPolicy::Accepted(WeaponSlots::Knife,true,head) && !HeadshotPolicy::Accepted(WeaponSlots::RPG,true,head),"melee and explosives cannot headshot");
+    Require(!HeadshotPolicy::Accepted(WeaponSlots::Pistol,false,head),"body/fallback has no head bonus");
+    float doubled=HeadshotPolicy::Damage(36,true,head);
+    Require(doubled==72 && CombatDamage::Amount(doubled,true,false,420)==36,"head bonus precedes friendly reduction");
+    Require(CombatDamage::Amount(doubled,true,false,420,0)==0,"headshots cannot bypass zero friendly damage");
+    Require(HeadshotPolicy::Damage(0,true,head)==0,"zero damage remains zero");
+    head.headshots=false;Require(!HeadshotPolicy::Accepted(WeaponSlots::Pistol,true,head),"headshots can be disabled");
+    head.headshotMultiplier=3;Require(HeadshotPolicy::Damage(36,true,head)==108,"configured multiplier");
     std::puts("Combat damage invariants passed: friendly coefficient, C4 and AWP finishing");
 }

@@ -1,12 +1,12 @@
 # Experimental Warcraft III 1.27a support
 
-This source feature targets **Game.dll 1.27.0.52240, x86** alongside the existing
-**1.26.0.6401** host. Reforged and other builds are rejected. This work is not in
-the published 0.11.0 downloads.
+Release **0.12.0** adds experimental **Game.dll 1.27.0.52240, x86** support alongside
+the existing **1.26.0.6401** host. Reforged and other builds are rejected. Older
+published 0.11.0 downloads do not contain this port.
 
 ## Installation
 
-Use Player setup in the unified DLL-included preview, or Developer/source setup, with your own complete 1.27a installation and the
+Use Player setup in the 0.12.0 DLL-included launcher, or Developer/source setup, with your own complete 1.27a installation and the
 existing `setup.cmd -WarcraftDirectory ... -CounterStrikeDirectory ...` command.
 Choose a separate installation folder. Warcraft-only setup remains available.
 The original game is never patched on disk.
@@ -21,7 +21,7 @@ Miles proxy. Setup derives exact export data from the selected owner's original
 sound library, retaining names, aliases and ordinals without shipping that library
 or requiring C++ Build Tools. The original game stays untouched. Legacy published
 0.11.0 packages retain their exact host/hash restriction. See
-[unified preview details](UNIFIED-PREVIEW.md); real 1.27a gameplay remains unverified.
+[complete release details](RELEASE-0.12.0.md); real 1.27a gameplay remains unverified.
 
 ## Design
 
@@ -56,7 +56,9 @@ This is an **experimental partial port**, not feature parity with 1.26a:
   exact terrain/walkable bridge helpers and camera ceiling overrides are
   unavailable. Hitboxes use existing approximate defaults and terrain uses public
   location-height natives. Item/gate interaction and bridge/tree collision do not
-  claim 1.26a behavior.
+  claim 1.26a behavior. The local headshot/item-name preview also needs verified
+  model, pose-clock and item-name adapters; those features are unavailable on 1.27a.
+  Its dollar/gold purchase selection and fallback use public natives on both hosts.
 - Native XP-threshold and inventory-art helpers are unavailable. Public health,
   mana, level, XP and item charges remain available. Internal item activation
   forms are unavailable. Spell helpers retain their own capability guards.

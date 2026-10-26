@@ -1,6 +1,6 @@
 # Optional Half-Life arsenal
 
-Development feature after 0.11.0. Run setup again with your owned CS 1.6 directory to
+Available in release 0.12.0. Run setup again with your owned CS 1.6 directory to
 convert sibling `valve` content (loose files or `pak*.pak`). Each weapon requires its
 own valid model, preview, animation timeline and sounds. Missing/incomplete content
 hides only that weapon. Only Warcraft installations exclude these weapons.

@@ -10,6 +10,8 @@
 #include "SpellHudView.hpp"
 #include "HudFont.hpp"
 #include "HudDiagnostics.hpp"
+#include "ItemNameView.hpp"
+#include "CombatVisualView.hpp"
 #include "UnitHudView.hpp"
 #include "MuzzleFlashPulse.hpp"
 class NativeMinimap;
@@ -37,6 +39,8 @@ private:
     bool loaded_[WeaponSlots::Count] = {}, attempted_[WeaponSlots::Count] = {};
     HudFont font_{"hints"},statusFont_{"status"},spellFont_{"spells"},unitFont_{"unit"},inventoryFont_{"inventory"};
     HudDiagnostics hudDiagnostics_;
+    ItemNameView itemName_;
+    CombatVisualView combatView_;
     int hintGlyphWidth_ = 12;
     HGLRC context_ = nullptr;
     bool refreshPending_ = false;

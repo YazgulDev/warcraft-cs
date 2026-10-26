@@ -418,3 +418,20 @@ Handle PickOwnedUnit() {
     return fallback;
 }
 }
+
+namespace wc3 {
+std::string ItemName(Handle item) {
+    if(!item || !nativeBase || ActiveBuild()!=GameBuildKind::Classic126a)return {};
+    // Owned GetItemName (3C4E90) and GetObjectName both call 32DBE0(type,0),
+    // whose result is the already-localized current-map name before JASS string interning.
+    const unsigned char signature[]={0x56,0x8B,0xF2,0xBA};
+    if(std::memcmp(reinterpret_cast<void*>(nativeBase+0x32DBE0),signature,sizeof(signature)))return {};
+    int type=GetItemTypeId(item);if(!type)return {};
+    using Name=const char* (__fastcall*)(int,int);
+    auto text=reinterpret_cast<Name>(nativeBase+0x32DBE0)(type,0);std::string result;
+    for(size_t i=0;text && i<512;++i){char c=0;SIZE_T read=0;
+        if(!ReadProcessMemory(GetCurrentProcess(),text+i,&c,1,&read) || read!=1)return {};
+        if(!c)return result;result+=c;}
+    return {};
+}
+}

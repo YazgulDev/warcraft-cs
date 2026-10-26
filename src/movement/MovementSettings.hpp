@@ -2,9 +2,9 @@
 
 // GoldSrc units are converted only by physics; collision uses Warcraft world units.
 struct MovementSettings {
-    // Recovery is the default; classic and hull remain selectable without resetting motion.
-    bool classicCollision=false;
-    bool platformRecovery=true;
+    // Classic is the requested default; recovery and hull remain selectable without resetting motion.
+    bool classicCollision=true;
+    bool platformRecovery=false;
     // Live creature footprints replace oversized visual extents; solid buildings/trees keep model geometry.
     bool useNativeUnitCollision=true;
     // Precise stationary prop surfaces keep arch openings and low column bases usable.

@@ -2,17 +2,17 @@
 
 [Project home](README.md) · [Documentation](docs/README.md) · [Requirements](REQUIREMENTS.md)
 
-This source branch additionally supports experimental Warcraft III **1.27a
-(Game.dll 1.27.0.52240)** through unified Player or Developer setup, selecting D3D9 at launch.
+Release **0.12.0** additionally accepts experimental Warcraft III **1.27a
+(Game.dll 1.27.0.52240)** through Player or Developer setup, selecting D3D9 at launch.
 Published 0.11.0 Player modules cannot be reused across host versions. Read
 [port limits and verification status](docs/PORT-1.27.md) before using that host.
 
 You need your own installed Warcraft III **1.26a x86** (Game.dll **1.26.0.6401**)
-and, for CS weapons, Counter-Strike 1.6. Reforged and other Warcraft patches are unsupported.
+or the experimental 1.27a host above, and, for CS weapons, Counter-Strike 1.6. Reforged and other Warcraft patches are unsupported.
 This offline, single-player prototype does not download games or redistribute their content.
 Full campaign/custom-map compatibility has not been verified.
 See [REQUIREMENTS.md](REQUIREMENTS.md) for the complete system, owned-file and dependency checklist.
-Current release: **0.11.0**; [all changes and download variants](docs/RELEASE-0.11.0.md).
+Current release: **0.12.0**; [all changes and download variants](docs/RELEASE-0.12.0.md).
 Antivirus can block the unsigned hook module; see the [short explanation and checks](TROUBLESHOOTING.md#antivirus).
 
 ## Windows EXE: recommended for clients
@@ -30,7 +30,7 @@ Open the launcher and use **Browse...** next to each field:
 
 | Launcher field | Choose this | Example |
 | --- | --- | --- |
-| Warcraft III 1.26a folder | Your Warcraft game root, containing `war3.exe`, `Game.dll`, `Mss32.dll`, `Storm.dll` and the four MPQ archives listed below. | `E:\Warcraft III` |
+| Warcraft III 1.26a / 1.27a folder | Your Warcraft game root, containing `war3.exe`, `Game.dll`, `Mss32.dll`, `Storm.dll` and the four MPQ archives listed below. | `E:\Warcraft III` |
 | Counter-Strike 1.6 folder (cstrike or Half-Life) | The `cstrike` folder containing the loose weapon models and sounds. Its `Half-Life` parent also works. | `C:\SteamGames\steamapps\common\Half-Life\cstrike` |
 | Install Warcraft CS here | A dedicated writable folder outside both game installations, with space for another Warcraft copy and dependencies. | Keep the default `%LOCALAPPDATA%\WarcraftCS`, or choose `D:\WarcraftCS`. |
 

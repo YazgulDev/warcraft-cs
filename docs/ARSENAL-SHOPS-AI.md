@@ -2,12 +2,18 @@
 
 [Project home](../README.md) · [Documentation](README.md) · [Settings](CONFIGURATION.md)
 
-The new paid firearms are Desert Eagle (650 gold), Glock 18 (400), MP5 (1500),
+In the local [dual-currency preview](DUAL-CURRENCY-HEADSHOTS-PREVIEW.md), **B** shows dollar and gold buttons above every category. Click the currency to select it; dollars are the default. When dollars cannot cover the whole price, the purchase uses gold if sufficient (`[Economy] FallbackToGold=true`). The wallets never combine. Selecting gold spends only gold. Both balances stay visible and dollar kill rewards continue in either mode. Native Warcraft shops keep their own gold rules. **F8** restores the saved `Economy.Currency` preference.
+
+The [current balance preview](WEAPON-BALANCE-PREVIEW.md) doubles whole-shell native attack multipliers: M3 **x6**, XM1014 **x4.8**. These apply in `Damage.Mode=unit`/`hero`; the fixed weapon-mode shell damage stays 104/80. HE now defaults to **600** peak damage; flash and smoke still deal zero health damage. F8 applies to subsequent shots/throws, and updates preserve custom tuning.
+
+The paid firearms are Desert Eagle (650), Glock 18 (400), MP5 (1500),
 P90 (2350), M249 (5750), M3 (1700), and XM1014 (3000). Open **B**: 1 pistols,
 2 shotguns, 3 SMGs, 4 rifles, 5 machine guns, 6 primary ammo, 7 pistol ammo,
 8 equipment. Number keys and mouse rows select the same catalog entries.
+In the [current preview](RELOAD-ARMY-PREVIEW.md), B and quick ammo remain available while reloading. Opening/closing B or buying ammunition preserves the reload clock, sounds and shell insertions; purchasing and equipping a different weapon cancels the old reload. Shotguns keep the number of insertions planned when R was pressed; newly purchased reserves remain available afterward.
+
 Buying grants a loaded magazine; reserve packs cost extra. Duplicates, insufficient
-funds and full packs do not charge gold. Inventory slot IDs remain stable. The
+funds and full packs do not charge either wallet. Inventory slot IDs remain stable. The
 [carried weapon menu](WEAPON-SELECTION.md) uses groups **1–5**, repeated category keys or the wheel
 to highlight a weapon, then LMB to equip it. Tab toggles item-number routing.
 F11 refills owned weapons; F12 grants all weapons. The initial kit is unchanged.
@@ -15,7 +21,7 @@ Models, sounds and hand-free previews are converted privately from owned CS file
 An optional [Half-Life RPG](HALF-LIFE-RPG.md) appears only with complete owned resources.
 
 The new INI sections `[Deagle]`, `[Glock]`, `[MP5]`, `[P90]`, `[M249]`, `[M3]`,
-`[XM1014]` expose `Price`/`AmmoPrice` in native gold (0–1000000), `AmmoPack`
+`[XM1014]` expose `Price`/`AmmoPrice` in the selected currency (0–1000000), `AmmoPack`
 (1–1000 rounds), `MaxReserve` (0–100000), `Magazine` (1–1000), `Damage`
 (0–1000000, weapon mode) and `HeroMultiplier` (0–1000, hero mode). Shotgun damage
 is a shell total, divided across `[Shotguns] Pellets=8` (1–16), with
@@ -96,8 +102,8 @@ model's barrel attachments; older WCG2 caches use a geometry-derived fallback.
 
 Equipment keys **4 HE, 5 Flashbang, 6 Smoke** append stable slots 15–17. Original
 number keys remain unchanged. Each purchase buys one grenade, including quick
-ammo on a carried grenade. Defaults: HE 300 gold/capacity 1, flash 200/capacity 2,
-smoke 300/capacity 1. Full inventory never charges gold. Fresh standard kits have
+ammo on a carried grenade. Defaults: HE 300/capacity 1, flash 200/capacity 2,
+smoke 300/capacity 1. Full inventory never charges either wallet. Fresh standard kits have
 no grenades; all-weapons grants them and free refill restores carried stacks.
 Grenades have no reserve, magazine reload, hitscan bullet or muzzle flash.
 
@@ -117,10 +123,7 @@ units and buildings using swept hulls. This calibrates launch reach; Warcraft
 collision responses and the existing detonation/effect rules remain adaptations. HE has fixed peak damage, linear 3D falloff, cover checks and the
 existing friendly-fire percentage; neutral buildings and destructable gates
 retain native quest immunity. Flash blinds the controlled view according to
-distance, facing and cover. As a Warcraft adaptation, nearby hostile mobile
-units briefly pause; already paused units and the controlled actor are excluded,
-and only pauses acquired by this feature are released. Set UnitStunSeconds=0 to
-disable that adaptation. Smoke is a visual volume with depth-tested soft puffs,
+distance, facing and cover. Published 0.12.0 briefly paused nearby hostile mobile units and excluded the controlled actor. The current local preview stuns every exposed creature, including allies and the controlled actor, for the full UnitStunSeconds by default. Pre-paused map units are not leased, and only pauses acquired by this feature are released. StunAllUnits=false restores the former enemy-only filter; UnitStunSeconds=0 disables creature stuns. Smoke is a visual volume with depth-tested soft puffs,
 near-eye density and fade; it does not block bullets or alter native AI sight.
 Thrown bodies use the owner's original `w_hegrenade.mdl`, `w_flashbang.mdl` and
 `w_smokegrenade.mdl` with their textures, real perspective and world occlusion.
@@ -174,8 +177,7 @@ custom action using U keeps it on upgrade; the new AI binding becomes NONE.
 Only living, available, **owned** units other than the actor and H/O members are
 eligible. Explicit RMB targets take priority. J releases H/O membership, making
 those units eligible again. Units fighting or executing other active orders retain
-their orders. Idle fighters reserve some units at base and send the rest toward
-the actor with native attack-move. Visible base threats call idle units into defense.
+their orders. In the [current preview](RELOAD-ARMY-PREVIEW.md), idle fighters reserve some units at an actual base and leave the rest in place. Visible threats still call idle units into defense. `[ArmyAI] FollowActor=true` restores automatic hero escort; the default is false. Without a hall, reserve units do not rally to the actor either.
 
 Stock workers/halls select a basic human, orc, undead or night elf build plan.
 AI requests a missing hall, supply when food is tight, a basic barracks, workers
@@ -191,6 +193,7 @@ All `[ArmyAI]` settings reload with F8:
 | Key | Default | Range / meaning |
 | --- | --- | --- |
 | Enabled | true | Enables U; automation starts off |
+| FollowActor | false | Preview: true/false or 1/0; automatic hero escort, applied on the next AI decision after F8 |
 | IntervalMs | 1500 | 500–10000 milliseconds between decisions |
 | ProductionRetrySeconds | 180 | 30–3600 active decision seconds before retrying canceled/unobserved training; pauses/background time do not count |
 | Workers | 6 | 0–30 desired workers |
@@ -215,3 +218,7 @@ garrisons remain counted. Canceled/unobserved training eventually retries at the
 decision-time limit. Map callbacks are followed by a fresh ownership/exclusion check before
 the next order. Reinforcements stop within SupportDistance while fighting units retain combat.
 Changing the retry duration applies to newly accepted training reservations.
+
+## Grenade balance in the current local preview
+
+The [Headshot/grenades preview](HEADSHOT-GRENADES-PREVIEW.md) raises HE peak damage to 300 while retaining its 350-unit radius and cover/distance/native-defense rules. The stock 100 upgrades once; custom damage and versioned 100 survive updates. Flashbangs stun all exposed living creatures, including allies and the controlled actor, for two seconds by default. `StunAllUnits=false` and `StunDistanceFalloff=true` restore the optional older filtering/falloff behavior. Already-flying grenades retain their settings; F8 applies to new throws.

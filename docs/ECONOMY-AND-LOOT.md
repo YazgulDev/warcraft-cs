@@ -1,6 +1,6 @@
 # Dollar economy and rare weapon loot
 
-Source feature; the published 0.11.0 package does not include these changes yet.
+Available in release 0.12.0. Older 0.11.0 packages do not include this economy.
 
 The default B menu and quick-ammo purchase use a separate CS dollar wallet.
 Each player's wallet starts with $800 once per map, earns $200 per confirmed
@@ -9,6 +9,8 @@ $16000. Native Warcraft gold, map resource triggers, loot tables and item slots
 are preserved. F6/F7/F9, switching units, free-refill shortcuts and F8 do not
 grant starting money again. Balances are map-local; they are not saved into
 Warcraft campaign saves or carried across maps/restarts.
+
+The local [dual-currency preview](DUAL-CURRENCY-HEADSHOTS-PREVIEW.md) adds **DOLLARS** and **GOLD** buttons above every B menu category and shows both balances. Dollars remain the default. If dollars cannot cover a whole purchase, sufficient gold pays the whole price (`FallbackToGold=true`). The wallets never combine; gold selection spends only gold. Dollar rewards continue while gold is selected. The menu choice is session-local; startup/F8 restores the saved preference. Quick-ammo follows the same selection/fallback, while native Warcraft shops keep their own rules.
 
 Set `[Economy] Currency=gold` to use the original Warcraft gold purchasing
 behavior. Prices in weapon sections apply to the selected currency. Gold mode
@@ -39,6 +41,7 @@ to reload. Updates add missing keys and preserve custom values.
 | Section / key | Default | Bounds / timing |
 | --- | --- | --- |
 | Economy / Currency | dollars | dollars or gold; F8 |
+| Economy / FallbackToGold (local preview) | true | true/false; whole-price gold fallback on insufficient dollars, F8 |
 | Economy / StartingMoney | 800 | Whole dollars, 0..1000000, limited by MaximumMoney; next new map/player wallet |
 | Economy / KillReward | 200 | Whole dollars, 0..1000000; subsequent kills after F8 |
 | Economy / MaximumMoney | 16000 | Whole dollars, 0..1000000; F8 clamps existing balances, increasing it grants no money |
@@ -62,4 +65,4 @@ to explicitly choose 375, retain version 2 and set `Radius=375`.
 Automated checks exercise production wallet transactions, probability boundaries,
 native death filtering and marker lifecycles with synthetic game APIs, actual INI
 reload and config migration. A live-map screenshot and manual pickup/buy-menu check
-remain necessary before claiming in-game validation of this source feature.
+remain necessary before claiming in-game validation on a particular map.

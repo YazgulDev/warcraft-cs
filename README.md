@@ -8,7 +8,7 @@ quests and combat rules. Third-person and unarmed first-person views are also av
 [Install and play](INSTALL.md) · [Documentation](docs/README.md) ·
 [Discussions](https://github.com/YazgulDev/warcraft-cs/discussions)
 
-**Development preview:** experimental 1.27a/D3D9, the optional Half-Life arsenal and dollar economy are combined in this branch. See [preview installation and changes](docs/UNIFIED-PREVIEW.md) and [1.27a verification limits](docs/PORT-1.27.md).
+**Release 0.12.0:** optional Half-Life weapons, dollar purchases, rare loot and selectable movement with platform recovery. See [all changes](docs/RELEASE-0.12.0.md). [1.27a/D3D9 support is experimental](docs/PORT-1.27.md).
 
 ## Start here
 
@@ -21,14 +21,15 @@ quests and combat rules. Third-person and unarmed first-person views are also av
 ## What it adds
 
 - First-person movement with WASD, mouse aiming, jumping and crouching.
-- CS weapons, buying, grenades and an optional Half-Life RPG from your own game files.
+- CS weapons, dollar purchases, rare loot, grenades and optional Half-Life Crowbar, Tau, Gluon and RPG from your own game files.
 - Native Warcraft spells, inventory, shops and squad commands.
 - Third-person unit control and a clean first-person view without weapons or HUD.
 
 ## Requirements
 
 Windows 10/11 x64 and your own **Warcraft III 1.26a** installation
-(`Game.dll` **1.26.0.6401**, OpenGL). CS weapons require your own **Counter-Strike 1.6**;
+(`Game.dll` **1.26.0.6401**, OpenGL), or experimental **1.27a** (**1.27.0.52240**, D3D9).
+CS weapons require your own **Counter-Strike 1.6**; optional Half-Life weapons also use your owned **Half-Life** files;
 the **Only Warcraft modes** option works without it. See [full requirements](REQUIREMENTS.md).
 
 This is an offline single-player prototype; full campaign and custom-map compatibility

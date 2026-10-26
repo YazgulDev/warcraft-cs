@@ -4,6 +4,8 @@
 // U enables a session policy; resource spending still goes through Warcraft's normal orders.
 struct ArmyAISettings {
     bool enabled=true;
+    // U manages the base by default; following the controlled hero requires an explicit opt-in.
+    bool followActor=false;
     unsigned intervalMs=1500;
     unsigned productionRetrySeconds=180;
     int workers=6,soldiers=24,defenders=3,supplyBuildings=6;

@@ -115,7 +115,7 @@ void ArmyAI::Tick(wc3::Handle actor,const ArmyAISettings& s,DWORD now,const std:
             if(!accepted && mine)wc3::IssueTargetOrderById(worker,wc3::OrderId("harvest"),mine);
         }
     }
-    // Defend the base when threatened; otherwise keep a reserve and send the rest toward the controlled actor.
+    // Defend threats independently of optional hero escort; reserves return only to a real base.
     wc3::Handle threat=0;float search=s.baseRadius;
     group=wc3::CreateGroup();wc3::GroupEnumUnitsInRange(group,&bx,&by,&search,0);
     while(auto u=wc3::FirstOfGroup(group)) {
@@ -140,6 +140,12 @@ void ArmyAI::Tick(wc3::Handle actor,const ArmyAISettings& s,DWORD now,const std:
             if(wc3::IssueTargetOrderById(u,Attack,threat)) {
                 travel_.erase(u);wc3::Log("army AI defend unit=%08X target=%08X",u,threat);
             }
+            continue;
+        }
+        // No hall means no base rally either: campaign troops must not silently become hero followers.
+        if(!s.followActor && (!defense || base==all.end())) {
+            // A live opt-out releases only our outstanding approach, after manual/combat exclusions above.
+            if(own!=travel_.end() && order==Attack) {wc3::IssueImmediateOrderById(u,Stop);travel_.erase(own);}
             continue;
         }
         float x=defense ? bx : wc3::Real(wc3::GetUnitX(actor)),y=defense ? by : wc3::Real(wc3::GetUnitY(actor));

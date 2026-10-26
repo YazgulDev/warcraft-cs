@@ -172,7 +172,7 @@ are project source; their code license does not license Counter-Strike game art.
 Source-only Git commits include project source, tests, setup/configuration and
 these required notices. All .local data, downloaded dependencies, generated
 forwarders/binaries, private mod logs, game assets, saves and recordings are excluded.
-Version guards target offline Warcraft III 1.26a only; there is no affiliation with
+Version guards target offline Warcraft III 1.26a and experimental 1.27a; there is no affiliation with
 or endorsement by Blizzard, Valve, SDK/library authors or referenced fan projects.
 
 Native IAS multiplier layout (1.26a attack component +0x1B0) was cross-checked against MemHackAPI.

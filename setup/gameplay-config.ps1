@@ -13,6 +13,21 @@ function Update-GameplayConfig([string]$Template,[string]$Destination) {
     $lines=[Collections.Generic.List[string]]::new()
     $lines.AddRange([string[]]@(Get-Content -LiteralPath $Destination))
     $changed=$false
+    # Upgrade only the former HE stock peak once; keep custom damage, explicit zero and versioned stock choices.
+    $heSection=$false;$heDamageIndex=-1;$heVersionIndex=-1;$heVersion='1'
+    for($i=0;$i -lt $lines.Count;$i++) {
+        if($lines[$i] -match '^\s*\[([^\]]+)\]\s*$'){$heSection=$Matches[1] -eq 'HEGrenade';continue}
+        if($heSection -and $lines[$i] -match '^\s*(Damage|DamageVersion)\s*=\s*(.*?)\s*$') {
+            if($Matches[1] -eq 'Damage'){$heDamageIndex=$i}else{$heVersionIndex=$i;$heVersion=$Matches[2].Trim()}
+        }
+    }
+    if($heVersion -in @('','1')) {
+        [double]$oldHE=0
+        if($heDamageIndex -ge 0 -and [double]::TryParse(($lines[$heDamageIndex] -split '=',2)[1].Trim(),[Globalization.NumberStyles]::Float,[Globalization.CultureInfo]::InvariantCulture,[ref]$oldHE) -and $oldHE -eq 100) {
+            $lines[$heDamageIndex]='Damage=300';$changed=$true
+        }
+        if($heVersionIndex -ge 0){$lines[$heVersionIndex]='DamageVersion=2';$changed=$true}
+    }
     # Upgrade only previous stock energy values once. User tuning, including explicit zero, remains authoritative.
     $energySection='';$energyVersion='1';$energyVersionIndex=-1;$energyValues=@{}
     for($i=0;$i -lt $lines.Count;$i++) {
@@ -48,6 +63,30 @@ function Update-GameplayConfig([string]$Template,[string]$Destination) {
             }
         }
         if($blastIndex -ge 0){$lines[$blastIndex]='BlastVersion=2';$changed=$true}
+    }
+    # Apply the latest balance after historical upgrades; versioned opt-backs and non-stock values stay intact.
+    foreach($upgrade in @(
+        @('RPG','Damage','DamageVersion',2,100,1800),
+        @('RPG','Radius','BlastVersion',3,525,600),
+        @('HEGrenade','Damage','DamageVersion',3,300,600),
+        @('M3','HeroMultiplier','MultiplierVersion',2,3,6),
+        @('XM1014','HeroMultiplier','MultiplierVersion',2,2.4,4.8))) {
+        $balanceSection='';$valueIndex=-1;$versionIndex=-1;$savedVersion=1
+        for($i=0;$i -lt $lines.Count;$i++) {
+            if($lines[$i] -match '^\s*\[([^\]]+)\]\s*$'){$balanceSection=$Matches[1];continue}
+            if($balanceSection -ne $upgrade[0] -or $lines[$i] -notmatch '^\s*([^=;]+?)\s*=\s*(.*?)\s*$'){continue}
+            if($Matches[1] -eq $upgrade[1]){$valueIndex=$i}
+            if($Matches[1] -eq $upgrade[2]){
+                $versionIndex=$i
+                if(![int]::TryParse($Matches[2].Trim(),[ref]$savedVersion)){$savedVersion=0}
+            }
+        }
+        if($savedVersion -ge $upgrade[3]){continue}
+        [double]$savedValue=0
+        if($valueIndex -ge 0 -and [double]::TryParse(($lines[$valueIndex] -split '=',2)[1].Trim(),[Globalization.NumberStyles]::Float,[Globalization.CultureInfo]::InvariantCulture,[ref]$savedValue) -and $savedValue -eq $upgrade[4]) {
+            $lines[$valueIndex]=$upgrade[1]+'='+([double]$upgrade[5]).ToString([Globalization.CultureInfo]::InvariantCulture);$changed=$true
+        }
+        if($versionIndex -ge 0){$lines[$versionIndex]=$upgrade[2]+'='+$upgrade[3];$changed=$true}
     }
     # Upgrade the complete old stock trajectory once; every custom speed/gravity pair remains intact.
     $grenadeSection=$false;$throwIndex=-1;$gravityIndex=-1;$trajectoryIndex=-1;$trajectoryVersion='1'

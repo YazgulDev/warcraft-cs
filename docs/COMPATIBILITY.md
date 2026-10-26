@@ -4,12 +4,14 @@
 
 ## Supported setup
 
-The published **0.11.0** release targets Windows 10/11 x64 and **Warcraft III 1.26a
-x86**, with `Game.dll` version **1.26.0.6401**, using OpenGL. Both Reign of Chaos
+Release **0.12.0** targets Windows 10/11 x64 and **Warcraft III 1.26a
+x86**, with `Game.dll` version **1.26.0.6401**, using OpenGL. It additionally accepts
+experimental **1.27a (1.27.0.52240)** with D3D9 in both Player and Developer setup.
+[1.27a remains a partial port without real-game verification](PORT-1.27.md). Both Reign of Chaos
 and The Frozen Throne can be selected in the launcher.
 
-CS weapon mode requires an owned Counter-Strike 1.6 installation. The optional RPG
-also requires complete owned Half-Life resources. **Only Warcraft modes** provides
+CS weapon mode requires an owned Counter-Strike 1.6 installation. Optional Crowbar,
+Tau Cannon, Gluon Gun and RPG also require complete owned Half-Life resources. **Only Warcraft modes** provides
 third-person and unarmed first-person control without Counter-Strike assets.
 
 Reforged and other Warcraft patches are not supported by this published release.
@@ -26,8 +28,12 @@ Check the notes bundled with a development build before assuming it supports ano
   authoritative. Custom spell orders and map-specific effects may need configuration.
 - Hitboxes approximate model bounds rather than individual bones.
 - CS recoil is adapted; complete GoldSrc bullet spread/accuracy and the original
-  client are not implemented. Purchases use Warcraft gold; CS rounds and team economy
-  are not part of this release.
+  client are not implemented. Purchases use a map-local dollar wallet by default;
+  `Economy.Currency=gold` selects Warcraft gold. CS rounds and team economy are not implemented.
+- Dollar rewards cover only mod weapon/explosive kills, not native spell/RTS/squad kills.
+  Balances are not persisted in Warcraft saves. See [economy rules](ECONOMY-AND-LOOT.md).
+- Recovery-mode collision is not a complete campaign guarantee. Keep progress saved;
+  platform/bridge/custom-map interactions and camera ownership can need further fixes.
 
 Report a specific map, release version and reproduction steps through
 [Discussions](https://github.com/YazgulDev/warcraft-cs/discussions).
