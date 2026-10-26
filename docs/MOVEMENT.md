@@ -34,7 +34,7 @@ unit through those camera edges on native render updates too, without expanding 
 minimap bounds. The render clamp adapter remains unavailable on unverified 1.27a internals.
 
 The optional classic mode uses the original pre-rework collision. The following round hull and local
-surface features apply to hull/recovery modes; recovery is the default. Every swept
+surface features apply to hull/recovery modes; classic is the current preview default; published 0.12.0 defaulted to recovery. Every swept
 step checks feet, standing/crouching body height and head clearance against the current terrain,
 transformed obstacle bounds and native bridge decks. Jumping directly below an underside stops upward
 velocity; releasing crouch under a low ceiling retains the last fitting stance. A low step is accepted
@@ -150,7 +150,7 @@ No SDK implementation is embedded; Warcraft heightfields, native pathing and mod
 
 ## Selectable movement modes
 
-`[Movement] Mode=recovery` is the default, enabling the latest platform protection and Home recovery.
+The current local preview defaults to `[Movement] Mode=classic`. Optional `Mode=recovery` enables the latest platform protection and Home recovery; published 0.12.0 used recovery by default.
 The optional `Mode=classic` restores the movement from before the 24 October
 jump/collision rework, using the owned 2babf58 collision adapter and original floor-landing rules.
 This is the version before yesterday's redesign, not the later 25 October passage-collision build.

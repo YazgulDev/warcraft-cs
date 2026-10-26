@@ -10,6 +10,8 @@ are preserved. F6/F7/F9, switching units, free-refill shortcuts and F8 do not
 grant starting money again. Balances are map-local; they are not saved into
 Warcraft campaign saves or carried across maps/restarts.
 
+The local [dual-currency preview](DUAL-CURRENCY-HEADSHOTS-PREVIEW.md) adds **DOLLARS** and **GOLD** buttons above every B menu category and shows both balances. Dollars remain the default. If dollars cannot cover a whole purchase, sufficient gold pays the whole price (`FallbackToGold=true`). The wallets never combine; gold selection spends only gold. Dollar rewards continue while gold is selected. The menu choice is session-local; startup/F8 restores the saved preference. Quick-ammo follows the same selection/fallback, while native Warcraft shops keep their own rules.
+
 Set `[Economy] Currency=gold` to use the original Warcraft gold purchasing
 behavior. Prices in weapon sections apply to the selected currency. Gold mode
 does not add CS kill rewards to native resources. Switching back to dollars
@@ -39,6 +41,7 @@ to reload. Updates add missing keys and preserve custom values.
 | Section / key | Default | Bounds / timing |
 | --- | --- | --- |
 | Economy / Currency | dollars | dollars or gold; F8 |
+| Economy / FallbackToGold (local preview) | true | true/false; whole-price gold fallback on insufficient dollars, F8 |
 | Economy / StartingMoney | 800 | Whole dollars, 0..1000000, limited by MaximumMoney; next new map/player wallet |
 | Economy / KillReward | 200 | Whole dollars, 0..1000000; subsequent kills after F8 |
 | Economy / MaximumMoney | 16000 | Whole dollars, 0..1000000; F8 clamps existing balances, increasing it grants no money |

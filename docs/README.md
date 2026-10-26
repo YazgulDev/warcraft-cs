@@ -13,6 +13,8 @@
 | [Compatibility](COMPATIBILITY.md) | Supported versions, map limits and missing features |
 | [Troubleshooting](../TROUBLESHOOTING.md) | Installation, graphics, audio and reporting a problem |
 
+Current local feature preview: [RPG, shotgun and HE balance](WEAPON-BALANCE-PREVIEW.md), including [buying during reload and optional army escort](RELOAD-ARMY-PREVIEW.md), including [Headshot caption and stronger grenades](HEADSHOT-GRENADES-PREVIEW.md), including [classic movement, blood and casings](CLASSIC-BLOOD-CASINGS-PREVIEW.md) and [dual currency/item names](DUAL-CURRENCY-HEADSHOTS-PREVIEW.md).
+
 ## Gameplay guides
 
 | Page | What it covers |

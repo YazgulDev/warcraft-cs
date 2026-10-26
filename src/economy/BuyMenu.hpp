@@ -5,7 +5,9 @@
 class BuyMenu {
 public:
     enum class Page { Closed, Main, Pistols, Rifles, Equipment, Shotguns, SMGs, Machineguns, HalfLife };
-    struct Action { int slot=-1;bool primaryAmmo=false;bool secondaryAmmo=false; };
+    // Currency buttons are available on every page without renumbering weapon/category shortcuts.
+    static constexpr int PayDollars=10,PayGold=11;
+    struct Action { int slot=-1;bool primaryAmmo=false;bool secondaryAmmo=false;int currency=-1; };
     Page Current() const { return page_; }
     bool Open() const { return page_!=Page::Closed; }
     void Close() { page_=Page::Closed; }
@@ -21,6 +23,7 @@ public:
     Action Select(int key,int /*current*/) {
         Action result;
         if (!Open()) return result;
+        if(key==PayDollars || key==PayGold){result.currency=key==PayDollars ? 0 : 1;return result;}
         if (key==0) { page_=page_==Page::Main ? Page::Closed : Page::Main;return result; }
         if (page_==Page::Main) {
             if (key==1) page_=Page::Pistols;

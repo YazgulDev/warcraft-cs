@@ -1,10 +1,32 @@
 #include "../src/economy/BuyInventory.hpp"
 #include "../src/economy/BuyMenu.hpp"
+#include "../src/combat/ShotgunReload.hpp"
 #include "../src/presentation/BuyMenuLayout.hpp"
 #include <cassert>
 
 int main() {
+    // Currency buttons are available on every page, without purchasing or changing that page.
+    {BuyMenu paymentMenu;paymentMenu.Toggle();
+     assert(paymentMenu.Select(BuyMenu::PayGold,0).currency==1 && paymentMenu.Current()==BuyMenu::Page::Main);
+     paymentMenu.Select(4,0);assert(paymentMenu.Select(BuyMenu::PayDollars,0).currency==0 && paymentMenu.Current()==BuyMenu::Page::Rifles);
+     for(int w:{1024,1920}){int h=w*9/16;BuyMenuLayout layout(w,h);
+      assert(BuyMenuLayout::Key(int(layout.listX+10),int(layout.paymentY+2),w,h,paymentMenu.Current())==BuyMenu::PayDollars);
+      assert(BuyMenuLayout::Key(int(layout.detailX+10),int(layout.paymentY+2),w,h,paymentMenu.Current())==BuyMenu::PayGold);}}
+
     GameplaySettings settings;BuyInventory inventory;
+    // Opening/navigating B does not mutate ammunition; buying reserve during a shell reload spends rounds once.
+    {BuyMenu menu;BuyInventory carried;carried.owned[WeaponSlots::M3]=true;
+     ShotgunReload reload;reload.Configure(3,8,4.5f,.5f,.4f,.8f);
+     int loaded=5,spare=3,wallet=1000;menu.Toggle();menu.Select(2,WeaponSlots::M3);
+     assert(reload.LoadCompleted(.9f,8,loaded,spare)==1 && loaded==6 && spare==2);
+     assert(carried.Buy(WeaponSlots::M3,true,settings,wallet,loaded,spare,8,32)==BuyInventory::Result::Bought);
+     int purchasedReserve=spare;
+     assert(reload.LoadCompleted(9,8,loaded,spare)==2 && loaded==8 && spare==purchasedReserve-2);
+     assert(reload.LoadCompleted(9,8,loaded,spare)==0);
+     // A rejected duplicate purchase cannot change the running reload's credit or the wallet.
+     int saved=wallet;
+     assert(carried.Buy(WeaponSlots::M3,false,settings,wallet,loaded,spare,8,32)==BuyInventory::Result::AlreadyOwned);
+     assert(wallet==saved && reload.LoadCompleted(9,8,loaded,spare)==0);}
     // Both C4 purchase paths buy one charge for the requested price.
     assert(settings.weaponPrice[WeaponSlots::C4]==3000 && settings.ammoPrice[WeaponSlots::C4]==3000);
     for(bool quickAmmo : {false,true}) {

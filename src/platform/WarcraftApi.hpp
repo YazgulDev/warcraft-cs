@@ -43,6 +43,8 @@ std::string UnitModelPath(int type);
 // Enumerate native destructable widgets without passing a C++ function as JASS bytecode.
 std::vector<Handle> NearbyDestructables(float x, float y, float radius);
 std::vector<Handle> NearbyItems(float x,float y,float radius);
+// Localized current-map item/rune name; unsupported internal hosts return no fabricated name.
+std::string ItemName(Handle item);
 // Current native min/max attack includes dice, hero attributes, items and buffs; FPS uses their mean.
 float UnitAttackAverage(Handle unit);
 // Animation only: no attack target or automatic pursuit order is assigned.

@@ -55,6 +55,9 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     grenades.flashRadius=std::max(32.f,number("Flashbang","Radius",1000,3000));
     grenades.flashSeconds=number("Flashbang","BlindSeconds",3,10);
     grenades.flashUnitStunSeconds=number("Flashbang","UnitStunSeconds",2,10);
+    // Separate victim eligibility from duration: all exposed creatures get a full stun by default.
+    grenades.flashStunAllUnits=enabled("Flashbang","StunAllUnits");
+    grenades.flashStunDistanceFalloff=enabled("Flashbang","StunDistanceFalloff",false);
     grenades.smokeRadius=std::max(32.f,number("SmokeGrenade","Radius",300,1000));
     grenades.smokeSeconds=std::max(1.f,number("SmokeGrenade","DurationSeconds",18,60));
     grenades.smokeOpacity=number("SmokeGrenade","Opacity",.85f,1);
@@ -75,6 +78,8 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     // The shared reach upgrades saved short gun ranges without rewriting the player's per-weapon choices.
     result.minimumFirearmRange=number("Combat","MinimumFirearmRange",30000,50000);
     auto& ai=result.armyAI;ai.enabled=enabled("ArmyAI","Enabled");
+    // F8 may opt into support movement without changing economy or manual squad membership.
+    ai.followActor=enabled("ArmyAI","FollowActor",false);
     ai.intervalMs=unsigned(std::max(500.f,number("ArmyAI","IntervalMs",1500,10000)));
     ai.productionRetrySeconds=unsigned(std::max(30.f,number("ArmyAI","ProductionRetrySeconds",180,3600)));
     ai.workers=int(number("ArmyAI","Workers",6,30));ai.soldiers=int(number("ArmyAI","Soldiers",24,100));
@@ -180,10 +185,10 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         if (!_stricmp(value.c_str(), "false")) return false;
         return fallback;
     };
-    // Missing/invalid modes use recovery on startup and F8; explicit classic/hull choices survive updates.
-    auto movementMode=text("Movement","Mode","recovery");
-    result.movement.classicCollision=!_stricmp(movementMode.c_str(),"classic");
-    result.movement.platformRecovery=!result.movement.classicCollision && _stricmp(movementMode.c_str(),"hull");
+    // Missing/invalid modes restore classic; explicit recovery/hull preferences remain available.
+    auto movementMode=text("Movement","Mode","classic");
+    result.movement.platformRecovery=!_stricmp(movementMode.c_str(),"recovery");
+    result.movement.classicCollision=!result.movement.platformRecovery && _stricmp(movementMode.c_str(),"hull");
     result.movement.bunnyHop = boolean("BunnyHop", true);
     result.movement.scaleFromUnitMoveSpeed=boolean("ScaleFromUnitMoveSpeed",false);
     result.movement.unitMoveSpeedReference=std::max(1.f,number("Movement","UnitMoveSpeedReference",300,1000));
@@ -382,6 +387,31 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.squadClearance=std::max(60.f,number("Squad","PlayerClearance",100,300));
     result.squadYieldAhead=std::max(result.squadClearance,number("Squad","YieldAheadDistance",350,1000));
     result.squadOrderIntervalMs=unsigned(std::max(50.f,number("Squad","OrderIntervalMs",150,1000)));
+    // Item naming is independent of inventory ownership; distance/radius bound the reticle query.
+    result.itemHover.enabled=_stricmp(text("Interface","ItemNames","true").c_str(),"false")!=0;
+    result.itemHover.distance=std::max(160.f,number("Interface","ItemNameDistance",1200,5000));
+    result.itemHover.radius=std::max(4.f,number("Interface","ItemNameRadius",32,128));
+    // Pool snapshots are visual only; F8 clears active fragments before replacing these bounded settings.
+    auto& cv=result.combatVisuals;
+    cv.headshotBlood=enabled("CombatVisuals","HeadshotBlood");cv.criticalText=enabled("CombatVisuals","CriticalText");
+    cv.bloodSeconds=std::max(.1f,number("CombatVisuals","BloodSeconds",.5f,3));
+    cv.bloodScale=std::max(.25f,number("CombatVisuals","BloodScale",1,4));cv.bloodCount=unsigned(std::max(1.f,number("CombatVisuals","BloodCount",16,64)));
+    cv.criticalSeconds=std::max(.2f,number("CombatVisuals","CriticalSeconds",1,4));cv.criticalRise=number("CombatVisuals","CriticalRise",40,200);
+    cv.bloodSpeed=number("CombatVisuals","BloodSpeed",180,500);cv.bloodGravity=number("CombatVisuals","BloodGravity",400,2000);
+    cv.criticalOffset=number("CombatVisuals","CriticalOffset",24,128);
+    cv.criticalScale=std::max(.5f,number("CombatVisuals","CriticalScale",1,2));
+    cv.shellCasings=enabled("CombatVisuals","ShellCasings");cv.shellSeconds=std::max(.25f,number("CombatVisuals","ShellSeconds",3,10));
+    cv.shellSpeed=std::max(20.f,number("CombatVisuals","ShellSpeed",140,500));cv.shellGravity=std::max(50.f,number("CombatVisuals","ShellGravity",650,2000));
+    cv.shellScale=std::max(.25f,number("CombatVisuals","ShellScale",1,4));cv.shellBounce=number("CombatVisuals","ShellBounce",.35f,.9f);
+    cv.shellMaximum=unsigned(std::max(1.f,number("CombatVisuals","ShellMaximum",64,128)));
+    // Signed ejection offsets use their own parser because ordinary positive tuning deliberately clamps at zero.
+    const char* offsets[]={"ShellRight","ShellUp","ShellForward"};
+    for(int i=0;i<3;++i){auto value=text("CombatVisuals",offsets[i],"");char* end=nullptr;float parsed=std::strtof(value.c_str(),&end);
+        if(!value.empty() && end!=value.c_str() && !*end && std::isfinite(parsed))cv.shellOffset[i]=std::clamp(parsed,-64.f,64.f);}
+    // Accurate model contacts and named-head bonuses are optional, validated F8 policies.
+    result.hitDetection.preciseModels=_stricmp(text("Combat","PreciseUnitHits","true").c_str(),"false")!=0;
+    result.hitDetection.headshots=_stricmp(text("Combat","Headshots","true").c_str(),"false")!=0;
+    result.hitDetection.headshotMultiplier=std::max(1.f,number("Combat","HeadshotMultiplier",2,10));
     // Dollars are isolated from campaign resources; malformed settings retain the documented defaults.
     auto currency=text("Economy","Currency","dollars");
     if(!_stricmp(currency.c_str(),"gold"))result.economy.currency=EconomySettings::Currency::Gold;
@@ -389,6 +419,9 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.economy.maximumMoney=int(number("Economy","MaximumMoney",16000,1000000));
     result.economy.startingMoney=std::min(result.economy.maximumMoney,int(number("Economy","StartingMoney",800,1000000)));
     result.economy.killReward=int(number("Economy","KillReward",200,1000000));
+    // An explicit false disables automatic gold spending; missing/invalid values keep the requested fallback.
+    auto goldFallback=text("Economy","FallbackToGold","true");
+    result.economy.fallbackToGold=_stricmp(goldFallback.c_str(),"false")!=0;
     result.weaponDrops.enabled=enabled("WeaponDrops","Enabled");
     result.weaponDrops.chancePercent=number("WeaponDrops","ChancePercent",.5f,100);
     result.weaponDrops.lifetimeSeconds=std::max(1.f,number("WeaponDrops","LifetimeSeconds",120,3600));
@@ -429,7 +462,7 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     // Optional RPG defaults use the same bounded F8 snapshot, while availability comes only from owned caches.
     auto& rpg=result.rpg;rpg.enabled=enabled("RPG","Enabled");rpg.guidance=enabled("RPG","GuidanceByDefault");
     rpg.available=!result.warcraftOnly && OptionalWeaponAssets::Rpg(std::filesystem::path(filename).parent_path());
-    rpg.radius=std::max(32.f,number("RPG","Radius",525,3000));
+    rpg.radius=std::max(32.f,number("RPG","Radius",600,3000));
     // Upgrade only the former stock blast, including an old config loaded directly with F8.
     auto blastVersion=text("RPG","BlastVersion","1");
     if((blastVersion=="1" || blastVersion.empty()) && rpg.radius==375)rpg.radius=525;
@@ -493,6 +526,19 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
             weapon.interval=std::max(.1f,number(sections[slot],"FireInterval",.5f,5));
         }
     }
+    // Upgrade the previous unversioned stock HE once; versioned 100 and every custom value remain deliberate.
+    if(GetPrivateProfileIntA("HEGrenade","DamageVersion",1,filename.c_str())<2 && result.damage[WeaponSlots::HE]==100)
+        result.damage[WeaponSlots::HE]=300;
+    // Each balance marker upgrades only the prior stock value; F8 and setup preserve explicit newer choices.
+    auto upgradeStock=[&](const char* section,const char* marker,int current,float previous,float next,float& value) {
+        int version=GetPrivateProfileIntA(section,marker,1,filename.c_str());
+        if(version<current && value==previous)value=next;
+    };
+    upgradeStock("RPG","DamageVersion",2,100,1800,result.damage[WeaponSlots::RPG]);
+    upgradeStock("RPG","BlastVersion",3,525,600,rpg.radius);
+    upgradeStock("HEGrenade","DamageVersion",3,300,600,result.damage[WeaponSlots::HE]);
+    upgradeStock("M3","MultiplierVersion",2,3,6,result.heroMultiplier[WeaponSlots::M3]);
+    upgradeStock("XM1014","MultiplierVersion",2,2.4f,4.8f,result.heroMultiplier[WeaponSlots::XM1014]);
     result.knifeSecondaryDamage=number("Knife","SecondaryDamage",65,1000000);
     result.swordSecondaryDamage=number("Sword","SecondaryDamage",240,1000000);
     return result;

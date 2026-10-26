@@ -4,6 +4,8 @@
 struct EconomySettings {
     enum class Currency { Dollars, Gold };
     Currency currency=Currency::Dollars;
+    // Prefer dollars, but pay the complete price from gold when dollars are insufficient.
+    bool fallbackToGold=true;
     // Confirmed hostile creature kills pay $200 by default; F8 can apply a custom reward.
     int startingMoney=800,killReward=200,maximumMoney=16000;
 };

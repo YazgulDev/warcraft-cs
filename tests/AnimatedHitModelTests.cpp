@@ -1,0 +1,35 @@
+#include "MdxHitFixture.hpp"
+#include "../src/geometry/AnimatedHitModel.hpp"
+#include "../src/geometry/RayEllipsoid.hpp"
+#include "../src/presentation/GameText.hpp"
+#include <cassert>
+#include <cstdio>
+
+int main() {
+    _set_error_mode(_OUT_TO_STDERR);
+    AnimatedHitModel model;auto bytes=MdxHitFixture::Model();assert(model.Load(bytes));
+    assert(model.TriangleCount()==2 && model.HeadVertices()==3);
+    float ray[]={1,0,0},body[]={-100,0,50},head[]={-100,0,110},empty[]={-100,50,110};
+    AnimatedHitModel::Contact hit;assert(model.Intersect(body,ray,200,0,500,hit) && !hit.head && hit.distance==100);
+    assert(model.Intersect(head,ray,200,0,0,hit) && hit.head && hit.distance==100);
+    assert(model.Intersect(head,ray,200,0,500,hit) && hit.head && hit.distance==110);
+    assert(model.Intersect(head,ray,200,0,1000,hit) && hit.head && hit.distance==120);
+    float broad=0;assert(IntersectBounds(model.BroadBounds(),empty,ray,200,broad));
+    assert(!model.Intersect(empty,ray,200,0,500,hit)); // A neighboring broad box cannot steal the shot.
+    assert(!model.Intersect(head,ray,109,0,500,hit));
+    assert(!model.Intersect(head,ray,200,-1,0,hit));
+    assert(model.Load(MdxHitFixture::Model(true)) && !model.Intersect(head,ray,200,0,500,hit));
+    assert(model.Load(MdxHitFixture::Model(false,264)) && model.TriangleCount()==1);
+    // Truncated/malformed data cannot retain the previous valid model or overrun a chunk.
+    for(size_t size:{size_t(0),size_t(3),bytes.size()-1}){auto bad=bytes;bad.resize(size);assert(!model.Load(bad) && !model.Ready());}
+    auto bad=bytes;MdxHitFixture::Set(bad,8,0xffffffff);assert(!model.Load(bad));
+    MdxPose::Track track;track.interpolation=1;track.keys={{0,{0,0,0,0}},{1000,{20,0,0,0}}};
+    assert(track.Sample(500,0,1000,{})[0]==10);
+    auto q=MdxPose::Slerp({0,0,0,1},{0,0,1,0},.5f);assert(std::abs(q[2]-.70710678f)<.0001f);
+    Bounds3 fallback={{-20,-20,0},{20,20,100}};float corner[]={-100,19,95};
+    assert(IntersectBounds(fallback,corner,ray,200,broad) && !IntersectEllipsoid(fallback,corner,ray,200,broad));
+    assert(GameText::Label("|cffff0000Rune|r|nPower")=="Rune Power");
+    assert(GameText::Label("A||B")=="A|B");
+    assert(GameText::Label(u8"|cffff0000\u0420\u0443\u043d\u0430|r")==u8"\u0420\u0443\u043d\u0430");
+    std::puts("Posed head/body surfaces, neighbor empty-space rejection, hidden/billboard geometry, range, malformed MDX and localized names passed.");
+}

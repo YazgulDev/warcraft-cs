@@ -17,11 +17,12 @@ struct Unit {
 std::array<Unit,12> units;
 std::vector<wc3::Handle> group;
 std::vector<std::tuple<wc3::Handle,int,wc3::Handle>> orders;
+std::vector<std::tuple<wc3::Handle,float,float>> destinations;
 bool buildAccepted=true;int builds=0;
 std::function<void()> onBuild;
 wc3::Bits Bits(float f){wc3::Bits b;memcpy(&b,&f,4);return b;}
 void Setup() {
-    units={};orders.clear();builds=0;buildAccepted=true;onBuild={};
+    units={};orders.clear();destinations.clear();builds=0;buildAccepted=true;onBuild={};
     for(unsigned i=1;i<units.size();++i) {units[i].type=ArmyPlan::Code("hfoo");units[i].x=1800;*reinterpret_cast<uintptr_t*>(units[i].object.data()+0x1E8)=123;}
     units[1].hero=true;units[1].x=0;
     units[2].type=ArmyPlan::Code("htow");units[2].building=true;units[2].x=-800;
@@ -43,6 +44,7 @@ std::vector<Handle> NearbyDestructables(float,float,float){return {};}
 }
 namespace FpsCombatGuard {uintptr_t AttackTargetObject(wc3::Handle u){return units[u].target;}}
 int main() {
+    _set_error_mode(_OUT_TO_STDERR);
     using namespace wc3;
     CreateGroup=[]()->Handle{group.clear();return 1;};DestroyGroup=[](Handle){};
     GroupEnumUnitsOfPlayer=[](Handle,Handle owner,Handle){for(unsigned i=1;i<units.size();++i)if(unsigned(units[i].owner)==owner && units[i].type)group.push_back(i);};
@@ -62,7 +64,7 @@ int main() {
     IssueBuildOrderById=[](Handle u,int type,float*,float*)->BOOL {++builds;if(!buildAccepted)return FALSE;orders.emplace_back(u,type,0);units[u].order=type;if(onBuild)onBuild();return TRUE;};
     IssueImmediateOrderById=[](Handle u,int type)->BOOL {orders.emplace_back(u,type,0);units[u].order=type;return TRUE;};
     IssueTargetOrderById=[](Handle u,int type,Handle t)->BOOL {orders.emplace_back(u,type,t);units[u].order=type;return TRUE;};
-    IssuePointOrderById=[](Handle u,int type,float*,float*)->BOOL {orders.emplace_back(u,type,0);units[u].order=type;return TRUE;};
+    IssuePointOrderById=[](Handle u,int type,float* x,float* y)->BOOL {destinations.emplace_back(u,*x,*y);orders.emplace_back(u,type,0);units[u].order=type;return TRUE;};
     Setup();ArmyAI ai;ArmyAISettings s;s.defenders=0;
     auto reserved=[](Handle u){return u==6;};
     ai.Tick(1,s,1000,reserved);assert(orders.empty()); // No resource spending before the deliberate U toggle.
@@ -84,18 +86,31 @@ int main() {
     units[5].x=-700;ai.Tick(1,s,1000,reserved);
     bool defended=false;for(auto o:orders)if(std::get<0>(o)>=7 && std::get<1>(o)==851983 && std::get<2>(o)==5)defended=true;
     assert(defended && !Touched(1) && !Touched(6));
+    // U alone never rallies ordinary troops to the actor; a reserve may return to the actual hall.
+    Setup();ai.Reset();ai.Toggle();s=ArmyAISettings();s.workers=s.soldiers=s.supplyBuildings=0;
+    assert(!s.followActor);ai.Tick(1,s,1000,reserved);
+    assert(destinations.size()==3);for(auto point:destinations)assert(std::get<1>(point)==-800);
+    // Without a hall even reserve units remain in place, while the economy remains independently available.
+    Setup();ai.Reset();ai.Toggle();units[2].type=0;
+    ai.Tick(1,s,1000,reserved);assert(destinations.empty());
+    // F8 opt-out stops only owned approaches: reserved, manually ordered and fighting units keep control.
+    Setup();ai.Reset();ai.Toggle();s.followActor=true;s.defenders=0;ai.Tick(1,s,1000,reserved);
+    s.followActor=false;units[7].order=123456;units[8].target=555;orders.clear();
+    ai.Tick(1,s,3000,reserved);assert(!Touched(6) && !Touched(7) && !Touched(8));
+    assert(Touched(9) && units[9].order==851972);
+    orders.clear();ai.Tick(1,s,5000,reserved);assert(!Touched(9));
     // Workers hidden inside a mine still satisfy the worker target and cannot cause endless replacement training.
     Setup();ai.Reset();ai.Toggle();s.workers=6;
     for(unsigned i=7;i<units.size();++i) {units[i].type=ArmyPlan::Code("hpea");units[i].hidden=true;}
     ai.Tick(1,s,1000,reserved);assert(!Touched(2));
     // Reinforcements park within arrival distance, while a native fight keeps its target/order untouched.
-    Setup();ai.Reset();ai.Toggle();s.workers=s.soldiers=s.supplyBuildings=0;s.defenders=0;
+    Setup();ai.Reset();ai.Toggle();s.workers=s.soldiers=s.supplyBuildings=0;s.defenders=0;s.followActor=true;
     units[7].hero=true; // An unassigned second hero is eligible; only the controlled actor and H/O membership reserve it.
     ai.Tick(1,s,1000,reserved);assert(Touched(7) && Touched(8));
     units[7].x=100;units[8].x=100;units[8].target=555;orders.clear();
     ai.Tick(1,s,3000,reserved);assert(units[7].order==851972 && !Touched(8));
     // Synchronous map order callbacks can transfer another unit or the actor before the next AI command.
-    Setup();ai.Reset();ai.Toggle();s=ArmyAISettings();s.defenders=0;
+    Setup();ai.Reset();ai.Toggle();s=ArmyAISettings();s.defenders=0;s.followActor=true;
     onBuild=[](){units[7].owner=2;};ai.Tick(1,s,1000,reserved);assert(!Touched(7) && Touched(8));
     Setup();ai.Reset();ai.Toggle();onBuild=[](){units[1].owner=2;};
     ai.Tick(1,s,1000,reserved);assert(orders.size()==1 && Touched(3) && !Touched(2) && !Touched(8));
