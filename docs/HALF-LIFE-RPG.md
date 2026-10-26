@@ -2,7 +2,7 @@
 
 [Project home](../README.md) · [Documentation](README.md) · [Controls](CONTROLS.md)
 
-The [current local balance preview](WEAPON-BALANCE-PREVIEW.md) defaults RPG to **1800** fixed peak damage and **600** world-unit blast radius. `[RPG] Damage` (0–1000000) and `Radius` (32–3000) reload with F8 for new launches. Prior stock damage 100 and radius 525 migrate once; custom values and already-flying rockets retain their tuning.
+The [0.13.0 release](RELEASE-0.13.0.md) defaults RPG to **1800** fixed peak damage and **600** world-unit blast radius. `[RPG] Damage` (0–1000000) and `Radius` (32–3000) reload with F8 for new launches. Prior stock damage 100 and radius 525 migrate once; custom values and already-flying rockets retain their tuning.
 
 The RPG is added only when setup finds the owner's `models/v_rpg.mdl`,
 `models/rpgrocket.mdl` and `sound/weapons/rocketfire1.wav`, `rocket1.wav`,
@@ -48,7 +48,7 @@ missing keys and preserve saved prices, tuning and opt-outs.
 | Enabled / GuidanceByDefault | true / true | true/false; resources remain required |
 | Magazine / MaxReserve | 1 / 5 | 1–1000 loaded / 0–100000 reserve |
 | Price / AmmoPrice / AmmoPack | 4000 / 500 / 1 | 0–1000000 selected currency / 1–1000 rockets |
-| Damage / Radius | 100 / 525 | 0–1000000 fixed peak damage / 32–3000 world units |
+| Damage / Radius | 1800 / 600 | 0–1000000 fixed peak damage / 32–3000 world units |
 | FireInterval / ReloadSeconds | 1.5 / 2 | .025–10 / .1–30 seconds |
 | Range | 30000 | 100–50000 world units, subject to common MinimumFirearmRange |
 | LaunchSpeed / MaximumSpeed | 375 / 3000 | 50–6000 / 100–10000 world units/s |

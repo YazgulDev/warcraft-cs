@@ -998,3 +998,10 @@ target driver; the standalone tests do not establish cross-driver compatibility.
 The CS audio regression also queues a project-authored odd-length 8-bit PCM sample followed by unpadded LIST metadata. The mixer accepts complete PCM before optional trailing metadata, matching the owned pinpull.wav layout without weakening data-chunk bounds checks.
 
 World grenade regressions use project-authored textured cubes with offset model origins. Actual WGL pixels verify all three slots, centering, camera handedness, depth occlusion, scale/spin, inherited state and context replacement. Synthetic MDL conversion checks w_ source selection and separate world cache destinations. Config tests cover bounded appearance values, F8 launch snapshots and migration of saved scale/spin.
+
+
+## Release 0.13.0 validation
+
+The complete native-independent suite now includes posed-model/headshot/ray and item-label scenes, actual WGL currency/Unicode/combat visuals, payment fallbacks, reload/ammunition accounting, optional army escort, native all-target flash leases and new HE/RPG launch snapshots. Settings and repeated installer merges cover new defaults, bounds, old stock, custom/current-marker opt-backs and unrelated preference preservation. Grenade tests reject signed native abort statuses.
+
+Final release packaging checks both EXEs, the immutable source snapshot, runtime/source hashes, host metadata, compact/full notes and native-free public ZIPs. Synthetic launcher install/update/reinstall/replacement fixtures use private temporary directories. Public release assets are hash-compared after publication. The active campaign is not used; real 1.27a gameplay remains unverified. See [complete release notes and limits](RELEASE-0.13.0.md).

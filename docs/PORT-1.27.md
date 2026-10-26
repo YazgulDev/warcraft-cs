@@ -6,7 +6,7 @@ published 0.11.0 downloads do not contain this port.
 
 ## Installation
 
-Use Player setup in the 0.12.0 DLL-included launcher, or Developer/source setup, with your own complete 1.27a installation and the
+Use Player setup in the 0.13.0 DLL-included launcher, or Developer/source setup, with your own complete 1.27a installation and the
 existing `setup.cmd -WarcraftDirectory ... -CounterStrikeDirectory ...` command.
 Choose a separate installation folder. Warcraft-only setup remains available.
 The original game is never patched on disk.
@@ -21,7 +21,7 @@ Miles proxy. Setup derives exact export data from the selected owner's original
 sound library, retaining names, aliases and ordinals without shipping that library
 or requiring C++ Build Tools. The original game stays untouched. Legacy published
 0.11.0 packages retain their exact host/hash restriction. See
-[complete release details](RELEASE-0.12.0.md); real 1.27a gameplay remains unverified.
+[current release details](RELEASE-0.13.0.md); real 1.27a gameplay remains unverified.
 
 ## Design
 
@@ -56,7 +56,7 @@ This is an **experimental partial port**, not feature parity with 1.26a:
   exact terrain/walkable bridge helpers and camera ceiling overrides are
   unavailable. Hitboxes use existing approximate defaults and terrain uses public
   location-height natives. Item/gate interaction and bridge/tree collision do not
-  claim 1.26a behavior. The local headshot/item-name preview also needs verified
+  claim 1.26a behavior. The 0.13.0 headshot/item-name features also need verified
   model, pose-clock and item-name adapters; those features are unavailable on 1.27a.
   Its dollar/gold purchase selection and fallback use public natives on both hosts.
 - Native XP-threshold and inventory-art helpers are unavailable. Public health,

@@ -60,10 +60,10 @@ interaction regardless of these display preferences.
 
 ## Movement collision
 
-Release 0.12.0 defaults to `[Movement] Mode=recovery`, enabling the latest round-hull,
-platform support and Home rescue. Set `Mode=classic` for movement before the 24 October
-jump/collision redesign (2babf58). `Mode=hull` retains the intermediate round-hull build.
-Mode names are case-insensitive; unknown/empty/missing values use recovery.
+Release 0.13.0 defaults to `[Movement] Mode=classic`, retaining movement before the 24 October
+jump/collision redesign (2babf58). `Mode=recovery` enables the optional round-hull, platform support
+and Home rescue; `Mode=hull` retains the intermediate round-hull build.
+Mode names are case-insensitive; unknown/empty/missing values use classic.
 Save and press F8 to switch without resetting motion. Updates preserve an explicit mode.
 
 Optional hull/recovery modes use `[Movement] MaxWalkSlope=46` (15–75 degrees) and
@@ -97,7 +97,7 @@ Install and restart once for the native hull/terrain code. See [movement contact
 | `Runes / AmmoPercent`, `AmmoWeapons` | `40`, `all`; rewards apply to owned weapons. `current` limits recovery to the held weapon. Rejected pickups grant no ammo. |
 
 Weapon sections define `Price`, `AmmoPrice`, `AmmoPack`, `Magazine`, `MaxReserve`,
-`Damage` and `HeroMultiplier`. Purchases use **Warcraft gold**. A gun purchase gives
+`Damage` and `HeroMultiplier`. Purchases use the selected **dollars or Warcraft gold**. A gun purchase gives
 a loaded magazine; reserve ammo costs extra. Duplicate weapons, full packs and
 rejected purchases do not charge gold. F11/F12 are free assistance shortcuts.
 Exact prices and capacities are in the [INI](../config/WarcraftCS.ini).
@@ -156,15 +156,15 @@ depends on hardware and map load; farther rendering does not reveal fog-hidden u
 caches retain the native sky. F8 applies changes; map/RTS transitions restore the
 map's original state.
 
-## Shopping and army preview
+## Shopping and army
 
-The [current preview](RELOAD-ARMY-PREVIEW.md) keeps reloading active while B is open or ammunition is purchased. Purchasing/equipping a different weapon still cancels the old reload.
+[Release 0.13.0](RELEASE-0.13.0.md) keeps reloading active while B is open or ammunition is purchased. Purchasing/equipping a different weapon still cancels the old reload.
 
 `[ArmyAI] FollowActor=false` disables automatic hero escort while retaining economy and defense. Set true to restore escort. Accepts true/false or 1/0; missing, empty and malformed values default to false. F8 applies on the next active AI decision (`IntervalMs`); updates add missing keys once and preserve saved choices. Without a hall, reserve fighters remain in place instead of rallying to the actor. Explicit squad commands are unchanged.
 
-## Local feature preview settings
+## Currency, targeting and item names
 
-The [dual-currency/headshot preview](DUAL-CURRENCY-HEADSHOTS-PREVIEW.md) adds these startup/F8 settings. Installation updates fill missing keys and preserve custom choices. Published 0.12.0 downloads do not yet contain these additions.
+Release 0.13.0 adds these startup/F8 settings. Installation updates fill missing keys and preserve custom choices.
 
 | Section / key | Default | Meaning / range |
 | --- | --- | --- |
@@ -177,19 +177,19 @@ The [dual-currency/headshot preview](DUAL-CURRENCY-HEADSHOTS-PREVIEW.md) adds th
 | Interface / ItemNameDistance | 1200 | Maximum ray length, 160-5000 world units |
 | Interface / ItemNameRadius | 32 | Spherical aim tolerance, 4-128 world units |
 
-Unsupported model/pose adapters never invent a head location. Experimental 1.27a retains approximate body hits and lacks item labels. Dollar rewards remain unchanged; the current preview movement default is described below.
+Unsupported model/pose adapters never invent a head location. Experimental 1.27a retains approximate body hits and lacks item labels. Dollar rewards remain unchanged; the current movement default is described below.
 
-## Current visual feedback preview
+## Visual combat feedback
 
-The [classic/blood/casings preview](CLASSIC-BLOOD-CASINGS-PREVIEW.md) changes the fresh/default movement mode to `classic`; explicit `hull` and `recovery` remain available and saved choices survive installation. Its `[CombatVisuals]` keys control confirmed blood/critical text and cosmetic casing pools. All defaults, units, ranges and F8 behavior are listed in that guide and the annotated INI. No centered HEADSHOT word is drawn in this preview.
+Release 0.13.0 defaults movement to `classic`; explicit `hull` and `recovery` remain available. `[CombatVisuals]` controls confirmed headshot blood, floating **Headshot** text and cosmetic casing pools. All defaults/ranges are in [release settings](RELEASE-0.13.0.md#visual-settings) and the annotated INI. F8 clears old visual pools before applying the new settings. There is no centered HEADSHOT word.
 
-## Stronger grenades preview
+## Flash area stun
 
-The [current grenade preview](HEADSHOT-GRENADES-PREVIEW.md) defaults HE to `Damage=300`, with one-time `HEGrenade.DamageVersion=2` migration preserving custom/versioned damage. `[Flashbang] StunAllUnits=true` and `StunDistanceFalloff=false` apply the full existing `UnitStunSeconds=2` to every exposed creature, including the controlled actor and allies. False on the first option restores enemy-only targeting; true on the second enables distance falloff. Both booleans accept true/false or 1/0. F8 applies damage and these policies to subsequent throws; installation updates preserve saved choices. The floating caption now reads Headshot under the existing `CombatVisuals.CriticalText` option.
+`[Flashbang] StunAllUnits=true` and `StunDistanceFalloff=false` apply the full `UnitStunSeconds=2` to every exposed creature, including the actor and allies. False on the first restores enemy-only filtering; true on the second enables distance falloff. Both booleans accept true/false or 1/0. Physical cover blocks exposure, and existing map pauses are never released by the adapter. F8 affects subsequent throws; updates preserve saved choices.
 
-## Current weapon balance preview
+## Weapon balance
 
-The [current local build](WEAPON-BALANCE-PREVIEW.md) defaults to `[RPG] Damage=1800`, `Radius=600`; `[M3] HeroMultiplier=6`; `[XM1014] HeroMultiplier=4.8`; `[HEGrenade] Damage=600`. Shotgun multipliers apply to the whole shell in unit/hero damage mode, with the result divided among pellets. Fixed weapon-mode shell damage remains 104/80. Flash and smoke remain non-damaging.
+[Release 0.13.0](RELEASE-0.13.0.md) defaults to `[RPG] Damage=1800`, `Radius=600`; `[M3] HeroMultiplier=6`; `[XM1014] HeroMultiplier=4.8`; `[HEGrenade] Damage=600`. Shotgun multipliers apply to the whole shell in unit/hero damage mode, with the result divided among pellets. Fixed weapon-mode shell damage remains 104/80. Flash and smoke remain non-damaging.
 
 Startup/F8 loads the same validated values as fresh installation. Damage accepts 0–1000000, RPG radius 32–3000 world units, and multipliers 0–1000. F8 applies to new shots/launches/throws; active projectiles keep their original snapshot.
 

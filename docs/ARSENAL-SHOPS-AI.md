@@ -2,15 +2,15 @@
 
 [Project home](../README.md) · [Documentation](README.md) · [Settings](CONFIGURATION.md)
 
-In the local [dual-currency preview](DUAL-CURRENCY-HEADSHOTS-PREVIEW.md), **B** shows dollar and gold buttons above every category. Click the currency to select it; dollars are the default. When dollars cannot cover the whole price, the purchase uses gold if sufficient (`[Economy] FallbackToGold=true`). The wallets never combine. Selecting gold spends only gold. Both balances stay visible and dollar kill rewards continue in either mode. Native Warcraft shops keep their own gold rules. **F8** restores the saved `Economy.Currency` preference.
+In [release 0.13.0](RELEASE-0.13.0.md), **B** shows dollar and gold buttons above every category. Click the currency to select it; dollars are the default. When dollars cannot cover the whole price, the purchase uses gold if sufficient (`[Economy] FallbackToGold=true`). The wallets never combine. Selecting gold spends only gold. Both balances stay visible and dollar kill rewards continue in either mode. Native Warcraft shops keep their own gold rules. **F8** restores the saved `Economy.Currency` preference.
 
-The [current balance preview](WEAPON-BALANCE-PREVIEW.md) doubles whole-shell native attack multipliers: M3 **x6**, XM1014 **x4.8**. These apply in `Damage.Mode=unit`/`hero`; the fixed weapon-mode shell damage stays 104/80. HE now defaults to **600** peak damage; flash and smoke still deal zero health damage. F8 applies to subsequent shots/throws, and updates preserve custom tuning.
+The [0.13.0 release](RELEASE-0.13.0.md) doubles whole-shell native attack multipliers: M3 **x6**, XM1014 **x4.8**. These apply in `Damage.Mode=unit`/`hero`; the fixed weapon-mode shell damage stays 104/80. HE now defaults to **600** peak damage; flash and smoke still deal zero health damage. F8 applies to subsequent shots/throws, and updates preserve custom tuning.
 
 The paid firearms are Desert Eagle (650), Glock 18 (400), MP5 (1500),
 P90 (2350), M249 (5750), M3 (1700), and XM1014 (3000). Open **B**: 1 pistols,
 2 shotguns, 3 SMGs, 4 rifles, 5 machine guns, 6 primary ammo, 7 pistol ammo,
 8 equipment. Number keys and mouse rows select the same catalog entries.
-In the [current preview](RELOAD-ARMY-PREVIEW.md), B and quick ammo remain available while reloading. Opening/closing B or buying ammunition preserves the reload clock, sounds and shell insertions; purchasing and equipping a different weapon cancels the old reload. Shotguns keep the number of insertions planned when R was pressed; newly purchased reserves remain available afterward.
+In 0.13.0, B and quick ammo remain available while reloading. Opening/closing B or buying ammunition preserves the reload clock, sounds and shell insertions; purchasing and equipping a different weapon cancels the old reload. Shotguns keep the number of insertions planned when R was pressed; newly purchased reserves remain available afterward.
 
 Buying grants a loaded magazine; reserve packs cost extra. Duplicates, insufficient
 funds and full packs do not charge either wallet. Inventory slot IDs remain stable. The
@@ -123,7 +123,7 @@ units and buildings using swept hulls. This calibrates launch reach; Warcraft
 collision responses and the existing detonation/effect rules remain adaptations. HE has fixed peak damage, linear 3D falloff, cover checks and the
 existing friendly-fire percentage; neutral buildings and destructable gates
 retain native quest immunity. Flash blinds the controlled view according to
-distance, facing and cover. Published 0.12.0 briefly paused nearby hostile mobile units and excluded the controlled actor. The current local preview stuns every exposed creature, including allies and the controlled actor, for the full UnitStunSeconds by default. Pre-paused map units are not leased, and only pauses acquired by this feature are released. StunAllUnits=false restores the former enemy-only filter; UnitStunSeconds=0 disables creature stuns. Smoke is a visual volume with depth-tested soft puffs,
+distance, facing and cover. Published 0.12.0 briefly paused nearby hostile mobile units and excluded the controlled actor. Release 0.13.0 stuns every exposed creature, including allies and the controlled actor, for the full UnitStunSeconds by default. Pre-paused map units are not leased, and only pauses acquired by this feature are released. StunAllUnits=false restores the former enemy-only filter; UnitStunSeconds=0 disables creature stuns. Smoke is a visual volume with depth-tested soft puffs,
 near-eye density and fade; it does not block bullets or alter native AI sight.
 Thrown bodies use the owner's original `w_hegrenade.mdl`, `w_flashbang.mdl` and
 `w_smokegrenade.mdl` with their textures, real perspective and world occlusion.
@@ -148,9 +148,9 @@ limits and tuning to subsequent launches; live flights/clouds keep their snapsho
 | MaxActive | 32 | 1–128 simultaneous flights/clouds |
 | WorldModelScale / WorldSpinDegrees | 1 / 360 | .25–4 visual scale / 0–1440 degrees/s in flight; F8 affects new throws |
 | Each grenade: Capacity | 1 / 2 / 1 | 1–100 charges |
-| Price / AmmoPrice | above / above | 0–1000000 gold; one grenade per purchase |
+| Price / AmmoPrice | above / above | 0–1000000 selected currency; one grenade per purchase |
 | MoveSpeed / ModelScale | 250 / .9 | 50–500 CS units/s / .25–2 model FOV scale |
-| HEGrenade: Damage / Radius | 100 / 350 | 0–1000000 fixed damage / 32–2000 world units |
+| HEGrenade: Damage / Radius | 600 / 350 | 0–1000000 fixed damage / 32–2000 world units |
 | Flashbang: Radius / BlindSeconds / UnitStunSeconds | 1000 / 3 / 2 | 32–3000 units / 0–10 s / 0–10 s |
 | SmokeGrenade: Radius / DurationSeconds / Opacity | 300 / 18 / .85 | 32–1000 units / 1–60 s / 0–1 |
 
@@ -177,7 +177,7 @@ custom action using U keeps it on upgrade; the new AI binding becomes NONE.
 Only living, available, **owned** units other than the actor and H/O members are
 eligible. Explicit RMB targets take priority. J releases H/O membership, making
 those units eligible again. Units fighting or executing other active orders retain
-their orders. In the [current preview](RELOAD-ARMY-PREVIEW.md), idle fighters reserve some units at an actual base and leave the rest in place. Visible threats still call idle units into defense. `[ArmyAI] FollowActor=true` restores automatic hero escort; the default is false. Without a hall, reserve units do not rally to the actor either.
+their orders. In 0.13.0, idle fighters reserve some units at an actual base and leave the rest in place. Visible threats still call idle units into defense. `[ArmyAI] FollowActor=true` restores automatic hero escort; the default is false. Without a hall, reserve units do not rally to the actor either.
 
 Stock workers/halls select a basic human, orc, undead or night elf build plan.
 AI requests a missing hall, supply when food is tight, a basic barracks, workers
@@ -193,7 +193,7 @@ All `[ArmyAI]` settings reload with F8:
 | Key | Default | Range / meaning |
 | --- | --- | --- |
 | Enabled | true | Enables U; automation starts off |
-| FollowActor | false | Preview: true/false or 1/0; automatic hero escort, applied on the next AI decision after F8 |
+| FollowActor | false | true/false or 1/0; automatic hero escort, applied on the next AI decision after F8 |
 | IntervalMs | 1500 | 500–10000 milliseconds between decisions |
 | ProductionRetrySeconds | 180 | 30–3600 active decision seconds before retrying canceled/unobserved training; pauses/background time do not count |
 | Workers | 6 | 0–30 desired workers |
@@ -219,6 +219,6 @@ decision-time limit. Map callbacks are followed by a fresh ownership/exclusion c
 the next order. Reinforcements stop within SupportDistance while fighting units retain combat.
 Changing the retry duration applies to newly accepted training reservations.
 
-## Grenade balance in the current local preview
+## Grenade balance in 0.13.0
 
-The [Headshot/grenades preview](HEADSHOT-GRENADES-PREVIEW.md) raises HE peak damage to 300 while retaining its 350-unit radius and cover/distance/native-defense rules. The stock 100 upgrades once; custom damage and versioned 100 survive updates. Flashbangs stun all exposed living creatures, including allies and the controlled actor, for two seconds by default. `StunAllUnits=false` and `StunDistanceFalloff=true` restore the optional older filtering/falloff behavior. Already-flying grenades retain their settings; F8 applies to new throws.
+[Release 0.13.0](RELEASE-0.13.0.md) defaults HE peak damage to 600 with its 350-unit radius and cover/distance/native-defense rules. Stock values upgrade once; custom and current-version damage choices survive updates. Flashbangs stun all exposed living creatures, including allies and the controlled actor, for two seconds by default. `StunAllUnits=false` and `StunDistanceFalloff=true` restore optional enemy-only filtering and distance falloff. Already-flying grenades retain their settings; F8 applies to new throws.

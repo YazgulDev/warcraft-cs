@@ -8,7 +8,7 @@ quests and combat rules. Third-person and unarmed first-person views are also av
 [Install and play](INSTALL.md) · [Documentation](docs/README.md) ·
 [Discussions](https://github.com/YazgulDev/warcraft-cs/discussions)
 
-**Release 0.12.0:** optional Half-Life weapons, dollar purchases, rare loot and selectable movement with platform recovery. See [all changes](docs/RELEASE-0.12.0.md). [1.27a/D3D9 support is experimental](docs/PORT-1.27.md).
+**Release 0.13.0:** dollar/gold purchases, precise headshots, blood and casings, item names, optional army escort and stronger explosives. Movement defaults to classic. See [downloads and all changes](docs/RELEASE-0.13.0.md). [1.27a/D3D9 support is experimental](docs/PORT-1.27.md).
 
 ## Start here
 

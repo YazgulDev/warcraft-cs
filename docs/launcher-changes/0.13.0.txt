@@ -1,0 +1,16 @@
+- Added selectable dollar and gold purchases with automatic gold fallback when dollars are insufficient.
+- Added configurable headshot damage, blood spray and floating Headshot text on verified 1.26a head contacts.
+- Fixed nearby units intercepting shots through empty model bounds with precise posed surface tracing.
+- Added localized first-person item and rune names under the reticle with obstacle occlusion.
+- Changed the default movement physics to classic while retaining optional recovery and hull modes.
+- Added falling, spinning cartridge cases for conventional firearms, including burst rounds and shotgun shells.
+- Preserved native defenses, separate wallets and custom settings on update.
+- Changed the default HE grenade peak damage from 100 to 600 with one-time stock configuration migration.
+- Changed flashbangs to stun every exposed creature for two seconds, including allies and the controlled actor.
+- Added configurable enemy-only flash targeting and optional distance-based stun duration.
+- Fixed buy-menu toggles interrupting reloads and menu navigation freezing reload progress.
+- Changed army AI to manage economy and defense without automatically rallying troops to the hero.
+- Added an optional ArmyAI FollowActor setting to restore automatic hero escort.
+- Changed RPG defaults to 1800 damage and a 600-unit blast radius.
+- Changed shotgun native attack multipliers to M3 x6 and XM1014 x4.8.
+- Preserved custom weapon tuning with one-time stock balance upgrades and live F8 reload.

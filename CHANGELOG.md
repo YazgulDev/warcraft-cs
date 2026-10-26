@@ -2,29 +2,21 @@
 
 ## Unreleased
 
-- Default RPG to 1800 fixed peak damage and a 600-unit blast radius; double whole-shell native attack multipliers to M3 x6 and XM1014 x4.8, and raise HE peak damage to 600.
-- Make the native grenade test runner reject signed abort/crash exit codes, and extend RPG/HE launch-snapshot checks to the new balance.
-- Migrate prior stock balance once at setup/startup/F8 while preserving custom values and newer-version opt-backs. Future shots/throws consume the new snapshot; active projectiles retain their tuning. [Current balance preview](docs/WEAPON-BALANCE-PREVIEW.md).
+## 0.13.0 — 2026-10-26
 
-- Keep purchases available during reload; opening/closing B preserves timing, sound and shell insertion, while buying ammunition adds real reserve without restarting or duplicating transfers.
-- Default ArmyAI.FollowActor to false: U retains economy and defense without rallying ordinary troops to the hero; base reserves require an actual hall. F8 supports opting into the old escort behavior and updates preserve preferences. [Current preview](docs/RELOAD-ARMY-PREVIEW.md). - local feature preview
-
-- Use Headshot for the floating head-contact caption, retaining blood, world anchoring and fading.
-- Raise HE peak damage from 100 to 300; upgrade old stock once with HEGrenade.DamageVersion=2 while preserving custom damage.
-- Stun all exposed flashbang creatures, including allies and the controlled actor, for a full two seconds by default; retain cover and safe pause leases.
-- Add configurable enemy-only targeting and distance-based stun time; verify native victim/overlap/lifecycle policy and config upgrade behavior. [Current grenade preview](docs/HEADSHOT-GRENADES-PREVIEW.md).
-
-- Default movement to classic in fresh/missing/invalid config; retain explicit recovery/hull choices and F8 switching.
-- Replace the centered HEADSHOT caption with confirmed world-space blood spray and rising Headshot text above the target.
-- Add bounded, spinning/falling/bouncing brass and shotgun cases for accepted conventional rounds, configurable with independent visual toggles.
-- Extend copied visual pools/Unicode world captions, actual WGL depth/state checks and config/movement regressions. [Earlier visual preview](docs/CLASSIC-BLOOD-CASINGS-PREVIEW.md).
-
-- Add dollar/gold selection in every buy-menu category, both balances and whole-price automatic gold fallback when dollars are insufficient; keep earning dollars while gold is selected.
-- Add configurable direct headshots (default x2) using named skeletal head surfaces on verified 1.26a models, with confirmed amber HUD feedback.
-- Trace posed unit surfaces for firearms to avoid nearby units stealing rays through empty broad bounds; preserve melee/spell/TPS targeting contracts.
-- Show localized item/rune names under the F6/F9 reticle with obstacle occlusion, Unicode captions and configurable distance/tolerance.
-- Add parser, native pose/scene, payment, graphics and settings-migration regression coverage. Kill rewards remain $200; current movement defaults are described above.
-- Details, upgrade controls and host limitations: [feature preview](docs/DUAL-CURRENCY-HEADSHOTS-PREVIEW.md).
+- Add selectable dollar/gold payment in every B category, both wallet balances and whole-price gold fallback when dollars are insufficient. Dollars remain the default and kill rewards stay $200.
+- Allow shopping during reload without canceling or freezing animation, audio, deadline or shell insertion; ammo purchases replenish reserve and actual weapon deployment cancels the old reload.
+- Trace verified 1.26a posed unit surfaces so neighboring broad bounds do not steal shots; add named-head damage bonuses (default x2) with native defenses and existing melee/spell/TPS behavior retained.
+- Add confirmed headshot blood and rising world-space Headshot text; add bounded falling/spinning brass and shotgun cases for accepted conventional rounds, with editable visual settings.
+- Show localized item/rune names under the F6/F9 reticle with physical occlusion, Unicode support and configurable range/tolerance.
+- Default movement to classic while retaining optional hull/recovery, platform protection and Home in recovery; preserve saved explicit mode choices.
+- Default ArmyAI.FollowActor to false: U retains native economy and defense without rallying ordinary troops to the hero. Reserve rally requires an actual hall; F8 can restore optional escort.
+- Default RPG to 1800 fixed peak damage and radius 600, M3/XM1014 whole-shell native attack multipliers to x6/x4.8, and HE peak damage to 600 with radius 350.
+- Default flashbangs to full two-second stuns for all exposed creatures, including allies and the actor; add enemy-only and distance-falloff opt-ins while retaining safe pause ownership, cover and overlap handling.
+- Add stock-only balance migrations at setup/startup/F8, preserving custom/current-version choices and immutable live projectile snapshots.
+- Extend posed-model, native shot/item/blast, payment, visual WGL, configuration/update and movement regressions; reject signed native abort statuses in the grenade runner.
+- Update modular source/build documentation, complete launcher summaries and release instructions requiring direct downloads first.
+- Complete download links, settings, upgrade instructions, verification and 1.27a limitations: [Release 0.13.0](docs/RELEASE-0.13.0.md).
 
 ## 0.12.0 — 2026-10-25
 
