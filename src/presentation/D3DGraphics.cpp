@@ -1,5 +1,6 @@
 #include "D3DGraphics.hpp"
 #include "D3DGraphicsState.hpp"
+#include "GraphicsDiagnostics.hpp"
 #include <algorithm>
 #include <cstring>
 
@@ -19,59 +20,67 @@ static DWORD Blend(GLenum value) {
 void Apply() {
     auto& s=Current();auto d=s.device;auto& a=s.attributes;
     auto enabled=[&](GLenum value){return a.enabled.count(value)!=0;};
+    // Record the exact rejected state/stage instead of silently losing the following draw.
+    auto render=[&](D3DRENDERSTATETYPE key,DWORD value){GraphicsDiagnostics::Result("SetRenderState",d->SetRenderState(key,value),unsigned(key),value);};
+    auto stage=[&](DWORD unit,D3DTEXTURESTAGESTATETYPE key,DWORD value){GraphicsDiagnostics::Result("SetTextureStageState",d->SetTextureStageState(unit,key,value),(unit<<16)|unsigned(key),value);};
+    auto sampler=[&](DWORD unit,D3DSAMPLERSTATETYPE key,DWORD value){GraphicsDiagnostics::Result("SetSamplerState",d->SetSamplerState(unit,key,value),(unit<<16)|unsigned(key),value);};
+    auto binding=[&](DWORD unit,IDirect3DBaseTexture9* texture){GraphicsDiagnostics::Result("SetTexture",d->SetTexture(unit,texture),unit);};
+    auto transform=[&](D3DTRANSFORMSTATETYPE key,const D3DMATRIX* matrix){GraphicsDiagnostics::Result("SetTransform",d->SetTransform(key,matrix),unsigned(key));};
     // Every submitted batch starts from owned state, including hostile shader/texture state left by Warcraft.
-    d->SetVertexShader(nullptr);d->SetPixelShader(nullptr);d->SetVertexDeclaration(nullptr);
-    d->SetFVF(D3DFVF_XYZ|D3DFVF_DIFFUSE|D3DFVF_TEX1|D3DFVF_TEXCOORDSIZE3(0));
-    d->SetRenderState(D3DRS_LIGHTING,FALSE);d->SetRenderState(D3DRS_FOGENABLE,FALSE);
-    d->SetRenderState(D3DRS_CULLMODE,D3DCULL_NONE);d->SetRenderState(D3DRS_STENCILENABLE,FALSE);
-    d->SetRenderState(D3DRS_SCISSORTESTENABLE,FALSE);d->SetRenderState(D3DRS_CLIPPLANEENABLE,0);
-    d->SetRenderState(D3DRS_FILLMODE,D3DFILL_SOLID);d->SetRenderState(D3DRS_SHADEMODE,D3DSHADE_GOURAUD);
-    d->SetRenderState(D3DRS_COLORWRITEENABLE,a.colorMask);d->SetRenderState(D3DRS_SPECULARENABLE,FALSE);
-    d->SetRenderState(D3DRS_ZENABLE,enabled(GL_DEPTH_TEST));d->SetRenderState(D3DRS_ZWRITEENABLE,a.depthWrite);
-    d->SetRenderState(D3DRS_ZFUNC,a.depth-GL_NEVER+D3DCMP_NEVER);
-    d->SetRenderState(D3DRS_ALPHABLENDENABLE,enabled(GL_BLEND));d->SetRenderState(D3DRS_BLENDOP,D3DBLENDOP_ADD);
-    d->SetRenderState(D3DRS_SEPARATEALPHABLENDENABLE,FALSE);
-    d->SetRenderState(D3DRS_SRCBLEND,Blend(a.source));d->SetRenderState(D3DRS_DESTBLEND,Blend(a.destination));
-    d->SetRenderState(D3DRS_ALPHATESTENABLE,enabled(GL_ALPHA_TEST));
-    d->SetRenderState(D3DRS_ALPHAFUNC,a.alpha-GL_NEVER+D3DCMP_NEVER);
-    d->SetRenderState(D3DRS_ALPHAREF,DWORD(std::clamp(a.alphaRef,0.f,1.f)*255));
-    d->SetRenderState(D3DRS_SRGBWRITEENABLE,FALSE);
+    GraphicsDiagnostics::Result("SetVertexShader",d->SetVertexShader(nullptr));GraphicsDiagnostics::Result("SetPixelShader",d->SetPixelShader(nullptr));GraphicsDiagnostics::Result("SetVertexDeclaration",d->SetVertexDeclaration(nullptr));
+    GraphicsDiagnostics::Result("SetFVF",d->SetFVF(D3DFVF_XYZ|D3DFVF_DIFFUSE|D3DFVF_TEX1|D3DFVF_TEXCOORDSIZE3(0)));
+    render(D3DRS_LIGHTING,FALSE);render(D3DRS_FOGENABLE,FALSE);
+    render(D3DRS_CULLMODE,D3DCULL_NONE);render(D3DRS_STENCILENABLE,FALSE);
+    render(D3DRS_SCISSORTESTENABLE,FALSE);render(D3DRS_CLIPPLANEENABLE,0);
+    render(D3DRS_FILLMODE,D3DFILL_SOLID);render(D3DRS_SHADEMODE,D3DSHADE_GOURAUD);
+    render(D3DRS_COLORWRITEENABLE,a.colorMask);render(D3DRS_SPECULARENABLE,FALSE);
+    render(D3DRS_ZENABLE,enabled(GL_DEPTH_TEST));render(D3DRS_ZWRITEENABLE,a.depthWrite);
+    render(D3DRS_ZFUNC,a.depth-GL_NEVER+D3DCMP_NEVER);
+    render(D3DRS_ALPHABLENDENABLE,enabled(GL_BLEND));render(D3DRS_BLENDOP,D3DBLENDOP_ADD);
+    render(D3DRS_SEPARATEALPHABLENDENABLE,FALSE);
+    render(D3DRS_SRCBLEND,Blend(a.source));render(D3DRS_DESTBLEND,Blend(a.destination));
+    render(D3DRS_ALPHATESTENABLE,enabled(GL_ALPHA_TEST));
+    render(D3DRS_ALPHAFUNC,a.alpha-GL_NEVER+D3DCMP_NEVER);
+    render(D3DRS_ALPHAREF,DWORD(std::clamp(a.alphaRef,0.f,1.f)*255));
+    render(D3DRS_SRGBWRITEENABLE,FALSE);
     auto texture=s.Bound(enabled(0x8513) ? 0x8513 : GL_TEXTURE_2D);
     bool textured=(enabled(GL_TEXTURE_2D)||enabled(0x8513)) && texture && texture->object;
-    d->SetTexture(0,textured ? texture->object : nullptr);
-    for(int stage=1;stage<8;++stage) {d->SetTexture(stage,nullptr);d->SetTextureStageState(stage,D3DTSS_COLOROP,D3DTOP_DISABLE);}
-    d->SetTextureStageState(0,D3DTSS_COLOROP,textured ? D3DTOP_MODULATE : D3DTOP_SELECTARG2);
-    d->SetTextureStageState(0,D3DTSS_COLORARG1,D3DTA_TEXTURE);d->SetTextureStageState(0,D3DTSS_COLORARG2,D3DTA_DIFFUSE);
-    d->SetTextureStageState(0,D3DTSS_ALPHAOP,textured ? D3DTOP_MODULATE : D3DTOP_SELECTARG2);
-    d->SetTextureStageState(0,D3DTSS_ALPHAARG1,D3DTA_TEXTURE);d->SetTextureStageState(0,D3DTSS_ALPHAARG2,D3DTA_DIFFUSE);
-    d->SetTextureStageState(0,D3DTSS_TEXCOORDINDEX,0);d->SetTextureStageState(0,D3DTSS_TEXTURETRANSFORMFLAGS,D3DTTFF_DISABLE);
-    d->SetSamplerState(0,D3DSAMP_SRGBTEXTURE,FALSE);d->SetSamplerState(0,D3DSAMP_MIPFILTER,D3DTEXF_NONE);
-    d->SetSamplerState(0,D3DSAMP_MINFILTER,texture && texture->minFilter==GL_NEAREST ? D3DTEXF_POINT : D3DTEXF_LINEAR);
-    d->SetSamplerState(0,D3DSAMP_MAGFILTER,texture && texture->magFilter==GL_NEAREST ? D3DTEXF_POINT : D3DTEXF_LINEAR);
-    d->SetSamplerState(0,D3DSAMP_ADDRESSU,texture && texture->wrapS==GL_REPEAT ? D3DTADDRESS_WRAP : D3DTADDRESS_CLAMP);
-    d->SetSamplerState(0,D3DSAMP_ADDRESSV,texture && texture->wrapT==GL_REPEAT ? D3DTADDRESS_WRAP : D3DTADDRESS_CLAMP);
+    binding(0,textured ? texture->object : nullptr);
+    for(unsigned unit=1;unit<8;++unit) {binding(unit,nullptr);stage(unit,D3DTSS_COLOROP,D3DTOP_DISABLE);}
+    stage(0,D3DTSS_COLOROP,textured ? D3DTOP_MODULATE : D3DTOP_SELECTARG2);
+    stage(0,D3DTSS_COLORARG1,D3DTA_TEXTURE);stage(0,D3DTSS_COLORARG2,D3DTA_DIFFUSE);
+    stage(0,D3DTSS_ALPHAOP,textured ? D3DTOP_MODULATE : D3DTOP_SELECTARG2);
+    stage(0,D3DTSS_ALPHAARG1,D3DTA_TEXTURE);stage(0,D3DTSS_ALPHAARG2,D3DTA_DIFFUSE);
+    stage(0,D3DTSS_TEXCOORDINDEX,0);stage(0,D3DTSS_TEXTURETRANSFORMFLAGS,D3DTTFF_DISABLE);
+    sampler(0,D3DSAMP_SRGBTEXTURE,FALSE);sampler(0,D3DSAMP_MIPFILTER,D3DTEXF_NONE);
+    sampler(0,D3DSAMP_MINFILTER,texture && texture->minFilter==GL_NEAREST ? D3DTEXF_POINT : D3DTEXF_LINEAR);
+    sampler(0,D3DSAMP_MAGFILTER,texture && texture->magFilter==GL_NEAREST ? D3DTEXF_POINT : D3DTEXF_LINEAR);
+    sampler(0,D3DSAMP_ADDRESSU,texture && texture->wrapS==GL_REPEAT ? D3DTADDRESS_WRAP : D3DTADDRESS_CLAMP);
+    sampler(0,D3DSAMP_ADDRESSV,texture && texture->wrapT==GL_REPEAT ? D3DTADDRESS_WRAP : D3DTADDRESS_CLAMP);
     auto identity=RenderMatrix::Identity();auto projection=RenderMatrix::DepthForD3D(s.projection.back());
-    d->SetTransform(D3DTS_WORLD,reinterpret_cast<const D3DMATRIX*>(s.model.back().data()));
-    d->SetTransform(D3DTS_VIEW,reinterpret_cast<const D3DMATRIX*>(identity.data()));
-    d->SetTransform(D3DTS_PROJECTION,reinterpret_cast<const D3DMATRIX*>(projection.data()));
+    transform(D3DTS_WORLD,reinterpret_cast<const D3DMATRIX*>(s.model.back().data()));
+    transform(D3DTS_VIEW,reinterpret_cast<const D3DMATRIX*>(identity.data()));
+    transform(D3DTS_PROJECTION,reinterpret_cast<const D3DMATRIX*>(projection.data()));
     D3DVIEWPORT9 viewport={DWORD(a.viewport[0]),DWORD(s.height-a.viewport[1]-a.viewport[3]),DWORD(a.viewport[2]),DWORD(a.viewport[3]),a.minDepth,a.maxDepth};
-    d->SetViewport(&viewport);
+    GraphicsDiagnostics::Result("SetViewport",d->SetViewport(&viewport),a.viewport[2],a.viewport[3]);
 }
 }
 using detail::Current;
 bool Active() {return Current().active;}
 bool BeginFrame(IDirect3DDevice9* device,HDC dc,int width,int height) {
-    auto& s=Current();if(s.active || !device || width<=0 || height<=0 || FAILED(device->TestCooperativeLevel()))return false;
+    auto& s=Current();if(s.active || !device || width<=0 || height<=0)return false;
+    // Device-loss and frame/state-block failures must remain visible even with TRACE disabled.
+    if(!GraphicsDiagnostics::Result("TestCooperativeLevel",device->TestCooperativeLevel()))return false;
     if(s.device!=device) {
         // Texture IDs never cross device ownership; Overlay observes the changed generation and forgets its caches.
         for(auto& entry:s.textures)if(entry.second.object)entry.second.object->Release();
         s.textures.clear();s.device=device;++s.generation;
     }
-    if(FAILED(device->CreateStateBlock(D3DSBT_ALL,&s.saved)))return false;
-    if(FAILED(s.saved->Capture())) {s.saved->Release();s.saved=nullptr;return false;}
+    if(!GraphicsDiagnostics::Result("CreateStateBlock",device->CreateStateBlock(D3DSBT_ALL,&s.saved)))return false;
+    if(!GraphicsDiagnostics::Result("StateBlock.Capture",s.saved->Capture())) {s.saved->Release();s.saved=nullptr;return false;}
     // DrawPrimitiveUP clears stream zero, which some drivers omit from their state-block restore.
-    device->GetStreamSource(0,&s.stream,&s.streamOffset,&s.streamStride);
-    s.scene=SUCCEEDED(device->BeginScene());
+    GraphicsDiagnostics::Result("GetStreamSource",device->GetStreamSource(0,&s.stream,&s.streamOffset,&s.streamStride));
+    s.scene=GraphicsDiagnostics::Result("BeginScene",device->BeginScene());
     if(!s.scene) {s.saved->Release();s.saved=nullptr;if(s.stream)s.stream->Release();s.stream=nullptr;return false;}
     s.dc=dc;s.width=width;s.height=height;s.attributes={};s.attributes.viewport[2]=width;s.attributes.viewport[3]=height;
     s.model={RenderMatrix::Identity()};s.projection={RenderMatrix::Identity()};s.texture={RenderMatrix::Identity()};
@@ -79,9 +88,9 @@ bool BeginFrame(IDirect3DDevice9* device,HDC dc,int width,int height) {
 }
 void EndFrame() {
     auto& s=Current();if(!s.active)return;s.active=false;
-    if(s.scene)s.device->EndScene();s.scene=false;
-    s.saved->Apply();s.saved->Release();s.saved=nullptr;
-    s.device->SetStreamSource(0,s.stream,s.streamOffset,s.streamStride);if(s.stream)s.stream->Release();s.stream=nullptr;
+    if(s.scene)GraphicsDiagnostics::Result("EndScene",s.device->EndScene());s.scene=false;
+    GraphicsDiagnostics::Result("StateBlock.Apply",s.saved->Apply());s.saved->Release();s.saved=nullptr;
+    GraphicsDiagnostics::Result("SetStreamSource.restore",s.device->SetStreamSource(0,s.stream,s.streamOffset,s.streamStride));if(s.stream)s.stream->Release();s.stream=nullptr;
 }
 void APIENTRY Begin(GLenum mode) {auto& s=Current();s.primitive=mode;s.vertices.clear();}
 void APIENTRY End() {
@@ -101,7 +110,7 @@ void APIENTRY End() {
             expanded=s.vertices;expanded.push_back(data[0]);data=expanded.data();type=D3DPT_LINESTRIP;count=UINT(size);break;
         default:break;
     }
-    if(count)s.device->DrawPrimitiveUP(type,count,data,sizeof(detail::Vertex));
+    if(count)GraphicsDiagnostics::Result("DrawPrimitiveUP",s.device->DrawPrimitiveUP(type,count,data,sizeof(detail::Vertex)),unsigned(type),count);
 }
 void APIENTRY Vertex3f(GLfloat x,GLfloat y,GLfloat z) {auto& s=Current();s.vertices.push_back({x,y,z,s.attributes.color,s.u,s.v,s.w});}
 void APIENTRY Vertex2f(GLfloat x,GLfloat y) {Vertex3f(x,y,0);}
@@ -123,8 +132,8 @@ void APIENTRY ClearDepth(GLclampd value) {Current().attributes.clearDepth=float(
 void APIENTRY Clear(GLbitfield mask) {
     auto& s=Current();if(mask&GL_DEPTH_BUFFER_BIT) {
         // Clear the whole overlay viewport, independent of native scissor/write-mask leftovers.
-        s.device->SetRenderState(D3DRS_SCISSORTESTENABLE,FALSE);
-        s.device->Clear(0,nullptr,D3DCLEAR_ZBUFFER,0,s.attributes.clearDepth,0);
+        GraphicsDiagnostics::Result("Clear.SetRenderState",s.device->SetRenderState(D3DRS_SCISSORTESTENABLE,FALSE));
+        GraphicsDiagnostics::Result("Clear.depth",s.device->Clear(0,nullptr,D3DCLEAR_ZBUFFER,0,s.attributes.clearDepth,0));
     }
 }
 void APIENTRY AlphaFunc(GLenum function,GLclampf reference) {Current().attributes.alpha=function;Current().attributes.alphaRef=reference;}

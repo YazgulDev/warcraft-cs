@@ -1,0 +1,5 @@
+- Added per-pass OpenGL errors and supported driver messages for HUD, weapon and effect failures.
+- Added failed D3D9 operation/HRESULT diagnostics and immediate shot/model visibility traces.
+- Added original exception context, module offsets, registers and best-effort native stack chains for handled faults.
+- Enabled GraphicsDebug by default, with F8 reload, preserved custom settings and bounded repeated messages/log files.
+- Preserved the previous HUD isolation, headshot alignment, saved friendly-fire and campaign-economy fixes.

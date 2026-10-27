@@ -1,5 +1,6 @@
 #include "D3DGraphics.hpp"
 #include "D3DGraphicsState.hpp"
+#include "GraphicsDiagnostics.hpp"
 #include <algorithm>
 
 namespace D3DGraphics {
@@ -20,11 +21,11 @@ void Upload(GLenum target,GLint level,GLint,GLsizei width,GLsizei height,GLint b
         // Managed textures survive Alt-Tab Reset; resource ownership still changes on a new device.
         if(cube) {
             if(width!=height)return;IDirect3DCubeTexture9* texture=nullptr;
-            if(FAILED(s.device->CreateCubeTexture(UINT(width),1,0,D3DFMT_A8R8G8B8,D3DPOOL_MANAGED,&texture,nullptr)))return;
+            if(!GraphicsDiagnostics::Result("CreateCubeTexture",s.device->CreateCubeTexture(UINT(width),1,0,D3DFMT_A8R8G8B8,D3DPOOL_MANAGED,&texture,nullptr),width,height))return;
             entry->object=texture;
         } else {
             IDirect3DTexture9* texture=nullptr;
-            if(FAILED(s.device->CreateTexture(UINT(width),UINT(height),1,0,D3DFMT_A8R8G8B8,D3DPOOL_MANAGED,&texture,nullptr)))return;
+            if(!GraphicsDiagnostics::Result("CreateTexture",s.device->CreateTexture(UINT(width),UINT(height),1,0,D3DFMT_A8R8G8B8,D3DPOOL_MANAGED,&texture,nullptr),width,height))return;
             entry->object=texture;
         }
         entry->width=width;entry->height=height;entry->target=cube ? 0x8513 : GL_TEXTURE_2D;
@@ -32,7 +33,8 @@ void Upload(GLenum target,GLint level,GLint,GLsizei width,GLsizei height,GLint b
     D3DLOCKED_RECT locked={};auto face=static_cast<D3DCUBEMAP_FACES>(target-0x8515);
     HRESULT result=cube ? static_cast<IDirect3DCubeTexture9*>(entry->object)->LockRect(face,0,&locked,nullptr,0) :
         static_cast<IDirect3DTexture9*>(entry->object)->LockRect(0,&locked,nullptr,0);
-    if(FAILED(result))return;
+    // Failed uploads otherwise leave a valid name with invisible/uninitialized pixels.
+    if(!GraphicsDiagnostics::Result("Texture.LockRect",result,width,height))return;
     auto input=static_cast<const unsigned char*>(pixels);int channels=format==GL_ALPHA ? 1 : format==GL_RGB ? 3 : 4;
     for(int y=0;y<height;++y) {
         auto row=reinterpret_cast<DWORD*>(static_cast<unsigned char*>(locked.pBits)+size_t(y)*locked.Pitch);
@@ -43,8 +45,8 @@ void Upload(GLenum target,GLint level,GLint,GLsizei width,GLsizei height,GLint b
             row[x]=(a<<24)|(r<<16)|(g<<8)|b;
         }
     }
-    if(cube)static_cast<IDirect3DCubeTexture9*>(entry->object)->UnlockRect(face,0);
-    else static_cast<IDirect3DTexture9*>(entry->object)->UnlockRect(0);
+    GraphicsDiagnostics::Result("Texture.UnlockRect",cube ? static_cast<IDirect3DCubeTexture9*>(entry->object)->UnlockRect(face,0) :
+        static_cast<IDirect3DTexture9*>(entry->object)->UnlockRect(0),width,height);
 }
 }
 void APIENTRY GenTextures(GLsizei count,GLuint* names) {auto& s=detail::Current();for(GLsizei i=0;i<count;++i){names[i]=s.nextTexture++;s.textures[names[i]]={};}}

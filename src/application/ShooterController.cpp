@@ -675,8 +675,8 @@ void ShooterController::ReloadSettings() {
     wc3::Log("Speed display configured visible=%d units=CS",showSpeed_);
     // Startup and F8 share validated logging settings without discarding the active session.
     DiagnosticLog::Configure(settings_.logging);
-    wc3::Log("Logging configured detailed=%d intervalMs=%u maxFileMB=%u archives=%u",
-        settings_.logging.detailed, settings_.logging.intervalMs, settings_.logging.maxFileMB, settings_.logging.archiveCount);
+    wc3::Log("Logging configured detailed=%d graphicsDebug=%d intervalMs=%u maxFileMB=%u archives=%u",
+        settings_.logging.detailed, settings_.logging.graphicsDebug, settings_.logging.intervalMs, settings_.logging.maxFileMB, settings_.logging.archiveCount);
     // Startup and F8 share the same CS-only gain update; Warcraft's Miles mixer is untouched.
     audio_.SetVolumePercent(settings_.csVolumePercent);
     movement_.Configure(settings_.movement); // F8 changes tuning without resetting a jump or accumulated momentum.

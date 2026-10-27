@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Expand graphics diagnostics with per-pass OpenGL error checkpoints, scoped driver messages, failed D3D9 HRESULT operations, immediate shot/model-visibility decisions and resource-load failures. Add validated F8-reloadable Logging.GraphicsDebug=true with update preservation and bounded duplicate counts. Enrich already handled controller/Army AI faults with original exception/module/register data and best-effort frame chains. [Diagnostics preview](docs/GRAPHICS-DIAGNOSTICS-PREVIEW.md).
 - Isolate fixed-function OpenGL effects, weapons and HUD from inherited GLSL/separate/ARB programs and rasterizer discard; restore bindings/enables explicitly and include separate pipeline state in diagnostics. Add real WGL pixel/state regressions for issue #10. [HUD repair preview](docs/HUD-ISSUE-10-PREVIEW.md).
 - Classify mixed head/neck faces at the actual contact using fractional named-head skin weights, retaining physical occlusion and unverified-model exclusions.
 - Enable direct Tau/Gluon headshot bonuses by default and emit blood from verified head contacts even when bonus/text is disabled; retain actual-HP-loss requirements and visual-only query exclusion.

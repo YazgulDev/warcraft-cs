@@ -9,6 +9,7 @@
 #include "../platform/NativePortrait.hpp"
 #include "../platform/WarcraftApi.hpp"
 #include "../platform/DiagnosticLog.hpp"
+#include "../platform/NativeFaultDiagnostics.hpp"
 #include "../platform/GameWindowInput.hpp"
 #include "../platform/NativeFrameRate.hpp"
 #include "../platform/NativeFramePresentation.hpp"
@@ -144,24 +145,24 @@ static void __cdecl InterfaceHook(BOOL show, float* duration) {
     originalInterface(show, duration);
 }
 static void SafeTick(uintptr_t ui) {
-    // Disable the extension on a native fault, leaving the game callback intact.
+    // Log original exception context in the filter, then keep the existing disable/recovery contract.
     __try {
         controller.Tick(ui);
         healthBars.Update(controller.ViewActor(),controller.Settings().healthBars);
     }
-    __except (EXCEPTION_EXECUTE_HANDLER) {
+    __except (NativeFaultDiagnostics::Filter("controller",GetExceptionInformation())) {
         healthy = false; wc3::LogError("Controller fault %08X; disabled", GetExceptionCode());
         // A diagnostic/native failure must never keep FPS input or camera ownership locked over an exit dialog.
         __try { controller.RecoverFault(); }
-        __except (EXCEPTION_EXECUTE_HANDLER) { wc3::LogError("Native view restoration failed; input remains released"); }
+        __except (NativeFaultDiagnostics::Filter("controller-recovery",GetExceptionInformation())) { wc3::LogError("Native view restoration failed; input remains released"); }
     }
 }
 static void SafeArmyTick() {
     __try {controller.TickArmyAI();}
-    __except(EXCEPTION_EXECUTE_HANDLER) {
+    __except(NativeFaultDiagnostics::Filter("army-ai",GetExceptionInformation())) {
         healthy=false;wc3::LogError("Army AI fault %08X; disabled",GetExceptionCode());
         __try {controller.RecoverFault();}
-        __except(EXCEPTION_EXECUTE_HANDLER) {wc3::LogError("Army AI recovery failed; input released");}
+        __except(NativeFaultDiagnostics::Filter("army-ai-recovery",GetExceptionInformation())) {wc3::LogError("Army AI recovery failed; input released");}
     }
 }
 static int __fastcall WorldHook(uintptr_t ui, uintptr_t unused) {

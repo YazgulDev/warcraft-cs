@@ -2,9 +2,12 @@
 #include "../src/presentation/HudFont.hpp"
 #include "../src/presentation/RenderMatrix.hpp"
 #include "../src/presentation/EnergyBeamView.hpp"
+#include "../src/platform/DiagnosticLog.hpp"
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
+#include <fstream>
+#include <iterator>
 
 namespace {
 void Require(bool condition,const char* message) {if(!condition){std::fprintf(stderr,"FAIL %s\n",message);std::exit(1);}}
@@ -12,7 +15,9 @@ void Rect(float x,float y,float width,float height,float z=0) {
     glBegin(GL_QUADS);glVertex3f(x,y,z);glVertex3f(x+width,y,z);glVertex3f(x+width,y+height,z);glVertex3f(x,y+height,z);glEnd();
 }
 }
-int main() {
+int main(int argc,char** argv) {
+    Require(argc==2,"private diagnostic journal directory");
+    LoggingSettings logging;logging.detailed=false;DiagnosticLog::Configure(logging);DiagnosticLog::Open(argv[1]);
     auto nearProjection=RenderMatrix::Identity();nearProjection[10]=2;nearProjection[14]=-1;
     auto d3dProjection=RenderMatrix::DepthForD3D(nearProjection);
     Require(d3dProjection[10]==1 && d3dProjection[14]==0,"clip-depth conversion preserves homogeneous W");
@@ -29,6 +34,10 @@ int main() {
     device->SetRenderState(D3DRS_COLORWRITEENABLE,D3DCOLORWRITEENABLE_RED);
     device->SetRenderState(D3DRS_ALPHABLENDENABLE,FALSE);device->SetRenderState(D3DRS_CULLMODE,D3DCULL_CW);
     HDC dc=GetDC(window);Require(!GraphicsBackend::IsD3D9(),"legacy forwarding outside D3D frame");
+    // Force a real rejected D3D call; the adapter must log it and retain its existing failure/recovery contract.
+    Require(SUCCEEDED(device->BeginScene()),"host-owned scene");
+    Require(!D3DGraphics::BeginFrame(device,dc,320,240),"nested BeginScene rejected");
+    Require(SUCCEEDED(device->EndScene()),"host scene remains owned by caller");
     Require(D3DGraphics::BeginFrame(device,dc,320,240),"begin isolated frame");
     glMatrixMode(GL_PROJECTION);glLoadIdentity();glOrtho(0,320,240,0,-1,1);
     glMatrixMode(GL_MODELVIEW);glLoadIdentity();glDisable(GL_DEPTH_TEST);
@@ -81,5 +90,8 @@ int main() {
         readback->UnlockRect();readback->Release();target->Release();
     }
     ReleaseDC(window,dc);device->Release();api->Release();DestroyWindow(window);
-    std::printf("PASS D3D9 actual pixels, atlas coverage, depth, resource lifetime and native state restoration.\n");
+    DiagnosticLog::Close();std::ifstream journal(std::string(argv[1])+"/WarcraftCS.log",std::ios::binary);
+    std::string text{std::istreambuf_iterator<char>(journal),std::istreambuf_iterator<char>()};
+    Require(text.find("graphics D3D9 operation=BeginScene hr=8876086C")!=std::string::npos,"actual rejected call logged with HRESULT while TRACE disabled");
+    std::printf("PASS D3D9 actual pixels, atlas coverage, depth, resource lifetime, state restoration and real failure diagnostics.\n");
 }

@@ -11,4 +11,6 @@ public:
     static void Close();
     static void Write(const char* level, const char* format, va_list args);
     static bool Due(DWORD& previous, bool immediate = false);
+    // Return a coherent copy for driver callbacks and failure paths; callers never retain the lock.
+    static LoggingSettings Settings();
 };

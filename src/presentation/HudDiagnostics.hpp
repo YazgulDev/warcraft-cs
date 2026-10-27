@@ -10,6 +10,8 @@ public:
     static void Omitted(const char* reason,bool sampled);
     static void Font(const char* role,const char* phase,int requested,int width,int height,
         unsigned texture,unsigned long error,int glyph,int coverage);
+    // Decisions/accepted-round changes are immediate; ordinary unchanged frames stay sampled.
+    static void Weapon(int slot,unsigned serial,const char* animation,float seconds,bool loaded,bool held,bool scoped,bool contained,bool hidden);
 private:
     DWORD previous_=0;
     HGLRC context_=nullptr;

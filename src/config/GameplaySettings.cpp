@@ -176,6 +176,10 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     auto detailed = text("Logging", "Detailed", "true");
     if (!_stricmp(detailed.c_str(), "false") || detailed == "0") result.logging.detailed = false;
     else if (_stricmp(detailed.c_str(), "true") && detailed != "1") wc3::Log("Invalid Logging.Detailed; using true");
+    // Native/API failures remain available independently of optional TRACE summaries.
+    auto graphicsDebug=text("Logging","GraphicsDebug","true");
+    if(!_stricmp(graphicsDebug.c_str(),"false") || graphicsDebug=="0")result.logging.graphicsDebug=false;
+    else if(_stricmp(graphicsDebug.c_str(),"true") && graphicsDebug!="1")wc3::Log("Invalid Logging.GraphicsDebug; using true");
     result.logging.intervalMs = unsigned(std::max(100.f, number("Logging", "IntervalMs", 1000, 60000)));
     result.logging.maxFileMB = unsigned(std::max(1.f, number("Logging", "MaxFileMB", 8, 64)));
     result.logging.archiveCount = unsigned(number("Logging", "ArchiveCount", 3, 8));

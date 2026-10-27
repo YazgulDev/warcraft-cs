@@ -11,6 +11,15 @@ modules. Native GL minimap/portrait capture remains separate. See `PORT-1.27.md`
 queried texture state and the GL error queue, and records labelled font lifecycle
 events. The existing platform `DiagnosticLog` still owns serialization and rotation.
 
+`GraphicsDiagnostics` is a scoped presentation observer for every-pass GL error checkpoints and
+supported driver debug messages, with bounded duplicate suppression and exact callback-state
+restoration. D3D adapters report failed HRESULT operations through the same observer. It consumes
+queued errors deliberately, unlike the observational `HudDiagnostics` snapshots. `NativeFaultDiagnostics`
+is a separate platform adapter used by existing runtime SEH filters: it records original exception
+context/module offsets and a bounded best-effort frame-pointer chain without taking over recovery
+or installing a process-wide handler. `tools/test-graphics-diagnostics.ps1` exercises real hidden WGL
+driver delivery, callback ownership, opt-out, suppression and an actual recovered Windows exception.
+
 `HudRenderState` owns a scoped raster/texture reset for the flat HUD after the 3D
 world/weapon passes. It resets blend equations and MSAA coverage as well as fixed
 function masks/texture targets, then restores the caller state before the outer

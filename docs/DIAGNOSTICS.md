@@ -62,6 +62,47 @@ shader pipeline can discard or blacken fixed-function HUD/weapon geometry while 
 zero for both. The renderer restores the caller's program/pipeline and supported legacy-program/discard
 enables after drawing. This is automatic render-state isolation, without a player setting.
 
+`GraphicsDebug=true` adds an observer around each visible mod overlay pass. Error checkpoints run
+at every boundary rather than only on the summary timer: `host-before-overlay`, `context-resources`,
+`overlay-state`, `clean-view-effects`, `weapon-resource-load`, `world-effects`, `held-model`,
+`flat-hud` and `restore-host`. An OpenGL error record includes its symbolic/raw code, phase and context.
+Already queued host errors are labelled separately; a later boundary identifies the interval in which
+an error was observed, not necessarily its root cause. Each checkpoint consumes at most 16 queued errors.
+Failures trigger bounded state snapshots, including shader/pipeline, framebuffer, raster/texture state,
+matrix-stack depths and pixel-unpack layout. `Detailed=false` omits these TRACE snapshots while retaining
+the new ERROR/WARN records when GraphicsDebug is enabled.
+
+When the context exposes KHR_debug/core 4.3 or ARB_debug_output, the observer also records delivered
+driver messages with source, type, ID, severity and phase. Delivery is synchronous only during the mod
+scope to keep the owning callback and phase valid. Existing message filters are preserved, an originally
+enabled foreign callback is forwarded, and its callback/user/output/synchronous state is restored afterward.
+Some drivers/non-debug contexts emit no messages, and previously filtered messages remain filtered;
+this feature cannot guarantee a record for every silent GPU problem. Synchronous delivery and additional
+state queries may cost frame time; `GraphicsDebug=false` disables this observer/checkpoints live on F8.
+Existing sampled reticle checks remain controlled by `Detailed`.
+
+`graphics weapon` records accepted-shot serial/animation time, loaded/held/scoped/contained/hidden
+decisions immediately when a round or visibility changes, with ordinary unchanged frames sampled.
+Failed held-model and buy-preview loads include the role, slot and path. These records distinguish an
+intentional hidden model or missing resource from a submitted draw; they do not prove pixel visibility.
+D3D9 failures include the operation, HRESULT and relevant state/texture dimensions or draw parameters,
+covering scene/state-block capture/restoration, draw calls, render/texture/sampler/transform state,
+depth clears and texture creation/locking/upload completion. Successful API calls produce no error record.
+
+Identical graphics messages are collapsed within `IntervalMs` using a bounded 64-entry table. The next
+occurrence after that interval reports how many intervening duplicates were suppressed in `repeats`.
+A different phase/code/message/parameter can be recorded immediately; old entries can be evicted.
+There is no periodic flush for a suppressed error that never occurs again; its first occurrence remains.
+The existing file rotation bounds storage even during a persistent failure.
+
+Already handled controller/Army AI faults and failures during their recovery now add `native fault`
+ERROR records with the original exception code, address, module/base/offset, exception arguments and
+x86 registers. A safe, bounded frame-pointer walk reports up to 24 return addresses when available.
+Optimized code may omit frame pointers, so this is explicitly a best-effort chain, not a complete symbolic
+stack. Recovery/disable behavior is unchanged; no process-wide exception interception is installed.
+These essential fault records remain enabled independently of Detailed/GraphicsDebug. Unhandled game
+crashes, silent driver faults and unavailable storage still cannot be guaranteed to reach the log.
+
 Movement settings are recorded after validation at startup and F8. `movement contact` traces each
 takeoff/landing with horizontal speed in Warcraft and GoldSrc units, XYZ velocity, movement inputs
 and view yaw. These transitions complement sampled position/ground/speed summaries when diagnosing
@@ -87,6 +128,7 @@ Edit the existing private `WarcraftCS.ini`; F8 in FPS or restart applies the val
 | `[Logging]` key | Default | Range/meaning |
 | --- | --- | --- |
 | `Detailed` | `true` | `true`/`false` (also `1`/`0`). Disable optional TRACE records; essential events and reported faults remain. |
+| `GraphicsDebug` | `true` | `true`/`false` (also `1`/`0`). Enable per-pass GL checkpoints/driver messages and failed D3D9 call diagnostics. F8 reloads it; independent of Detailed. |
 | `IntervalMs` | `1000` | 100–60000 milliseconds between movement/render summaries. Control/action edges remain event driven. |
 | `MaxFileMB` | `8` | 1–64 MiB per runtime journal; size rollover starts a new segment. |
 | `ArchiveCount` | `3` | 0–8 older sessions/segments. Reducing it removes surplus numbered runtime archives; zero retains only the current file. |
