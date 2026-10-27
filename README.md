@@ -8,7 +8,7 @@ quests and combat rules. Third-person and unarmed first-person views are also av
 [Install and play](INSTALL.md) · [Documentation](docs/README.md) ·
 [Discussions](https://github.com/YazgulDev/warcraft-cs/discussions)
 
-**Release 0.13.0:** dollar/gold purchases, precise headshots, blood and casings, item names, optional army escort and stronger explosives. Movement defaults to classic. See [downloads and all changes](docs/RELEASE-0.13.0.md). [1.27a/D3D9 support is experimental](docs/PORT-1.27.md).
+**Release 0.14.0:** improved head contacts and blood, saved friendly-fire preferences, campaign economy startup, HUD/weapon graphics-state isolation and expanded diagnostics. Movement and weapon balance retain their defaults. See [downloads and all changes](docs/RELEASE-0.14.0.md). [1.27a/D3D9 support is experimental](docs/PORT-1.27.md).
 
 ## Start here
 

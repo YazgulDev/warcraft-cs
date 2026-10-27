@@ -34,12 +34,36 @@ Expand-LauncherRuntime $Launcher $source $destination
 foreach ($name in @('WarcraftCS.mix','Mss32.dll')) {
     if ((Get-FileHash -LiteralPath (Join-Path $destination $name) -Algorithm SHA256).Hash.ToLowerInvariant() -ne (Get-RuntimeHash $files[$name])) { throw 'Embedded runtime differs from packaged module.' }
 }
-# A DLL-install failure must identify both host fingerprints in the captured backend output/error.
+# Missing game identity is a different rejection from a legacy Miles fingerprint mismatch.
 $badHost=Join-Path $work 'different-host';New-Item -ItemType Directory -Path $badHost -Force | Out-Null
 Set-Content -LiteralPath (Join-Path $badHost 'Mss32.dll') -Value 'synthetic incompatible host'
 $actual=(Get-FileHash -LiteralPath (Join-Path $badHost 'Mss32.dll') -Algorithm SHA256).Hash.ToLowerInvariant()
-try { Assert-PrebuiltHost $destination $badHost | Out-Null;throw 'Unexpectedly accepted incompatible host.' }
-catch {if(!$_.Exception.Message.Contains($actual) -or !$_.Exception.Message.Contains('Expected')){throw 'Host rejection omitted diagnostic fingerprints.'}}
+Require-Rejected {Assert-PrebuiltHost $destination $badHost} 'A host without Game.dll was accepted.'
+# Version-only owned PE data reaches the Miles policy without using any retail game file.
+$manifestPath=Join-Path $destination 'runtime.json'
+$originalManifest=[IO.File]::ReadAllText($manifestPath)
+$metadata=$originalManifest | ConvertFrom-Json
+$fixtureSource=Join-Path $work 'HostVersion.cs'
+('[assembly: System.Reflection.AssemblyFileVersion("'+$metadata.HostVersion+'")] public sealed class HostVersion {}') | Set-Content -LiteralPath $fixtureSource -Encoding ascii
+$compiler=Join-Path $env:WINDIR 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
+& $compiler /nologo /target:library /platform:x86 ('/out:'+(Join-Path $badHost 'Game.dll')) $fixtureSource
+if($LASTEXITCODE){throw 'Synthetic host version fixture compilation failed.'}
+if($metadata.FormatVersion -eq 2) {
+    # Adaptive packages report both fingerprints but defer export validation to local proxy preparation.
+    $diagnostic=(Assert-PrebuiltHost $destination $badHost) -join "`n"
+    if(!$diagnostic.Contains($actual) -or !$diagnostic.Contains($metadata.OriginalSoundSha256)){throw 'Adaptive host check omitted diagnostic fingerprints.'}
+    $runtime=Join-Path $work 'bad-export-runtime';New-Item -ItemType Directory -Path $runtime -Force | Out-Null
+    Set-Content -LiteralPath (Join-Path $runtime '.warcraft-cs-private-runtime') -Value 'synthetic fixture'
+    Require-Rejected {Install-PrebuiltRuntime $destination $runtime $badHost} 'Malformed local Miles exports were accepted.'
+    foreach($name in @('WarcraftCS.mix','Mss32.dll')) {if(Test-Path (Join-Path $runtime $name)){throw 'Invalid Miles exports installed a partial module.'}}
+}
+# Older exact-host packages must still reject a different Miles library with both hashes in the reason.
+$metadata.PSObject.Properties.Remove('FormatVersion')
+try {
+    $metadata | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+    try {Assert-PrebuiltHost $destination $badHost | Out-Null;throw 'Unexpectedly accepted incompatible legacy host.'}
+    catch {if(!$_.Exception.Message.Contains($actual) -or !$_.Exception.Message.Contains('Expected')){throw 'Legacy host rejection omitted diagnostic fingerprints.'}}
+} finally {[IO.File]::WriteAllText($manifestPath,$originalManifest,[Text.UTF8Encoding]::new($false))}
 Require-Rejected { Expand-LauncherRuntime $Launcher (Join-Path $work ('b'*64)) (Join-Path $work 'wrong') } 'Launcher/source mismatch accepted.'
 if (Test-Path -LiteralPath (Join-Path $work 'wrong')) { throw 'Invalid runtime wrote files.' }
 Write-Output 'PASS Player payload: embedded modules, source/version binding, hashes, x86 DLLs, fixed layout, traversal and corrupt-package rejection.'
