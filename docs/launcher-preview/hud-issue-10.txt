@@ -1,0 +1,5 @@
+- Fixed inherited OpenGL programs hiding fixed-function HUD, weapon and effect geometry.
+- Added separate shader-pipeline isolation with exact host-state restoration.
+- Improved HUD diagnostics to report separate program pipelines even when the current program is zero.
+- Added real WGL pixel regressions for missing weapons, reticles and text across graphics contexts.
+- Preserved the previous headshot alignment, saved friendly-fire and campaign-economy fixes.

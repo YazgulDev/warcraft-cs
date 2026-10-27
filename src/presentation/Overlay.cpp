@@ -11,6 +11,7 @@
 #include "WeaponSelectionView.hpp"
 #include "HudHints.hpp"
 #include "HudRenderState.hpp"
+#include "FixedFunctionState.hpp"
 #include "InventoryHudView.hpp"
 #include "../platform/NativeMinimap.hpp"
 #include "../platform/DiagnosticLog.hpp"
@@ -81,6 +82,8 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     }
     // One cadence covers raw host state, the post-weapon handoff and the prepared/completed flat HUD.
     bool sampledHud=hudDiagnostics_.Begin(controller.UnitFirstPerson() ? "clean-unit-view" : controller.ThirdPerson() ? "third-person" : "weapon-first-person",width,height);
+    // Capture the raw host first, then isolate world effects and weapons before the nested HUD scope.
+    FixedFunctionState fixedFunction;
     glViewport(0, 0, width, height);
     // Warcraft uses multiple texture units; isolate the overlay on unit zero.
     using ActiveTexture = void (APIENTRY*)(GLenum);

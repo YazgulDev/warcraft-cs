@@ -453,6 +453,14 @@ and exercised with the original historical collision regressions in addition to 
 
 `CombatVisuals` owns bounded copied-value blood/critical/casing pools. Confirmed game-thread HP loss creates target feedback and accepted conventional rounds create cases; small physics substeps update visual debris without giving it collision authority. `CombatVisualView` draws world-depth procedural droplets/cases and reuses `ItemNameView::DrawAt` for cached Unicode critical captions. Rendering never queries native unit handles. Controller suspension freezes visual time; map teardown/F8 clear the pools. The dedicated hidden WGL suite verifies actual pixels and state without campaign input.
 
+`FixedFunctionState` owns OpenGL program/pipeline bindings and legacy-program/rasterizer-discard
+enables through an RAII scope. `Overlay` uses it around all mod world effects, held models and HUD;
+`HudRenderState` additionally uses it for standalone 2D passes. Unlike legacy attribute stacks, the
+scope explicitly restores modern program bindings. It returns immediately on the D3D9 adapter.
+Raw diagnostics precede isolation. Hidden WGL tests reproduce zero-error missing geometry with
+`CURRENT_PROGRAM=0` and a separate pipeline, compare actual weapon/reticle/glyph pixels and verify
+restoration across replacement contexts.
+
 
 ### Local head/contact and campaign-economy fixes
 

@@ -37,18 +37,20 @@ void HudDiagnostics::State(const char* phase,bool sampled) {
     auto ext=reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS));
     auto has=[&](const char* name){return ext && strstr(ext,name);};
     bool v12=major>1 || (major==1 && minor>=2),v13=major>1 || (major==1 && minor>=3),v14=major>1 || (major==1 && minor>=4);
-    GLint draw=0,read=0,fbDraw=0,fbRead=0,program=0,equation=0x8006,equationAlpha=0x8006;
+    GLint draw=0,read=0,fbDraw=0,fbRead=0,program=0,pipeline=0,equation=0x8006,equationAlpha=0x8006;
     glGetIntegerv(GL_DRAW_BUFFER,&draw);glGetIntegerv(GL_READ_BUFFER,&read);
     // Only query extension state supported by this context; diagnostics must not manufacture GL errors.
     if(major>=3 || has("GL_ARB_framebuffer_object")){glGetIntegerv(0x8CA6,&fbDraw);glGetIntegerv(0x8CAA,&fbRead);}
     else if(has("GL_EXT_framebuffer_object")){glGetIntegerv(0x8CA6,&fbDraw);fbRead=fbDraw;}
     if(major>=2)glGetIntegerv(0x8B8D,&program);
+    // Separate shader pipelines can affect pixels even with CURRENT_PROGRAM=0 and no GL errors.
+    if(major>4 || (major==4 && minor>=1) || has("GL_ARB_separate_shader_objects"))glGetIntegerv(0x825A,&pipeline);
     if(v14 || has("GL_EXT_blend_minmax") || has("GL_EXT_blend_subtract"))glGetIntegerv(0x8009,&equation);
     equationAlpha=equation;if(major>=2 || has("GL_EXT_blend_equation_separate"))glGetIntegerv(0x883D,&equationAlpha);
     GLfloat coverage=1;GLboolean invert=0;GLint samples=0;bool ms=v13 || has("GL_ARB_multisample");
     if(ms){glGetFloatv(0x80AA,&coverage);glGetBooleanv(0x80AB,&invert);glGetIntegerv(0x80A9,&samples);}
-    Record("TRACE","HUD state phase=%s drawBuffer=%04X readBuffer=%04X framebuffer=%d/%d program=%d blendEquation=%04X/%04X polygonSmooth=%d samples=%d alphaCoverage=%d alphaOne=%d coverage=%d:%.3f:%d fragmentProgram=%d vertexProgram=%d discard=%d",
-        phase,draw,read,fbDraw,fbRead,program,equation,equationAlpha,glIsEnabled(GL_POLYGON_SMOOTH),samples,
+    Record("TRACE","HUD state phase=%s drawBuffer=%04X readBuffer=%04X framebuffer=%d/%d program=%d pipeline=%d blendEquation=%04X/%04X polygonSmooth=%d samples=%d alphaCoverage=%d alphaOne=%d coverage=%d:%.3f:%d fragmentProgram=%d vertexProgram=%d discard=%d",
+        phase,draw,read,fbDraw,fbRead,program,pipeline,equation,equationAlpha,glIsEnabled(GL_POLYGON_SMOOTH),samples,
         ms ? glIsEnabled(0x809E) : 0,ms ? glIsEnabled(0x809F) : 0,ms ? glIsEnabled(0x80A0) : 0,coverage,invert,
         has("GL_ARB_fragment_program") ? glIsEnabled(0x8804) : 0,has("GL_ARB_vertex_program") ? glIsEnabled(0x8620) : 0,major>=3 ? glIsEnabled(0x8C89) : 0);
     GLint viewport[4],scissor[4],polygon[2],source=0,destination=0,alpha=0;GLboolean mask[4],depthMask=0;GLfloat alphaRef=0;

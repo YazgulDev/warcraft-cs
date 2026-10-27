@@ -56,6 +56,12 @@ camera, player status, render frequency, world-frame age, focus, context, viewpo
 and reticle submission decisions. OpenGL vendor/renderer/version identify the driver used by the game.
 An observed GL error may originate in the host frame; a submission record does not prove visible pixels.
 
+HUD state records include both `program` and the independent `pipeline` binding. A bound separate
+shader pipeline can discard or blacken fixed-function HUD/weapon geometry while `program=0` and
+`observedErrors=0`. The raw `host` snapshot precedes program isolation; prepared passes should report
+zero for both. The renderer restores the caller's program/pipeline and supported legacy-program/discard
+enables after drawing. This is automatic render-state isolation, without a player setting.
+
 Movement settings are recorded after validation at startup and F8. `movement contact` traces each
 takeoff/landing with horizontal speed in Warcraft and GoldSrc units, XYZ velocity, movement inputs
 and view yaw. These transitions complement sampled position/ground/speed summaries when diagnosing

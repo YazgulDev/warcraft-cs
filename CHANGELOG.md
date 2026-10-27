@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Isolate fixed-function OpenGL effects, weapons and HUD from inherited GLSL/separate/ARB programs and rasterizer discard; restore bindings/enables explicitly and include separate pipeline state in diagnostics. Add real WGL pixel/state regressions for issue #10. [HUD repair preview](docs/HUD-ISSUE-10-PREVIEW.md).
 - Classify mixed head/neck faces at the actual contact using fractional named-head skin weights, retaining physical occlusion and unverified-model exclusions.
 - Enable direct Tau/Gluon headshot bonuses by default and emit blood from verified head contacts even when bonus/text is disabled; retain actual-HP-loss requirements and visual-only query exclusion.
 - Start a missing campaign base near available workers, prioritize actual worker race over captured foreign halls and retry bounded placement sites within a decision.
