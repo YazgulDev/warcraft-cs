@@ -279,13 +279,22 @@ int main() {
     // Diagnostic defaults, bounds and F8-style reloads use the actual INI parser.
     { std::ofstream file(path); file << "[Logging]\nDetailed=false\nIntervalMs=1\nMaxFileMB=999\nArchiveCount=-1\n"; }
     settings=GameplaySettings::Load(path);
-    assert(!settings.logging.detailed && settings.logging.intervalMs==100 && settings.logging.maxFileMB==64 && settings.logging.archiveCount==0);
+    assert(!settings.logging.detailed && settings.logging.graphicsDebug && settings.logging.intervalMs==100 && settings.logging.maxFileMB==64 && settings.logging.archiveCount==0);
+    // F8 snapshots validate both observer opt-out and malformed/missing fallback independently of TRACE.
+    for(const char* value : {"false","FALSE","0"}) {
+        WritePrivateProfileStringA("Logging","GraphicsDebug",value,path.c_str());
+        assert(!GameplaySettings::Load(path).logging.graphicsDebug);
+    }
+    for(const char* value : {"true","TRUE","1","","bad","nan"}) {
+        WritePrivateProfileStringA("Logging","GraphicsDebug",value,path.c_str());
+        assert(GameplaySettings::Load(path).logging.graphicsDebug);
+    }
     WritePrivateProfileStringA("Logging","Detailed","true",path.c_str());
     WritePrivateProfileStringA("Logging","IntervalMs","2500",path.c_str());
     settings=GameplaySettings::Load(path); assert(settings.logging.detailed && settings.logging.intervalMs==2500);
     { std::ofstream file(path); file << "[Logging]\nDetailed=invalid\nIntervalMs=nan\nMaxFileMB=broken\nArchiveCount=inf\n"; }
     settings=GameplaySettings::Load(path);
-    assert(settings.logging.detailed && settings.logging.intervalMs==1000 && settings.logging.maxFileMB==8 && settings.logging.archiveCount==3);
+    assert(settings.logging.detailed && settings.logging.graphicsDebug && settings.logging.intervalMs==1000 && settings.logging.maxFileMB==8 && settings.logging.archiveCount==3);
     DeleteFileA(path.c_str());
     // Visibility settings reject malformed values and bound work to the world camera's range.
     // Combined display/spell controls share a conflict-checked layout and survive a fresh INI load.
@@ -789,5 +798,14 @@ int main() {
         assert(flash.flashStunAllUnits==(strcmp(value,"false") && strcmp(value,"0")));
         assert(flash.flashStunDistanceFalloff==(!strcmp(value,"true") || !strcmp(value,"1")));
     }
+    // New head/contact and campaign economy controls replace one validated startup/F8 snapshot.
+    {std::ofstream f(path);f<<"[Combat]\nEnergyHeadshots=0\nHeadshotBoneWeight=nan\n[ArmyAI]\nShowStatus=false\nPlacementAttempts=999\nLumberWorkers=-1\n";}
+    auto repairs=GameplaySettings::Load(path);
+    assert(!repairs.hitDetection.energyHeadshots && repairs.hitDetection.headshotBoneWeight==.35f);
+    assert(!repairs.armyAI.showStatus && repairs.armyAI.placementAttempts==32 && repairs.armyAI.lumberWorkers==0);
+    {std::ofstream f(path);f<<"[Combat]\nHeadshotBoneWeight=0\n[ArmyAI]\nPlacementAttempts=0\nLumberWorkers=99\n";}
+    repairs=GameplaySettings::Load(path);
+    assert(repairs.hitDetection.energyHeadshots && repairs.hitDetection.headshotBoneWeight==.05f);
+    assert(repairs.armyAI.showStatus && repairs.armyAI.placementAttempts==1 && repairs.armyAI.lumberWorkers==10);
     DeleteFileA(path.c_str());return 0;
 }

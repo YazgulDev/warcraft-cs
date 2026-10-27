@@ -26,6 +26,15 @@ bool HudDiagnostics::Begin(const char* mode,int width,int height) {
 void HudDiagnostics::Omitted(const char* reason,bool sampled) {
     if(sampled)Record("TRACE","HUD omitted reason=%s",reason);
 }
+void HudDiagnostics::Weapon(int slot,unsigned serial,const char* animation,float seconds,bool loaded,bool held,bool scoped,bool contained,bool hidden) {
+    static thread_local int previousSlot=-1;static thread_local unsigned previousSerial=0,previousFlags=~0u;static thread_local DWORD previous=0;
+    unsigned flags=unsigned(loaded)|(unsigned(held)<<1)|(unsigned(scoped)<<2)|(unsigned(contained)<<3)|(unsigned(hidden)<<4);
+    bool changed=slot!=previousSlot || serial!=previousSerial || flags!=previousFlags;
+    if(DiagnosticLog::Due(previous,changed))Record("TRACE","graphics weapon slot=%d serial=%u animation=%s seconds=%.4f loaded=%d held=%d scoped=%d contained=%d hidden=%d reason=%s",
+        slot,serial,animation ? animation : "none",seconds,loaded,held,scoped,contained,hidden,
+        !loaded ? "resource-unavailable" : contained ? "contained" : hidden ? "hidden" : !held ? "view-or-empty-equipment" : scoped ? "scoped-hands-suppressed" : "draw");
+    previousSlot=slot;previousSerial=serial;previousFlags=flags;
+}
 void HudDiagnostics::Font(const char* role,const char* phase,int requested,int width,int height,unsigned texture,unsigned long error,int glyph,int coverage) {
     Record(!strcmp(phase,"ready") ? "INFO" : "ERROR",
         "HUD font role=%s phase=%s requested=%d atlas=%dx%d texture=%u context=%p winError=%lu glyph=%d coverage=%d",
@@ -37,18 +46,27 @@ void HudDiagnostics::State(const char* phase,bool sampled) {
     auto ext=reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS));
     auto has=[&](const char* name){return ext && strstr(ext,name);};
     bool v12=major>1 || (major==1 && minor>=2),v13=major>1 || (major==1 && minor>=3),v14=major>1 || (major==1 && minor>=4);
-    GLint draw=0,read=0,fbDraw=0,fbRead=0,program=0,equation=0x8006,equationAlpha=0x8006;
+    GLint draw=0,read=0,fbDraw=0,fbRead=0,program=0,pipeline=0,equation=0x8006,equationAlpha=0x8006;
     glGetIntegerv(GL_DRAW_BUFFER,&draw);glGetIntegerv(GL_READ_BUFFER,&read);
     // Only query extension state supported by this context; diagnostics must not manufacture GL errors.
     if(major>=3 || has("GL_ARB_framebuffer_object")){glGetIntegerv(0x8CA6,&fbDraw);glGetIntegerv(0x8CAA,&fbRead);}
     else if(has("GL_EXT_framebuffer_object")){glGetIntegerv(0x8CA6,&fbDraw);fbRead=fbDraw;}
     if(major>=2)glGetIntegerv(0x8B8D,&program);
+    // Separate shader pipelines can affect pixels even with CURRENT_PROGRAM=0 and no GL errors.
+    if(major>4 || (major==4 && minor>=1) || has("GL_ARB_separate_shader_objects"))glGetIntegerv(0x825A,&pipeline);
+    GLint matrixMode=0,modelDepth=0,projectionDepth=0,textureDepth=0,attributeDepth=0,renderMode=0;
+    glGetIntegerv(GL_MATRIX_MODE,&matrixMode);glGetIntegerv(GL_MODELVIEW_STACK_DEPTH,&modelDepth);glGetIntegerv(GL_PROJECTION_STACK_DEPTH,&projectionDepth);
+    glGetIntegerv(GL_TEXTURE_STACK_DEPTH,&textureDepth);glGetIntegerv(GL_ATTRIB_STACK_DEPTH,&attributeDepth);glGetIntegerv(GL_RENDER_MODE,&renderMode);
+    Record("TRACE","HUD stacks phase=%s mode=%04X renderMode=%04X model=%d projection=%d texture=%d attributes=%d",phase,matrixMode,renderMode,modelDepth,projectionDepth,textureDepth,attributeDepth);
+    GLint unpack=0,rowLength=0,skipRows=0,skipPixels=0;glGetIntegerv(GL_UNPACK_ALIGNMENT,&unpack);glGetIntegerv(GL_UNPACK_ROW_LENGTH,&rowLength);
+    glGetIntegerv(GL_UNPACK_SKIP_ROWS,&skipRows);glGetIntegerv(GL_UNPACK_SKIP_PIXELS,&skipPixels);
+    Record("TRACE","HUD upload phase=%s alignment=%d rowLength=%d skipRows=%d skipPixels=%d",phase,unpack,rowLength,skipRows,skipPixels);
     if(v14 || has("GL_EXT_blend_minmax") || has("GL_EXT_blend_subtract"))glGetIntegerv(0x8009,&equation);
     equationAlpha=equation;if(major>=2 || has("GL_EXT_blend_equation_separate"))glGetIntegerv(0x883D,&equationAlpha);
     GLfloat coverage=1;GLboolean invert=0;GLint samples=0;bool ms=v13 || has("GL_ARB_multisample");
     if(ms){glGetFloatv(0x80AA,&coverage);glGetBooleanv(0x80AB,&invert);glGetIntegerv(0x80A9,&samples);}
-    Record("TRACE","HUD state phase=%s drawBuffer=%04X readBuffer=%04X framebuffer=%d/%d program=%d blendEquation=%04X/%04X polygonSmooth=%d samples=%d alphaCoverage=%d alphaOne=%d coverage=%d:%.3f:%d fragmentProgram=%d vertexProgram=%d discard=%d",
-        phase,draw,read,fbDraw,fbRead,program,equation,equationAlpha,glIsEnabled(GL_POLYGON_SMOOTH),samples,
+    Record("TRACE","HUD state phase=%s drawBuffer=%04X readBuffer=%04X framebuffer=%d/%d program=%d pipeline=%d blendEquation=%04X/%04X polygonSmooth=%d samples=%d alphaCoverage=%d alphaOne=%d coverage=%d:%.3f:%d fragmentProgram=%d vertexProgram=%d discard=%d",
+        phase,draw,read,fbDraw,fbRead,program,pipeline,equation,equationAlpha,glIsEnabled(GL_POLYGON_SMOOTH),samples,
         ms ? glIsEnabled(0x809E) : 0,ms ? glIsEnabled(0x809F) : 0,ms ? glIsEnabled(0x80A0) : 0,coverage,invert,
         has("GL_ARB_fragment_program") ? glIsEnabled(0x8804) : 0,has("GL_ARB_vertex_program") ? glIsEnabled(0x8620) : 0,major>=3 ? glIsEnabled(0x8C89) : 0);
     GLint viewport[4],scissor[4],polygon[2],source=0,destination=0,alpha=0;GLboolean mask[4],depthMask=0;GLfloat alphaRef=0;

@@ -37,6 +37,8 @@ int main(int argc,char** argv) {
     std::ifstream input(std::string(argv[1])+"/WarcraftCS.log",std::ios::binary);
     std::string log{std::istreambuf_iterator<char>(input),std::istreambuf_iterator<char>()};
     assert(log.find("phase=host drawBuffer=")!=std::string::npos);
+    // A zero current program no longer omits the independent program-pipeline binding from reports.
+    assert(log.find("program=0 pipeline=0")!=std::string::npos);
     assert(log.find("blendEquation=800B/800B")!=std::string::npos && log.find("blendEquation=8006/8006")!=std::string::npos);
     assert(log.find("HUD texture phase=host unit=1 active=1")!=std::string::npos);
     auto first=log.find("HUD frame mode=weapons");assert(first!=std::string::npos && log.find("HUD frame mode=weapons",first+1)==std::string::npos);

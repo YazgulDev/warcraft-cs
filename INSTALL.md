@@ -2,7 +2,7 @@
 
 [Project home](README.md) · [Documentation](docs/README.md) · [Requirements](REQUIREMENTS.md)
 
-Release **0.12.0** additionally accepts experimental Warcraft III **1.27a
+Release **0.13.0** retains support for experimental Warcraft III **1.27a
 (Game.dll 1.27.0.52240)** through Player or Developer setup, selecting D3D9 at launch.
 Published 0.11.0 Player modules cannot be reused across host versions. Read
 [port limits and verification status](docs/PORT-1.27.md) before using that host.
@@ -12,7 +12,7 @@ or the experimental 1.27a host above, and, for CS weapons, Counter-Strike 1.6. R
 This offline, single-player prototype does not download games or redistribute their content.
 Full campaign/custom-map compatibility has not been verified.
 See [REQUIREMENTS.md](REQUIREMENTS.md) for the complete system, owned-file and dependency checklist.
-Current release: **0.12.0**; [all changes and download variants](docs/RELEASE-0.12.0.md).
+Current release: **0.13.0**; [all changes and direct downloads](docs/RELEASE-0.13.0.md).
 Antivirus can block the unsigned hook module; see the [short explanation and checks](TROUBLESHOOTING.md#antivirus).
 
 ## Windows EXE: recommended for clients

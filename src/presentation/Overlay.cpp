@@ -11,6 +11,8 @@
 #include "WeaponSelectionView.hpp"
 #include "HudHints.hpp"
 #include "HudRenderState.hpp"
+#include "FixedFunctionState.hpp"
+#include "GraphicsDiagnostics.hpp"
 #include "InventoryHudView.hpp"
 #include "../platform/NativeMinimap.hpp"
 #include "../platform/DiagnosticLog.hpp"
@@ -51,6 +53,9 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     // Clean unit view still receives physical grenade smoke/blindness; its HUD and arms stay hidden below.
     if (!wglGetCurrentContext()) { ReticleDiagnostics::Skip("no-gl-context"); return; }
     HGLRC current = wglGetCurrentContext();
+    // Boundaries observe transient failures while the scope restores any pre-existing driver observer.
+    GraphicsDiagnostics graphics(controller.Settings().logging);
+    graphics.Phase("context-resources");
     if (context_ != current) {
         ResetGraphics(false); context_ = current;
         wc3::Log("Overlay context acquired: %p", current);
@@ -81,6 +86,9 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     }
     // One cadence covers raw host state, the post-weapon handoff and the prepared/completed flat HUD.
     bool sampledHud=hudDiagnostics_.Begin(controller.UnitFirstPerson() ? "clean-unit-view" : controller.ThirdPerson() ? "third-person" : "weapon-first-person",width,height);
+    // Capture the raw host first, then isolate world effects and weapons before the nested HUD scope.
+    FixedFunctionState fixedFunction;
+    graphics.Phase("overlay-state");
     glViewport(0, 0, width, height);
     // Warcraft uses multiple texture units; isolate the overlay on unit zero.
     using ActiveTexture = void (APIENTRY*)(GLenum);
@@ -110,6 +118,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         sky_.Draw(root_,controller.SkyName(),controller.ViewYaw(),controller.ViewPitch(),controller.ViewFov(),float(width)/height);
     // World depth still exists here; the first-person weapon clears it in the next pass.
     if(controller.UnitFirstPerson()) {
+        graphics.Phase("clean-view-effects");
         itemName_.Draw(controller.HoveredItemName(),width,height,std::clamp(height/45,16,30));
         HudDiagnostics::Omitted("clean-unit-view",sampledHud);
         if(!controller.Status().contained && !controller.Status().hidden) {
@@ -124,10 +133,13 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     }
     // Load the held model before world effects so its actual animated attachment can anchor an energy beam.
     int index=controller.WeaponIndex();float projectionScale=controller.Settings().weaponModelScale[index];
+    graphics.Phase("weapon-resource-load");
     float animationSeconds=controller.AnimationTime(); // Attachment and mesh must sample one identical animation phase.
     if(!controller.Settings().warcraftOnly && !attempted_[index]) {
         attempted_[index]=true;loaded_[index]=guns_[index].Load(root_+"\\assets\\"+WeaponSlots::Caches[index]+".wcg");
+        if(!loaded_[index])wc3::LogError("graphics resource load failed role=held-model slot=%d path=%s\\assets\\%s.wcg",index,root_.c_str(),WeaponSlots::Caches[index]);
     }
+    graphics.Phase("world-effects");
     // Copied target/casing pools render in world depth, independently of the current weapon's private depth pass.
     if(!controller.Status().contained && !controller.Status().hidden)
         combatView_.Draw(controller.Visuals(),barView,width,height,nearPlane,farPlane);
@@ -151,11 +163,14 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         GrenadeView::Draw(controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
     }
     glMatrixMode(GL_PROJECTION); glPushMatrix(); glLoadIdentity();
+    graphics.Phase("held-model");
     // Slightly tighten USP/AWP framing while preserving the original lower-edge arm origins.
     float top = std::tan(45.0f * 0.01745329252f) * projectionScale; float side = top * width / height;
     glFrustum(-side, side, -top, top, 1, 200);
     glMatrixMode(GL_MODELVIEW); glPushMatrix(); glLoadIdentity();
     bool heldModel=!controller.ThirdPerson() && loaded_[index] && !controller.Status().contained && !controller.Status().hidden && (index!=WeaponSlots::C4 || controller.Ammo()>0);
+    HudDiagnostics::Weapon(index,controller.ShotSerial(),controller.Animation(),animationSeconds,loaded_[index],heldModel,controller.Scoped(),
+        controller.Status().contained,controller.Status().hidden);
     const auto& visuals=controller.Settings().viewmodel;
     float flash=muzzleFlash_.Sample(controller.ShotSerial(),heldModel && controller.ShowMuzzleFlash(),GetTickCount(),visuals.flashMilliseconds);
     if (heldModel && (!controller.Scoped() || flash>0)) {
@@ -170,6 +185,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     }
     bool unavailableView = controller.Status().contained || controller.Status().hidden;
     HudDiagnostics::State("after-weapon",sampledHud);
+    graphics.Phase("flat-hud");
     {
     // Re-establish all flat-HUD state after the world/weapon passes; restore it before the outer host scope.
     HudRenderState hudState;
@@ -304,6 +320,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         if(!previewAttempted_[slot]) {
             previewAttempted_[slot]=true;
             previewLoaded_[slot]=buyPreviews_[slot].Load(root_+"\\assets\\buy\\"+item->cache+".wcg");
+            if(!previewLoaded_[slot])wc3::LogError("graphics resource load failed role=buy-preview slot=%d path=%s\\assets\\buy\\%s.wcg",slot,root_.c_str(),item->cache);
         }
         if(previewLoaded_[slot])buyPreviews_[slot].DrawPreview(x,y,w,h);
     };
@@ -314,6 +331,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     GrenadeView::Flash(controller.FlashOpacity(),width,height); // Blindness covers hands, scope and HUD together.
     HudDiagnostics::State("completed",sampledHud);
     }
+    graphics.Phase("restore-host");
     glPopMatrix(); glMatrixMode(GL_PROJECTION); glPopMatrix();
     glMatrixMode(GL_TEXTURE); glPopMatrix();
     glMatrixMode(oldMode); glPopAttrib();

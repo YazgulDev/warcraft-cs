@@ -18,6 +18,7 @@
 #include "../economy/PurchasePayment.hpp"
 #include "../platform/WeaponTrace.hpp"
 #include "../combat/HeadshotPolicy.hpp"
+#include "../presentation/ArmyAIStatusText.hpp"
 #include "../presentation/CursorAimRay.hpp"
 #include "../platform/MapEnvironment.hpp"
 #ifdef WCS_GAMEPLAY_TEST
@@ -622,6 +623,7 @@ void ShooterController::ReloadSettings() {
     for(int i=0;i<3;++i)wc3::Log("Half-Life slot=%d available=%d enabled=%d",WeaponSlots::Crowbar+i,settings_.halfLife.available[i],settings_.halfLife.enabled[i]);
     if(!settings_.WeaponEnabled(weapon_))SwitchWeapon(WeaponSlots::Pistol);
     if(!settings_.armyAI.enabled)armyAI_.Reset();
+    armyStatus_=ArmyAIStatus::Scanning; // Re-enabling status on F8 must report the current blocker again.
     // Startup/F8 restore the configured distance; wheel choices stay in this map session only.
     thirdPersonDistance_=settings_.thirdPerson.distance;cameraWheel_.Reset();
     // Reducing a cap on F8 discards surplus reserve, but cannot grant ammunition or empty the magazine.
@@ -673,8 +675,8 @@ void ShooterController::ReloadSettings() {
     wc3::Log("Speed display configured visible=%d units=CS",showSpeed_);
     // Startup and F8 share validated logging settings without discarding the active session.
     DiagnosticLog::Configure(settings_.logging);
-    wc3::Log("Logging configured detailed=%d intervalMs=%u maxFileMB=%u archives=%u",
-        settings_.logging.detailed, settings_.logging.intervalMs, settings_.logging.maxFileMB, settings_.logging.archiveCount);
+    wc3::Log("Logging configured detailed=%d graphicsDebug=%d intervalMs=%u maxFileMB=%u archives=%u",
+        settings_.logging.detailed, settings_.logging.graphicsDebug, settings_.logging.intervalMs, settings_.logging.maxFileMB, settings_.logging.archiveCount);
     // Startup and F8 share the same CS-only gain update; Warcraft's Miles mixer is untouched.
     audio_.SetVolumePercent(settings_.csVolumePercent);
     movement_.Configure(settings_.movement); // F8 changes tuning without resetting a jump or accumulated momentum.
@@ -901,6 +903,7 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
     float origin[]={x,y,z},direction[]={vx,vy,vz};
     WeaponTrace::Options trace;trace.volumes=WeaponSlots::Melee(weapon_);trace.padding=weapon_==WeaponSlots::Sword ? 28.f : 0;
     trace.surfaceOnMiss=WeaponSlots::Energy(weapon_);
+    trace.diagnostic=!visualOnly; // Record candidate pose/misses for fired rounds, never continuous visual retargeting.
     auto contact=WeaponTrace::Cast(unit_,origin,direction,attackRange,settings_,hitboxes_,destructableHitboxes_,gameBase_,trace);
     float nearest=contact.distance;auto target=contact.target;bool destructable=contact.destructable;
     bool headshot=HeadshotPolicy::Accepted(weapon_,contact.head,settings_.hitDetection);
@@ -952,10 +955,10 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
         if (after < before) {
             // The reticle still confirms ordinary damage; headshots additionally receive target-local effects.
             hits_.Record(headshot);
-            // Blood/text require real HP loss; rejected damage and invulnerable targets cannot emit a critical.
-            if(headshot)combatVisuals_.Headshot(target,{x+vx*nearest,y+vy*nearest,z+vz*nearest},
-                {wc3::Real(wc3::GetUnitX(target)),wc3::Real(wc3::GetUnitY(target)),z+vz*nearest+settings_.combatVisuals.criticalOffset},
-                {vx,vy,vz},settings_.combatVisuals);
+            // Anchor confirmed blood/text at contact, even if a lethal map trigger has already removed the unit.
+            if(HeadshotPolicy::Direct(weapon_,contact.head))combatVisuals_.Headshot(target,{x+vx*nearest,y+vy*nearest,z+vz*nearest},
+                {x+vx*nearest,y+vy*nearest,z+vz*nearest+settings_.combatVisuals.criticalOffset},
+                {vx,vy,vz},settings_.combatVisuals,headshot);
             if (WeaponSlots::Melee(weapon_) && weapon_!=WeaponSlots::Crowbar) {
                 static const char* contacts[] = {"knife_hit1.wav", "knife_hit2.wav", "knife_hit3.wav", "knife_hit4.wav"};
                 const char* sample = destructable ? "knife_hitwall1.wav" : (weapon_ == WeaponSlots::Sword || meleeAttack_.secondary) ? "knife_stab.wav" : contacts[knifeSwing_ % 4];
@@ -968,6 +971,10 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
         // Dirt contact differs from structures; an empty swing still has no contact sample.
         if(weapon_==WeaponSlots::Crowbar)CrowbarImpact(CrowbarContact::Surface::Ground);
         else Sound("knife_hitwall1.wav");
+    } else {
+        // A miss needs its own ray record to distinguish geometry/pose gaps, ally protection and recoil.
+        wc3::Log("shot miss weapon=%s origin=%.1f,%.1f,%.1f ray=%.5f,%.5f,%.5f limit=%.1f targetAllies=%d friendlyFirePercent=%.1f",
+            w.name,x,y,z,vx,vy,vz,nearest,settings_.targetAllies,settings_.friendlyFirePercent);
     }
 }
 void ShooterController::CrowbarImpact(CrowbarContact::Surface surface) {
@@ -1062,6 +1069,11 @@ void ShooterController::TickArmyAI() {
     if(!focused)return;
     // Build orders can create birth models synchronously. Native skinning must see them before the next world draw.
     armyAI_.Tick(unit_,settings_.armyAI,GetTickCount(),[&](wc3::Handle u){return squad_.Reserved(u);});
+    if(armyAI_.Active() && armyStatus_!=armyAI_.Status()) {
+        armyStatus_=armyAI_.Status();
+        if(settings_.armyAI.showStatus)Notice(ArmyAIStatusText(armyStatus_));
+        wc3::Log("army AI status=%s gold=%d lumber=%d",ArmyAIStatusText(armyStatus_),wc3::GetPlayerState(wc3::GetLocalPlayer(),1),wc3::GetPlayerState(wc3::GetLocalPlayer(),2));
+    }
 }
 void ShooterController::Tick(uintptr_t ui) {
     aimTarget_={}; // Clear before every early return, mode change, menu or lost-control state.
@@ -1173,7 +1185,7 @@ void ShooterController::Tick(uintptr_t ui) {
     if (settingsRequested_) { settingsRequested_=false;ReloadSettings();if(!Visible())return; } // Unit-view opt-out may return to RTS.
     if(armyToggleRequested_) {
         armyToggleRequested_=false;
-        if(settings_.armyAI.enabled)Notice(armyAI_.Toggle() ? "ARMY AI ON" : "ARMY AI OFF");else Notice("ARMY AI DISABLED IN CONFIG");
+        if(settings_.armyAI.enabled){armyAI_.Toggle();armyStatus_=ArmyAIStatus::Scanning;Notice(ArmyAIStatusText(armyAI_.Status()));}else Notice("ARMY AI DISABLED IN CONFIG");
         wc3::Log("army AI active=%d",armyAI_.Active());
     }
     if(viewToggleRequested_) {viewToggleRequested_=false;ToggleView();}
@@ -1181,8 +1193,15 @@ void ShooterController::Tick(uintptr_t ui) {
     if(allyTargetToggleRequested_) {
         // Apply before both prediction and contact so Q changes the marker and damage policy together.
         allyTargetToggleRequested_=false;settings_.targetAllies=!settings_.targetAllies;aimTarget_={};
-        ammoMessage_=settings_.targetAllies ? "ALLY TARGETING ON" : "ALLY TARGETING OFF";refillTick_=now;
-        wc3::Log("Ally targeting enabled=%d",settings_.targetAllies);
+        // Persist Q so F8, switching views or restarting cannot silently restore ally protection.
+        bool saved=GameplaySettings::SaveAllyTargeting(root_+"\\WarcraftCS.ini",settings_.targetAllies);
+        char message[128];
+        if(!saved)std::snprintf(message,sizeof(message),"ALLY TARGETING %s (NOT SAVED)",settings_.targetAllies ? "ON" : "OFF");
+        else if(settings_.targetAllies && settings_.friendlyFirePercent>0)
+            std::snprintf(message,sizeof(message),"FRIENDLY FIRE ON (%g%%)",settings_.friendlyFirePercent);
+        else std::snprintf(message,sizeof(message),"FRIENDLY FIRE OFF%s",settings_.targetAllies ? " (DAMAGE 0%)" : "");
+        ammoMessage_=message;refillTick_=now;
+        wc3::Log("Ally targeting enabled=%d friendlyFirePercent=%.1f saved=%d",settings_.targetAllies,settings_.friendlyFirePercent,saved);
     }
     if (speedToggleRequested_) {
         speedToggleRequested_=false;showSpeed_=!showSpeed_;

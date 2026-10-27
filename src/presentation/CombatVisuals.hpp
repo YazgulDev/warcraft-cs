@@ -16,7 +16,7 @@ public:
     struct Shell {Point position,velocity;float age=0,lifetime=3,size=1,angle=0,spin=0,gravity=650,bounce=.35f,floor=0;bool shotgun=false,resting=false;};
     void Reset(){blood_.clear();criticals_.clear();shells_.clear();lastTarget_=0;sinceCritical_=100;}
     static bool UsesCases(int weapon){return WeaponSlots::Firearm(weapon) && !WeaponSlots::HalfLife(weapon);}
-    void Headshot(uint32_t target,const Point& contact,const Point& above,const Point& direction,const CombatVisualSettings& settings);
+    void Headshot(uint32_t target,const Point& contact,const Point& above,const Point& direction,const CombatVisualSettings& settings,bool showCritical=true);
     void Eject(int weapon,const Point& eye,const Point& direction,const Point& inherited,float floor,const CombatVisualSettings& settings);
     void Step(float dt);
     const std::vector<Blood>& BloodDrops() const{return blood_;}

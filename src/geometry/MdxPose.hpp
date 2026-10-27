@@ -64,7 +64,7 @@ inline Matrix Transform(const float* pivot,Value translation,Value rotation,Valu
 inline std::array<float,3> Point(const Matrix& matrix,const float* point) {
     std::array<float,3> result{};for(int r=0;r<3;++r){result[r]=matrix[r*4+3];for(int c=0;c<3;++c)result[r]+=matrix[r*4+c]*point[c];}return result;
 }
-inline bool Triangle(const float* a,const float* b,const float* c,const float* origin,const float* direction,float limit,float& entry) {
+inline bool Triangle(const float* a,const float* b,const float* c,const float* origin,const float* direction,float limit,float& entry,std::array<float,3>* weights=nullptr) {
     float e[3],f[3],p[3],t[3],q[3];for(int i=0;i<3;++i){e[i]=b[i]-a[i];f[i]=c[i]-a[i];t[i]=origin[i]-a[i];}
     p[0]=direction[1]*f[2]-direction[2]*f[1];p[1]=direction[2]*f[0]-direction[0]*f[2];p[2]=direction[0]*f[1]-direction[1]*f[0];
     float determinant=e[0]*p[0]+e[1]*p[1]+e[2]*p[2];if(std::abs(determinant)<.000001f)return false;
@@ -72,6 +72,8 @@ inline bool Triangle(const float* a,const float* b,const float* c,const float* o
     q[0]=t[1]*e[2]-t[2]*e[1];q[1]=t[2]*e[0]-t[0]*e[2];q[2]=t[0]*e[1]-t[1]*e[0];
     float v=(direction[0]*q[0]+direction[1]*q[1]+direction[2]*q[2])/determinant;if(v<0 || u+v>1)return false;
     float distance=(f[0]*q[0]+f[1]*q[1]+f[2]*q[2])/determinant;
-    if(distance<0 || distance>=limit)return false;entry=distance;return true;
+    if(distance<0 || distance>=limit)return false;entry=distance;
+    // Expose the actual contact weights so mixed head/neck faces do not use a whole-triangle vote.
+    if(weights)*weights={1-u-v,u,v};return true;
 }
 }

@@ -10,6 +10,10 @@ int main(){
     assert(effects.Shells().size()==11); // Conventional firearms only, one shell per round, no energy/explosive/melee cases.
     int red=0;for(const auto& shell:effects.Shells()){red+=shell.shotgun;assert(shell.position[0]==20 && shell.position[1]==-10 && shell.position[2]==84);}
     assert(red==2);
+    // Bonus/text opt-out still emits blood at the accepted head contact, never at the feet or caption anchor.
+    effects.Reset();effects.Headshot(9,contact,above,ray,s,false);
+    assert(effects.Criticals().empty() && effects.BloodDrops().size()==s.bloodCount);
+    for(const auto& drop:effects.BloodDrops())assert(drop.position==contact);
     effects.Reset();for(int i=0;i<3;++i)effects.Eject(WeaponSlots::Glock,eye,ray,velocity,0,s);assert(effects.Shells().size()==3);
     for(int i=0;i<200;++i)effects.Eject(0,eye,ray,velocity,0,s);assert(effects.Shells().size()==64);
     effects.Headshot(5,contact,above,ray,s);assert(effects.BloodDrops().size()==16 && effects.Criticals().size()==1);

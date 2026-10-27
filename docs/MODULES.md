@@ -11,6 +11,15 @@ modules. Native GL minimap/portrait capture remains separate. See `PORT-1.27.md`
 queried texture state and the GL error queue, and records labelled font lifecycle
 events. The existing platform `DiagnosticLog` still owns serialization and rotation.
 
+`GraphicsDiagnostics` is a scoped presentation observer for every-pass GL error checkpoints and
+supported driver debug messages, with bounded duplicate suppression and exact callback-state
+restoration. D3D adapters report failed HRESULT operations through the same observer. It consumes
+queued errors deliberately, unlike the observational `HudDiagnostics` snapshots. `NativeFaultDiagnostics`
+is a separate platform adapter used by existing runtime SEH filters: it records original exception
+context/module offsets and a bounded best-effort frame-pointer chain without taking over recovery
+or installing a process-wide handler. `tools/test-graphics-diagnostics.ps1` exercises real hidden WGL
+driver delivery, callback ownership, opt-out, suppression and an actual recovered Windows exception.
+
 `HudRenderState` owns a scoped raster/texture reset for the flat HUD after the 3D
 world/weapon passes. It resets blend equations and MSAA coverage as well as fixed
 function masks/texture targets, then restores the caller state before the outer
@@ -64,9 +73,9 @@ It compares the live native sequence before reusing a cached pose, repairing AI 
 The snapshot supplies terrain-conforming circle vertices and enemy classification; the renderer keeps
 world depth for the ring and screen-space brackets, without altering native unit selection.
 `Combat.TargetAllies` is shared by direct-contact prediction and damage. The Q mailbox toggles it
-on the game thread; protected allied units/buildings are filtered before nearest-contact selection
+on the game thread and persists it through `GameplaySettings::SaveAllyTargeting`; protected allied units/buildings are filtered before nearest-contact selection
 in FPS, TPS melee and both TPS ranged traces. Movement collisions remain native. Area bombs and native spells keep
-their own policies. Startup/F8 reloads the saved default and config upgrades preserve custom shortcuts.
+their own policies. Startup/F8 reloads the saved preference and config upgrades preserve custom shortcuts.
 `ActorJumpView` captures the native model's skinning inputs between world passes and applies physical
 body elevation through that same skinning function for world drawing. It restores the model/cache
 at the presentation boundary before the next tick. It does not write unit fly height, grant
@@ -447,8 +456,23 @@ and exercised with the original historical collision regressions in addition to 
 
 `PurchasePayment` chooses a single wallet before `BuyInventory` validates a transaction. The controller commits that wallet only on success; `BuyMenuState` copies wallet/selection information for `BuyMenuView`, whose buttons share `BuyMenuLayout` with mouse dispatch.
 
-`AnimatedHitModel` and `MdxPose` decode bounded classic MDX geometry, sample skeletal/geoset visibility tracks and intersect posed triangles. `UnitHitboxes::IntersectShot` owns verified native pose/facing/scale transforms and conservative body fallback; its existing volume method remains available to melee/spells/TPS. `WeaponTrace` owns nearest contact filtering and terrain/destructable occlusion. `HeadshotPolicy` applies direct-firearm eligibility and the configurable multiplier before ordinary native damage.
+`AnimatedHitModel` and `MdxPose` decode bounded classic MDX geometry, sample skeletal/geoset visibility tracks and intersect posed triangles. `UnitHitboxes::IntersectShot` owns verified native pose and full render transforms through `SpriteTransform::ReadScaled`, retaining independent basis, visual scale and position. Unverified transforms/poses use conservative body fallback; its existing volume method remains available to melee/spells/TPS. `WeaponTrace` owns nearest contact filtering and terrain/destructable occlusion. Only fired-round queries opt into candidate pose diagnostics. `HeadshotPolicy` applies direct-firearm eligibility and the configurable multiplier before ordinary native damage.
 
 `ItemHover` owns game-thread ground-item enumeration, read-only occlusion and copied localized names. `GameText` removes Warcraft color/control markup. `ItemNameView` owns a single cached Unicode caption texture per graphics context; no native handles or names are dereferenced by the renderer. F8/map replacement clear hover caches. Project-authored fixtures in `test-precise-shots.ps1` and actual hidden WGL pixels in `test-buy-hover-view.ps1` exercise these modules without controlling the user's game.
 
 `CombatVisuals` owns bounded copied-value blood/critical/casing pools. Confirmed game-thread HP loss creates target feedback and accepted conventional rounds create cases; small physics substeps update visual debris without giving it collision authority. `CombatVisualView` draws world-depth procedural droplets/cases and reuses `ItemNameView::DrawAt` for cached Unicode critical captions. Rendering never queries native unit handles. Controller suspension freezes visual time; map teardown/F8 clear the pools. The dedicated hidden WGL suite verifies actual pixels and state without campaign input.
+
+`FixedFunctionState` owns OpenGL program/pipeline bindings and legacy-program/rasterizer-discard
+enables through an RAII scope. `Overlay` uses it around all mod world effects, held models and HUD;
+`HudRenderState` additionally uses it for standalone 2D passes. Unlike legacy attribute stacks, the
+scope explicitly restores modern program bindings. It returns immediately on the D3D9 adapter.
+Raw diagnostics precede isolation. Hidden WGL tests reproduce zero-error missing geometry with
+`CURRENT_PROGRAM=0` and a separate pipeline, compare actual weapon/reticle/glyph pixels and verify
+restoration across replacement contexts.
+
+
+### Local head/contact and campaign-economy fixes
+
+`MdxPose::Triangle` exposes barycentric contact weights; `AnimatedHitModel` retains fractional named-head skin influence until the exact accepted contact. `UnitHitboxes` consumes validated head weight policy, while `HeadshotPolicy` separates direct contact eligibility from optional damage bonuses. `CombatVisuals` separates blood from critical captions and receives only confirmed head world contacts.
+
+`ArmyPlan::Detect` prioritizes builders over captured foreign halls. The existing game-thread `ArmyAI` coordinates bounded native construction, worker-centered startup, race-compatible mines and undead lumber ghouls. `ArmyAIStatus` contains the copied domain result; presentation's `ArmyAIStatusText` maps it to HUD text. The controller reports transitions without taking over native orders. No new engine offsets, free units, resource setters or public runtime entry points are introduced.

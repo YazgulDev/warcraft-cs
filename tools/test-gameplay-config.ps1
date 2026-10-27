@@ -307,13 +307,21 @@ $customLogging=Join-Path $folder 'custom-logging.ini'
 @('[Logging]','Detailed=false','IntervalMs=2500','MaxFileMB=2') | Set-Content -LiteralPath $customLogging -Encoding ascii
 Update-GameplayConfig $template $customLogging
 $loggingText=Get-Content -LiteralPath $customLogging -Raw
-foreach ($setting in @('Detailed=false','IntervalMs=2500','MaxFileMB=2','ArchiveCount=3')) {
+foreach ($setting in @('Detailed=false','GraphicsDebug=true','IntervalMs=2500','MaxFileMB=2','ArchiveCount=3')) {
     if (!$loggingText.Contains($setting)) { throw "Logging migration lost preference/default: $setting" }
 }
 if ([regex]::Matches($loggingText,'(?m)^\[Logging\]').Count -ne 1) { throw 'Logging migration duplicated its section.' }
 $loggingBefore=(Get-FileHash -LiteralPath $customLogging).Hash
 Update-GameplayConfig $template $customLogging
 if ((Get-FileHash -LiteralPath $customLogging).Hash -ne $loggingBefore) { throw 'Repeated logging migration changed the file.' }
+# An explicit observer opt-out must survive subsequent installs without duplicate keys.
+$loggingText.Replace('GraphicsDebug=true','GraphicsDebug=false') | Set-Content -LiteralPath $customLogging -Encoding ascii
+Update-GameplayConfig $template $customLogging
+$loggingText=Get-Content -LiteralPath $customLogging -Raw
+if (!$loggingText.Contains('GraphicsDebug=false') -or [regex]::Matches($loggingText,'(?m)^GraphicsDebug=').Count -ne 1) {throw 'Graphics diagnostic preference was overwritten or duplicated.'}
+$loggingBefore=(Get-FileHash -LiteralPath $customLogging).Hash
+Update-GameplayConfig $template $customLogging
+if ((Get-FileHash -LiteralPath $customLogging).Hash -ne $loggingBefore) {throw 'Observer opt-out migration is not idempotent.'}
 # A custom keyboard layout and spell mapping must survive updates, with missing siblings inserted once.
 $customShortcuts=Join-Path $folder 'custom-shortcuts.ini'
 @('[Shortcuts]','Spell1=Q','Spell2=E','Pickup=Z','Speed=TAB','Minimap=Y','[Interface]','ShowMinimap=false','ShowAllyHealthBars=true','ShowEnemyHealthBars=true','[Spells]','Slot1Ability=AHtb','Slot1Order=852095','Slot1Target=unit','AimDistance=850') | Set-Content -LiteralPath $customShortcuts -Encoding ascii
@@ -562,3 +570,17 @@ foreach($spec in @(
 }
 
 Write-Output 'PASS current RPG/HE/shotgun balance, custom/versioned choices, audio preservation and repeated updates.'
+
+# Head/contact and campaign economy preferences merge once without resetting saved policies.
+$repairConfig=Join-Path $folder 'head-campaign-custom.ini'
+@('[Combat]','EnergyHeadshots=false','HeadshotBoneWeight=0.6','[ArmyAI]','ShowStatus=false','PlacementAttempts=3','LumberWorkers=1') | Set-Content -LiteralPath $repairConfig -Encoding ascii
+Update-GameplayConfig $template $repairConfig
+$repairText=Get-Content -LiteralPath $repairConfig -Raw
+foreach($key in @('EnergyHeadshots=false','HeadshotBoneWeight=0.6','ShowStatus=false','PlacementAttempts=3','LumberWorkers=1')) {if(!$repairText.Contains($key)){throw ('Lost repair preference: '+$key)}}
+$repairHash=(Get-FileHash $repairConfig).Hash;Update-GameplayConfig $template $repairConfig
+if((Get-FileHash $repairConfig).Hash -ne $repairHash){throw 'Repair config migration is not idempotent.'}
+$repairFresh=Join-Path $folder 'head-campaign-fresh.ini'
+Update-GameplayConfig $template $repairFresh
+$freshRepairText=Get-Content -LiteralPath $repairFresh -Raw
+foreach($key in @('EnergyHeadshots=true','HeadshotBoneWeight=0.35','ShowStatus=true','PlacementAttempts=12','LumberWorkers=2')) {if(!$freshRepairText.Contains($key)){throw ('Missing repair default: '+$key)}}
+Write-Output 'PASS head/contact and campaign economy config defaults and saved custom policies.'
