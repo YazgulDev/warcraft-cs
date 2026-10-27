@@ -1,0 +1,5 @@
+- Fixed precise shot alignment using the complete rendered unit basis, position and visual scale.
+- Fixed Q allied-targeting choices being lost on F8 or restart by saving the preference.
+- Improved friendly-fire feedback with the effective damage percentage and save failures.
+- Added fired-round pose, candidate and miss diagnostics for unresolved model-specific contacts.
+- Preserved the previous headshot, blood, energy-weapon and campaign-economy fixes.

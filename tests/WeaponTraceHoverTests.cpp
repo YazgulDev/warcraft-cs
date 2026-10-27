@@ -10,6 +10,7 @@ struct Unit {float entry;bool head=false,hit=true,hidden=false,loaded=false,visi
 std::map<wc3::Handle,Unit> scene;
 std::vector<wc3::Handle> order,objects,items={100};std::deque<wc3::Handle> group;
 bool itemOwned=false,itemVisible=true,wall=false;float gate=40,itemX=100;int nameCalls=0;bool volumeCalled=false;
+bool diagnosticSeen=false;
 wc3::Bits RealBits(float value){wc3::Bits bits;std::memcpy(&bits,&value,4);return bits;}
 }
 namespace wc3 {
@@ -41,7 +42,8 @@ float Ground(float,float){return 0;}
 std::string ItemName(Handle){++nameCalls;return u8"|cffff0000\u0420\u0443\u043d\u0430|r";}
 }
 namespace WeaponTargetFilter {bool PassThrough(wc3::Handle h,uintptr_t){return scene[h].effect;}}
-bool UnitHitboxes::IntersectShot(wc3::Handle h,const float*,const float*,float limit,float& entry,bool& head) {
+bool UnitHitboxes::IntersectShot(wc3::Handle h,const float*,const float*,float limit,float& entry,bool& head,float,bool diagnostic) {
+    diagnosticSeen=diagnostic; // The production query forwards fired-round diagnostics to the hitbox adapter.
     const auto& u=scene[h];entry=u.entry;head=u.head;return u.hit && entry<=limit;
 }
 bool UnitHitboxes::Intersect(wc3::Handle h,const float*,const float*,float limit,float& entry,float){volumeCalled=true;entry=scene[h].entry;return entry<=limit;}
@@ -53,6 +55,7 @@ int main() {
     auto cast=[&]{return WeaponTrace::Cast(1,origin,ray,200,settings,units,destructables,0,options);};
     scene[2]={20,false,false};scene[3]={100,true};order={2,3};
     auto hit=cast();assert(hit.target==3 && hit.head); // Near broad-box ghost cannot steal an actual head surface.
+    assert(!diagnosticSeen);options.diagnostic=true;assert(cast().target==3 && diagnosticSeen);options.diagnostic=false;
     scene[2].hit=true;hit=cast();assert(hit.target==2 && !hit.head);
     for(bool Unit::*flag:{&Unit::hidden,&Unit::loaded,&Unit::effect}){scene[2].*flag=true;assert(cast().target==3);scene[2].*flag=false;}
     scene[2].visible=false;assert(cast().target==3);scene[2].visible=true;

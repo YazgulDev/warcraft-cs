@@ -1,0 +1,7 @@
+- Fixed headshot classification on mixed head and neck faces using the actual contact and skin influence.
+- Enabled direct Tau and Gluon headshot bonuses by default with a configurable opt-out.
+- Fixed verified head blood depending on the optional damage bonus or critical caption.
+- Fixed campaign base startup using the distant hero instead of available workers and their race.
+- Added undead haunted-mine construction and configurable idle-ghoul lumber gathering.
+- Added native night elf mine entangling and bounded construction-site retries.
+- Added configurable army progress and blocker feedback while preserving native resources and mission restrictions.

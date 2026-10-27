@@ -396,6 +396,7 @@ private:
     ItemPickup itemPickup_;
     SquadController squad_;
     ArmyAI armyAI_;
+    ArmyAIStatus armyStatus_=ArmyAIStatus::Off;
     bool armyToggleRequested_=false;
     SquadOrderMode squadOrderMode_;
     std::string ammoMessage_;

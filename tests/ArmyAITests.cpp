@@ -11,18 +11,18 @@ namespace {
 struct Unit {
     alignas(uintptr_t) std::array<unsigned char,0x200> object{};
     int type=0,order=0,owner=1;float x=0,y=0,hp=100;
-    bool building=false,hidden=false,loaded=false,paused=false,hero=false,merchant=false;
+    bool building=false,hidden=false,loaded=false,paused=false,hero=false,merchant=false,entangle=false;
     uintptr_t target=0;
 };
 std::array<Unit,12> units;
-std::vector<wc3::Handle> group;
+std::vector<wc3::Handle> group,trees;
 std::vector<std::tuple<wc3::Handle,int,wc3::Handle>> orders;
 std::vector<std::tuple<wc3::Handle,float,float>> destinations;
-bool buildAccepted=true;int builds=0;
+bool buildAccepted=true,immediateAccepted=true;int builds=0,rejectSites=0;float builtX=0,builtY=0;
 std::function<void()> onBuild;
 wc3::Bits Bits(float f){wc3::Bits b;memcpy(&b,&f,4);return b;}
 void Setup() {
-    units={};orders.clear();destinations.clear();builds=0;buildAccepted=true;onBuild={};
+    units={};trees.clear();orders.clear();destinations.clear();builds=0;rejectSites=0;buildAccepted=immediateAccepted=true;onBuild={};
     for(unsigned i=1;i<units.size();++i) {units[i].type=ArmyPlan::Code("hfoo");units[i].x=1800;*reinterpret_cast<uintptr_t*>(units[i].object.data()+0x1E8)=123;}
     units[1].hero=true;units[1].x=0;
     units[2].type=ArmyPlan::Code("htow");units[2].building=true;units[2].x=-800;
@@ -39,8 +39,8 @@ namespace wc3 {
 void Log(const char*,...) {}
 float Real(Bits b){float f;memcpy(&f,&b,4);return f;}
 uintptr_t UnitObject(Handle u){return u && u<units.size() && units[u].type ? uintptr_t(units[u].object.data()) : 0;}
-int OrderId(const char* name){return !strcmp(name,"harvest") ? 852018 : 852020;}
-std::vector<Handle> NearbyDestructables(float,float,float){return {};}
+int OrderId(const char* name){return !strcmp(name,"harvest") ? 852018 : !strcmp(name,"entangle") ? 852147 : 852020;}
+std::vector<Handle> NearbyDestructables(float,float,float){return trees;}
 }
 namespace FpsCombatGuard {uintptr_t AttackTargetObject(wc3::Handle u){return units[u].target;}}
 int main() {
@@ -54,15 +54,16 @@ int main() {
     GetOwningPlayer=[](Handle u)->Handle{return units[u].owner;};
     GetLocalPlayer=[]()->Handle{return 1;};
     GetUnitState=[](Handle u,int){return ::Bits(units[u].hp);};
+    GetDestructableLife=[](Handle){return ::Bits(100.f);};
     GetUnitX=[](Handle u){return ::Bits(units[u].x);};GetUnitY=[](Handle u){return ::Bits(units[u].y);};
     GetUnitMoveSpeed=[](Handle){return ::Bits(270);};GetUnitCurrentOrder=[](Handle u){return units[u].order;};
     IsUnitHidden=[](Handle u)->BOOL{return units[u].hidden;};IsUnitPaused=[](Handle u)->BOOL{return units[u].paused;};IsUnitLoaded=[](Handle u)->BOOL{return units[u].loaded;};
     IsUnitType=[](Handle u,int type)->BOOL{return type==2 ? units[u].building : type==0 && units[u].hero;};
     IsUnitVisible=[](Handle,Handle)->BOOL{return TRUE;};IsUnitEnemy=[](Handle u,Handle p)->BOOL{return unsigned(units[u].owner)!=p;};
     GetPlayerState=[](Handle,int state){return state==5 ? 20 : state==4 ? 19 : 1000;};
-    GetUnitAbilityLevel=[](Handle u,int){return int(units[u].merchant);};
-    IssueBuildOrderById=[](Handle u,int type,float*,float*)->BOOL {++builds;if(!buildAccepted)return FALSE;orders.emplace_back(u,type,0);units[u].order=type;if(onBuild)onBuild();return TRUE;};
-    IssueImmediateOrderById=[](Handle u,int type)->BOOL {orders.emplace_back(u,type,0);units[u].order=type;return TRUE;};
+    GetUnitAbilityLevel=[](Handle u,int ability){return ability==ArmyPlan::Code("Aent") ? int(units[u].entangle) : int(units[u].merchant);};
+    IssueBuildOrderById=[](Handle u,int type,float* x,float* y)->BOOL {++builds;builtX=*x;builtY=*y;if(!buildAccepted || builds<=rejectSites)return FALSE;orders.emplace_back(u,type,0);units[u].order=type;if(onBuild)onBuild();return TRUE;};
+    IssueImmediateOrderById=[](Handle u,int type)->BOOL {if(!immediateAccepted)return FALSE;orders.emplace_back(u,type,0);units[u].order=type;return TRUE;};
     IssueTargetOrderById=[](Handle u,int type,Handle t)->BOOL {orders.emplace_back(u,type,t);units[u].order=type;return TRUE;};
     IssuePointOrderById=[](Handle u,int type,float* x,float* y)->BOOL {destinations.emplace_back(u,*x,*y);orders.emplace_back(u,type,0);units[u].order=type;return TRUE;};
     Setup();ArmyAI ai;ArmyAISettings s;s.defenders=0;
@@ -121,6 +122,48 @@ int main() {
     ai.Tick(1,s,5000,reserved);assert(!Touched(2));
     // Background/pause gaps do not consume the bounded retry lease; only accepted AI decisions advance it.
     ai.Tick(1,s,1000000000,reserved);assert(!Touched(2));
+    // A campaign with only a hero/army has no legal economy: report it without granting a free worker.
+    Setup();ai.Reset();ai.Toggle();s=ArmyAISettings();units[2].type=units[3].type=units[4].type=0;
+    ai.Tick(1,s,1000,reserved);assert(ai.Status()==ArmyAIStatus::NoEconomy && builds==0);
+    // Builders outrank captured foreign halls, and a missing hall is built near those workers rather than the hero.
+    Setup();ai.Reset();ai.Toggle();units[3].type=ArmyPlan::Code("opeo");units[3].x=5000;
+    ai.Tick(1,s,1000,reserved);assert(builds==1 && builtX>4000);
+    assert(std::get<1>(orders.front())==ArmyPlan::Code("ogre"));
+    // Bounded retries can find a legal site after several native rejects in the same decision.
+    Setup();ai.Reset();ai.Toggle();rejectSites=3;ai.Tick(1,s,1000,reserved);
+    assert(builds==4 && ai.Status()==ArmyAIStatus::Working);
+    Setup();ai.Reset();ai.Toggle();buildAccepted=false;s.placementAttempts=5;ai.Tick(1,s,1000,reserved);assert(builds==5);
+    // Undead acolytes haunt an available mine at its actual coordinates before expanding production.
+    Setup();ai.Reset();ai.Toggle();s=ArmyAISettings();units[2].type=ArmyPlan::Code("unpl");units[3].type=ArmyPlan::Code("uaco");
+    units[4].type=ArmyPlan::Code("usep");units[5].type=ArmyPlan::Code("ngol");units[5].x=-600;
+    ai.Tick(1,s,1000,reserved);bool haunted=false;
+    for(auto o:orders)haunted|=std::get<1>(o)==ArmyPlan::Code("ugol");
+    assert(haunted && builtX==-600 && builtY==0);
+    // The final undead campaign starts with workers but no base; idle ghouls must supply its missing wood.
+    Setup();ai.Reset();ai.Toggle();units[2].type=0;units[3].type=ArmyPlan::Code("uaco");units[3].x=5000;
+    units[4].type=0;units[7].type=units[8].type=units[9].type=ArmyPlan::Code("ugho");trees={900};
+    ai.Tick(1,s,1000,reserved);int wood=0;
+    for(auto o:orders)wood+=std::get<1>(o)==OrderId("harvest") && std::get<2>(o)==900;
+    assert(wood==s.lumberWorkers && builtX>4000 && ai.Status()==ArmyAIStatus::Working);
+    for(auto o:orders)if(std::get<1>(o)==OrderId("harvest") && std::get<2>(o)==900){units[std::get<0>(o)].order=OrderId("returnresources");break;}
+    orders.clear();ai.Tick(1,s,3000,reserved);wood=0;
+    for(auto o:orders)wood+=std::get<1>(o)==OrderId("harvest") && std::get<2>(o)==900;
+    assert(wood==0); // Delivery is part of the same lumber job, never a reason to recruit the third ghoul.
+
+    // Night elf halls use the native entangle ability; wisps never receive a fake raw-mine harvest.
+    Setup();ai.Reset();ai.Toggle();units[2].type=ArmyPlan::Code("etol");units[2].entangle=true;
+    units[3].type=ArmyPlan::Code("ewsp");units[4].type=ArmyPlan::Code("eaom");units[5].type=ArmyPlan::Code("ngol");units[5].x=-600;
+    ai.Tick(1,s,1000,reserved);bool entangled=false;
+    for(auto o:orders){entangled|=std::get<0>(o)==2 && std::get<1>(o)==OrderId("entangle") && std::get<2>(o)==5;
+        assert(!(std::get<0>(o)==3 && std::get<1>(o)==OrderId("harvest") && std::get<2>(o)==5));}
+    assert(entangled);
+    // Native resource/tech rejection produces a useful blocker instead of a silent enabled assistant.
+    Setup();ai.Reset();ai.Toggle();s=ArmyAISettings();buildAccepted=immediateAccepted=false;
+    units[3].order=OrderId("harvest");units[5].type=ArmyPlan::Code("ngol");units[5].x=-600;
+    ai.Tick(1,s,1000,reserved);assert(ai.Status()==ArmyAIStatus::Blocked);
+    // Reaching targets while workers already harvest is healthy, rather than a false busy/no-resource warning.
+    Setup();ai.Reset();ai.Toggle();s.workers=1;s.soldiers=s.supplyBuildings=0;units[3].order=OrderId("harvest");
+    ai.Tick(1,s,1000,reserved);assert(ai.Status()==ArmyAIStatus::Ready);
     // Shop recognition also enforces distance, visibility/allegiance and living native stock providers.
     units[4].merchant=true;units[4].x=300;assert(ShopAccess::Nearby(1,4,450));
     units[4].x=451;assert(!ShopAccess::Nearby(1,4,450));units[4].x=300;units[4].owner=2;assert(!ShopAccess::Nearby(1,4,450));

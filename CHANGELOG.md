@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Expand graphics diagnostics with per-pass OpenGL error checkpoints, scoped driver messages, failed D3D9 HRESULT operations, immediate shot/model-visibility decisions and resource-load failures. Add validated F8-reloadable Logging.GraphicsDebug=true with update preservation and bounded duplicate counts. Enrich already handled controller/Army AI faults with original exception/module/register data and best-effort frame chains. [Diagnostics preview](docs/GRAPHICS-DIAGNOSTICS-PREVIEW.md).
+- Isolate fixed-function OpenGL effects, weapons and HUD from inherited GLSL/separate/ARB programs and rasterizer discard; restore bindings/enables explicitly and include separate pipeline state in diagnostics. Add real WGL pixel/state regressions for issue #10. [HUD repair preview](docs/HUD-ISSUE-10-PREVIEW.md).
+- Classify mixed head/neck faces at the actual contact using fractional named-head skin weights, retaining physical occlusion and unverified-model exclusions.
+- Enable direct Tau/Gluon headshot bonuses by default and emit blood from verified head contacts even when bonus/text is disabled; retain actual-HP-loss requirements and visual-only query exclusion.
+- Start a missing campaign base near available workers, prioritize actual worker race over captured foreign halls and retry bounded placement sites within a decision.
+- Add undead haunted-mine construction and configurable idle-ghoul lumber gathering; activate night elf mines through the hall's native entangle ability.
+- Add configurable army status feedback for native map/resource restrictions, missing economy/workers/resources and progress, keeping manual/squad/combat exclusions and optional escort.
+- Add parser/update, mixed-surface, energy/blood and campaign-start/native-economy regression coverage; make the affected native runners catch signed aborts. [Local fix preview](docs/HEADSHOTS-CAMPAIGN-PREVIEW.md).
+
 ## 0.13.0 — 2026-10-26
 
 - Add selectable dollar/gold payment in every B category, both wallet balances and whole-price gold fallback when dollars are insufficient. Dollars remain the default and kill rewards stay $200.

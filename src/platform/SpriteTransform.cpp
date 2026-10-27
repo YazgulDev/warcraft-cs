@@ -18,3 +18,15 @@ bool SpriteTransform::Read(uintptr_t sprite, ModelTransform& transform) {
     float origin[3]={},direction[3]={1,0,0},localOrigin[3],localDirection[3];
     return transform.LocalRay(origin,direction,localOrigin,localDirection);
 }
+bool SpriteTransform::ReadScaled(uintptr_t sprite, ModelTransform& transform) {
+    if(!Read(sprite,transform))return false;
+    uintptr_t table=0,getter=0;SIZE_T got=0;
+    if(!ReadProcessMemory(GetCurrentProcess(),reinterpret_cast<void*>(sprite),&table,sizeof(table),&got) || got!=sizeof(table) ||
+        !ReadProcessMemory(GetCurrentProcess(),reinterpret_cast<void*>(table+0x44),&getter,sizeof(getter),&got) || got!=sizeof(getter) || !getter)return false;
+    // Verified CSprite virtual +44 returns visual scale in ST0; +38 returns the independent basis.
+    using Scale=float (__thiscall*)(uintptr_t);
+    float scale=reinterpret_cast<Scale>(getter)(sprite);
+    if(!std::isfinite(scale) || scale<=0 || scale>100)return false;
+    for(float& value:transform.matrix)value*=scale;
+    return true;
+}

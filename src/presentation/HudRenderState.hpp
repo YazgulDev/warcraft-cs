@@ -1,6 +1,7 @@
 #pragma once
 #include <windows.h>
 #include "GraphicsApi.hpp"
+#include "FixedFunctionState.hpp"
 #include <cstdio>
 #include <cstdint>
 #include <cstring>
@@ -53,6 +54,8 @@ public:
     HudRenderState(const HudRenderState&)=delete;
     HudRenderState& operator=(const HudRenderState&)=delete;
 private:
+    // Keep standalone text/reticle passes independent of programmable host/third-party rendering.
+    FixedFunctionState fixedFunction_;
     using Active=void (APIENTRY*)(GLenum);
     using Equation=void (APIENTRY*)(GLenum);
     using Separate=void (APIENTRY*)(GLenum,GLenum);

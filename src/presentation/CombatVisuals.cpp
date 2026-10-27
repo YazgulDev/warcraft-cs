@@ -1,10 +1,11 @@
 #include "CombatVisuals.hpp"
 
-void CombatVisuals::Headshot(uint32_t target,const Point& contact,const Point& above,const Point& direction,const CombatVisualSettings& s) {
+void CombatVisuals::Headshot(uint32_t target,const Point& contact,const Point& above,const Point& direction,const CombatVisualSettings& s,bool showCritical) {
     // Shotgun pellets/continuous beams share a brief per-target interval instead of stacking unreadable labels.
     if(target==lastTarget_ && sinceCritical_<.08f)return;
     lastTarget_=target;sinceCritical_=0;
-    if(s.criticalText){if(criticals_.size()>=32)criticals_.erase(criticals_.begin());criticals_.push_back({above,0,s.criticalSeconds,s.criticalRise,s.criticalScale});}
+    // Blood is tied to the anatomical contact; disabling bonus text must not suppress it.
+    if(showCritical && s.criticalText){if(criticals_.size()>=32)criticals_.erase(criticals_.begin());criticals_.push_back({above,0,s.criticalSeconds,s.criticalRise,s.criticalScale});}
     if(s.headshotBlood)for(unsigned i=0;i<s.bloodCount;++i){
         if(blood_.size()>=256)blood_.erase(blood_.begin());
         Point velocity;for(int axis=0;axis<3;++axis)velocity[axis]=(Random()-.5f)*s.bloodSpeed+direction[axis]*s.bloodSpeed*.3f;

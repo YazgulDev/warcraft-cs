@@ -20,6 +20,8 @@ $hookRoot=Join-Path $MinHookDirectory 'include'
 $sources = @('platform/WarcraftApi.cpp', 'input/MouseLook.cpp', 'movement/MovementPhysics.cpp', 'platform/WarcraftCollision.cpp', 'platform/WeaponTrace.cpp', 'platform/ItemHover.cpp', 'platform/ClassicWarcraftCollision.cpp', 'presentation/FirstPersonCamera.cpp', 'presentation/ItemNameView.cpp','presentation/CombatVisuals.cpp','presentation/CombatVisualView.cpp', 'platform/MapCameraGuard.cpp', 'platform/ActorRenderFilter.cpp', 'audio/GameAudio.cpp', 'presentation/FullscreenView.cpp', 'presentation/HitFeedback.cpp', 'presentation/ScopeView.cpp', 'combat/UnitStatus.cpp', 'geometry/ModelBounds.cpp', 'platform/SpriteTransform.cpp', 'combat/UnitHitboxes.cpp', 'combat/DestructableHitboxes.cpp', 'combat/PlantedBomb.cpp', 'combat/WeaponRecoil.cpp', 'application/ShooterController.cpp', 'presentation/GunMesh.cpp', 'presentation/Overlay.cpp', 'runtime/PluginRuntime.cpp', 'Plugin.cpp', 'input/InputDispatcher.cpp') | ForEach-Object { '"' + (Join-Path $modRoot "src/$_") + '"' }
 # Host selection and the alternate graphics backend keep existing view layouts and gameplay independent.
 $sources += @('platform/GameBuild.cpp','platform/D3DHooks.cpp','presentation/D3DGraphics.cpp','presentation/D3DTextures.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
+# Captured native faults keep module offsets/registers without installing a process-wide exception handler.
+$sources += '"'+(Join-Path $modRoot 'src/platform/NativeFaultDiagnostics.cpp')+'"'
 # Native spell fixtures are opt-in and are excluded from the installed normal build.
 # Item pickup and temporary native squad policies remain independent of shooter input/rendering.
 $sources += @('config/GameplaySettings.cpp','inventory/ItemPickup.cpp','squad/SquadController.cpp','platform/FpsCombatGuard.cpp') | ForEach-Object { '"' + (Join-Path $modRoot "src/$_") + '"' }
@@ -43,6 +45,7 @@ $sources += @('platform/NativeUnitHud.cpp','platform/NativePortrait.cpp','presen
 $sources += @('platform/NativeItemCommands.cpp','platform/NativeItemActions.cpp','application/InventoryController.cpp','presentation/InventoryHudView.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 # Draw diagnostics are shared by the real reticle and frame/overlay skip paths.
 $sources += '"' + (Join-Path $modRoot 'src/presentation/ReticleDiagnostics.cpp') + '"'
+$sources += '"' + (Join-Path $modRoot 'src/presentation/GraphicsDiagnostics.cpp') + '"' # Stage-local GL errors and D3D HRESULT failures.
 # Thread-safe bounded diagnostics are a native platform adapter, not controller/file ownership.
 $sources += '"' + (Join-Path $modRoot 'src/platform/DiagnosticLog.cpp') + '"'
 

@@ -35,6 +35,10 @@ int main() {
     Require(doubled==72 && CombatDamage::Amount(doubled,true,false,420)==36,"head bonus precedes friendly reduction");
     Require(CombatDamage::Amount(doubled,true,false,420,0)==0,"headshots cannot bypass zero friendly damage");
     Require(HeadshotPolicy::Damage(0,true,head)==0,"zero damage remains zero");
+    Require(HeadshotPolicy::Accepted(WeaponSlots::Tau,true,head) && HeadshotPolicy::Accepted(WeaponSlots::Gluon,true,head),"direct energy heads use the same bonus");
+    head.energyHeadshots=false;
+    Require(!HeadshotPolicy::Accepted(WeaponSlots::Tau,true,head) && HeadshotPolicy::Direct(WeaponSlots::Tau,true),"energy bonus opt-out retains anatomical blood eligibility");
+    Require(!HeadshotPolicy::Direct(WeaponSlots::RPG,true) && !HeadshotPolicy::Direct(WeaponSlots::Knife,true),"explosions and melee never invent a direct head contact");
     head.headshots=false;Require(!HeadshotPolicy::Accepted(WeaponSlots::Pistol,true,head),"headshots can be disabled");
     head.headshotMultiplier=3;Require(HeadshotPolicy::Damage(36,true,head)==108,"configured multiplier");
     std::puts("Combat damage invariants passed: friendly coefficient, C4 and AWP finishing");

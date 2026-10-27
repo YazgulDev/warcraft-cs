@@ -3,4 +3,8 @@
 #include "../geometry/ModelTransform.hpp"
 
 // Warcraft's simple destructable sprites and animated unit sprites have different member layouts.
-namespace SpriteTransform { bool Read(uintptr_t sprite, ModelTransform& transform); }
+namespace SpriteTransform {
+bool Read(uintptr_t sprite, ModelTransform& transform);
+// Model geometry needs the separately authored uniform visual scale as well as the native basis.
+bool ReadScaled(uintptr_t sprite, ModelTransform& transform);
+}

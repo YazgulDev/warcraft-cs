@@ -7,6 +7,10 @@
 #include <cstring>
 #include <cctype>
 
+bool GameplaySettings::SaveAllyTargeting(const std::string& filename,bool enabled) {
+    // Change only this key; percentages, shortcuts and the rest of the player's file stay intact.
+    return WritePrivateProfileStringA("Combat","TargetAllies",enabled ? "true" : "false",filename.c_str())!=FALSE;
+}
 GameplaySettings GameplaySettings::Load(const std::string& filename) {
     GameplaySettings result;
     auto text = [&](const char* section,const char* key,const char* fallback) {
@@ -80,6 +84,9 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     auto& ai=result.armyAI;ai.enabled=enabled("ArmyAI","Enabled");
     // F8 may opt into support movement without changing economy or manual squad membership.
     ai.followActor=enabled("ArmyAI","FollowActor",false);
+    ai.showStatus=enabled("ArmyAI","ShowStatus");
+    ai.placementAttempts=unsigned(std::max(1.f,number("ArmyAI","PlacementAttempts",12,32)));
+    ai.lumberWorkers=int(number("ArmyAI","LumberWorkers",2,10));
     ai.intervalMs=unsigned(std::max(500.f,number("ArmyAI","IntervalMs",1500,10000)));
     ai.productionRetrySeconds=unsigned(std::max(30.f,number("ArmyAI","ProductionRetrySeconds",180,3600)));
     ai.workers=int(number("ArmyAI","Workers",6,30));ai.soldiers=int(number("ArmyAI","Soldiers",24,100));
@@ -169,6 +176,10 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     auto detailed = text("Logging", "Detailed", "true");
     if (!_stricmp(detailed.c_str(), "false") || detailed == "0") result.logging.detailed = false;
     else if (_stricmp(detailed.c_str(), "true") && detailed != "1") wc3::Log("Invalid Logging.Detailed; using true");
+    // Native/API failures remain available independently of optional TRACE summaries.
+    auto graphicsDebug=text("Logging","GraphicsDebug","true");
+    if(!_stricmp(graphicsDebug.c_str(),"false") || graphicsDebug=="0")result.logging.graphicsDebug=false;
+    else if(_stricmp(graphicsDebug.c_str(),"true") && graphicsDebug!="1")wc3::Log("Invalid Logging.GraphicsDebug; using true");
     result.logging.intervalMs = unsigned(std::max(100.f, number("Logging", "IntervalMs", 1000, 60000)));
     result.logging.maxFileMB = unsigned(std::max(1.f, number("Logging", "MaxFileMB", 8, 64)));
     result.logging.archiveCount = unsigned(number("Logging", "ArchiveCount", 3, 8));
@@ -411,6 +422,9 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     // Accurate model contacts and named-head bonuses are optional, validated F8 policies.
     result.hitDetection.preciseModels=_stricmp(text("Combat","PreciseUnitHits","true").c_str(),"false")!=0;
     result.hitDetection.headshots=_stricmp(text("Combat","Headshots","true").c_str(),"false")!=0;
+    // Fractional head skinning is evaluated at contact; beam damage and feedback share that same point.
+    result.hitDetection.energyHeadshots=enabled("Combat","EnergyHeadshots");
+    result.hitDetection.headshotBoneWeight=std::max(.05f,number("Combat","HeadshotBoneWeight",.35f,1));
     result.hitDetection.headshotMultiplier=std::max(1.f,number("Combat","HeadshotMultiplier",2,10));
     // Dollars are isolated from campaign resources; malformed settings retain the documented defaults.
     auto currency=text("Economy","Currency","dollars");

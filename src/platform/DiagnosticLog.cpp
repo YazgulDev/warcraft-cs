@@ -52,8 +52,11 @@ void DiagnosticLog::Close() {
     file = nullptr;
     ReleaseSRWLockExclusive(&mutex);
 }
+LoggingSettings DiagnosticLog::Settings() {
+    AcquireSRWLockShared(&mutex);auto current=options;ReleaseSRWLockShared(&mutex);return current;
+}
 bool DiagnosticLog::Due(DWORD& previous, bool immediate) {
-    AcquireSRWLockShared(&mutex); auto current = options; ReleaseSRWLockShared(&mutex);
+    auto current=Settings();
     DWORD now = GetTickCount();
     // Diagnostic transitions can be immediate without bypassing the player's master TRACE switch.
     if (!current.detailed || (!immediate && previous && now - previous < current.intervalMs)) return false;
