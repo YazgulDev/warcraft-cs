@@ -98,6 +98,7 @@ $testDefine = ' /DWCS_D3D9'
 if ($TestMovement) {
     # Movement requests and destructive fixtures exist only in this explicit disposable-map build.
     $sources += '"'+(Join-Path $modRoot 'tests/MovementScene.cpp')+'"'
+    $sources += '"'+(Join-Path $modRoot 'tests/CameraTerrainScene.cpp')+'"'
     $testDefine += ' /DWCS_MOVEMENT_TEST'
 }
 if ($TestFloatingText) {

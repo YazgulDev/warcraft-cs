@@ -11,8 +11,10 @@ void FirstPersonCamera::Update(float eyeX, float eyeY, float eyeZ, float yaw, fl
     float zero = 0, distance = 100, farZ = farClip;
     // The same normalized angles drive camera fields, movement and weapon rays after any number of full turns.
     float angle = LookAngles::Normalize(pitch), rotation = LookAngles::Normalize(yaw);
-    // Cancel Warcraft's terrain contribution, rather than treating ZOFFSET as eye height.
-    float terrainBaseline = wc3::Real(wc3::GetCameraTargetPositionZ()) - wc3::Real(wc3::GetCameraField(6));
+    // The verified render guard removes the engine's independently averaged terrain Z.
+    // Unverified layouts retain the original public-API compensation and setter ordering.
+    float terrainBaseline = MapCameraGuard::AbsoluteEyeHeight() ? 0 :
+        wc3::Real(wc3::GetCameraTargetPositionZ()) - wc3::Real(wc3::GetCameraField(6));
     wc3::SetCameraField(0, &distance, &zero);
     distance = std::max(1.0f, wc3::Real(wc3::GetCameraField(0)));
     // The native minimum distance is not zero: aim the target ahead by the actual
@@ -24,7 +26,6 @@ void FirstPersonCamera::Update(float eyeX, float eyeY, float eyeZ, float yaw, fl
     wc3::SetCameraField(1, &farZ, &zero); wc3::SetCameraField(2, &angle, &zero);
     wc3::SetCameraField(3, &fov, &zero); wc3::SetCameraField(4, &zero, &zero);
     wc3::SetCameraField(5, &rotation, &zero); wc3::SetCameraField(6, &offsetZ, &zero);
-    // Orientation/field refreshes may revalidate the target. Commit the physical eye
-    // after those writes, then let the FPS-only render guard retain it until the next tick.
+    // Orientation/field refreshes may revalidate the target; commit physical XY after those writes.
     MapCameraGuard::PositionEyeTarget(&targetX, &targetY);
 }

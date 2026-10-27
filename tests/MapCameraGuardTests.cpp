@@ -15,6 +15,7 @@ uintptr_t image=0;
 bool ownsCamera=true;
 float fields[7]={100},target[3]={};
 const float authoredLimits[4]={-512,-768,512,768};
+float TerrainBase(float x,float y);
 wc3::Bits Bits(float f){wc3::Bits bits;std::memcpy(&bits,&f,4);return bits;}
 float* __fastcall NativeClamp(uintptr_t object,uintptr_t,float* out,const float* in) {
     auto limits=reinterpret_cast<float*>(object+0x4CC);
@@ -23,7 +24,7 @@ float* __fastcall NativeClamp(uintptr_t object,uintptr_t,float* out,const float*
     constexpr float c=.8f,s=.6f;
     float u=std::clamp(in[0]*c-in[1]*s,limits[1],limits[3]);
     float v=std::clamp(in[0]*s+in[1]*c,limits[0],limits[2]);
-    out[0]=u*c+v*s;out[1]=-u*s+v*c;out[2]=0;return out;
+    out[0]=u*c+v*s;out[1]=-u*s+v*c;out[2]=TerrainBase(out[0],out[1]);return out;
 }
 bool Hook(void* address,void* detour,void** original) {
     if(reinterpret_cast<uintptr_t>(address)==image+0x303070){
@@ -32,16 +33,23 @@ bool Hook(void* address,void* detour,void** original) {
     return true;
 }
 void __cdecl Position(float* x,float* y) {
-    float in[3]={*x,*y,0};NativeClamp(reinterpret_cast<uintptr_t>(camera),0,target,in);
+    float in[3]={*x,*y,0};
+    if(renderClamp)renderClamp(reinterpret_cast<uintptr_t>(camera),0,target,in);
+    else NativeClamp(reinterpret_cast<uintptr_t>(camera),0,target,in);
 }
 void __cdecl Field(int field,float* value,float*){
     fields[field]=*value;
     // Native field/orientation changes can revalidate an earlier position write.
-    float result[3];NativeClamp(reinterpret_cast<uintptr_t>(camera),0,result,target);
+    float result[3];
+    if(renderClamp)renderClamp(reinterpret_cast<uintptr_t>(camera),0,result,target);
+    else NativeClamp(reinterpret_cast<uintptr_t>(camera),0,result,target);
     std::memcpy(target,result,sizeof(target));
 }
 wc3::Bits __cdecl GetField(int field){return Bits(fields[field]);}
-wc3::Bits __cdecl TargetZ(){return Bits(fields[6]);}
+// Native target Z contains a position-dependent terrain contribution, in addition to ZOFFSET.
+// A constant-zero baseline masked the old-position height error on slopes and map-edge reticks.
+float TerrainBase(float x,float y){return .15f*x+.08f*y+24*std::sin(x/200);}
+wc3::Bits __cdecl TargetZ(){return Bits(fields[6]+target[2]);}
 void Retick() {
     float result[3];renderClamp(reinterpret_cast<uintptr_t>(camera),0,result,target);
     std::memcpy(target,result,sizeof(target));
@@ -69,12 +77,14 @@ int main() {
     std::memcpy(reinterpret_cast<void*>(image+0x3B4C62),minX,sizeof(minX));
     std::memcpy(reinterpret_cast<void*>(image+0x303070),entry,sizeof(entry));
     std::memcpy(reinterpret_cast<void*>(image+0x303107),clampX,sizeof(clampX));
+    const unsigned char heightStore[]={0xD9,0x5F,0x08,0x5F,0x5E,0x5B,0x83,0xC4,0x14,0xC2,0x08,0x00};
+    std::memcpy(reinterpret_cast<void*>(image+0x30327B),heightStore,sizeof(heightStore));
     auto thunk=reinterpret_cast<unsigned char*>(image+0x300710);thunk[0]=0xB8;
     uintptr_t uiAddress=reinterpret_cast<uintptr_t>(ui);std::memcpy(thunk+1,&uiAddress,4);thunk[5]=0xC3;
     *reinterpret_cast<uintptr_t*>(ui+0x254)=reinterpret_cast<uintptr_t>(camera);
     std::memcpy(camera+0x4CC,authoredLimits,sizeof(authoredLimits));
     std::memcpy(otherCamera+0x4CC,authoredLimits,sizeof(authoredLimits));
-    MapCameraGuard::Install(image,[](){return ownsCamera;},Hook);assert(renderClamp);
+    MapCameraGuard::Install(image,[](){return ownsCamera;},Hook);assert(renderClamp && MapCameraGuard::AbsoluteEyeHeight());
     FirstPersonCamera view;
     for(float x:{-4000.f,0.f,4000.f})for(float y:{-4000.f,0.f,4000.f})
         for(float yaw:{0.f,60.f,180.f,270.f,720.f})for(float pitch:{-65.f,0.f,65.f}) {
@@ -84,13 +94,18 @@ int main() {
             constexpr float r=.01745329252f;
             Near(target[0]-fields[0]*std::cos(pitch*r)*std::cos(yaw*r),x);
             Near(target[1]-fields[0]*std::cos(pitch*r)*std::sin(yaw*r),y);
+            Near(fields[6]+target[2]-fields[0]*std::sin(pitch*r),200);
         }
     ownsCamera=false;Retick();assert(std::hypot(target[0],target[1])<1000);
+    Near(target[2],TerrainBase(target[0],target[1])); // Releasing control restores the normal terrain contribution.
     ownsCamera=true;float in[3]={4000,4000,0},out[3];
     renderClamp(reinterpret_cast<uintptr_t>(otherCamera),0,out,in);
     assert(std::hypot(out[0],out[1])<1000); // Unrelated cameras retain native restrictions.
+    Near(out[2],TerrainBase(out[0],out[1]));
+    *reinterpret_cast<unsigned char*>(image+0x30327B)=0;
+    MapCameraGuard::Install(image,[](){return ownsCamera;},Hook);assert(!MapCameraGuard::AbsoluteEyeHeight());
     *reinterpret_cast<unsigned char*>(image+0x303107)=0;renderClamp=nullptr;
-    MapCameraGuard::Install(image,[](){return ownsCamera;},Hook);assert(!renderClamp);
+    MapCameraGuard::Install(image,[](){return ownsCamera;},Hook);assert(!renderClamp && !MapCameraGuard::AbsoluteEyeHeight());
     VirtualFree(reinterpret_cast<void*>(image),0,MEM_RELEASE);
-    std::puts("FPS edge tracking, repeated render clamps, rotated bounds, RTS/unrelated camera isolation and signature refusal passed.");
+    std::puts("FPS slope-height compensation, pitched/rotated edge tracking, repeated render clamps, RTS isolation and signature refusal passed.");
 }
