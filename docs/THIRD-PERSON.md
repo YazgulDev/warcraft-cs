@@ -73,8 +73,8 @@ An older custom shortcut occupying T needs a unique `ToggleView` binding.
 
 All `[ThirdPerson]` values are editable in the existing private `WarcraftCS.ini`:
 
-Q toggles allied targeting and direct damage together. `[Combat] TargetAllies=false` is the
-protected startup/F8 default; enable it to start with allied contacts. With it enabled, allied
+Q toggles allied targeting and direct damage together and saves the choice across F8/restarts.
+`[Combat] TargetAllies=false` protects allies on a fresh install; enable it to start with allied contacts. With it enabled, allied
 targets use yellow circles and the configured `[Damage] FriendlyFirePercent`. With it disabled,
 allied units/buildings are skipped by both melee sweeps and ranged reticle/muzzle traces, allowing
 the enemy behind them to be marked and hit without damaging allies. Terrain and gates still block.

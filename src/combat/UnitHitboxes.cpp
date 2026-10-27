@@ -2,6 +2,7 @@
 #include "UnitHitboxes.hpp"
 #include "../geometry/ModelBounds.hpp"
 #include "../geometry/RayEllipsoid.hpp"
+#include "../platform/SpriteTransform.hpp"
 #include <cstring>
 #include <string>
 #include <vector>
@@ -70,12 +71,20 @@ bool UnitHitboxes::Pose(uintptr_t model,const AnimatedHitModel& mesh,int& sequen
     const auto& range=mesh.Sequences()[active];if(clock<range.start || clock>range.end)return false;
     sequence=active;time=float(clock);return true;
 }
-bool UnitHitboxes::IntersectShot(wc3::Handle unit,const float* origin,const float* direction,float limit,float& entry,bool& head,float headWeight) {
+bool UnitHitboxes::IntersectShot(wc3::Handle unit,const float* origin,const float* direction,float limit,float& entry,bool& head,float headWeight,bool diagnostic) {
     head=false;int type=wc3::GetUnitTypeId(unit);if(!type)return false;
     auto found=models_.find(type);bool building=wc3::IsUnitType(unit,2)!=FALSE;
     if(found==models_.end())found=models_.emplace(type,Load(type,building)).first;
-    float localOrigin[3],localDirection[3],scale=1;auto model=LocalRay(unit,origin,direction,localOrigin,localDirection,scale);
-    for(int i=0;i<3;++i){localOrigin[i]/=scale;localDirection[i]/=scale;}
+    float localOrigin[3],localDirection[3],scale=1;
+    auto model=LocalRay(unit,origin,direction,localOrigin,localDirection,scale);
+    // Precise shots must follow the rendered basis/position, including tilt and interpolated facing.
+    // Keep the existing spell/melee/TPS volume transform unchanged.
+    using Resolve=uintptr_t (__fastcall*)(wc3::Handle,uintptr_t);
+    uintptr_t object=base_ && wc3::Rva(0x3BDCB0) ? reinterpret_cast<Resolve>(base_+wc3::Rva(0x3BDCB0))(unit,0) : 0;
+    uintptr_t sprite=Pointer(object ? object+0x28 : 0);
+    ModelTransform transform;
+    bool rendered=sprite && SpriteTransform::ReadScaled(sprite,transform) && transform.LocalRay(origin,direction,localOrigin,localDirection);
+    if(!rendered)for(int i=0;i<3;++i){localOrigin[i]/=scale;localDirection[i]/=scale;}
     auto mesh=shotModels_.find(type);
     if(mesh==shotModels_.end()) {
         AnimatedHitModel shape;std::vector<unsigned char> bytes;auto path=wc3::UnitModelPath(type);
@@ -84,13 +93,24 @@ bool UnitHitboxes::IntersectShot(wc3::Handle unit,const float* origin,const floa
         mesh=shotModels_.emplace(type,std::move(shape)).first;
     }
     int sequence=0;float time=0;
-    if(mesh->second.Ready() && Pose(model,mesh->second,sequence,time)) {
+    bool posed=mesh->second.Ready() && Pose(model,mesh->second,sequence,time);
+    // Actual fired rounds diagnose nearby candidate surfaces, without logging every reticle/frame query.
+    auto report=[&](bool hit) {
+        float broadEntry=0;
+        const auto& broad=mesh->second.Ready() ? mesh->second.BroadBounds() : found->second;
+        if(diagnostic && IntersectBounds(broad,localOrigin,localDirection,limit,broadEntry))
+            wc3::Log("shot candidate target=%08X type=%08X rendered=%d posed=%d sequence=%d time=%.1f hit=%d head=%d entry=%.1f local=%.2f,%.2f,%.2f ray=%.4f,%.4f,%.4f",
+                unit,type,rendered,posed,sequence,time,hit,head,hit ? entry : -1.f,
+                localOrigin[0],localOrigin[1],localOrigin[2],localDirection[0],localDirection[1],localDirection[2]);
+        return hit;
+    };
+    if(rendered && posed) {
         AnimatedHitModel::Contact contact;
-        if(!mesh->second.Intersect(localOrigin,localDirection,limit,sequence,time,contact,headWeight))return false;
-        entry=contact.distance;head=contact.head && !building;return true;
+        if(!mesh->second.Intersect(localOrigin,localDirection,limit,sequence,time,contact,headWeight))return report(false);
+        entry=contact.distance;head=contact.head && !building;return report(true);
     }
     // Missing/unsupported model or pose keeps bounded damage with no invented head location.
     // Buildings retain their authored volumes; unknown creatures use an ellipsoid instead of empty box corners.
-    return building ? IntersectBounds(found->second,localOrigin,localDirection,limit,entry) :
-        IntersectEllipsoid(found->second,localOrigin,localDirection,limit,entry);
+    return report(building ? IntersectBounds(found->second,localOrigin,localDirection,limit,entry) :
+        IntersectEllipsoid(found->second,localOrigin,localDirection,limit,entry));
 }

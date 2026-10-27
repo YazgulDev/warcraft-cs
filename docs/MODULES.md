@@ -64,9 +64,9 @@ It compares the live native sequence before reusing a cached pose, repairing AI 
 The snapshot supplies terrain-conforming circle vertices and enemy classification; the renderer keeps
 world depth for the ring and screen-space brackets, without altering native unit selection.
 `Combat.TargetAllies` is shared by direct-contact prediction and damage. The Q mailbox toggles it
-on the game thread; protected allied units/buildings are filtered before nearest-contact selection
+on the game thread and persists it through `GameplaySettings::SaveAllyTargeting`; protected allied units/buildings are filtered before nearest-contact selection
 in FPS, TPS melee and both TPS ranged traces. Movement collisions remain native. Area bombs and native spells keep
-their own policies. Startup/F8 reloads the saved default and config upgrades preserve custom shortcuts.
+their own policies. Startup/F8 reloads the saved preference and config upgrades preserve custom shortcuts.
 `ActorJumpView` captures the native model's skinning inputs between world passes and applies physical
 body elevation through that same skinning function for world drawing. It restores the model/cache
 at the presentation boundary before the next tick. It does not write unit fly height, grant
@@ -447,7 +447,7 @@ and exercised with the original historical collision regressions in addition to 
 
 `PurchasePayment` chooses a single wallet before `BuyInventory` validates a transaction. The controller commits that wallet only on success; `BuyMenuState` copies wallet/selection information for `BuyMenuView`, whose buttons share `BuyMenuLayout` with mouse dispatch.
 
-`AnimatedHitModel` and `MdxPose` decode bounded classic MDX geometry, sample skeletal/geoset visibility tracks and intersect posed triangles. `UnitHitboxes::IntersectShot` owns verified native pose/facing/scale transforms and conservative body fallback; its existing volume method remains available to melee/spells/TPS. `WeaponTrace` owns nearest contact filtering and terrain/destructable occlusion. `HeadshotPolicy` applies direct-firearm eligibility and the configurable multiplier before ordinary native damage.
+`AnimatedHitModel` and `MdxPose` decode bounded classic MDX geometry, sample skeletal/geoset visibility tracks and intersect posed triangles. `UnitHitboxes::IntersectShot` owns verified native pose and full render transforms through `SpriteTransform::ReadScaled`, retaining independent basis, visual scale and position. Unverified transforms/poses use conservative body fallback; its existing volume method remains available to melee/spells/TPS. `WeaponTrace` owns nearest contact filtering and terrain/destructable occlusion. Only fired-round queries opt into candidate pose diagnostics. `HeadshotPolicy` applies direct-firearm eligibility and the configurable multiplier before ordinary native damage.
 
 `ItemHover` owns game-thread ground-item enumeration, read-only occlusion and copied localized names. `GameText` removes Warcraft color/control markup. `ItemNameView` owns a single cached Unicode caption texture per graphics context; no native handles or names are dereferenced by the renderer. F8/map replacement clear hover caches. Project-authored fixtures in `test-precise-shots.ps1` and actual hidden WGL pixels in `test-buy-hover-view.ps1` exercise these modules without controlling the user's game.
 

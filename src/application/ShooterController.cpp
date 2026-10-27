@@ -903,6 +903,7 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
     float origin[]={x,y,z},direction[]={vx,vy,vz};
     WeaponTrace::Options trace;trace.volumes=WeaponSlots::Melee(weapon_);trace.padding=weapon_==WeaponSlots::Sword ? 28.f : 0;
     trace.surfaceOnMiss=WeaponSlots::Energy(weapon_);
+    trace.diagnostic=!visualOnly; // Record candidate pose/misses for fired rounds, never continuous visual retargeting.
     auto contact=WeaponTrace::Cast(unit_,origin,direction,attackRange,settings_,hitboxes_,destructableHitboxes_,gameBase_,trace);
     float nearest=contact.distance;auto target=contact.target;bool destructable=contact.destructable;
     bool headshot=HeadshotPolicy::Accepted(weapon_,contact.head,settings_.hitDetection);
@@ -970,6 +971,10 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
         // Dirt contact differs from structures; an empty swing still has no contact sample.
         if(weapon_==WeaponSlots::Crowbar)CrowbarImpact(CrowbarContact::Surface::Ground);
         else Sound("knife_hitwall1.wav");
+    } else {
+        // A miss needs its own ray record to distinguish geometry/pose gaps, ally protection and recoil.
+        wc3::Log("shot miss weapon=%s origin=%.1f,%.1f,%.1f ray=%.5f,%.5f,%.5f limit=%.1f targetAllies=%d friendlyFirePercent=%.1f",
+            w.name,x,y,z,vx,vy,vz,nearest,settings_.targetAllies,settings_.friendlyFirePercent);
     }
 }
 void ShooterController::CrowbarImpact(CrowbarContact::Surface surface) {
@@ -1188,8 +1193,15 @@ void ShooterController::Tick(uintptr_t ui) {
     if(allyTargetToggleRequested_) {
         // Apply before both prediction and contact so Q changes the marker and damage policy together.
         allyTargetToggleRequested_=false;settings_.targetAllies=!settings_.targetAllies;aimTarget_={};
-        ammoMessage_=settings_.targetAllies ? "ALLY TARGETING ON" : "ALLY TARGETING OFF";refillTick_=now;
-        wc3::Log("Ally targeting enabled=%d",settings_.targetAllies);
+        // Persist Q so F8, switching views or restarting cannot silently restore ally protection.
+        bool saved=GameplaySettings::SaveAllyTargeting(root_+"\\WarcraftCS.ini",settings_.targetAllies);
+        char message[128];
+        if(!saved)std::snprintf(message,sizeof(message),"ALLY TARGETING %s (NOT SAVED)",settings_.targetAllies ? "ON" : "OFF");
+        else if(settings_.targetAllies && settings_.friendlyFirePercent>0)
+            std::snprintf(message,sizeof(message),"FRIENDLY FIRE ON (%g%%)",settings_.friendlyFirePercent);
+        else std::snprintf(message,sizeof(message),"FRIENDLY FIRE OFF%s",settings_.targetAllies ? " (DAMAGE 0%)" : "");
+        ammoMessage_=message;refillTick_=now;
+        wc3::Log("Ally targeting enabled=%d friendlyFirePercent=%.1f saved=%d",settings_.targetAllies,settings_.friendlyFirePercent,saved);
     }
     if (speedToggleRequested_) {
         speedToggleRequested_=false;showSpeed_=!showSpeed_;

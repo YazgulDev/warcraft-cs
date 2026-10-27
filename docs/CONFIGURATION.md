@@ -85,8 +85,8 @@ Install and restart once for the native hull/terrain code. See [movement contact
 | --- | --- |
 | `Damage / Mode` | `unit`: live Warcraft attack damage times each weapon's `HeroMultiplier`. `hero` is a compatible alias; `weapon` selects fixed per-weapon damage. C4 stays fixed. |
 | `Damage / AWPOneShot` | `false`; opt into enemy finishing in weapon mode. Ordinary AWP uses its configured damage and native armor. |
-| `Damage / FriendlyFirePercent` | `50`; 0–100%, including allied buildings and C4's planter. Zero disables allied damage. |
-| `Combat / TargetAllies` | `false`; Q changes direct allied targeting for the session. Protected allies are skipped by direct rays. |
+| `Damage / FriendlyFirePercent` | `50`; 0–100%, including allied buildings and C4's planter. Zero disables allied damage. Direct attacks also require Q / `TargetAllies=true`. |
+| `Combat / TargetAllies` | `false` on a fresh install; Q changes and saves direct allied targeting across F8 and restarts. The message reports the effective friendly damage percentage or a save failure. Protected allies are skipped by direct rays. |
 | `Combat / EnableAttackEffects` | `true`; confirmed firearm/melee hits use native attack callbacks, passives and item orbs. Native chances, restrictions and orb priority remain. False selects direct damage. |
 | `Combat / WaterBlocksAttacks` | `false`; traces cross water but still stop at solid beds, cliffs, decks, gates and bodies. True restores water-surface blocking. |
 | `Combat / IgnorePassableInvulnerableObjects` | `true`; ignore nonphysical Locust effects and invulnerable noncolliding helpers. Physical invulnerable units still intercept rays. |

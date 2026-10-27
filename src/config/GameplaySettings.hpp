@@ -143,6 +143,8 @@ struct GameplaySettings {
     std::array<float, WeaponSlots::Count> heroMultiplier = {1,1,1,3,1,1,3,1.6f,.75f,.8f,.65f,1,6,4.8f,0,0,0,0,1,0,0};
     float knifeSecondaryDamage = 65, swordSecondaryDamage = 240;
     static GameplaySettings Load(const std::string& filename);
+    // Q and the INI/F8 loader share one persisted direct-allied-contact preference.
+    static bool SaveAllyTargeting(const std::string& filename,bool enabled);
     // Config alone cannot grant optional content; the private resource seal is checked on startup/F8.
     bool WeaponEnabled(int slot) const {return slot>=0 && slot<WeaponSlots::Count &&
         (!WeaponSlots::Grenade(slot) || grenades.enabled) && (slot!=WeaponSlots::RPG || (rpg.enabled && rpg.available && !warcraftOnly)) &&

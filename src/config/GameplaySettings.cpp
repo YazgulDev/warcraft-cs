@@ -7,6 +7,10 @@
 #include <cstring>
 #include <cctype>
 
+bool GameplaySettings::SaveAllyTargeting(const std::string& filename,bool enabled) {
+    // Change only this key; percentages, shortcuts and the rest of the player's file stay intact.
+    return WritePrivateProfileStringA("Combat","TargetAllies",enabled ? "true" : "false",filename.c_str())!=FALSE;
+}
 GameplaySettings GameplaySettings::Load(const std::string& filename) {
     GameplaySettings result;
     auto text = [&](const char* section,const char* key,const char* fallback) {

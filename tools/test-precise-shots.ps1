@@ -10,7 +10,7 @@ $script=Join-Path $build 'test-precise-shots.cmd'
 @('@echo off',('call "'+$environment+'" >nul'),
     ('cl /nologo /std:c++17 /EHsc /O2 /W4 /DNOMINMAX "'+(Join-Path $root 'tests/AnimatedHitModelTests.cpp')+'" /Fe:animated-hit-tests.exe'),
     'if not "%errorlevel%"=="0" exit /b 1','animated-hit-tests.exe','if not "%errorlevel%"=="0" exit /b 1',
-    ('cl /nologo /std:c++17 /EHsc /O2 /W4 /DNOMINMAX "'+(Join-Path $root 'tests/UnitShotHitboxTests.cpp')+'" "'+(Join-Path $root 'src/combat/UnitHitboxes.cpp')+'" /Fe:unit-shot-tests.exe'),
+    ('cl /nologo /std:c++17 /EHsc /O2 /W4 /DNOMINMAX "'+(Join-Path $root 'tests/UnitShotHitboxTests.cpp')+'" "'+(Join-Path $root 'src/combat/UnitHitboxes.cpp')+'" "'+(Join-Path $root 'src/platform/SpriteTransform.cpp')+'" /Fe:unit-shot-tests.exe'),
      'if not "%errorlevel%"=="0" exit /b 1','unit-shot-tests.exe','if not "%errorlevel%"=="0" exit /b 1',
     ('cl /nologo /std:c++17 /EHsc /O2 /W4 /DNOMINMAX "'+(Join-Path $root 'tests/WeaponTraceHoverTests.cpp')+'" "'+(Join-Path $root 'src/platform/WeaponTrace.cpp')+'" "'+(Join-Path $root 'src/platform/ItemHover.cpp')+'" "'+(Join-Path $root 'src/input/ShortcutBindings.cpp')+'" /Fe:trace-hover-tests.exe'),
     'if not "%errorlevel%"=="0" exit /b 1','trace-hover-tests.exe') | Set-Content -LiteralPath $script -Encoding ascii

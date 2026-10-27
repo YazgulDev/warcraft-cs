@@ -114,6 +114,12 @@ int main() {
     WritePrivateProfileStringA("Combat","TargetAllies","bad",path);assert(!GameplaySettings::Load(path).targetAllies);
     WritePrivateProfileStringA("Combat","TargetAllies","true",path);assert(GameplaySettings::Load(path).targetAllies);
     WritePrivateProfileStringA("Combat","TargetAllies","0",path);assert(!GameplaySettings::Load(path).targetAllies);
+    // A Q preference survives the real startup/F8 loader without resetting damage or private bindings.
+    WritePrivateProfileStringA("Damage","FriendlyFirePercent","37",path);
+    assert(GameplaySettings::SaveAllyTargeting(path,true));
+    auto persisted=GameplaySettings::Load(path);assert(persisted.targetAllies && persisted.friendlyFirePercent==37);
+    assert(GameplaySettings::SaveAllyTargeting(path,false) && !GameplaySettings::Load(path).targetAllies);
+    assert(!GameplaySettings::SaveAllyTargeting("Z:\\warcraft-cs-missing-test-folder\\settings.ini",true));
     WritePrivateProfileStringA("Shortcuts","ToggleAllyTargeting","F5",path);
     assert(GameplaySettings::Load(path).shortcuts.Key(ShortcutAction::ToggleAllyTargeting)==VK_F5);
     WritePrivateProfileStringA("Shortcuts","ToggleAllyTargeting",nullptr,path);WritePrivateProfileStringA("Shortcuts","Reload","Q",path);
