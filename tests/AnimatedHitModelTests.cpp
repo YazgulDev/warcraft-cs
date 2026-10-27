@@ -20,6 +20,13 @@ int main() {
     assert(!model.Intersect(head,ray,200,-1,0,hit));
     assert(model.Load(MdxHitFixture::Model(true)) && !model.Intersect(head,ray,200,0,500,hit));
     assert(model.Load(MdxHitFixture::Model(false,264)) && model.TriangleCount()==1);
+    // One head-influenced corner cannot turn the whole face into either a head or a shoulder.
+    assert(model.Load(MdxHitFixture::Model(false,256,true)) && model.HeadVertices()==1);
+    float headCorner[]={-100,-8,104},shoulderCorner[]={-100,8,104},middle[]={-100,0,115};
+    assert(model.Intersect(headCorner,ray,200,0,500,hit) && hit.head);
+    assert(model.Intersect(shoulderCorner,ray,200,0,500,hit) && !hit.head);
+    assert(model.Intersect(middle,ray,200,0,500,hit,.2f) && hit.head);
+    assert(model.Intersect(middle,ray,200,0,500,hit,.8f) && !hit.head);
     // Truncated/malformed data cannot retain the previous valid model or overrun a chunk.
     for(size_t size:{size_t(0),size_t(3),bytes.size()-1}){auto bad=bytes;bad.resize(size);assert(!model.Load(bad) && !model.Ready());}
     auto bad=bytes;MdxHitFixture::Set(bad,8,0xffffffff);assert(!model.Load(bad));

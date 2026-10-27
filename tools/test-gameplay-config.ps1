@@ -562,3 +562,17 @@ foreach($spec in @(
 }
 
 Write-Output 'PASS current RPG/HE/shotgun balance, custom/versioned choices, audio preservation and repeated updates.'
+
+# Head/contact and campaign economy preferences merge once without resetting saved policies.
+$repairConfig=Join-Path $folder 'head-campaign-custom.ini'
+@('[Combat]','EnergyHeadshots=false','HeadshotBoneWeight=0.6','[ArmyAI]','ShowStatus=false','PlacementAttempts=3','LumberWorkers=1') | Set-Content -LiteralPath $repairConfig -Encoding ascii
+Update-GameplayConfig $template $repairConfig
+$repairText=Get-Content -LiteralPath $repairConfig -Raw
+foreach($key in @('EnergyHeadshots=false','HeadshotBoneWeight=0.6','ShowStatus=false','PlacementAttempts=3','LumberWorkers=1')) {if(!$repairText.Contains($key)){throw ('Lost repair preference: '+$key)}}
+$repairHash=(Get-FileHash $repairConfig).Hash;Update-GameplayConfig $template $repairConfig
+if((Get-FileHash $repairConfig).Hash -ne $repairHash){throw 'Repair config migration is not idempotent.'}
+$repairFresh=Join-Path $folder 'head-campaign-fresh.ini'
+Update-GameplayConfig $template $repairFresh
+$freshRepairText=Get-Content -LiteralPath $repairFresh -Raw
+foreach($key in @('EnergyHeadshots=true','HeadshotBoneWeight=0.35','ShowStatus=true','PlacementAttempts=12','LumberWorkers=2')) {if(!$freshRepairText.Contains($key)){throw ('Missing repair default: '+$key)}}
+Write-Output 'PASS head/contact and campaign economy config defaults and saved custom policies.'

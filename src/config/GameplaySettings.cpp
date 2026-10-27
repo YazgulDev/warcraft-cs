@@ -80,6 +80,9 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     auto& ai=result.armyAI;ai.enabled=enabled("ArmyAI","Enabled");
     // F8 may opt into support movement without changing economy or manual squad membership.
     ai.followActor=enabled("ArmyAI","FollowActor",false);
+    ai.showStatus=enabled("ArmyAI","ShowStatus");
+    ai.placementAttempts=unsigned(std::max(1.f,number("ArmyAI","PlacementAttempts",12,32)));
+    ai.lumberWorkers=int(number("ArmyAI","LumberWorkers",2,10));
     ai.intervalMs=unsigned(std::max(500.f,number("ArmyAI","IntervalMs",1500,10000)));
     ai.productionRetrySeconds=unsigned(std::max(30.f,number("ArmyAI","ProductionRetrySeconds",180,3600)));
     ai.workers=int(number("ArmyAI","Workers",6,30));ai.soldiers=int(number("ArmyAI","Soldiers",24,100));
@@ -411,6 +414,9 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     // Accurate model contacts and named-head bonuses are optional, validated F8 policies.
     result.hitDetection.preciseModels=_stricmp(text("Combat","PreciseUnitHits","true").c_str(),"false")!=0;
     result.hitDetection.headshots=_stricmp(text("Combat","Headshots","true").c_str(),"false")!=0;
+    // Fractional head skinning is evaluated at contact; beam damage and feedback share that same point.
+    result.hitDetection.energyHeadshots=enabled("Combat","EnergyHeadshots");
+    result.hitDetection.headshotBoneWeight=std::max(.05f,number("Combat","HeadshotBoneWeight",.35f,1));
     result.hitDetection.headshotMultiplier=std::max(1.f,number("Combat","HeadshotMultiplier",2,10));
     // Dollars are isolated from campaign resources; malformed settings retain the documented defaults.
     auto currency=text("Economy","Currency","dollars");

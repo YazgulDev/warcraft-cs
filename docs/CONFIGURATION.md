@@ -194,3 +194,17 @@ Release 0.13.0 defaults movement to `classic`; explicit `hull` and `recovery` re
 Startup/F8 loads the same validated values as fresh installation. Damage accepts 0–1000000, RPG radius 32–3000 world units, and multipliers 0–1000. F8 applies to new shots/launches/throws; active projectiles keep their original snapshot.
 
 Setup and the loader upgrade former stock values once: RPG 100 damage and 525 radius (or unversioned 375), M3 x3, XM1014 x2.4, and HE 300 (or unversioned 100). Custom values, explicit zero and other preserved versioned settings remain authoritative. `[RPG] DamageVersion=2` / `BlastVersion=3`, each shotgun's `MultiplierVersion=2`, and `[HEGrenade] DamageVersion=3` record the current balance. After an update, editing values back to older stock numbers with those markers retains them. Prior version-2 HE 100 and RPG radius 375 are also preserved. Missing keys are inserted once; repeated upgrades do not duplicate/reset them.
+
+## Local headshot and campaign fix preview
+
+The [local follow-up](HEADSHOTS-CAMPAIGN-PREVIEW.md) adds these editable startup/F8 settings; installed 0.13.0 releases need the new native module first. Installation updates add missing keys and preserve saved choices.
+
+| Section / key | Default | Bounds / effect |
+| --- | --- | --- |
+| Combat / HeadshotBoneWeight | .35 | .05–1 minimum interpolated named-head skin influence at the actual contact |
+| Combat / EnergyHeadshots | true | true/false or 1/0; enable direct Tau/Gluon bonuses; false retains anatomical blood only |
+| ArmyAI / ShowStatus | true | true/false or 1/0; report development/blockers when state changes; U on/off still confirms |
+| ArmyAI / PlacementAttempts | 12 | 1–32 total native build-site attempts per AI decision |
+| ArmyAI / LumberWorkers | 2 | 0–10 unassigned undead ghouls for native tree harvesting; zero stops new assignments |
+
+Head/contact policy applies to subsequent shots; visual-only beam tracking cannot emit damage or blood. A confirmed damaging named-head contact emits blood independently of the optional Headshots bonus; the existing HeadshotBlood flag can still disable it. A disabled bonus produces no Headshot label. Army settings apply on the next active AI decision. F8 requests a current status report; already accepted native orders retain ownership. Lumber changes never cancel existing manual harvesting. No resources or workers are created to bypass a campaign restriction.

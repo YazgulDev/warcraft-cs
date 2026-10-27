@@ -15,13 +15,13 @@ public:
     bool Ready() const {return !faces_.empty();}
     bool Animated() const {return animated_;}
     size_t TriangleCount() const {return faces_.size();}
-    size_t HeadVertices() const {return size_t(std::count_if(vertices_.begin(),vertices_.end(),[](const Vertex& v){return v.head && v.usable;}));}
+    size_t HeadVertices() const {return size_t(std::count_if(vertices_.begin(),vertices_.end(),[](const Vertex& v){return v.headWeight>0 && v.usable;}));}
     const Bounds3& BroadBounds() const {return broad_;}
     const std::vector<Sequence>& Sequences() const {return sequences_;}
-    bool Intersect(const float* origin,const float* direction,float limit,int sequence,float time,Contact& contact) const;
+    bool Intersect(const float* origin,const float* direction,float limit,int sequence,float time,Contact& contact,float headWeight=.35f) const;
 private:
     struct Node {unsigned id=0,parent=0xffffffff,flags=0;bool head=false;MdxPose::Track translation,rotation,scale;};
-    struct Vertex {std::array<float,3> position;std::vector<unsigned> bones;bool head=false,usable=true;};
+    struct Vertex {std::array<float,3> position;std::vector<unsigned> bones;float headWeight=0;bool usable=true;};
     struct Face {unsigned a,b,c,geoset;};
     struct Visibility {float alpha=1;MdxPose::Track track;};
     struct Chunk {size_t begin,end;};
@@ -186,7 +186,8 @@ inline bool AnimatedHitModel::Load(const std::vector<unsigned char>& bytes) {
             }
             if(isHead)++head;
         }
-        vertex.head=head*2>=vertex.bones.size();
+        // Retain fractional skin influence until the exact ray contact is known.
+        vertex.headWeight=float(head)/float(vertex.bones.size());
     }
     candidate.faces_.erase(std::remove_if(candidate.faces_.begin(),candidate.faces_.end(),[&](const Face& f){
         return !candidate.vertices_[f.a].usable || !candidate.vertices_[f.b].usable || !candidate.vertices_[f.c].usable;
@@ -210,7 +211,7 @@ inline bool AnimatedHitModel::Load(const std::vector<unsigned char>& bytes) {
     }
     if(!bounds)return false;*this=std::move(candidate);return true;
 }
-inline bool AnimatedHitModel::Intersect(const float* origin,const float* direction,float limit,int sequence,float time,Contact& contact) const {
+inline bool AnimatedHitModel::Intersect(const float* origin,const float* direction,float limit,int sequence,float time,Contact& contact,float headWeight) const {
     if(!Ready() || sequence<0 || size_t(sequence)>=sequences_.size() || !std::isfinite(time))return false;
     float broadEntry=0;if(!IntersectBounds(broad_,origin,direction,limit,broadEntry))return false;
     const auto& range=sequences_[sequence];time=std::clamp(time,float(range.start),float(range.end));
@@ -231,12 +232,14 @@ inline bool AnimatedHitModel::Intersect(const float* origin,const float* directi
     for(unsigned i=0;i<vertices_.size();++i){const auto& vertex=vertices_[i];if(!vertex.usable)continue;auto& position=positions[i];
         for(auto bone:vertex.bones){evaluate(bone);auto p=MdxPose::Point(pose[bone],vertex.position.data());for(int axis=0;axis<3;++axis)position[axis]+=p[axis]/vertex.bones.size();}}
     bool hit=false;float nearest=limit;
-    for(const auto& face:faces_) {float distance=0;
+    for(const auto& face:faces_) {float distance=0;std::array<float,3> weights{};
         // Alternate weapon/carry/death geosets use native sequence opacity; hidden meshes cannot intercept a ray.
         if(face.geoset<visibility_.size()){const auto& v=visibility_[face.geoset];
             if(v.track.Sample(time,range.start,range.end,{v.alpha,0,0,0})[0]<=.01f)continue;}
-        if(MdxPose::Triangle(positions[face.a].data(),positions[face.b].data(),positions[face.c].data(),origin,direction,nearest,distance)) {
-            nearest=distance;hit=true;contact={distance,(int(vertices_[face.a].head)+int(vertices_[face.b].head)+int(vertices_[face.c].head))>=2};
+        if(MdxPose::Triangle(positions[face.a].data(),positions[face.b].data(),positions[face.c].data(),origin,direction,nearest,distance,&weights)) {
+            nearest=distance;hit=true;// Classify the struck point, preserving shoulders/body on a face that also touches a head bone.
+            float influence=weights[0]*vertices_[face.a].headWeight+weights[1]*vertices_[face.b].headWeight+weights[2]*vertices_[face.c].headWeight;
+            contact={distance,influence>=headWeight};
         }
     }
     return hit;

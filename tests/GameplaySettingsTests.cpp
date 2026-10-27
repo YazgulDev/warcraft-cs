@@ -789,5 +789,14 @@ int main() {
         assert(flash.flashStunAllUnits==(strcmp(value,"false") && strcmp(value,"0")));
         assert(flash.flashStunDistanceFalloff==(!strcmp(value,"true") || !strcmp(value,"1")));
     }
+    // New head/contact and campaign economy controls replace one validated startup/F8 snapshot.
+    {std::ofstream f(path);f<<"[Combat]\nEnergyHeadshots=0\nHeadshotBoneWeight=nan\n[ArmyAI]\nShowStatus=false\nPlacementAttempts=999\nLumberWorkers=-1\n";}
+    auto repairs=GameplaySettings::Load(path);
+    assert(!repairs.hitDetection.energyHeadshots && repairs.hitDetection.headshotBoneWeight==.35f);
+    assert(!repairs.armyAI.showStatus && repairs.armyAI.placementAttempts==32 && repairs.armyAI.lumberWorkers==0);
+    {std::ofstream f(path);f<<"[Combat]\nHeadshotBoneWeight=0\n[ArmyAI]\nPlacementAttempts=0\nLumberWorkers=99\n";}
+    repairs=GameplaySettings::Load(path);
+    assert(repairs.hitDetection.energyHeadshots && repairs.hitDetection.headshotBoneWeight==.05f);
+    assert(repairs.armyAI.showStatus && repairs.armyAI.placementAttempts==1 && repairs.armyAI.lumberWorkers==10);
     DeleteFileA(path.c_str());return 0;
 }

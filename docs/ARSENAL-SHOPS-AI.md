@@ -222,3 +222,8 @@ Changing the retry duration applies to newly accepted training reservations.
 ## Grenade balance in 0.13.0
 
 [Release 0.13.0](RELEASE-0.13.0.md) defaults HE peak damage to 600 with its 350-unit radius and cover/distance/native-defense rules. Stock values upgrade once; custom and current-version damage choices survive updates. Flashbangs stun all exposed living creatures, including allies and the controlled actor, for two seconds by default. `StunAllUnits=false` and `StunDistanceFalloff=true` restore optional enemy-only filtering and distance falloff. Already-flying grenades retain their settings; F8 applies to new throws.
+
+
+## Local campaign-economy fix preview
+
+The [follow-up preview](HEADSHOTS-CAMPAIGN-PREVIEW.md) addresses the last Frozen Throne undead mission's worker-only base start: it centers missing-base construction on available workers, uses the actual builder race, creates a haunted mine through native construction and assigns two free ghouls to native lumber harvesting. Night elf halls use their native entangle ability before wisps harvest gold. Rejected building sites receive bounded retries. U reports missing workers/resources, native map/resource restrictions, progress or completed targets. FollowActor remains false; owned, manually ordered, fighting and H/O-reserved units keep their exclusions. This remains a basic stock economy assistant, not a complete campaign/advanced-research AI.

@@ -18,6 +18,7 @@
 #include "../economy/PurchasePayment.hpp"
 #include "../platform/WeaponTrace.hpp"
 #include "../combat/HeadshotPolicy.hpp"
+#include "../presentation/ArmyAIStatusText.hpp"
 #include "../presentation/CursorAimRay.hpp"
 #include "../platform/MapEnvironment.hpp"
 #ifdef WCS_GAMEPLAY_TEST
@@ -622,6 +623,7 @@ void ShooterController::ReloadSettings() {
     for(int i=0;i<3;++i)wc3::Log("Half-Life slot=%d available=%d enabled=%d",WeaponSlots::Crowbar+i,settings_.halfLife.available[i],settings_.halfLife.enabled[i]);
     if(!settings_.WeaponEnabled(weapon_))SwitchWeapon(WeaponSlots::Pistol);
     if(!settings_.armyAI.enabled)armyAI_.Reset();
+    armyStatus_=ArmyAIStatus::Scanning; // Re-enabling status on F8 must report the current blocker again.
     // Startup/F8 restore the configured distance; wheel choices stay in this map session only.
     thirdPersonDistance_=settings_.thirdPerson.distance;cameraWheel_.Reset();
     // Reducing a cap on F8 discards surplus reserve, but cannot grant ammunition or empty the magazine.
@@ -952,10 +954,10 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
         if (after < before) {
             // The reticle still confirms ordinary damage; headshots additionally receive target-local effects.
             hits_.Record(headshot);
-            // Blood/text require real HP loss; rejected damage and invulnerable targets cannot emit a critical.
-            if(headshot)combatVisuals_.Headshot(target,{x+vx*nearest,y+vy*nearest,z+vz*nearest},
-                {wc3::Real(wc3::GetUnitX(target)),wc3::Real(wc3::GetUnitY(target)),z+vz*nearest+settings_.combatVisuals.criticalOffset},
-                {vx,vy,vz},settings_.combatVisuals);
+            // Anchor confirmed blood/text at contact, even if a lethal map trigger has already removed the unit.
+            if(HeadshotPolicy::Direct(weapon_,contact.head))combatVisuals_.Headshot(target,{x+vx*nearest,y+vy*nearest,z+vz*nearest},
+                {x+vx*nearest,y+vy*nearest,z+vz*nearest+settings_.combatVisuals.criticalOffset},
+                {vx,vy,vz},settings_.combatVisuals,headshot);
             if (WeaponSlots::Melee(weapon_) && weapon_!=WeaponSlots::Crowbar) {
                 static const char* contacts[] = {"knife_hit1.wav", "knife_hit2.wav", "knife_hit3.wav", "knife_hit4.wav"};
                 const char* sample = destructable ? "knife_hitwall1.wav" : (weapon_ == WeaponSlots::Sword || meleeAttack_.secondary) ? "knife_stab.wav" : contacts[knifeSwing_ % 4];
@@ -1062,6 +1064,11 @@ void ShooterController::TickArmyAI() {
     if(!focused)return;
     // Build orders can create birth models synchronously. Native skinning must see them before the next world draw.
     armyAI_.Tick(unit_,settings_.armyAI,GetTickCount(),[&](wc3::Handle u){return squad_.Reserved(u);});
+    if(armyAI_.Active() && armyStatus_!=armyAI_.Status()) {
+        armyStatus_=armyAI_.Status();
+        if(settings_.armyAI.showStatus)Notice(ArmyAIStatusText(armyStatus_));
+        wc3::Log("army AI status=%s gold=%d lumber=%d",ArmyAIStatusText(armyStatus_),wc3::GetPlayerState(wc3::GetLocalPlayer(),1),wc3::GetPlayerState(wc3::GetLocalPlayer(),2));
+    }
 }
 void ShooterController::Tick(uintptr_t ui) {
     aimTarget_={}; // Clear before every early return, mode change, menu or lost-control state.
@@ -1173,7 +1180,7 @@ void ShooterController::Tick(uintptr_t ui) {
     if (settingsRequested_) { settingsRequested_=false;ReloadSettings();if(!Visible())return; } // Unit-view opt-out may return to RTS.
     if(armyToggleRequested_) {
         armyToggleRequested_=false;
-        if(settings_.armyAI.enabled)Notice(armyAI_.Toggle() ? "ARMY AI ON" : "ARMY AI OFF");else Notice("ARMY AI DISABLED IN CONFIG");
+        if(settings_.armyAI.enabled){armyAI_.Toggle();armyStatus_=ArmyAIStatus::Scanning;Notice(ArmyAIStatusText(armyAI_.Status()));}else Notice("ARMY AI DISABLED IN CONFIG");
         wc3::Log("army AI active=%d",armyAI_.Active());
     }
     if(viewToggleRequested_) {viewToggleRequested_=false;ToggleView();}

@@ -70,7 +70,7 @@ bool UnitHitboxes::Pose(uintptr_t model,const AnimatedHitModel& mesh,int& sequen
     const auto& range=mesh.Sequences()[active];if(clock<range.start || clock>range.end)return false;
     sequence=active;time=float(clock);return true;
 }
-bool UnitHitboxes::IntersectShot(wc3::Handle unit,const float* origin,const float* direction,float limit,float& entry,bool& head) {
+bool UnitHitboxes::IntersectShot(wc3::Handle unit,const float* origin,const float* direction,float limit,float& entry,bool& head,float headWeight) {
     head=false;int type=wc3::GetUnitTypeId(unit);if(!type)return false;
     auto found=models_.find(type);bool building=wc3::IsUnitType(unit,2)!=FALSE;
     if(found==models_.end())found=models_.emplace(type,Load(type,building)).first;
@@ -86,7 +86,7 @@ bool UnitHitboxes::IntersectShot(wc3::Handle unit,const float* origin,const floa
     int sequence=0;float time=0;
     if(mesh->second.Ready() && Pose(model,mesh->second,sequence,time)) {
         AnimatedHitModel::Contact contact;
-        if(!mesh->second.Intersect(localOrigin,localDirection,limit,sequence,time,contact))return false;
+        if(!mesh->second.Intersect(localOrigin,localDirection,limit,sequence,time,contact,headWeight))return false;
         entry=contact.distance;head=contact.head && !building;return true;
     }
     // Missing/unsupported model or pose keeps bounded damage with no invented head location.

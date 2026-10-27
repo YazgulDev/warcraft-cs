@@ -41,7 +41,7 @@ float Ground(float,float){return 0;}
 std::string ItemName(Handle){++nameCalls;return u8"|cffff0000\u0420\u0443\u043d\u0430|r";}
 }
 namespace WeaponTargetFilter {bool PassThrough(wc3::Handle h,uintptr_t){return scene[h].effect;}}
-bool UnitHitboxes::IntersectShot(wc3::Handle h,const float*,const float*,float limit,float& entry,bool& head) {
+bool UnitHitboxes::IntersectShot(wc3::Handle h,const float*,const float*,float limit,float& entry,bool& head,float) {
     const auto& u=scene[h];entry=u.entry;head=u.head;return u.hit && entry<=limit;
 }
 bool UnitHitboxes::Intersect(wc3::Handle h,const float*,const float*,float limit,float& entry,float){volumeCalled=true;entry=scene[h].entry;return entry<=limit;}

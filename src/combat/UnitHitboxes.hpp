@@ -12,7 +12,7 @@ public:
     bool Intersect(wc3::Handle unit, const float* origin, const float* direction, float limit,
         float& entry, float padding = 0);
     // Firearms use posed surfaces; spell/TPS/melee callers retain their existing volume contract.
-    bool IntersectShot(wc3::Handle unit,const float* origin,const float* direction,float limit,float& entry,bool& head);
+    bool IntersectShot(wc3::Handle unit,const float* origin,const float* direction,float limit,float& entry,bool& head,float headWeight=.35f);
 private:
     uintptr_t LocalRay(wc3::Handle unit,const float* origin,const float* direction,float* localOrigin,float* localDirection,float& scale) const;
     bool Pose(uintptr_t model,const AnimatedHitModel& mesh,int& sequence,float& time) const;

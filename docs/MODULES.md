@@ -452,3 +452,10 @@ and exercised with the original historical collision regressions in addition to 
 `ItemHover` owns game-thread ground-item enumeration, read-only occlusion and copied localized names. `GameText` removes Warcraft color/control markup. `ItemNameView` owns a single cached Unicode caption texture per graphics context; no native handles or names are dereferenced by the renderer. F8/map replacement clear hover caches. Project-authored fixtures in `test-precise-shots.ps1` and actual hidden WGL pixels in `test-buy-hover-view.ps1` exercise these modules without controlling the user's game.
 
 `CombatVisuals` owns bounded copied-value blood/critical/casing pools. Confirmed game-thread HP loss creates target feedback and accepted conventional rounds create cases; small physics substeps update visual debris without giving it collision authority. `CombatVisualView` draws world-depth procedural droplets/cases and reuses `ItemNameView::DrawAt` for cached Unicode critical captions. Rendering never queries native unit handles. Controller suspension freezes visual time; map teardown/F8 clear the pools. The dedicated hidden WGL suite verifies actual pixels and state without campaign input.
+
+
+### Local head/contact and campaign-economy fixes
+
+`MdxPose::Triangle` exposes barycentric contact weights; `AnimatedHitModel` retains fractional named-head skin influence until the exact accepted contact. `UnitHitboxes` consumes validated head weight policy, while `HeadshotPolicy` separates direct contact eligibility from optional damage bonuses. `CombatVisuals` separates blood from critical captions and receives only confirmed head world contacts.
+
+`ArmyPlan::Detect` prioritizes builders over captured foreign halls. The existing game-thread `ArmyAI` coordinates bounded native construction, worker-centered startup, race-compatible mines and undead lumber ghouls. `ArmyAIStatus` contains the copied domain result; presentation's `ArmyAIStatusText` maps it to HUD text. The controller reports transitions without taking over native orders. No new engine offsets, free units, resource setters or public runtime entry points are introduced.
