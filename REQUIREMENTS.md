@@ -2,26 +2,26 @@
 
 [Project home](README.md) · [Documentation](docs/README.md) · [Installation](INSTALL.md)
 
-Applies to **0.12.0**. See [Release Notes](docs/RELEASE-0.12.0.md) for changes and
+Applies to **0.15.0**. See [Release Notes](docs/RELEASE-0.15.0.md) for changes and
 [antivirus troubleshooting](TROUBLESHOOTING.md#antivirus) for unsigned-module detections.
 
 This release additionally accepts experimental **1.27a, Game.dll 1.27.0.52240**,
 with a D3D9 driver, in Player and Developer setup. Older 0.11.0 Player modules target 1.26a.
 See [port limitations and verification status](docs/PORT-1.27.md).
 
-The [development Direct3D preview](docs/DIRECT3D-126A-PREVIEW.md) also permits D3D9
+This release also permits [Direct3D](docs/DIRECT3D-126A-PREVIEW.md)
 for 1.26a through automatically prepared app-local d3d8to9/D3DX components. Player
 bundles them; Developer obtains pinned upstream downloads. No system DirectX
-installer is required. Published 0.14.0 downloads retain the requirements below.
+installer is required. Auto retains OpenGL on 1.26a; select Direct3D before Play to use the bridge.
 
 ## Playing through the Windows launcher
 
 | Requirement | Details |
 | --- | --- |
 | Operating system | Windows 10/11 x64, with .NET Framework 4.x and Windows PowerShell 5.1 available. The launcher is x64; the supported Warcraft runtime and mod are x86. |
-| Warcraft III | Your own complete **Warcraft III 1.26a** (`Game.dll` **1.26.0.6401**), or experimental **1.27a** (**1.27.0.52240**) with 0.12.0 Player or Developer setup. Reforged and other patches are unsupported. |
+| Warcraft III | Your own complete **Warcraft III 1.26a** (`Game.dll` **1.26.0.6401**), or experimental **1.27a** (**1.27.0.52240**) with current Player or Developer setup. Reforged and other patches are unsupported. |
 | Counter-Strike | Your own installed **Counter-Strike 1.6**, with the loose models and sounds listed below. Select `cstrike` or its Half-Life parent in the launcher. |
-| Graphics/input | A working OpenGL driver for 1.26a, or D3D9 driver for experimental 1.27a, a keyboard and a mouse. A wheel is optional; keys 1–7 also select weapons. |
+| Graphics/input | A working OpenGL or Direct3D 9 driver for 1.26a, or Direct3D 9 driver for experimental 1.27a, a keyboard and a mouse. A wheel is optional; keys 1–7 also select weapons. |
 | Installation folder | A dedicated writable folder outside both original games. Allow room for another complete Warcraft copy, converted assets, source revisions and dependency caches. |
 | Disk/network | Initial setup and release updates need internet access. Developer mode can need several GB for missing Microsoft tools/SDK; actual space also depends on the owned game copy. Installed single-player gameplay works offline. |
 | Permissions | Accept the launcher's download/install agreement. In Developer mode, Microsoft tool installation may request administrator approval or a Windows restart. |

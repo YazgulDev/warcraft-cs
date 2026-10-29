@@ -22,7 +22,7 @@ Clients do not need Git or Python beforehand. Source setup requires C++ tools/SD
 6. Select **The Frozen Throne** or **Reign of Chaos** under **Game to launch**, then press **Play**.
    Select your own living unit in a single-player map/campaign and press F6.
 
-The development [Direct3D preview](DIRECT3D-126A-PREVIEW.md) also offers a saved
+Release 0.15.0 offers a saved [graphics choice](DIRECT3D-126A-PREVIEW.md) in its
 **Graphics** selector. Auto preserves the host default; explicit OpenGL/Direct3D
 applies on next launch independently of edition. Install prepares the app-local
 1.26a bridge/D3DX components automatically, so Play remains offline.

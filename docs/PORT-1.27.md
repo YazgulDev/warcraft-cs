@@ -6,7 +6,7 @@ published 0.11.0 downloads do not contain this port.
 
 ## Installation
 
-Use Player setup in the 0.13.0 DLL-included launcher, or Developer/source setup, with your own complete 1.27a installation and the
+Use Player setup in the 0.15.0 DLL-included launcher, or Developer/source setup, with your own complete 1.27a installation and the
 existing `setup.cmd -WarcraftDirectory ... -CounterStrikeDirectory ...` command.
 Choose a separate installation folder. Warcraft-only setup remains available.
 The original game is never patched on disk.
@@ -14,7 +14,7 @@ The original game is never patched on disk.
 Source Play and launchers built from this source select **D3D9 for 1.27a** and
 retain **OpenGL for 1.26a**. Source launch accepts
 `tools/launch.ps1 -Renderer Auto|OpenGL|Direct3D`; the earlier D3D9 spelling remains
-an alias. The [development 1.26a Direct3D preview](DIRECT3D-126A-PREVIEW.md) also
+an alias. The [1.26a Direct3D feature](DIRECT3D-126A-PREVIEW.md), released in 0.15.0, also
 adds a saved launcher selector. Auto is the default, applied on the
 next launch. OpenGL on 1.27a is a diagnostic path, not a verified combination.
 
@@ -23,7 +23,7 @@ Miles proxy. Setup derives exact export data from the selected owner's original
 sound library, retaining names, aliases and ordinals without shipping that library
 or requiring C++ Build Tools. The original game stays untouched. Legacy published
 0.11.0 packages retain their exact host/hash restriction. See
-[current release details](RELEASE-0.13.0.md); real 1.27a gameplay remains unverified.
+[current release details](RELEASE-0.15.0.md); real 1.27a gameplay remains unverified.
 
 ## Design
 
@@ -65,8 +65,8 @@ This is an **experimental partial port**, not feature parity with 1.26a:
   mana, level, XP and item charges remain available. Internal item activation
   forms are unavailable. Spell helpers retain their own capability guards.
   Dynamic order-name conversion also remains disabled until its helper ABI is verified.
-- Native minimap and portrait capture have no D3D9 feed and are omitted there.
-  Their OpenGL capture paths remain intact.
+- The 0.15.0 native Direct3D minimap/portrait capture is verified on 1.26a only;
+  its required 1.27a native bindings remain unavailable, so those images remain omitted on 1.27a.
 
 ## Verification
 
@@ -75,9 +75,8 @@ or Alt-Tab verification is claimed.** Compilation and synthetic metadata checks
 cannot establish real game compatibility.
 
 The existing regression suites and launcher/install checks passed, including real
-OpenGL/D3D9 hidden-device pixels. A separate 1.26a test copy reached native binding
-and hook initialization but did not produce a verified loaded-map frame; this is
-not counted as a successful in-game smoke test.
+OpenGL/D3D9 hidden-device pixels. A separate owned 1.26a test copy now verifies loaded-map gameplay and UI in
+OpenGL/Direct3D, including camera terrain oracles; this does not verify 1.27a.
 
 `tools/test-d3d9.ps1` checks actual pixels on a real hidden D3D9 device: quads,
 textured colors, GDI alpha-atlas text, world-depth occlusion, resource persistence

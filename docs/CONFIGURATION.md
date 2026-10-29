@@ -19,6 +19,15 @@ The [annotated INI](../config/WarcraftCS.ini) is the complete list of keys, defa
 units, bounds and reload rules. Values below describe the published release;
 an older installation may retain different saved choices.
 
+## Renderer selection
+
+In launcher 0.15.0 or newer, choose **Graphics → Auto / OpenGL / Direct3D** before Play.
+Auto uses OpenGL on 1.26a and Direct3D 9 on experimental 1.27a. The validated choice
+is saved as `Renderer` in `%LOCALAPPDATA%/WarcraftCSLauncher/last-install.json`,
+independently of the gameplay INI and RoC/TFT edition. Missing old preferences use Auto.
+Restart Warcraft to apply a renderer change; F8 reloads game settings only. Install/Update
+prepares the private 1.26a graphics components automatically.
+
 ## Guides by topic
 
 | Topic | Guide |

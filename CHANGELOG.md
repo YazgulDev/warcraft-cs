@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.15.0 — 2026-10-29
+
+- Publish [complete downloads, upgrade instructions and Release Notes](docs/RELEASE-0.15.0.md), with both launcher variants, current renderer requirements and compact launcher summaries. Preserve movement, weapon balance and economy defaults.
 
 - Remove the verified 1.26a camera helper's extra averaged terrain height only during controlled views, preventing slope-dependent view shifts without changing physical movement/collision. Preserve normal RTS/unrelated cameras and unverified-host fallback. Add native flat/slope/standing/walking/jumping camera oracles and pitched map-edge regressions. [Camera preview](docs/CAMERA-SLOPE-PREVIEW.md).
 - Add the native minimap to Direct3D with the same placement, M toggle, size setting and hint wrapping as OpenGL. Capture native UI on a private GPU canvas and crop terrain/fog/markers without world color/depth writes or per-frame CPU readback; release capture surfaces on Reset and restore the world target on a second world submission before Present.

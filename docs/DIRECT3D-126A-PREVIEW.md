@@ -1,9 +1,10 @@
-# Direct3D for Warcraft III 1.26a — local preview
+# Direct3D for Warcraft III 1.26a
 
 [Project home](../README.md) · [Installation](../INSTALL.md) · [Compatibility](COMPATIBILITY.md)
 
-This feature branch adds a Direct3D launch path for **1.26.0.6401** and a graphics
-selector to both launcher variants. It is not part of the published 0.14.0 assets.
+Included in [release 0.15.0](RELEASE-0.15.0.md): a Direct3D launch path for
+**1.26.0.6401** and a graphics selector in both launcher variants. Earlier preview
+verification is retained below; published 0.14.0 assets did not contain this option.
 
 Choose **Graphics → Direct3D**, then Play. Auto retains OpenGL on 1.26a and D3D9
 on 1.27a; explicit OpenGL remains available. The choice is saved with the existing
@@ -12,7 +13,7 @@ preferences use Auto, invalid values are rejected. Changes take effect on the
 next game launch and do not change the selected RoC/TFT edition or gameplay INI.
 The preference file is `%LOCALAPPDATA%/WarcraftCSLauncher/last-install.json`.
 
-Run Install with the preview launcher once for an older installation. Player
+Run Install with the current launcher once for an older installation. Player
 setup installs the bundled components; Developer/source setup obtains pinned
 upstream dependencies automatically. After setup either renderer works offline.
 There is no separate DirectX/SDK installer or manual DLL configuration. A source
