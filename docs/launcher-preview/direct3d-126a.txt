@@ -2,4 +2,6 @@
 - Added saved Auto, OpenGL and Direct3D launch choices in both launcher variants.
 - Fixed native cursor and oversized Warcraft health bars leaking into FPS in Direct3D.
 - Added the native animated portrait to the Direct3D HUD with isolated color/depth capture.
+- Added the native Direct3D minimap with shared placement, M toggle and live size settings.
+- Fixed portrait proportions for the square HUD and verified the shared item inventory, potion use and item moves.
 - Preserved campaign selection, existing renderer defaults, saves and gameplay settings.

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add the native minimap to Direct3D with the same placement, M toggle, size setting and hint wrapping as OpenGL. Capture native UI on a private GPU canvas and crop terrain/fog/markers without world color/depth writes or per-frame CPU readback; release capture surfaces on Reset and restore the world target on a second world submission before Present.
+- Correct the Direct3D portrait camera for the square HUD while retaining native vertical framing. Verify the shared item icons, charges, potion use, mouse inventory and slot moves on an owned hero in OpenGL/Direct3D, including fullscreen and live HUD scaling.
 - Fix the 1.26a Direct3D preview leaking native cursor/health-bar geometry into FPS; filter the native UI submission phase and retain the configured mod health bars. Hide the D3D hardware cursor during mouse look and restore its requested visibility for free-cursor menus/RTS.
 - Capture the native animated portrait into a separate Direct3D color/depth target. End capture at the following UI projection even when Warcraft omits another viewport call; restore engine surfaces and release default-pool resources before Reset.
 

@@ -1,4 +1,5 @@
 #include "../src/platform/D3DNativeUi.hpp"
+#include "../src/platform/D3DMinimap.hpp"
 #include "../src/presentation/D3DGraphics.hpp"
 #include <cstdio>
 #include <cstdlib>
@@ -51,6 +52,9 @@ int main() {
     D3DNativeUi::Overlay(true);Triangle(device,130,10,0xFF00FF00);D3DNativeUi::Overlay(false);
     D3DVIEWPORT9 portrait={70,180,40,40,0,1};D3DNativeUi::Viewport(device,portrait,320,240);
     Require(portrait.X==0 && portrait.Y==0,"portrait redirects into private local viewport");device->SetViewport(&portrait);Triangle(device,0,0,0xFFFFFF00);
+    D3DMATRIX nativeProjection={};nativeProjection.m[0][0]=1;nativeProjection.m[1][1]=1.6f;nativeProjection.m[2][3]=1;
+    D3DNativeUi::PortraitProjection(device,nativeProjection);
+    Require(nativeProjection.m[0][0]==nativeProjection.m[1][1],"square portrait framing preserves face proportions without changing vertical FOV");
     // The real engine changes projection after portraits and can omit another SetViewport call.
     D3DNativeUi::Projection(device,true);D3DVIEWPORT9 full={0,0,320,240,0,1};device->SetViewport(&full);
     Triangle(device,70,60,0xFFFF0000);device->EndScene();
@@ -61,6 +65,27 @@ int main() {
     Require(Pixel(device,75,15)==0x101010,"native cursor and HP geometry suppressed in the world region");
     Require(Pixel(device,135,15)==0x00FF00,"own overlay geometry remains visible");
     Require(Pixel(device,205,65)==0xFFFF00,"actual native portrait pixels reach the HUD");
+    // Capture a real native minimap draw and a nested portrait without touching world pixels.
+    D3DNativeUi::Phase(false);device->Clear(0,nullptr,D3DCLEAR_TARGET|D3DCLEAR_ZBUFFER,0xFF0000FF,.25f,0);
+    D3DMinimap::Configure({0,160,80,240},320,240,true);device->BeginScene();D3DNativeUi::Phase(true);
+    Triangle(device,10,170,0xFF00FF00);Triangle(device,160,50,0xFFFF0000);
+    portrait={100,180,40,40,0,1};D3DNativeUi::Viewport(device,portrait,320,240);device->SetViewport(&portrait);Triangle(device,0,0,0xFFFFFF00);
+    D3DNativeUi::Projection(device,true);device->SetViewport(&full);device->EndScene();D3DMinimap::FinishFrame();
+    D3DNativeUi::Overlay(true);Require(D3DGraphics::BeginFrame(device,dc,320,240),"native minimap canvas");
+    D3DGraphics::MatrixMode(GL_PROJECTION);D3DGraphics::LoadIdentity();D3DGraphics::Ortho(0,320,240,0,-1,1);
+    D3DGraphics::MatrixMode(GL_MODELVIEW);D3DGraphics::LoadIdentity();D3DMinimap::Draw({240,0,80,0});D3DNativeUi::DrawPortrait(200,100,40);
+    // A HUD/world label behind the saved world depth must remain occluded after private UI depth clears.
+    D3DGraphics::Enable(GL_DEPTH_TEST);D3DGraphics::DepthFunc(GL_LESS);D3DGraphics::DepthMask(GL_FALSE);D3DGraphics::Disable(GL_TEXTURE_2D);D3DGraphics::Color4f(1,0,0,1);
+    D3DGraphics::Begin(GL_TRIANGLES);D3DGraphics::Vertex3f(10,170,-.5f);D3DGraphics::Vertex3f(46,170,-.5f);D3DGraphics::Vertex3f(10,206,-.5f);D3DGraphics::End();
+    D3DGraphics::EndFrame();D3DNativeUi::Overlay(false);
+    Require(Pixel(device,255,15)==0x00FF00,"GPU crop contains native terrain/marker pixels at the HUD map location");
+    Require(Pixel(device,315,75)==0,"rectangular map letterboxing remains black");
+    Require(Pixel(device,15,175)==0x0000FF && Pixel(device,165,55)==0x0000FF,"minimap and console never overwrite expanded world color");
+    Require(Pixel(device,205,105)==0xFFFF00,"portrait survives nested native minimap target ownership");
+    // An extra RenderWorld inside the same scene must regain the world target without requiring Present.
+    D3DNativeUi::Phase(false);device->Clear(0,nullptr,D3DCLEAR_TARGET,0xFF000000,1,0);device->BeginScene();
+    D3DNativeUi::Phase(true);Triangle(device,10,170,0xFF00FF00);D3DNativeUi::Phase(false);Triangle(device,10,10,0xFFFF0000);device->EndScene();
+    Require(Pixel(device,15,15)==0xFF0000 && Pixel(device,15,175)==0,"second world submission restores its target inside the active scene");
     // Device Reset must succeed after releasing every capture surface, and RTS must resume native drawing.
     D3DNativeUi::BeforeReset(device);D3DNativeUi::Configure(false,0);D3DNativeUi::Phase(false);
     Require(SUCCEEDED(device->Reset(&params)),"capture does not retain default-pool surfaces across Reset");

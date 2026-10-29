@@ -14,7 +14,12 @@ Unavailable internal adapters retain native behavior instead of installing legac
 `D3DHooks` owns D3D9 interception. `GraphicsApi` adapts current presentation calls;
 `D3DGraphics` owns draw/state/matrix isolation, `D3DTextures` owns texture lifetime,
 and `RenderMatrix` owns portable matrix math. Gameplay and layout keep their existing
-modules. Native GL minimap/portrait capture remains separate. See `PORT-1.27.md`.
+modules. `D3DNativeUi` owns native draw-slot filtering, hardware cursor ownership
+and the portrait target/square camera. `D3DMinimap` owns the private native UI
+color/depth canvas, GPU crop and restoration before the mod canvas. Portrait capture
+can nest inside that target. `NativeMinimap` supplies the same evaluated bounds
+to both backends; `Overlay` retains common HUD placement and existing inventory
+adapters. The WGL captures retain their own context resources. See `PORT-1.27.md`.
 
 `HudDiagnostics` samples phase-specific GL state independently of drawing, preserves
 queried texture state and the GL error queue, and records labelled font lifecycle

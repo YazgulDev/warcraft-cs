@@ -21,6 +21,7 @@ $sources = @('platform/WarcraftApi.cpp', 'input/MouseLook.cpp', 'movement/Moveme
 # Host selection and the alternate graphics backend keep existing view layouts and gameplay independent.
 $sources += @('platform/GameBuild.cpp','platform/D3DHooks.cpp','presentation/D3DGraphics.cpp','presentation/D3DTextures.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 $sources += '"'+(Join-Path $modRoot 'src/platform/D3DNativeUi.cpp')+'"' # Native D3D UI filtering and animated portrait capture.
+$sources += '"'+(Join-Path $modRoot 'src/platform/D3DMinimap.cpp')+'"' # Private native UI canvas and GPU minimap crop.
 # Captured native faults keep module offsets/registers without installing a process-wide exception handler.
 $sources += '"'+(Join-Path $modRoot 'src/platform/NativeFaultDiagnostics.cpp')+'"'
 # Native spell fixtures are opt-in and are excluded from the installed normal build.

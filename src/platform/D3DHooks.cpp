@@ -1,5 +1,6 @@
 #include "D3DHooks.hpp"
 #include "D3DNativeUi.hpp"
+#include "D3DMinimap.hpp"
 #include <d3d9.h>
 #include "../presentation/FullscreenView.hpp"
 #include "../platform/WarcraftApi.hpp"
@@ -312,7 +313,7 @@ void DrawFrame(IDirect3DDevice9* device, const char* label) {
     // swap chain and, if the probe already released it, dereference freed memory.
     if (device == probeDevice) return;
     if (!SelectOverlayDevice(device, label)) return;
-    D3DNativeUi::Attach(device);D3DNativeUi::Finish();
+    D3DNativeUi::Attach(device);D3DNativeUi::Finish();D3DMinimap::FinishFrame();
     frameAnchorSeen = true;
     // First present from a device this session has not drawn through yet: rendering that moved to
     // a device whose creation was never observed used to look like a silent stall.
@@ -446,6 +447,10 @@ HRESULT STDMETHODCALLTYPE SetTransformDetour(IDirect3DDevice9* device, D3DTRANSF
     if (!forward) return D3DERR_INVALIDCALL;
     // The world projection is what world-anchored HUD art must be measured against; the caller
     // filters out the portrait and interface passes.
+    D3DMATRIX portraitProjection={};
+    if(state==D3DTS_PROJECTION && matrix && !overlayActive) {
+        portraitProjection=*matrix;D3DNativeUi::PortraitProjection(device,portraitProjection);matrix=&portraitProjection;
+    }
     if (state == D3DTS_PROJECTION && matrix) {
         // Direct3D orthographic matrices carry no perspective row (_34 = 0, _44 = 1); every
         // perspective world projection the engine issues has _34 = 1 and _44 = 0.

@@ -1,7 +1,9 @@
 #include "D3DNativeUi.hpp"
+#include "D3DMinimap.hpp"
 #include "WarcraftApi.hpp"
 #include "../presentation/D3DGraphics.hpp"
 #include "../presentation/GraphicsDiagnostics.hpp"
+#include <cmath>
 
 namespace D3DNativeUi {
 namespace {
@@ -29,7 +31,12 @@ bool Skip(IDirect3DDevice9* device) {
         if(!drawn)Find(device)->clear(device,0,nullptr,D3DCLEAR_TARGET|D3DCLEAR_ZBUFFER,0xFF000000,1,0);
         drawn=true;++portraitDraws;device->SetRenderState(D3DRS_SCISSORTESTENABLE,FALSE);return false;
     }
-    if(nativeUi) {++rejected;return true;}return false;
+    if(nativeUi) {
+        // Native UI renders privately when the minimap needs its terrain/fog/markers; never into world depth/color.
+        if(D3DMinimap::BeginNativeUi(device))return false;
+        ++rejected;return true;
+    }
+    return false;
 }
 HRESULT STDMETHODCALLTYPE Draw(IDirect3DDevice9* d,D3DPRIMITIVETYPE t,UINT start,UINT count) {auto f=Find(d);return f ? (Skip(d) ? D3D_OK : f->primitive(d,t,start,count)) : D3DERR_INVALIDCALL;}
 HRESULT STDMETHODCALLTYPE DrawIndexed(IDirect3DDevice9* d,D3DPRIMITIVETYPE t,INT base,UINT min,UINT vertices,UINT start,UINT count) {auto f=Find(d);return f ? (Skip(d) ? D3D_OK : f->indexed(d,t,base,min,vertices,start,count)) : D3DERR_INVALIDCALL;}
@@ -38,7 +45,10 @@ HRESULT STDMETHODCALLTYPE DrawIndexedUP(IDirect3DDevice9* d,D3DPRIMITIVETYPE t,U
 HRESULT STDMETHODCALLTYPE ClearTarget(IDirect3DDevice9* d,DWORD count,const D3DRECT* rects,DWORD flags,D3DCOLOR colorValue,float z,DWORD stencil) {
     auto f=Find(d);if(!f)return D3DERR_INVALIDCALL;
     // Console clears must not erase the expanded world. Portrait clears cover only its private target.
-    if(d==owner && enabled && !overlay) {if(capturing)return f->clear(d,0,nullptr,flags,colorValue,z,stencil);if(nativeUi)return D3D_OK;}
+    if(d==owner && enabled && !overlay) {
+        if(capturing)return f->clear(d,0,nullptr,flags,colorValue,z,stencil);
+        if(nativeUi && !D3DMinimap::Capturing(d))return D3D_OK;
+    }
     return f->clear(d,count,rects,flags,colorValue,z,stencil);
 }
 BOOL STDMETHODCALLTYPE ShowCursor(IDirect3DDevice9* device,BOOL visible) {
@@ -62,6 +72,7 @@ bool Prepare(IDirect3DDevice9* device,int width,int height) {
 void Attach(IDirect3DDevice9* device) {
     bool changed=owner!=device;
     if(changed) {Dispose();owner=device;}
+    D3DMinimap::Attach(device);
     if(auto existing=Find(device)) {
         // A replacement device can reuse its runtime's already patched table, but has its own cursor state.
         if(changed) {engineCursor=existing->cursor(device,FALSE)!=FALSE;existing->cursor(device,engineCursor && !hideCursor);}
@@ -87,11 +98,25 @@ void Configure(bool value,uint32_t unit,bool cursor) {
     // RTS/menu/unarmed views release their portrait surfaces instead of retaining an old actor image.
     if(!enabled || !actor)Dispose();
 }
-void Phase(bool value) {nativeUi=value;}
+void Phase(bool value) {
+    nativeUi=value;
+    if(!value) {Finish();D3DMinimap::BeginWorld();}
+}
 void Overlay(bool value) {overlay=value;}
 void Projection(IDirect3DDevice9* device,bool orthographic) {
     // Warcraft can resume fullscreen UI by changing only its projection, without reissuing a viewport.
     if(device==owner && !overlay && orthographic)Finish();
+}
+void PortraitProjection(IDirect3DDevice9* device,D3DMATRIX& projection) {
+    if(device!=owner || overlay || !capturing || projection.m[2][3]==0 || projection.m[3][3]!=0)return;
+    float x=projection.m[0][0],y=projection.m[1][1];
+    if(!std::isfinite(x) || !std::isfinite(y) || std::abs(x)<.00001f || std::abs(y)<.00001f)return;
+    // The native rectangular viewport is displayed in a square HUD. Keep vertical framing and
+    // use a square camera aspect, so resampling cannot squeeze the face or stretch it vertically.
+    projection.m[0][0]=std::copysign(std::abs(y),x);
+    static bool logged=false;if(!logged) {
+        logged=true;wc3::Log("D3D9 portrait projection nativeAspect=%.3f capture=%dx%d HUDAspect=1",std::abs(y/x),cropWidth,cropHeight);
+    }
 }
 void Viewport(IDirect3DDevice9* device,D3DVIEWPORT9& viewport,int width,int height) {
     if(device!=owner || overlay)return;Finish();
@@ -113,7 +138,7 @@ void Finish() {
     owner->SetDepthStencilSurface(nullptr);owner->SetRenderTarget(0,previousColor);owner->SetDepthStencilSurface(previousDepth);
     Release(previousColor);Release(previousDepth);capturing=false;if(drawn)ready=true;
 }
-void BeforeReset(IDirect3DDevice9* device) {if(device==owner)Dispose();}
+void BeforeReset(IDirect3DDevice9* device) {if(device==owner) {Dispose();D3DMinimap::BeforeReset(device);}}
 void DrawPortrait(int x,int y,int side) {
     if(ready && enabled && actor && texture)D3DGraphics::DrawTexture(texture,x,y,side,side);
     static DWORD logged=0;if(enabled && GetTickCount()-logged>5000) {logged=GetTickCount();wc3::Log("D3D9 native UI rejected=%u portraitDraws=%u ready=%d",rejected,portraitDraws,ready);}

@@ -39,6 +39,23 @@ The native animated portrait renders to its own D3D color/depth target and is
 composited into the HUD. Capture ends on the next orthographic projection even
 when the engine omits another viewport call. Reset releases its default-pool
 surfaces; this does not introduce an external portrait asset or readback per frame.
+The portrait's D3D camera uses a square HUD aspect while preserving its native
+vertical framing, so the rectangular capture does not squeeze the displayed face.
+
+Direct3D now also captures the native minimap. A private full-resolution UI
+color/depth canvas keeps hidden Warcraft chrome away from the world; a GPU-only
+`StretchRect` copies the evaluated native minimap rectangle for the common HUD.
+The native terrain, fog and markers keep their usual engine updates. Portrait
+capture nests inside the private UI target. World color/depth and viewport are
+restored before weapons/HUD, including an extra world submission before Present;
+Reset releases the default-pool capture surfaces.
+
+Both APIs use the existing `Interface.ShowMinimap=true`, `MinimapSizePercent=22`
+(10–40 percent of client height), M toggle, `ShowUnitHud`, `UnitHudScalePercent`,
+`ShowInventory` and `InventoryControls` settings. F8 reload and update preservation
+remain unchanged. Items use the shared six-slot inventory, imported/native icons,
+charges, numeric use, I mouse panel and drag/drop behavior. A unit without native
+inventory slots has no item row, in either API; no inventory abilities are invented.
 
 Only the marked private game directory receives `d3d8.dll`, `d3dx9_43.dll` and
 `d3dcompiler_43.dll`. The bridge is compiled with a static C++ runtime; its import
@@ -86,8 +103,17 @@ normal-sized bar at distance 300; changing the lab-only `HealthBarDistance` from
 2000 to 200 produces zero candidates/submissions and removes that bar. The log
 contains no ERROR entries. All lab module/INI/caches/Save files were restored.
 
-The native minimap capture adapter still requires OpenGL and has no D3D9 feed.
-Its image is omitted in Direct3D; other HUD panels remain drawn.
+UI parity was then checked on the same owned Arthas hero in OpenGL and Direct3D
+at 1422×693: native minimap, portrait, HP/mana/XP, spell icons and four item icons;
+healing-potion consumption, slot 3→5 item move, I panel, M off/on, movement and
+RTS/FPS re-entry. The final D3D portrait camera was checked again at 1920×1080,
+with buy menu, third person, live minimap size 22→32 and unit-HUD scale 100→140.
+Logs confirm native item-use/move acceptance and no ERROR entries in those runs.
+Actual screenshots were inspected. Hidden HAL tests additionally verify nested
+portrait/minimap ownership, GPU crop pixels, world color/depth preservation,
+Reset and an extra RenderWorld inside the same BeginScene. WGL minimap/portrait
+and interactive-inventory regression tests pass. Original lab files were restored.
+
 Full campaign and Alt-Tab recovery parity remain unverified.
 The change supplies an alternate graphics path, not a confirmed diagnosis or fix
 for the AMD OpenGL failure in issue 10.

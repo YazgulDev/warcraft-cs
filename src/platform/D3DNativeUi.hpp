@@ -9,6 +9,7 @@ void Configure(bool enabled,uint32_t actor,bool hideCursor=true);
 void Phase(bool nativeUi);
 void Overlay(bool active);
 void Projection(IDirect3DDevice9* device,bool orthographic);
+void PortraitProjection(IDirect3DDevice9* device,D3DMATRIX& projection);
 void Viewport(IDirect3DDevice9* device,D3DVIEWPORT9& viewport,int width,int height);
 void Finish();
 void BeforeReset(IDirect3DDevice9* device);

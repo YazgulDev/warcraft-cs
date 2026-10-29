@@ -183,6 +183,17 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
         else if(BackgroundGameplay::Enabled() && command=="spell") {int slot=0;input>>slot;controller.RequestSpell(slot-1);}
         else if(BackgroundGameplay::Enabled() && command=="bars")controller.RequestHealthBarToggle();
         else if(BackgroundGameplay::Enabled() && command=="minimap")controller.RequestMinimapToggle();
+        else if(BackgroundGameplay::Enabled() && command=="inventory") {
+            // Drive production inventory gestures in the disposable oracle without desktop input.
+            std::string action;input>>action;
+            if(action=="panel")controller.RequestInventory({InventoryControls::Kind::Panel});
+            else if(action=="close")controller.RequestInventoryClose();
+            else if(action=="use") {int slot=1;input>>slot;InventoryControls::Event event{InventoryControls::Kind::Use};event.slot=slot-1;event.self=true;controller.RequestInventory(event);}
+            else if(action=="down" || action=="up" || action=="move") {
+                InventoryControls::Event event{action=="down" ? InventoryControls::Kind::Down : action=="up" ? InventoryControls::Kind::Up : InventoryControls::Kind::Move};
+                input>>event.x>>event.y>>event.width>>event.height;controller.RequestInventory(event);
+            }
+        }
         else if(BackgroundGameplay::Enabled() && command=="buttons")Buttons(base);
         // New tuning follows production mailboxes; only disposable fixture builds expose these commands.
         else if(BackgroundGameplay::Enabled() && command=="settings")controller.RequestSettingsReload();
