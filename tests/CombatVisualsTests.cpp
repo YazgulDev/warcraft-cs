@@ -16,9 +16,15 @@ int main(){
     for(const auto& drop:effects.BloodDrops())assert(drop.position==contact);
     effects.Reset();for(int i=0;i<3;++i)effects.Eject(WeaponSlots::Glock,eye,ray,velocity,0,s);assert(effects.Shells().size()==3);
     for(int i=0;i<200;++i)effects.Eject(0,eye,ray,velocity,0,s);assert(effects.Shells().size()==64);
-    effects.Headshot(5,contact,above,ray,s);assert(effects.BloodDrops().size()==16 && effects.Criticals().size()==1);
+    effects.Headshot(5,contact,above,ray,s);assert(effects.BloodDrops().size()==48 && effects.Criticals().size()==1);
     effects.Headshot(5,contact,above,ray,s);assert(effects.Criticals().size()==1); // Pellet spam is coalesced, not damage.
+    effects.Headshot(5,contact,above,ray,s,true,true);
+    assert(effects.BloodDrops().size()==192 && effects.Criticals().size()==1); // Fatal pellets still burst without duplicate text.
     effects.Step(.1f);effects.Headshot(5,contact,above,ray,s);assert(effects.Criticals().size()==2);
+    // Maximum fatal bursts stay in the same bounded pool even when many units die in one frame.
+    auto crowded=s;crowded.bloodCount=64;crowded.fatalBloodMultiplier=4;
+    for(unsigned target=100;target<110;++target)effects.Headshot(target,contact,above,ray,crowded,true,true);
+    assert(effects.BloodDrops().size()==256);
     float age=effects.Shells()[0].age;effects.Step(0);effects.Step(std::numeric_limits<float>::quiet_NaN());assert(effects.Shells()[0].age==age);
     effects.Step(1.1f);assert(effects.BloodDrops().empty() && effects.Criticals().empty());
     for(const auto& shell:effects.Shells())assert(shell.position[2]>=shell.floor+shell.size);

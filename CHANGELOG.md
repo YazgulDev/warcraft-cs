@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Fix frozen Direct3D portraits by disabling inherited scissor before clearing private color/depth, preventing old face depth from rejecting later animation frames. Restore the pre-portrait viewport even when native UI resumes by projection alone; add an actual HAL regression that fails before the clear-order fix.
+- Add configurable fatal headshot removal for verified 1.26a named-head models. Preserve the body, native death events and resurrection; carry the struck skull's identity from the accepted triangle so two-headed creatures lose only the struck head. Refuse stale/invisible native palettes.
+- Increase stock headshot blood to 48 droplets, 1.75 scale, 0.8 seconds and speed 220; fatal contacts use a configurable 3x burst, including a lethal pellet immediately after a nonfatal pellet. Preserve custom/disabled/versioned settings on startup, F8 and update.
+
 ## 0.15.0 — 2026-10-29
 
 - Publish [complete downloads, upgrade instructions and Release Notes](docs/RELEASE-0.15.0.md), with both launcher variants, current renderer requirements and compact launcher summaries. Preserve movement, weapon balance and economy defaults.

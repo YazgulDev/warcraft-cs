@@ -1,5 +1,6 @@
 #include "../platform/GameBuild.hpp"
 #include "ShooterController.hpp"
+#include "../platform/NativeHeadGore.hpp"
 #include "../presentation/TauChargeFeedback.hpp"
 #include "../platform/DiagnosticLog.hpp"
 #include "../combat/CombatDamage.hpp"
@@ -257,6 +258,7 @@ void ShooterController::Disable(bool restoreCamera) {
     wc3::Log("FPS disabled");
 }
 void ShooterController::ResetMap() {
+    NativeHeadGore::Reset(); // Corpse palettes and map model definitions must not cross map generations.
     // Currency and local loot belong to the unloaded map, independently of view/loadout changes.
     ++rewardGeneration_;dollars_.Reset();droppedWeapons_.Reset();nearbyWeapon_=-1;money_=0;
     flashWeapon_=-1;viewmodelMotion_.Reset(); // No viewmodel offset or unpresented flash crosses a map boundary.
@@ -935,6 +937,10 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
         // Named head geometry changes only the accepted direct hit; native defenses and passives remain authoritative.
         baseDamage=HeadshotPolicy::Damage(baseDamage,headshot,settings_.hitDetection);
         float damage = CombatDamage::Amount(baseDamage,allied,lethal,before,settings_.friendlyFirePercent);
+        // Capture the exact model/contact before death triggers can remove or morph the target.
+        bool hostileHead=!destructable && HeadshotPolicy::Direct(weapon_,contact.head) && wc3::IsUnitEnemy(target,wc3::GetOwningPlayer(unit_));
+        auto headCorpse=NativeHeadGore::Prepare(target,{x+vx*nearest,y+vy*nearest,z+vz*nearest},
+            settings_.hitDetection.headshotBoneWeight,hostileHead && damage>0 && settings_.combatVisuals.headshotDecapitation,contact.headRoot);
         if (settings_.heroDamage) wc3::Log("hero damage attack=%.1f multiplier=%.2f base=%.1f",attack,settings_.heroMultiplier[weapon_],baseDamage);
         // Confirmed weapon hits dispatch one native attack, including the map's attack effects, without pursuit.
         // C4/destructables and explicit finishing retain their own policies; zero friendly damage causes no events.
@@ -952,13 +958,15 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
         if(generation!=rewardGeneration_)return; // A native death trigger may have unloaded the map.
         if(damage>0)reward.Confirm(rewards);
         float after = life();
+        bool fatalHead=hostileHead && before>.405f && after<=.405f;
+        if(fatalHead)NativeHeadGore::Commit(headCorpse); // Presentation only: no extra damage, KillUnit or explosive-death flag.
         if (after < before) {
             // The reticle still confirms ordinary damage; headshots additionally receive target-local effects.
             hits_.Record(headshot);
             // Anchor confirmed blood/text at contact, even if a lethal map trigger has already removed the unit.
             if(HeadshotPolicy::Direct(weapon_,contact.head))combatVisuals_.Headshot(target,{x+vx*nearest,y+vy*nearest,z+vz*nearest},
                 {x+vx*nearest,y+vy*nearest,z+vz*nearest+settings_.combatVisuals.criticalOffset},
-                {vx,vy,vz},settings_.combatVisuals,headshot);
+                {vx,vy,vz},settings_.combatVisuals,headshot,fatalHead);
             if (WeaponSlots::Melee(weapon_) && weapon_!=WeaponSlots::Crowbar) {
                 static const char* contacts[] = {"knife_hit1.wav", "knife_hit2.wav", "knife_hit3.wav", "knife_hit4.wav"};
                 const char* sample = destructable ? "knife_hitwall1.wav" : (weapon_ == WeaponSlots::Sword || meleeAttack_.secondary) ? "knife_stab.wav" : contacts[knifeSwing_ % 4];

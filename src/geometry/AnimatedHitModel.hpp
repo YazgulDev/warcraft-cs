@@ -10,7 +10,7 @@
 class AnimatedHitModel {
 public:
     struct Sequence {unsigned start=0,end=0;};
-    struct Contact {float distance=0;bool head=false;};
+    struct Contact {float distance=0;bool head=false;unsigned headRoot=0xffffffff;};
     bool Load(const std::vector<unsigned char>& bytes);
     bool Ready() const {return !faces_.empty();}
     bool Animated() const {return animated_;}
@@ -18,6 +18,9 @@ public:
     size_t HeadVertices() const {return size_t(std::count_if(vertices_.begin(),vertices_.end(),[](const Vertex& v){return v.headWeight>0 && v.usable;}));}
     const Bounds3& BroadBounds() const {return broad_;}
     const std::vector<Sequence>& Sequences() const {return sequences_;}
+    struct HeadBone {unsigned id=0,root=0;std::array<float,3> pivot={};};
+    std::vector<HeadBone> HeadBones() const;
+    std::vector<std::vector<unsigned>> BoneGroups() const;
     bool Intersect(const float* origin,const float* direction,float limit,int sequence,float time,Contact& contact,float headWeight=.35f) const;
 private:
     struct Node {unsigned id=0,parent=0xffffffff,flags=0;bool head=false;MdxPose::Track translation,rotation,scale;};
@@ -30,6 +33,7 @@ private:
     static bool Array(const std::vector<unsigned char>& bytes,size_t end,size_t& at,const char* tag,size_t stride,size_t& data,unsigned& count);
     static bool Tracks(const std::vector<unsigned char>& bytes,size_t at,size_t end,Node& node);
     std::vector<Node> nodes_;
+    std::vector<unsigned> headRoots_;
     std::vector<std::array<float,3>> pivots_;
     std::vector<Vertex> vertices_;
     std::vector<Face> faces_;
@@ -38,6 +42,32 @@ private:
     Bounds3 broad_;
     bool animated_=false;
 };
+
+inline std::vector<AnimatedHitModel::HeadBone> AnimatedHitModel::HeadBones() const {
+    std::vector<HeadBone> result;
+    // Keep native MDX object IDs and separate head roots, including descendants of each named head.
+    // A two-headed model must never merge both heads into a single removal group.
+    for(const auto& node:nodes_) {
+        const Node* current=&node;unsigned root=0xffffffff;
+        for(size_t depth=0;current && depth<nodes_.size();++depth) {
+            if(current->head)root=current->id;
+            auto found=std::find_if(nodes_.begin(),nodes_.end(),[&](const Node& parent){return parent.id==current->parent;});
+            current=found==nodes_.end() ? nullptr : &*found;
+        }
+        if(root!=0xffffffff && root<pivots_.size())result.push_back({node.id,root,pivots_[root]});
+    }
+    return result;
+}
+inline std::vector<std::vector<unsigned>> AnimatedHitModel::BoneGroups() const {
+    std::vector<std::vector<unsigned>> result;
+    // The ray parser resolves vertex bone IDs to node indices. Export authored IDs for native palette validation.
+    for(const auto& vertex:vertices_) {
+        std::vector<unsigned> group;for(unsigned bone:vertex.bones)group.push_back(nodes_[bone].id);
+        std::sort(group.begin(),group.end());
+        if(std::find(result.begin(),result.end(),group)==result.end())result.push_back(std::move(group));
+    }
+    return result;
+}
 
 inline bool AnimatedHitModel::Array(const std::vector<unsigned char>& bytes,size_t end,size_t& at,const char* tag,size_t stride,size_t& data,unsigned& count) {
     if(at>end || end-at<8 || std::memcmp(bytes.data()+at,tag,4))return false;
@@ -209,7 +239,10 @@ inline bool AnimatedHitModel::Load(const std::vector<unsigned char>& bytes) {
         if(!std::memcmp(bytes.data()+at,"SEQS",4))for(size_t p=begin;p+132<=end;p+=132)include(p+108);
         at=end;
     }
-    if(!bounds)return false;*this=std::move(candidate);return true;
+    if(!bounds)return false;
+    candidate.headRoots_.resize(candidate.nodes_.size(),0xffffffff);
+    for(const auto& head:candidate.HeadBones())candidate.headRoots_[ids[head.id]]=head.root;
+    *this=std::move(candidate);return true;
 }
 inline bool AnimatedHitModel::Intersect(const float* origin,const float* direction,float limit,int sequence,float time,Contact& contact,float headWeight) const {
     if(!Ready() || sequence<0 || size_t(sequence)>=sequences_.size() || !std::isfinite(time))return false;
@@ -240,6 +273,18 @@ inline bool AnimatedHitModel::Intersect(const float* origin,const float* directi
             nearest=distance;hit=true;// Classify the struck point, preserving shoulders/body on a face that also touches a head bone.
             float influence=weights[0]*vertices_[face.a].headWeight+weights[1]*vertices_[face.b].headWeight+weights[2]*vertices_[face.c].headWeight;
             contact={distance,influence>=headWeight};
+            if(contact.head) {
+                // Carry the struck skull's authored identity through damage. Render palettes may be
+                // in camera space, so comparing their pivots against a world-space hit picks the wrong head.
+                std::vector<float> votes(pivots_.size());unsigned corners[]={face.a,face.b,face.c};
+                for(int corner=0;corner<3;++corner) {
+                    const auto& vertex=vertices_[corners[corner]];
+                    for(unsigned bone:vertex.bones)if(headRoots_[bone]!=0xffffffff)
+                        votes[headRoots_[bone]]+=weights[corner]/vertex.bones.size();
+                }
+                float largest=0;for(unsigned root=0;root<votes.size();++root)
+                    if(votes[root]>largest){largest=votes[root];contact.headRoot=root;}
+            }
         }
     }
     return hit;

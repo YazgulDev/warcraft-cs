@@ -523,14 +523,27 @@ if((Get-FileHash $aimConfig).Hash -ne $aimHash){throw 'Aiming/currency migration
 
 # Preserve explicit alternate movement and every visual opt-out/custom value; defaults merge exactly once.
 $visualConfig=Join-Path $folder 'classic-blood-cases.ini'
-@('[Movement]','Mode=recovery','[CombatVisuals]','HeadshotBlood=false','CriticalText=false','ShellCasings=false','BloodCount=7','ShellUp=-20','ShellSpeed=222','ShellMaximum=16') | Set-Content -LiteralPath $visualConfig -Encoding ascii
+@('[Movement]','Mode=recovery','[CombatVisuals]','HeadshotBlood=false','HeadshotDecapitation=false','FatalBloodMultiplier=1.5','CriticalText=false','ShellCasings=false','BloodCount=7','ShellUp=-20','ShellSpeed=222','ShellMaximum=16') | Set-Content -LiteralPath $visualConfig -Encoding ascii
 Update-GameplayConfig $template $visualConfig
 $visualText=Get-Content -LiteralPath $visualConfig -Raw
-foreach($expected in @('Mode=recovery','HeadshotBlood=false','CriticalText=false','ShellCasings=false','BloodCount=7','ShellUp=-20','ShellSpeed=222','ShellMaximum=16','CriticalSeconds=1','ShellBounce=0.35')) {
+foreach($expected in @('Mode=recovery','HeadshotBlood=false','HeadshotDecapitation=false','FatalBloodMultiplier=1.5','CriticalText=false','ShellCasings=false','BloodCount=7','ShellUp=-20','ShellSpeed=222','ShellMaximum=16','CriticalSeconds=1','ShellBounce=0.35')) {
     if(!$visualText.Contains($expected)){throw ('Visual/movement update lost '+$expected)}
 }
 $visualHash=(Get-FileHash $visualConfig).Hash;Update-GameplayConfig $template $visualConfig
 if((Get-FileHash $visualConfig).Hash -ne $visualHash){throw 'Visual update is not idempotent.'}
+
+# Stock spray upgrades as one versioned setting group; custom/disabled and deliberate old values survive.
+foreach($bloodCase in @(@('1','16','48'),@('2','16','16'),@('1','7','7'))) {
+    $bloodConfig=Join-Path $folder ('head-blood-'+[guid]::NewGuid().ToString('N')+'.ini')
+    @('[CombatVisuals]',('BloodVersion='+$bloodCase[0]),('BloodCount='+$bloodCase[1]),'BloodSeconds=0.5','BloodScale=1','BloodSpeed=180','HeadshotBlood=false') | Set-Content $bloodConfig -Encoding ascii
+    Update-GameplayConfig $template $bloodConfig
+    $bloodText=Get-Content $bloodConfig -Raw
+    if(!$bloodText.Contains('BloodCount='+$bloodCase[2]) -or !$bloodText.Contains('HeadshotBlood=false')){throw 'Blood update lost stock/custom count or opt-out.'}
+    $expectedBlood=if($bloodCase[0] -eq '2'){@('BloodSeconds=0.5','BloodScale=1','BloodSpeed=180')}else{@('BloodSeconds=0.8','BloodScale=1.75','BloodSpeed=220')}
+    foreach($value in $expectedBlood){if(!$bloodText.Contains($value)){throw ('Blood update lost '+$value)}}
+    $bloodHash=(Get-FileHash $bloodConfig).Hash;Update-GameplayConfig $template $bloodConfig
+    if((Get-FileHash $bloodConfig).Hash -ne $bloodHash){throw 'Blood update is not idempotent.'}
+}
 
 # Only former unversioned stock HE upgrades. Later returns to 100 and custom damage/flash opt-outs survive.
 foreach($case in @(@('100','','600'),@('100','1','600'),@('300','2','600'),@('300','3','300'),@('100','2','100'),@('0','','0'),@('777','','777'))) {

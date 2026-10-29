@@ -93,6 +93,28 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
         else if(BackgroundGameplay::Enabled() && command=="heroattack")controller.TestHeroAttack();
         else if(BackgroundGameplay::Enabled() && command=="holdattack") {DWORD duration=0;input>>duration;controller.TestHoldAttack(duration);}
         else if(BackgroundGameplay::Enabled() && command=="targetstats")controller.TestLogTarget();
+        else if(BackgroundGameplay::Enabled() && (command=="aimhead" || command=="headstrike") && enemy) {
+            // Verification uses the same named-head ray and shooter damage as real inputs; no forced kill or body flag.
+            int side=0;input>>side;
+            if(controller.TestAimHead(enemy,side) && command=="headstrike") {
+                controller.TestStrike(WeaponSlots::AWP);
+                // Keep the first native death pose visible; ordinary modules never freeze a corpse.
+                wc3::AnimationRate(enemy,0);
+                wc3::Log("fixture head corpse sequence=%d active=%d",wc3::AnimationSequence(enemy),wc3::ActiveAnimationSequence(enemy));
+            }
+        }
+        else if(BackgroundGameplay::Enabled() && command=="enemyrate" && enemy) {
+            // Freeze only the disposable corpse pose for visual inspection before native decay.
+            float rate=1;input>>rate;wc3::AnimationRate(enemy,rate);
+        }
+        else if(BackgroundGameplay::Enabled() && command=="enemypause" && enemy) {
+            // Let a newly created native model initialize its pose before freezing an oracle target.
+            int value=1;input>>value;wc3::PauseUnit(enemy,value!=0);
+        }
+        else if(BackgroundGameplay::Enabled() && command=="enemyhealth" && enemy) {
+            float health=100;input>>health;using SetState=void (__cdecl*)(wc3::Handle,int,float*);
+            reinterpret_cast<SetState>(base+0x3C5EA0)(enemy,0,&health);
+        }
         else if(BackgroundGameplay::Enabled() && command=="waterenemy") {
             // Force only disposable targets onto authored shallow/deep-water cells, without pathing relocation.
             float x=256,y=0,facing=180,scale=1;std::string raw="hfoo";input>>x>>y>>raw>>scale;

@@ -20,6 +20,8 @@ IDirect3DTexture9* texture=nullptr;
 IDirect3DSurface9* color=nullptr,*depth=nullptr,*previousColor=nullptr,*previousDepth=nullptr;
 bool enabled=false,nativeUi=false,overlay=false,capturing=false,drawn=false,ready=false;
 bool hideCursor=false,engineCursor=false;
+D3DVIEWPORT9 previousViewport={};
+bool restoringViewport=false;
 uint32_t actor=0;int cropWidth=0,cropHeight=0;
 unsigned rejected=0,portraitDraws=0;
 template<class T>void Release(T*& resource) {if(resource)resource->Release();resource=nullptr;}
@@ -28,8 +30,11 @@ bool Skip(IDirect3DDevice9* device) {
     if(device!=owner || overlay || !enabled)return false;
     if(capturing) {
         // Clear after the engine bound the local viewport, and before its first portrait batch.
+        // D3D Clear obeys scissor too: the inherited world band can exclude the entire private
+        // portrait and leave old face depth behind. Release it BEFORE clearing, not just drawing.
+        device->SetRenderState(D3DRS_SCISSORTESTENABLE,FALSE);
         if(!drawn)Find(device)->clear(device,0,nullptr,D3DCLEAR_TARGET|D3DCLEAR_ZBUFFER,0xFF000000,1,0);
-        drawn=true;++portraitDraws;device->SetRenderState(D3DRS_SCISSORTESTENABLE,FALSE);return false;
+        drawn=true;++portraitDraws;return false;
     }
     if(nativeUi) {
         // Native UI renders privately when the minimap needs its terrain/fog/markers; never into world depth/color.
@@ -46,7 +51,10 @@ HRESULT STDMETHODCALLTYPE ClearTarget(IDirect3DDevice9* d,DWORD count,const D3DR
     auto f=Find(d);if(!f)return D3DERR_INVALIDCALL;
     // Console clears must not erase the expanded world. Portrait clears cover only its private target.
     if(d==owner && enabled && !overlay) {
-        if(capturing)return f->clear(d,0,nullptr,flags,colorValue,z,stencil);
+        if(capturing) {
+            d->SetRenderState(D3DRS_SCISSORTESTENABLE,FALSE);
+            return f->clear(d,0,nullptr,flags,colorValue,z,stencil);
+        }
         if(nativeUi && !D3DMinimap::Capturing(d))return D3D_OK;
     }
     return f->clear(d,count,rects,flags,colorValue,z,stencil);
@@ -119,12 +127,13 @@ void PortraitProjection(IDirect3DDevice9* device,D3DMATRIX& projection) {
     }
 }
 void Viewport(IDirect3DDevice9* device,D3DVIEWPORT9& viewport,int width,int height) {
-    if(device!=owner || overlay)return;Finish();
+    if(device!=owner || overlay || restoringViewport)return;Finish();
     // Native portrait viewports are small, bottom-console 3D regions; the world and menu previews stay untouched.
     if(!enabled || !actor || !nativeUi || viewport.Width<16 || viewport.Height<16 ||
         viewport.Width>width*.25f || viewport.Height>height*.35f || viewport.X<width*.15f ||
         viewport.X>width*.55f || viewport.Y<height*.65f || int(viewport.Y)>height)return;
     if(!Prepare(device,viewport.Width,viewport.Height))return;
+    if(!GraphicsDiagnostics::Result("NativePortrait.SaveViewport",device->GetViewport(&previousViewport)))return;
     if(FAILED(device->GetRenderTarget(0,&previousColor)))return;
     device->GetDepthStencilSurface(&previousDepth);
     if(FAILED(device->SetDepthStencilSurface(nullptr)) || FAILED(device->SetRenderTarget(0,color)) || FAILED(device->SetDepthStencilSurface(depth))) {
@@ -136,7 +145,12 @@ void Finish() {
     if(!capturing)return;
     // Restore the engine targets before its next viewport, Present or Reset; default-pool resources never survive Reset.
     owner->SetDepthStencilSurface(nullptr);owner->SetRenderTarget(0,previousColor);owner->SetDepthStencilSurface(previousDepth);
-    Release(previousColor);Release(previousDepth);capturing=false;if(drawn)ready=true;
+    Release(previousColor);Release(previousDepth);capturing=false;
+    // SetRenderTarget resets the viewport. Restore the pre-portrait mapping even when Warcraft
+    // resumes UI with only a projection change; our own SetViewport must not start another capture.
+    restoringViewport=true;
+    GraphicsDiagnostics::Result("NativePortrait.RestoreViewport",owner->SetViewport(&previousViewport));
+    restoringViewport=false;if(drawn)ready=true;
 }
 void BeforeReset(IDirect3DDevice9* device) {if(device==owner) {Dispose();D3DMinimap::BeforeReset(device);}}
 void DrawPortrait(int x,int y,int side) {

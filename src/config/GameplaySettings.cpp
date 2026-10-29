@@ -405,10 +405,19 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     // Pool snapshots are visual only; F8 clears active fragments before replacing these bounded settings.
     auto& cv=result.combatVisuals;
     cv.headshotBlood=enabled("CombatVisuals","HeadshotBlood");cv.criticalText=enabled("CombatVisuals","CriticalText");
-    cv.bloodSeconds=std::max(.1f,number("CombatVisuals","BloodSeconds",.5f,3));
-    cv.bloodScale=std::max(.25f,number("CombatVisuals","BloodScale",1,4));cv.bloodCount=unsigned(std::max(1.f,number("CombatVisuals","BloodCount",16,64)));
+    cv.headshotDecapitation=enabled("CombatVisuals","HeadshotDecapitation");
+    cv.fatalBloodMultiplier=std::max(1.f,number("CombatVisuals","FatalBloodMultiplier",3,4));
+    cv.bloodSeconds=std::max(.1f,number("CombatVisuals","BloodSeconds",.8f,3));
+    cv.bloodScale=std::max(.25f,number("CombatVisuals","BloodScale",1.75f,4));cv.bloodCount=unsigned(std::max(1.f,number("CombatVisuals","BloodCount",48,64)));
     cv.criticalSeconds=std::max(.2f,number("CombatVisuals","CriticalSeconds",1,4));cv.criticalRise=number("CombatVisuals","CriticalRise",40,200);
-    cv.bloodSpeed=number("CombatVisuals","BloodSpeed",180,500);cv.bloodGravity=number("CombatVisuals","BloodGravity",400,2000);
+    cv.bloodSpeed=number("CombatVisuals","BloodSpeed",220,500);cv.bloodGravity=number("CombatVisuals","BloodGravity",400,2000);
+    // Upgrade only the old stock spray once, including startup/F8 on an existing installation.
+    if(GetPrivateProfileIntA("CombatVisuals","BloodVersion",1,filename.c_str())<2) {
+        if(cv.bloodCount==16)cv.bloodCount=48;
+        if(cv.bloodSeconds==.5f)cv.bloodSeconds=.8f;
+        if(cv.bloodScale==1)cv.bloodScale=1.75f;
+        if(cv.bloodSpeed==180)cv.bloodSpeed=220;
+    }
     cv.criticalOffset=number("CombatVisuals","CriticalOffset",24,128);
     cv.criticalScale=std::max(.5f,number("CombatVisuals","CriticalScale",1,2));
     cv.shellCasings=enabled("CombatVisuals","ShellCasings");cv.shellSeconds=std::max(.25f,number("CombatVisuals","ShellSeconds",3,10));

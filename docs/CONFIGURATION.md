@@ -192,6 +192,8 @@ Unsupported model/pose adapters never invent a head location. Experimental 1.27a
 
 Release 0.13.0 defaults movement to `classic`; explicit `hull` and `recovery` remain available. `[CombatVisuals]` controls confirmed headshot blood, floating **Headshot** text and cosmetic casing pools. All defaults/ranges are in [release settings](RELEASE-0.13.0.md#visual-settings) and the annotated INI. F8 clears old visual pools before applying the new settings. There is no centered HEADSHOT word.
 
+The local [head-removal preview](PORTRAIT-HEAD-GORE-PREVIEW.md) increases stock blood and adds `HeadshotDecapitation=true` and `FatalBloodMultiplier=3` (1–4). Removal affects subsequent fatal hostile direct head contacts on verified 1.26a named-head models; the body follows native death/decay and resurrection restores the model. Blood can be disabled independently. Startup/F8 reload the settings; updates preserve custom values and opt-outs. `BloodVersion=2` preserves an intentional return to old blood defaults.
+
 ## Flash area stun
 
 `[Flashbang] StunAllUnits=true` and `StunDistanceFalloff=false` apply the full `UnitStunSeconds=2` to every exposed creature, including the actor and allies. False on the first restores enemy-only filtering; true on the second enables distance falloff. Both booleans accept true/false or 1/0. Physical cover blocks exposure, and existing map pauses are never released by the adapter. F8 affects subsequent throws; updates preserve saved choices.

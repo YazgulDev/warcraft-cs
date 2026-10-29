@@ -483,6 +483,8 @@ and exercised with the original historical collision regressions in addition to 
 
 `CombatVisuals` owns bounded copied-value blood/critical/casing pools. Confirmed game-thread HP loss creates target feedback and accepted conventional rounds create cases; small physics substeps update visual debris without giving it collision authority. `CombatVisualView` draws world-depth procedural droplets/cases and reuses `ItemNameView::DrawAt` for cached Unicode critical captions. Rendering never queries native unit handles. Controller suspension freezes visual time; map teardown/F8 clear the pools. The dedicated hidden WGL suite verifies actual pixels and state without campaign input.
 
+`NativeHeadGore` owns the verified 1.26a per-instance corpse palette adapter. `AnimatedHitModel` carries the struck named-head root through `UnitHitboxes`/`WeaponTrace`; no camera-space pivot is compared to world coordinates. The adapter validates authored groups and mirrors native visible/enabled geoset eligibility before collapsing selected-head palettes. Invisible geosets retain stale indices and must never be written. Shared MDX, body palettes, other skulls, damage and death events remain native. Tracking is map-local/bounded and typed identity/life checks release resurrected or replaced objects. Synthetic memory fixtures cover selection, skipped stale output, body/other-instance isolation and resurrection.
+
 `FixedFunctionState` owns OpenGL program/pipeline bindings and legacy-program/rasterizer-discard
 enables through an RAII scope. `Overlay` uses it around all mod world effects, held models and HUD;
 `HudRenderState` additionally uses it for standalone 2D passes. Unlike legacy attribute stacks, the

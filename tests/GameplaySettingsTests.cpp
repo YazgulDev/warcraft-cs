@@ -758,7 +758,27 @@ int main() {
         assert(cv.bloodCount>=1 && cv.bloodCount<=64 && cv.bloodSeconds>=.1f && cv.bloodSeconds<=3);
         assert(cv.shellGravity>=50 && cv.shellGravity<=2000 && cv.shellSpeed>=20 && cv.shellSpeed<=500 && cv.shellMaximum>=1 && cv.shellMaximum<=128);
         assert(cv.shellOffset[1]>=-64 && cv.shellOffset[1]<=64 && cv.criticalScale>=.5f && cv.criticalScale<=2 && cv.shellBounce>=0 && cv.shellBounce<=.9f);
-        if(!strcmp(value,"nan") || !strcmp(value,"inf") || !strcmp(value,"bad") || !*value)assert(cv.shellOffset[1]==-12 && cv.shellSpeed==140 && cv.bloodSeconds==.5f);
+        if(!strcmp(value,"nan") || !strcmp(value,"inf") || !strcmp(value,"bad") || !*value)assert(cv.shellOffset[1]==-12 && cv.shellSpeed==140 && cv.bloodSeconds==.8f);
+    }
+    // Startup/F8 migrates only former stock spray; explicit versioned old values and custom tuning survive.
+    {std::ofstream f(path);f<<"[CombatVisuals]\nBloodCount=16\nBloodSeconds=0.5\nBloodScale=1\nBloodSpeed=180\n";}
+    cv=GameplaySettings::Load(path).combatVisuals;
+    assert(cv.bloodCount==48 && cv.bloodSeconds==.8f && cv.bloodScale==1.75f && cv.bloodSpeed==220);
+    {std::ofstream f(path);f<<"[CombatVisuals]\nBloodVersion=2\nBloodCount=16\nBloodSeconds=0.5\nBloodScale=1\nBloodSpeed=180\n";}
+    cv=GameplaySettings::Load(path).combatVisuals;
+    assert(cv.bloodCount==16 && cv.bloodSeconds==.5f && cv.bloodScale==1 && cv.bloodSpeed==180);
+    // Startup and F8 share this parser: head removal has its own opt-out and fatal spray stays bounded.
+    for(const char* value:{"", "broken", "true", "false", "0", "1"}) {
+        {std::ofstream f(path);f<<"[CombatVisuals]\nHeadshotDecapitation="<<value<<"\n";}
+        cv=GameplaySettings::Load(path).combatVisuals;
+        assert(cv.headshotDecapitation==(strcmp(value,"false") && strcmp(value,"0")));
+        assert(cv.fatalBloodMultiplier==3);
+    }
+    for(const auto& value:std::vector<std::pair<const char*,float>>{
+        {"nan",3},{"inf",3},{"broken",3},{"",3},{"-10",1},{"0",1},{"1.5",1.5f},{"999",4}}) {
+        {std::ofstream f(path);f<<"[CombatVisuals]\nHeadshotBlood=false\nHeadshotDecapitation=false\nFatalBloodMultiplier="<<value.first<<"\n";}
+        cv=GameplaySettings::Load(path).combatVisuals;
+        assert(!cv.headshotBlood && !cv.headshotDecapitation && cv.fatalBloodMultiplier==value.second);
     }
     // Startup/F8 upgrades old stock and preserves custom, disabled and explicit newer-version values.
     for(const auto& tuning:std::vector<std::tuple<const char*,const char*,const char*,int,int,float,float>>{
