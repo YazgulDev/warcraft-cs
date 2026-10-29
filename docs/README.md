@@ -11,6 +11,7 @@
 | [Controls](CONTROLS.md) | Movement, view modes, buying, spells, inventory and squads |
 | [Settings](CONFIGURATION.md) | INI location, live reload and configuration by topic |
 | [Compatibility](COMPATIBILITY.md) | Supported versions, map limits and missing features |
+| [Direct3D 1.26a preview](DIRECT3D-126A-PREVIEW.md) | Renderer selection, automatic private components and local verification |
 | [Troubleshooting](../TROUBLESHOOTING.md) | Installation, graphics, audio and reporting a problem |
 
 Current release: [0.14.0 — downloads, upgrade and complete changes](RELEASE-0.14.0.md). Earlier local preview notes are retained as implementation history; the release notes describe final behavior.

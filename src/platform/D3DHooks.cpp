@@ -155,6 +155,14 @@ struct Source {
 };
 Source sources[kSourceCount];
 
+bool RuntimeAnchored(int source) {
+    // Search-path and system slots can alias the same DLL after early capture; a second device teaches nothing.
+    HMODULE module=sources[source].module;
+    if(!module)return false;
+    for(const auto& entry:sources)if(entry.module==module && entry.frameEndpointsHooked)return true;
+    return false;
+}
+
 // A patched factory remembers which source it came from so its CreateDevice call still forwards
 // to the right runtime. It is keyed by the factory's *vtable*, not by the factory object:
 // Direct3DCreate9 hands out a new object on every call while every object of one runtime shares a
@@ -809,7 +817,10 @@ bool HookCreate9(int source, HMODULE module, const char* label) {
 bool ProbeDevice(int source) {    Source& entry = sources[source];
     if (!entry.module) return false;
     // Nothing left to learn: this runtime's presents already reach the frame tick.
-    if (entry.frameEndpointsHooked) return true;
+    if (RuntimeAnchored(source)) return true;
+    // An exclusive device normally stops presenting while inactive. Never compete with its native restore/reset.
+    HWND engine=ResolveWindow();
+    if(!engine || IsIconic(engine) || !IsWindowVisible(engine) || GetForegroundWindow()!=engine)return false;
     // A live session must never be probed. Building a second device through the client's wrapper
     // while the engine is presenting corrupts the wrapper's own device (it is not thread safe) and
     // the process dies inside d3dx9 on the next effect pass - and the throwaway device would also
@@ -930,6 +941,12 @@ DWORD WINAPI BlindProbeWatchdog(void*) {
             rendererPreloaded = true;
             blindProbeStart = GetTickCount() + kFirstBlindProbeDelayMs;
         }
+        // Alt-Tab/minimize is not a lost hook. Leave a quiet window after focus returns for the engine's Reset.
+        HWND engine=ResolveWindow();
+        if(!engine || IsIconic(engine) || !IsWindowVisible(engine) || GetForegroundWindow()!=engine) {
+            blindProbeAt=GetTickCount()+kProbeLiveWindowMs;
+            continue;
+        }
         if (!frameAnchorSeen) {
             // Not one frame has arrived: the engine's device was built before these hooks, and only
             // a Direct3D session can be recovered. Wait out the renderer bring-up first, because a
@@ -950,7 +967,7 @@ DWORD WINAPI BlindProbeWatchdog(void*) {
         // recovers the session never reaches the fragile wrapper at all.
         for (int pass = kSourceCount; pass-- > 0;) {
             int source = pass;
-            if (!sources[source].module || sources[source].frameEndpointsHooked) continue;
+            if (!sources[source].module || RuntimeAnchored(source)) continue;
             wc3::Log("D3D9 blind re-probe source=%s attempt=%u frames=%d", sources[source].label,
                 blindProbeAttempts, frameAnchorSeen ? 1 : 0);
             ProbeDevice(source);

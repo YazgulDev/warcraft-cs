@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add optional Direct3D for 1.26a through pinned app-local d3d8to9/D3DX components and the existing D3D9 presentation adapter; prepare automatically in Player/Developer setup, retain upstream notices, backup a replaced private wrapper and keep public source archives native-free.
+- Add validated, saved Auto/OpenGL/Direct3D choices in both launchers and Direct3D source launch spelling; Auto preserves OpenGL for 1.26a and D3D9 for 1.27a, independent of RoC/TFT edition. Changes apply on next launch. [Preview and native verification](docs/DIRECT3D-126A-PREVIEW.md).
+- Avoid Direct3D recovery probes while the game is inactive/minimized and give native reset a focus-return grace period; coalesce already anchored search/system aliases instead of creating another device.
+
 ## 0.14.0 — 2026-10-28
 
 - Publish complete downloads, upgrade instructions, settings/ranges, verification and compatibility limits: [Release 0.14.0](docs/RELEASE-0.14.0.md). Retain 0.13.0 movement, economy and weapon-balance defaults.

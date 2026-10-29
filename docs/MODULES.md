@@ -1,5 +1,14 @@
 # Source modules
 
+`launcher/game/GameRenderer` owns validated renderer selection and the 1.26a
+compatibility preflight; `GameEdition` independently owns RoC/TFT tokens. The
+existing `ClientRequest` carries both preferences through install/update/play.
+`setup/direct3d-runtime.ps1` owns pinned-file validation, private installation and
+wrapper backups; `tools/fetch-direct3d.ps1` owns upstream acquisition and
+`tools/build-direct3d-bridge.ps1` owns the checked static-CRT bridge build. Player
+packaging reuses those files and notices without changing native presentation
+or gameplay modules. The D3D8-to-9 bridge adapts 1.26a to the existing D3D9 renderer.
+
 `GameBuild` owns exact host identity and address translation for 1.26a/experimental 1.27a.
 Unavailable internal adapters retain native behavior instead of installing legacy addresses.
 `D3DHooks` owns D3D9 interception. `GraphicsApi` adapts current presentation calls;

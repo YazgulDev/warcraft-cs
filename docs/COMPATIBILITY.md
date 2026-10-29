@@ -10,6 +10,11 @@ experimental **1.27a (1.27.0.52240)** with D3D9 in both Player and Developer set
 [1.27a remains a partial port without real-game verification](PORT-1.27.md). Both Reign of Chaos
 and The Frozen Throne can be selected in the launcher.
 
+The [development Direct3D preview](DIRECT3D-126A-PREVIEW.md) additionally supports
+1.26a through an app-local D3D8-to-9 bridge and a saved graphics selector. Its native
+minimap/portrait images remain unavailable; other HUD panels and weapons were
+verified in the isolated game. Published 0.14.0 assets do not contain this option.
+
 CS weapon mode requires an owned Counter-Strike 1.6 installation. Optional Crowbar,
 Tau Cannon, Gluon Gun and RPG also require complete owned Half-Life resources. **Only Warcraft modes** provides
 third-person and unarmed first-person control without Counter-Strike assets.

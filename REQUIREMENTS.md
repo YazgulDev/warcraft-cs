@@ -9,6 +9,11 @@ This release additionally accepts experimental **1.27a, Game.dll 1.27.0.52240**,
 with a D3D9 driver, in Player and Developer setup. Older 0.11.0 Player modules target 1.26a.
 See [port limitations and verification status](docs/PORT-1.27.md).
 
+The [development Direct3D preview](docs/DIRECT3D-126A-PREVIEW.md) also permits D3D9
+for 1.26a through automatically prepared app-local d3d8to9/D3DX components. Player
+bundles them; Developer obtains pinned upstream downloads. No system DirectX
+installer is required. Published 0.14.0 downloads retain the requirements below.
+
 ## Playing through the Windows launcher
 
 | Requirement | Details |

@@ -1,0 +1,3 @@
+- Added Direct3D rendering for Warcraft III 1.26a with automatic app-local compatibility components.
+- Added saved Auto, OpenGL and Direct3D launch choices in both launcher variants.
+- Preserved campaign selection, existing renderer defaults, saves and gameplay settings.

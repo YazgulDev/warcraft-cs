@@ -1,5 +1,10 @@
 # Install and play Warcraft CS
 
+Development preview: the [1.26a Direct3D build](docs/DIRECT3D-126A-PREVIEW.md) adds
+**Graphics → Auto / OpenGL / Direct3D** beside the launch controls. Run Install
+once with that preview to prepare both renderers, then choose a mode before Play.
+The saved choice applies on the next launch; Auto preserves previous defaults.
+
 [Project home](README.md) · [Documentation](docs/README.md) · [Requirements](REQUIREMENTS.md)
 
 Release **0.13.0** retains support for experimental Warcraft III **1.27a
