@@ -23,6 +23,14 @@ public static class LauncherTests {
             var developer=(Button)form.Controls["DeveloperInstallButton"];
             var update=(Button)form.Controls["UpdateButton"];
             var edition=(ComboBox)form.Controls["GameEdition"];
+            var renderer=(ComboBox)form.Controls["GameRenderer"];
+            Require(renderer!=null && renderer.Items.Count==3 && renderer.DropDownStyle==ComboBoxStyle.DropDownList && renderer.SelectedIndex==0,
+                "Validated renderer selector/default missing in launcher variant");
+            renderer.SelectedIndex=2;
+            // Exercise the real form-to-request boundary rather than only a manually constructed preference object.
+            var current=(ClientRequest)typeof(LauncherForm).GetMethod("CurrentRequest",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Instance)
+                .Invoke(form,new object[] {"Developer"});
+            Require(current.Renderer==GameRenderer.Direct3D,"Actual launcher does not pass selected renderer");
             // Reading is independent of installation consent and is present in both actual launcher variants.
             var logs=(Button)form.Controls["ReadLogsButton"];
             Require(logs!=null && logs.Enabled && logs.Text=="Read logs","Log-reader action missing or consent-gated");
@@ -70,10 +78,17 @@ public static class LauncherTests {
         // Legacy JSON keeps TFT; serialization round-trips RoC without treating data as shell arguments.
         var serializer=new System.Web.Script.Serialization.JavaScriptSerializer();
         Require(serializer.Deserialize<ClientRequest>("{}").GameEdition==GameEdition.FrozenThrone,"Legacy preferences change edition");
+        // Renderer choices are saved as validated data, independently of campaign selection and consent.
+        Require(serializer.Deserialize<ClientRequest>("{}").Renderer==GameRenderer.Auto,"Legacy renderer default changed");
+        Require(!GameRenderer.UsesDirect3D(null,false) && GameRenderer.UsesDirect3D(null,true),"Auto lost host defaults");
+        Require(GameRenderer.UsesDirect3D(GameRenderer.Direct3D,false) && !GameRenderer.UsesDirect3D(GameRenderer.OpenGL,true),"Explicit renderer ignored");
+        Reject(()=>GameRenderer.Normalize("Direct3D -arbitrary"),"Unvalidated graphics arguments accepted");
+        request.Renderer=GameRenderer.Direct3D;
         request.GameEdition=GameEdition.ReignOfChaos;
         request.Save(Path.Combine(root,"quoted-paths.json"));
         Require(serializer.Deserialize<ClientRequest>(File.ReadAllText(Path.Combine(root,"quoted-paths.json"))).GameEdition==GameEdition.ReignOfChaos,
             "RoC preference not saved");
+        Require(serializer.Deserialize<ClientRequest>(File.ReadAllText(Path.Combine(root,"quoted-paths.json"))).Renderer==GameRenderer.Direct3D,"Graphics preference not saved");
         Require(GameEdition.LaunchArguments(GameEdition.ReignOfChaos)=="-opengl -classic","RoC launch argument missing");
         Require(GameEdition.LaunchArguments(null)=="-opengl","Legacy launch default wrong");
         // Host graphics selection must not erase edition choice or retain the legacy OpenGL flag.
@@ -88,6 +103,12 @@ public static class LauncherTests {
             Require(start.Arguments==GameEdition.LaunchArguments(selected),"Selected edition lost during Play");
             Require(start.EnvironmentVariables["__COMPAT_LAYER"].Contains("HIGHDPIAWARE"),"Fullscreen Play permits DPI bitmap scaling");
         }
+        Reject(()=>GameLaunch.CreateStartInfo(destination,GameEdition.FrozenThrone,GameRenderer.Direct3D),"Native D3D8 launched without overlay compatibility files");
+        Directory.CreateDirectory(Path.Combine(destination,"Game"));
+        foreach(string name in new[] {"d3d8.dll","d3dx9_43.dll","d3dcompiler_43.dll","direct3d-runtime.json"})File.WriteAllText(Path.Combine(destination,"Game",name),"fixture component presence only");
+        Require(GameLaunch.CreateStartInfo(destination,GameEdition.ReignOfChaos,GameRenderer.Direct3D).Arguments=="-classic","Direct3D loses RoC or retains OpenGL");
+        Require(GameLaunch.CreateStartInfo(destination,GameEdition.ReignOfChaos,GameRenderer.OpenGL).Arguments=="-opengl -classic","Explicit OpenGL loses edition");
+        Require(GameLaunch.CreateStartInfo(destination,GameEdition.FrozenThrone,GameRenderer.Auto).Arguments=="-opengl","Direct3D selection changed legacy Auto");
         Require(File.ReadAllText(Path.Combine(root,"quoted-paths.json")).Contains("Warcraft"),"Request serialization failed");
         using (var memory=new MemoryStream()) {
             using (var zip=new ZipArchive(memory,ZipArchiveMode.Create,true)) { zip.CreateEntry("../escaped.txt"); }

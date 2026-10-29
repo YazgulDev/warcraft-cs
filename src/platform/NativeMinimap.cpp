@@ -1,5 +1,9 @@
 #include "NativeMinimap.hpp"
 #include "WarcraftApi.hpp"
+#ifdef WCS_D3D9
+#include "D3DMinimap.hpp"
+#include "../presentation/D3DGraphics.hpp"
+#endif
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -13,6 +17,18 @@ static bool ReadBounds(uintptr_t ui,float* bounds) {
     } __except (EXCEPTION_EXECUTE_HANDLER) {return false;}
 }
 
+static bool ReadPixelBounds(uintptr_t ui,int width,int height,RECT& rectangle) {
+    // Both renderers use the same rounded evaluated CMinimap bounds, expressed from the top left.
+    float bounds[4]={};if(!ui || width<=0 || height<=0 || !ReadBounds(ui,bounds))return false;
+    for(float value:bounds)if(!std::isfinite(value))return false;
+    if(bounds[0]<0 || bounds[1]<0 || bounds[2]>.801f || bounds[3]>.601f || bounds[2]<=bounds[0] || bounds[3]<=bounds[1])return false;
+    rectangle.left=std::clamp(int(std::ceil(bounds[0]*width/.8f)),0,width-1);
+    rectangle.right=std::clamp(int(std::floor(bounds[2]*width/.8f)),int(rectangle.left)+1,width);
+    rectangle.bottom=height-std::clamp(int(std::ceil(bounds[1]*height/.6f)),0,height-1);
+    rectangle.top=height-std::clamp(int(std::floor(bounds[3]*height/.6f)),height-int(rectangle.bottom)+1,height);
+    return true;
+}
+
 void NativeMinimap::ContextDeleted(HGLRC context) {
     if (context_!=context) return;
     // Never delete old numeric texture IDs in a replacement context.
@@ -20,19 +36,19 @@ void NativeMinimap::ContextDeleted(HGLRC context) {
 }
 void NativeMinimap::BeginFrame(uintptr_t ui,int width,int height,bool enabled) {
     ui_=ui;width_=width;height_=height;enabled_=enabled;capturing_=ready_=false;
+#ifdef WCS_D3D9
+    // Convert the same evaluated native rectangle to D3D's top-left coordinates without GL calls.
+    RECT rectangle={};bool valid=enabled && ReadPixelBounds(ui,width,height,rectangle);
+    D3DMinimap::Configure(rectangle,width,height,valid);
+#endif
 }
 bool NativeMinimap::Prepare() {
     if (!enabled_ || !ui_ || width_<=0 || height_<=0) return false;
     // 1.26a CMinimap embeds CFrame at +B4; its evaluated rectangle is +44..50.
     // Read each frame because cinematic/custom map layouts can change independently of FPS.
-    float bounds[4]={};if (!ReadBounds(ui_,bounds)) return false;
-    for (int i=0;i<4;++i) if (!std::isfinite(bounds[i])) return false;
-    float left=bounds[0],bottom=bounds[1],right=bounds[2],top=bounds[3];
-    if (left<0 || bottom<0 || right>.801f || top>.601f || right<=left || top<=bottom) return false;
-    x_=std::clamp(int(std::ceil(left*width_/.8f)),0,width_-1);
-    y_=std::clamp(int(std::ceil(bottom*height_/.6f)),0,height_-1);
-    cropWidth_=std::clamp(int(std::floor(right*width_/.8f))-x_,1,width_-x_);
-    cropHeight_=std::clamp(int(std::floor(top*height_/.6f))-y_,1,height_-y_);
+    RECT rectangle={};if(!ReadPixelBounds(ui_,width_,height_,rectangle))return false;
+    x_=rectangle.left;y_=height_-rectangle.bottom;
+    cropWidth_=rectangle.right-rectangle.left;cropHeight_=rectangle.bottom-rectangle.top;
     HGLRC current=wglGetCurrentContext();if (!current) return false;
     if (context_!=current) {ContextDeleted(context_);context_=current;}
     // Forget lost resources rather than deleting names that the host may have recycled.
@@ -153,6 +169,9 @@ void NativeMinimap::FinishFrame() {
     capturing_=false;ready_=true;
 }
 void NativeMinimap::Draw(const MinimapLayout& layout) {
+#ifdef WCS_D3D9
+    if(D3DGraphics::Active()) {D3DMinimap::Draw(layout);return;}
+#endif
     if (!ready_ || context_!=wglGetCurrentContext() || layout.side<=0) return;
     // Overlay supplies a top-left pixel projection; retain its state for subsequent HUD text.
     glPushAttrib(GL_TEXTURE_BIT|GL_CURRENT_BIT);

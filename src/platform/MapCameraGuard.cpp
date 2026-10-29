@@ -32,21 +32,26 @@ PanTimedZ panTimedZ = nullptr;
 Reset reset = nullptr;
 bool (*blocked)() = nullptr;
 unsigned blockedWrites = 0;
+bool normalizeTerrainHeight=false;
+thread_local unsigned eyePositionWrites=0;
 uintptr_t LiveCamera() {
     using GetUI = uintptr_t (__fastcall*)(int,int);
     uintptr_t ui = reinterpret_cast<GetUI>(gameBase + wc3::Rva(0x300710))(1,0);
     return ui ? *reinterpret_cast<uintptr_t*>(ui + 0x254) : 0;
 }
 float* __fastcall ClampPositionHook(uintptr_t camera, uintptr_t, float* result, const float* requested) {
-    if (!blocked || !blocked() || camera != LiveCamera()) return clampPosition(camera,result,requested);
+    if ((!eyePositionWrites && (!blocked || !blocked())) || camera != LiveCamera()) return clampPosition(camera,result,requested);
     float saved[4]; auto limits = reinterpret_cast<float*>(camera + 0x4CC);
     memcpy(saved,limits,sizeof(saved));
     // The render update repeats this clamp after SetCameraPosition. Bypass it only
-    // for the live FPS camera, retaining native transforms, terrain sampling and RTS bounds.
+    // for the live controlled camera, retaining native transforms and RTS bounds.
     limits[0]=limits[1]=-1000000.0f; limits[2]=limits[3]=1000000.0f;
     float* value = nullptr;
     __try { value=clampPosition(camera,result,requested); }
     __finally { memcpy(limits,saved,sizeof(saved)); }
+    // The verified helper adds a nine-sample terrain average independently of the physical eye.
+    // Suppress only that Z contribution on the owned camera, including deferred render evaluations.
+    if(normalizeTerrainHeight && value)value[2]=0;
     return value;
 }
 bool Block() {
@@ -80,9 +85,11 @@ void MapCameraGuard::PositionEyeTarget(float* x, float* y) {
     // also rebuilds minimap textures and transforms its inputs; persistent expansion and
     // reapplying getter values can produce a negative bitmap border on cinematic/Alt-Tab.
     limits[0]=limits[1]=-1000000.0f; limits[2]=limits[3]=1000000.0f;
+    ++eyePositionWrites;
     __try { wc3::SetCameraPosition(x,y); }
-    __finally { memcpy(limits,saved,sizeof(saved)); }
+    __finally { --eyePositionWrites;memcpy(limits,saved,sizeof(saved)); }
 }
+bool MapCameraGuard::AbsoluteEyeHeight() {return normalizeTerrainHeight;}
 
 void MapCameraGuard::Install(uintptr_t base, bool (*shouldBlock)(), HookInstaller hook) {
     blocked = shouldBlock;
@@ -100,6 +107,10 @@ void MapCameraGuard::Install(uintptr_t base, bool (*shouldBlock)(), HookInstalle
         !memcmp(reinterpret_cast<void*>(base+0x303107),clampMinX,sizeof(clampMinX));
     if(renderClamp) renderClamp=hook(reinterpret_cast<void*>(base+0x303070),reinterpret_cast<void*>(ClampPositionHook),reinterpret_cast<void**>(&clampPosition));
     wc3::Log("FPS render camera clamp installed=%d; eye follows controlled unit at map camera edges",renderClamp);
+    // Refuse height normalization on another helper layout or experimental host; keep the public-API fallback.
+    const unsigned char heightStore[]={0xD9,0x5F,0x08,0x5F,0x5E,0x5B,0x83,0xC4,0x14,0xC2,0x08,0x00};
+    normalizeTerrainHeight=renderClamp && !memcmp(reinterpret_cast<void*>(base+0x30327B),heightStore,sizeof(heightStore));
+    wc3::Log("FPS native terrain camera normalization installed=%d",normalizeTerrainHeight);
     // These 1.26a native entry points use the verified JASS cdecl signatures, including all camera setups.
     hook(reinterpret_cast<void*>(base + wc3::Rva(0x3B48B0)), reinterpret_cast<void*>(FieldHook), reinterpret_cast<void**>(&field));
     hook(reinterpret_cast<void*>(base + wc3::Rva(0x3CD760)), reinterpret_cast<void*>(FollowHook), reinterpret_cast<void**>(&follow));

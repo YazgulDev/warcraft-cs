@@ -1,0 +1,12 @@
+- Fixed precise shot alignment using the full rendered unit transform and visual scale.
+- Fixed headshot classification on mixed head and neck faces at the actual contact.
+- Enabled direct Tau and Gluon headshot bonuses with a configurable opt-out.
+- Fixed verified head blood depending on the optional damage bonus or caption.
+- Fixed Q friendly-fire preferences being lost on F8 or restart and improved effective-damage feedback.
+- Fixed campaign base startup near available workers and added native mine and ghoul-lumber support.
+- Added configurable army progress, blocker feedback and bounded construction-site retries.
+- Fixed inherited OpenGL programs and separate pipelines hiding HUD, weapons and effects.
+- Added per-pass OpenGL errors, supported driver messages and failed D3D9 operation diagnostics.
+- Added shot/model traces and original context with best-effort stacks for handled native faults.
+- Enabled F8-reloadable GraphicsDebug by default with bounded logs and duplicate counts.
+- Preserved saved settings, classic movement, weapon balance and optional army escort.

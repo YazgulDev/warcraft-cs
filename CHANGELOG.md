@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- Remove the verified 1.26a camera helper's extra averaged terrain height only during controlled views, preventing slope-dependent view shifts without changing physical movement/collision. Preserve normal RTS/unrelated cameras and unverified-host fallback. Add native flat/slope/standing/walking/jumping camera oracles and pitched map-edge regressions. [Camera preview](docs/CAMERA-SLOPE-PREVIEW.md).
+- Add the native minimap to Direct3D with the same placement, M toggle, size setting and hint wrapping as OpenGL. Capture native UI on a private GPU canvas and crop terrain/fog/markers without world color/depth writes or per-frame CPU readback; release capture surfaces on Reset and restore the world target on a second world submission before Present.
+- Correct the Direct3D portrait camera for the square HUD while retaining native vertical framing. Verify the shared item icons, charges, potion use, mouse inventory and slot moves on an owned hero in OpenGL/Direct3D, including fullscreen and live HUD scaling.
+- Fix the 1.26a Direct3D preview leaking native cursor/health-bar geometry into FPS; filter the native UI submission phase and retain the configured mod health bars. Hide the D3D hardware cursor during mouse look and restore its requested visibility for free-cursor menus/RTS.
+- Capture the native animated portrait into a separate Direct3D color/depth target. End capture at the following UI projection even when Warcraft omits another viewport call; restore engine surfaces and release default-pool resources before Reset.
+
+- Add optional Direct3D for 1.26a through pinned app-local d3d8to9/D3DX components and the existing D3D9 presentation adapter; prepare automatically in Player/Developer setup, retain upstream notices, backup a replaced private wrapper and keep public source archives native-free.
+- Add validated, saved Auto/OpenGL/Direct3D choices in both launchers and Direct3D source launch spelling; Auto preserves OpenGL for 1.26a and D3D9 for 1.27a, independent of RoC/TFT edition. Changes apply on next launch. [Preview and native verification](docs/DIRECT3D-126A-PREVIEW.md).
+- Avoid Direct3D recovery probes while the game is inactive/minimized and give native reset a focus-return grace period; coalesce already anchored search/system aliases instead of creating another device.
+
+## 0.14.0 — 2026-10-28
+
+- Publish complete downloads, upgrade instructions, settings/ranges, verification and compatibility limits: [Release 0.14.0](docs/RELEASE-0.14.0.md). Retain 0.13.0 movement, economy and weapon-balance defaults.
+- Align precise firearm/energy contacts with the complete rendered transform and separate visual scale; persist Q allied-targeting choices and report effective friendly damage/save failures.
+- Update Player-package regressions for adaptive local Miles exports, preserving missing-host, atomic malformed-export and legacy fingerprint rejection checks.
 - Expand graphics diagnostics with per-pass OpenGL error checkpoints, scoped driver messages, failed D3D9 HRESULT operations, immediate shot/model-visibility decisions and resource-load failures. Add validated F8-reloadable Logging.GraphicsDebug=true with update preservation and bounded duplicate counts. Enrich already handled controller/Army AI faults with original exception/module/register data and best-effort frame chains. [Diagnostics preview](docs/GRAPHICS-DIAGNOSTICS-PREVIEW.md).
 - Isolate fixed-function OpenGL effects, weapons and HUD from inherited GLSL/separate/ARB programs and rasterizer discard; restore bindings/enables explicitly and include separate pipeline state in diagnostics. Add real WGL pixel/state regressions for issue #10. [HUD repair preview](docs/HUD-ISSUE-10-PREVIEW.md).
 - Classify mixed head/neck faces at the actual contact using fractional named-head skin weights, retaining physical occlusion and unverified-model exclusions.

@@ -1,5 +1,13 @@
 # Diagnostic logging
 
+Startup logs `FPS native terrain camera normalization installed=1` when the verified
+1.26a helper can remove its independently averaged terrain height from the owned FPS
+camera. A value of zero retains the original public-API fallback, including experimental
+1.27a. This correction does not change physical movement or native RTS terrain handling.
+The opt-in movement-test camera scene logs desired and observed eye positions plus
+`submittedEyeError`, accounting for the native getter's previous-submission delay.
+Ordinary clients do not expose that test scene or its request mailbox.
+
 Startup/settings reload logs every resolved keyboard shortcut and spell slot override. Invalid or
 conflicting layouts revert as a whole. Spell records identify unit/slot/rawcode/native order, target
 form and point, engine acceptance and mana. Unlearned/passive/unsupported notices are logged too.

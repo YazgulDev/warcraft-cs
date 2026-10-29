@@ -1,4 +1,4 @@
-# Player packages contain only our two x86 modules and their notices, never retail Warcraft libraries.
+# Player packages contain project modules, optional graphics redistributables and notices, never game libraries.
 . (Join-Path $PSScriptRoot 'host-build.ps1')
 . (Join-Path $PSScriptRoot 'miles-forwarders.ps1')
 function Assert-OrdinaryRuntimePath([string]$Path) {
@@ -27,13 +27,18 @@ function Read-RuntimePackage([byte[]]$Bytes,[string]$Revision,[string]$Version) 
     try {
         $allowed=@('runtime.json','WarcraftCS.mix','Mss32.dll','NOTICE','LICENSE-MIT','LICENSE-APACHE',
             'licenses/MinHook-BSD-2-Clause.txt','licenses/ReGameDLL_CS-MIT.txt','licenses/ReHLDS-MIT.txt')
+        # Old releases retain their exact layout; new bundles must contain the complete bridge and both notices.
+        $graphics=$null -ne $zip.GetEntry('d3d8.dll')
+        if($graphics){$allowed+=@('d3d8.dll','d3dx9_43.dll','d3dcompiler_43.dll','direct3d-runtime.json',
+            'licenses/d3d8to9-BSD-2-Clause.txt','licenses/Microsoft-DXSDK-D3DX.txt')}
         if ($zip.Entries.Count -ne $allowed.Count) { throw 'Runtime package has unexpected or missing files.' }
         $files=@{};$total=0L
         # Validate the complete fixed layout and size before extracting anything onto disk.
         foreach ($entry in $zip.Entries) {
             if ($entry.FullName -cnotin $allowed -or $files.ContainsKey($entry.FullName)) { throw 'Unsafe or duplicate runtime package entry.' }
             $total+=$entry.Length
-            if ($total -gt 5000000) { throw 'Runtime package is too large.' }
+            $limit=if($graphics){8000000}else{5000000}
+            if ($total -gt $limit) { throw 'Runtime package is too large.' }
             $stream=$entry.Open();$content=[IO.MemoryStream]::new()
             try { $stream.CopyTo($content);$files[$entry.FullName]=$content.ToArray() } finally { $stream.Dispose();$content.Dispose() }
         }
@@ -52,6 +57,7 @@ function Read-RuntimePackage([byte[]]$Bytes,[string]$Revision,[string]$Version) 
             if ($expected -cnotmatch '^[0-9a-f]{64}$' -or (Get-RuntimeHash $files[$name]) -cne $expected) { throw "Runtime package checksum mismatch: $name" }
         }
         foreach ($name in @('WarcraftCS.mix','Mss32.dll')) { Assert-X86Module $files[$name] }
+        if($graphics){foreach($name in @('d3d8.dll','d3dx9_43.dll','d3dcompiler_43.dll')){Assert-X86Module $files[$name]}}
         return $files
     } finally { $zip.Dispose();$memory.Dispose() }
 }

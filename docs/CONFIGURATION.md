@@ -195,9 +195,9 @@ Startup/F8 loads the same validated values as fresh installation. Damage accepts
 
 Setup and the loader upgrade former stock values once: RPG 100 damage and 525 radius (or unversioned 375), M3 x3, XM1014 x2.4, and HE 300 (or unversioned 100). Custom values, explicit zero and other preserved versioned settings remain authoritative. `[RPG] DamageVersion=2` / `BlastVersion=3`, each shotgun's `MultiplierVersion=2`, and `[HEGrenade] DamageVersion=3` record the current balance. After an update, editing values back to older stock numbers with those markers retains them. Prior version-2 HE 100 and RPG radius 375 are also preserved. Missing keys are inserted once; repeated upgrades do not duplicate/reset them.
 
-## Local headshot and campaign fix preview
+## Headshot and campaign improvements (0.14.0)
 
-The [local follow-up](HEADSHOTS-CAMPAIGN-PREVIEW.md) adds these editable startup/F8 settings; installed 0.13.0 releases need the new native module first. Installation updates add missing keys and preserve saved choices.
+[Release 0.14.0](RELEASE-0.14.0.md) adds these editable startup/F8 settings; older installations need the new native module first. Installation updates add missing keys and preserve saved choices.
 
 | Section / key | Default | Bounds / effect |
 | --- | --- | --- |
@@ -206,5 +206,8 @@ The [local follow-up](HEADSHOTS-CAMPAIGN-PREVIEW.md) adds these editable startup
 | ArmyAI / ShowStatus | true | true/false or 1/0; report development/blockers when state changes; U on/off still confirms |
 | ArmyAI / PlacementAttempts | 12 | 1–32 total native build-site attempts per AI decision |
 | ArmyAI / LumberWorkers | 2 | 0–10 unassigned undead ghouls for native tree harvesting; zero stops new assignments |
+| Logging / GraphicsDebug | true | true/false or 1/0; per-pass OpenGL errors/driver messages and failed D3D9 calls; F8 reloads |
 
 Head/contact policy applies to subsequent shots; visual-only beam tracking cannot emit damage or blood. A confirmed damaging named-head contact emits blood independently of the optional Headshots bonus; the existing HeadshotBlood flag can still disable it. A disabled bonus produces no Headshot label. Army settings apply on the next active AI decision. F8 requests a current status report; already accepted native orders retain ownership. Lumber changes never cancel existing manual harvesting. No resources or workers are created to bypass a campaign restriction.
+
+GraphicsDebug is independent of Logging.Detailed. Detailed=false suppresses optional TRACE summaries/snapshots, while enabled graphics ERROR/WARN messages and essential handled-fault data remain. Repeated graphics errors share bounded suppression with counts; existing file rotation remains 8 MiB plus three archives by default. Synchronous driver delivery and additional state queries can affect frame time; GraphicsDebug=false disables the added observer live on F8. See [diagnostic coverage and limits](DIAGNOSTICS.md).

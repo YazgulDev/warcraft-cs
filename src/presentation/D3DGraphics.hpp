@@ -8,6 +8,8 @@ namespace D3DGraphics {
 bool Active();
 bool BeginFrame(IDirect3DDevice9* device,HDC dc,int width,int height);
 void EndFrame();
+// Borrow a native render-target texture for one HUD quad; ownership stays with the capture adapter.
+void DrawTexture(IDirect3DTexture9* texture,int x,int y,int width,int height);
 void APIENTRY Begin(GLenum mode);
 void APIENTRY End();
 void APIENTRY Vertex3f(GLfloat x,GLfloat y,GLfloat z);

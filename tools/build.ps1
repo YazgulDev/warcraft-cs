@@ -20,6 +20,8 @@ $hookRoot=Join-Path $MinHookDirectory 'include'
 $sources = @('platform/WarcraftApi.cpp', 'input/MouseLook.cpp', 'movement/MovementPhysics.cpp', 'platform/WarcraftCollision.cpp', 'platform/WeaponTrace.cpp', 'platform/ItemHover.cpp', 'platform/ClassicWarcraftCollision.cpp', 'presentation/FirstPersonCamera.cpp', 'presentation/ItemNameView.cpp','presentation/CombatVisuals.cpp','presentation/CombatVisualView.cpp', 'platform/MapCameraGuard.cpp', 'platform/ActorRenderFilter.cpp', 'audio/GameAudio.cpp', 'presentation/FullscreenView.cpp', 'presentation/HitFeedback.cpp', 'presentation/ScopeView.cpp', 'combat/UnitStatus.cpp', 'geometry/ModelBounds.cpp', 'platform/SpriteTransform.cpp', 'combat/UnitHitboxes.cpp', 'combat/DestructableHitboxes.cpp', 'combat/PlantedBomb.cpp', 'combat/WeaponRecoil.cpp', 'application/ShooterController.cpp', 'presentation/GunMesh.cpp', 'presentation/Overlay.cpp', 'runtime/PluginRuntime.cpp', 'Plugin.cpp', 'input/InputDispatcher.cpp') | ForEach-Object { '"' + (Join-Path $modRoot "src/$_") + '"' }
 # Host selection and the alternate graphics backend keep existing view layouts and gameplay independent.
 $sources += @('platform/GameBuild.cpp','platform/D3DHooks.cpp','presentation/D3DGraphics.cpp','presentation/D3DTextures.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
+$sources += '"'+(Join-Path $modRoot 'src/platform/D3DNativeUi.cpp')+'"' # Native D3D UI filtering and animated portrait capture.
+$sources += '"'+(Join-Path $modRoot 'src/platform/D3DMinimap.cpp')+'"' # Private native UI canvas and GPU minimap crop.
 # Captured native faults keep module offsets/registers without installing a process-wide exception handler.
 $sources += '"'+(Join-Path $modRoot 'src/platform/NativeFaultDiagnostics.cpp')+'"'
 # Native spell fixtures are opt-in and are excluded from the installed normal build.
@@ -98,6 +100,7 @@ $testDefine = ' /DWCS_D3D9'
 if ($TestMovement) {
     # Movement requests and destructive fixtures exist only in this explicit disposable-map build.
     $sources += '"'+(Join-Path $modRoot 'tests/MovementScene.cpp')+'"'
+    $sources += '"'+(Join-Path $modRoot 'tests/CameraTerrainScene.cpp')+'"'
     $testDefine += ' /DWCS_MOVEMENT_TEST'
 }
 if ($TestFloatingText) {

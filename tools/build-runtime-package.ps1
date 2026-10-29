@@ -17,11 +17,17 @@ Copy-Item -LiteralPath $original -Destination (Join-Path $build 'WarcraftOrigina
 if ($LASTEXITCODE) { throw 'Player native build failed.' }
 $package=Join-Path $build 'package'
 New-Item -ItemType Directory -Path (Join-Path $package 'licenses') -Force | Out-Null
+# Bundle pinned compatibility components in the Player EXE only; public source archives remain native-free.
+& (Join-Path $PSScriptRoot 'fetch-direct3d.ps1')
+$graphics=Join-Path $root '.local/dependencies/direct3d'
 $files=@('WarcraftCS.mix','Mss32.dll','NOTICE','LICENSE-MIT','LICENSE-APACHE',
-    'licenses/MinHook-BSD-2-Clause.txt','licenses/ReGameDLL_CS-MIT.txt','licenses/ReHLDS-MIT.txt')
+    'licenses/MinHook-BSD-2-Clause.txt','licenses/ReGameDLL_CS-MIT.txt','licenses/ReHLDS-MIT.txt',
+    'd3d8.dll','d3dx9_43.dll','d3dcompiler_43.dll','direct3d-runtime.json',
+    'licenses/d3d8to9-BSD-2-Clause.txt','licenses/Microsoft-DXSDK-D3DX.txt')
 $hashes=@{}
 foreach ($name in $files) {
-    $source=if ($name -in @('WarcraftCS.mix','Mss32.dll')) { Join-Path $build $name } else { Join-Path $root $name }
+    $source=if ($name -in @('WarcraftCS.mix','Mss32.dll')) { Join-Path $build $name }
+        elseif($name -in @('d3d8.dll','d3dx9_43.dll','d3dcompiler_43.dll','direct3d-runtime.json')){Join-Path $graphics $name}else{Join-Path $root $name}
     Copy-Item -LiteralPath $source -Destination (Join-Path $package $name) -Force
     $hashes[$name]=(Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash.ToLowerInvariant()
 }
@@ -36,4 +42,4 @@ $contents=@(Get-ChildItem -LiteralPath $package -Recurse -File | ForEach-Object 
 if ($contents.Count -ne $files.Count+1 -or @($contents | Where-Object { $_ -notin $files -and $_ -ne 'runtime.json' }).Count) { throw 'Unexpected file in Player package staging.' }
 if (Test-Path -LiteralPath $OutputFile) { Remove-Item -LiteralPath $OutputFile -Force }
 [IO.Compression.ZipFile]::CreateFromDirectory($package,[IO.Path]::GetFullPath($OutputFile))
-Write-Output 'Built Player runtime: two original project modules and license notices; no retail game DLLs.'
+Write-Output 'Built Player runtime: project modules, pinned Direct3D compatibility components and notices; no retail game DLLs.'

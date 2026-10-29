@@ -1,11 +1,25 @@
 # Source modules
 
+`launcher/game/GameRenderer` owns validated renderer selection and the 1.26a
+compatibility preflight; `GameEdition` independently owns RoC/TFT tokens. The
+existing `ClientRequest` carries both preferences through install/update/play.
+`setup/direct3d-runtime.ps1` owns pinned-file validation, private installation and
+wrapper backups; `tools/fetch-direct3d.ps1` owns upstream acquisition and
+`tools/build-direct3d-bridge.ps1` owns the checked static-CRT bridge build. Player
+packaging reuses those files and notices without changing native presentation
+or gameplay modules. The D3D8-to-9 bridge adapts 1.26a to the existing D3D9 renderer.
+
 `GameBuild` owns exact host identity and address translation for 1.26a/experimental 1.27a.
 Unavailable internal adapters retain native behavior instead of installing legacy addresses.
 `D3DHooks` owns D3D9 interception. `GraphicsApi` adapts current presentation calls;
 `D3DGraphics` owns draw/state/matrix isolation, `D3DTextures` owns texture lifetime,
 and `RenderMatrix` owns portable matrix math. Gameplay and layout keep their existing
-modules. Native GL minimap/portrait capture remains separate. See `PORT-1.27.md`.
+modules. `D3DNativeUi` owns native draw-slot filtering, hardware cursor ownership
+and the portrait target/square camera. `D3DMinimap` owns the private native UI
+color/depth canvas, GPU crop and restoration before the mod canvas. Portrait capture
+can nest inside that target. `NativeMinimap` supplies the same evaluated bounds
+to both backends; `Overlay` retains common HUD placement and existing inventory
+adapters. The WGL captures retain their own context resources. See `PORT-1.27.md`.
 
 `HudDiagnostics` samples phase-specific GL state independently of drawing, preserves
 queried texture state and the GL error queue, and records labelled font lifecycle
@@ -158,6 +172,13 @@ keys, preserving other cameras and foreign edits. `WarcraftApi` validates and re
 channel; no shared constant or game file is patched. `FirstPersonCamera` writes the configured far
 clip and `FpsProjection` matches the live native field when adjusting the world's near plane,
 leaving portrait and native cinematic projection independent, including a clamped fallback.
+
+`MapCameraGuard` also removes the verified 1.26a camera helper's averaged terrain Z only
+for the controlled live FPS camera, during owned setters and deferred render evaluations.
+`FirstPersonCamera` then supplies the physical eye height directly. Signature rejection
+retains the previous public-API compensation; RTS and unrelated cameras keep native terrain.
+The opt-in `CameraTerrainScene` exercises real slope, walking and jumping submissions in
+movement-test builds; it is excluded from normal clients. Physical movement is independent.
 
 Tree movement bounds reuse `TreeTrunkMesh`'s standing ground-connected components, the same decoded
 geometry used for destructable shots. Canopy cards and death-only stumps do not expand the player

@@ -14,6 +14,7 @@ $root=Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'prebuilt-runtime.ps1')
 . (Join-Path $PSScriptRoot 'gameplay-config.ps1')
 . (Join-Path $PSScriptRoot 'warcraft-runtime.ps1')
+. (Join-Path $PSScriptRoot 'direct3d-runtime.ps1')
 . (Join-Path $PSScriptRoot 'host-build.ps1')
 . (Join-Path $root 'tools/sword-model.ps1')
 # Keep the owner's Grudge model and full authored animation set across repeated setup runs.
@@ -82,6 +83,15 @@ if ($InstallMode -eq 'Developer') {
     # Match the ordinary build's first-install policy without replacing the owner's customized INI.
     $config=Join-Path $runtime 'WarcraftCS/WarcraftCS.ini'
     Update-GameplayConfig (Join-Path $root 'config/WarcraftCS.ini') $config
+}
+# Both renderers are ready after installation, so switching later is offline and requires no extra setup.
+if((Get-WarcraftHostBuild $runtime).Minor -eq 26) {
+    $graphics=$PrebuiltDirectory
+    if($InstallMode -eq 'Developer') {
+        $graphics=Join-Path $root '.local/dependencies/direct3d'
+        & (Join-Path $root 'tools/fetch-direct3d.ps1') -Destination $graphics
+    }
+    Install-Direct3DRuntime $graphics $runtime
 }
 # The explicit launcher choice replaces only this profile key, preserving all gameplay customization.
 . (Join-Path $PSScriptRoot 'installation-profile.ps1')

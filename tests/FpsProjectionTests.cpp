@@ -18,7 +18,7 @@ Bits (__cdecl* GetCameraField)(int)=Get;
 Bits (__cdecl* GetCameraTargetPositionZ)()=TargetZ;
 float Real(Bits value) {float result;std::memcpy(&result,&value,4);return result;}
 }
-namespace MapCameraGuard {void PositionEyeTarget(float*,float*) {}}
+namespace MapCameraGuard {void PositionEyeTarget(float*,float*) {} bool AbsoluteEyeHeight(){return false;}}
 
 int main() {
     // Every supported/reloaded world distance preserves nearby ground and isolates the portrait camera.

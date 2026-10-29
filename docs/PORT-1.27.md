@@ -13,7 +13,9 @@ The original game is never patched on disk.
 
 Source Play and launchers built from this source select **D3D9 for 1.27a** and
 retain **OpenGL for 1.26a**. Source launch accepts
-`tools/launch.ps1 -Renderer Auto|OpenGL|D3D9`; Auto is the default, applied on the
+`tools/launch.ps1 -Renderer Auto|OpenGL|Direct3D`; the earlier D3D9 spelling remains
+an alias. The [development 1.26a Direct3D preview](DIRECT3D-126A-PREVIEW.md) also
+adds a saved launcher selector. Auto is the default, applied on the
 next launch. OpenGL on 1.27a is a diagnostic path, not a verified combination.
 
 New unified Player packages include the shared 1.26a/1.27a module and an adaptive

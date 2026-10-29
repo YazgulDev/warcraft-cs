@@ -18,8 +18,8 @@ void UnitHudView::Draw(const UnitHudSnapshot& unit,const UnitHudLayout& l,Native
     glPushAttrib(GL_ALL_ATTRIB_BITS);glDisable(GL_TEXTURE_2D);glColor4f(.50f,.40f,.20f,1);
     Rect(float(l.x-3),float(l.y-3),float(l.portrait+6),float(l.portrait+6));
     glColor4f(.025f,.025f,.035f,.96f);Rect(float(l.x),float(l.y),float(l.portrait),float(l.portrait));
-    // Native portrait capture currently belongs to the OpenGL backend only.
-    if(!GraphicsBackend::IsD3D9())portrait.Draw(l.x,l.y,l.portrait);glDisable(GL_TEXTURE_2D);
+    // Both backends supply the native animated portrait through their own capture target.
+    portrait.Draw(l.x,l.y,l.portrait);glDisable(GL_TEXTURE_2D);
     float x=float(l.x+l.portrait+l.gap),barHeight=l.portrait*.26f;
     auto bar=[&](float y,float fraction,float r,float g,float b,const char* label) {
         glDisable(GL_TEXTURE_2D);glColor4f(.35f,.29f,.16f,1);Rect(x-2,y-2,float(l.bars+4),barHeight+4);
