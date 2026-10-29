@@ -18,7 +18,7 @@ public:
     size_t HeadVertices() const {return size_t(std::count_if(vertices_.begin(),vertices_.end(),[](const Vertex& v){return v.headWeight>0 && v.usable;}));}
     const Bounds3& BroadBounds() const {return broad_;}
     const std::vector<Sequence>& Sequences() const {return sequences_;}
-    struct HeadBone {unsigned id=0,root=0;std::array<float,3> pivot={};};
+    struct HeadBone {unsigned id=0,root=0;std::array<float,3> pivot={};unsigned depth=0;};
     std::vector<HeadBone> HeadBones() const;
     std::vector<std::vector<unsigned>> BoneGroups() const;
     bool Intersect(const float* origin,const float* direction,float limit,int sequence,float time,Contact& contact,float headWeight=.35f) const;
@@ -48,13 +48,13 @@ inline std::vector<AnimatedHitModel::HeadBone> AnimatedHitModel::HeadBones() con
     // Keep native MDX object IDs and separate head roots, including descendants of each named head.
     // A two-headed model must never merge both heads into a single removal group.
     for(const auto& node:nodes_) {
-        const Node* current=&node;unsigned root=0xffffffff;
+        const Node* current=&node;unsigned root=0xffffffff,rootDepth=0;
         for(size_t depth=0;current && depth<nodes_.size();++depth) {
-            if(current->head)root=current->id;
+            if(current->head){root=current->id;rootDepth=unsigned(depth);}
             auto found=std::find_if(nodes_.begin(),nodes_.end(),[&](const Node& parent){return parent.id==current->parent;});
             current=found==nodes_.end() ? nullptr : &*found;
         }
-        if(root!=0xffffffff && root<pivots_.size())result.push_back({node.id,root,pivots_[root]});
+        if(root!=0xffffffff && root<pivots_.size())result.push_back({node.id,root,pivots_[root],rootDepth});
     }
     return result;
 }

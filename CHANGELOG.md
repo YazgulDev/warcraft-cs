@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fix stretched fatal-headshot meshes on naga and Crypt Fiends: choose an anchor from bones actually skinned by visible geosets, never an uncomputed authoring-parent matrix. Replace only the struck head's contribution to blended neck/jaw groups, including weights below the hit-classification threshold; retain body and other-head contributions.
 - Fix frozen Direct3D portraits by disabling inherited scissor before clearing private color/depth, preventing old face depth from rejecting later animation frames. Restore the pre-portrait viewport even when native UI resumes by projection alone; add an actual HAL regression that fails before the clear-order fix.
 - Add configurable fatal headshot removal for verified 1.26a named-head models. Preserve the body, native death events and resurrection; carry the struck skull's identity from the accepted triangle so two-headed creatures lose only the struck head. Refuse stale/invisible native palettes.
 - Increase stock headshot blood to 48 droplets, 1.75 scale, 0.8 seconds and speed 220; fatal contacts use a configurable 3x burst, including a lethal pellet immediately after a nonfatal pellet. Preserve custom/disabled/versioned settings on startup, F8 and update.

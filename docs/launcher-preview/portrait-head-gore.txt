@@ -4,3 +4,4 @@
 - Fixed a lethal pellet losing its blood burst immediately after a nonfatal head pellet.
 - Preserved custom blood settings, explicit visual opt-outs and existing gameplay defaults during updates.
 - Fixed Direct3D portrait animation freezing when the previous frame depth was left uncleared by the native world scissor.
+- Fixed stretched headshot meshes on naga and Crypt Fiends by using active skin bones and preserving blended neck and jaw contributions.

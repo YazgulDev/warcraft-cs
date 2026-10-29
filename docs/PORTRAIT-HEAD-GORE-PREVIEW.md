@@ -6,6 +6,8 @@ Direct3D portrait capture now disables inherited scissor before clearing its pri
 
 A fatal hostile direct head contact can remove the struck named head while the body keeps its native death animation and decay. Two-headed models retain the other head. Native damage, kill triggers, experience and resurrection keep their existing behavior. This is a render-only 1.26a adapter for validated classic named-head rigs; unsupported models/hosts keep their normal death. No new game assets are distributed.
 
+The stretching fix resolves the anchor from a bone actually used by the current visible skin. Authoring head parents on naga and Crypt Fiends are not necessarily skinned; their uncomputed matrix slots cannot position a removed head. Blended groups now replace only the struck head's averaged contribution, preserving native neck/body/jaw and other-skull contributions. Gameplay's headshot weight threshold no longer creates a visual cutoff in blended skin.
+
 `[CombatVisuals]` settings apply at startup/F8 and installer updates preserve saved choices:
 
 | Key | Default | Meaning |
@@ -24,7 +26,9 @@ A fatal hostile direct head contact can remove the struck named head while the b
 
 Real 1.26a OpenGL and Direct3D shots were verified on a footman and a two-headed ogre in the isolated test map. The ogre retained its body and the other head in both renderers. A disposable test-only clock freeze made the first corpse pose inspectable; ordinary modules never freeze corpses. Eight consecutive Arthas portrait samples continued changing after the fix; the earlier Direct3D capture became almost static, while the OpenGL reference animated normally. The native portrait clock and skin data also continued advancing.
 
-Synthetic native-palette tests cover body/other-model isolation, separate heads, resurrection, stale identities, invisible/disabled geosets and inseparable groups shared by two skulls. A shared group is left intact to preserve the other head. Relevant configuration, precise-shot, visual-pool and hidden HAL/WGL checks accompany the preview. Real 1.27a head removal is unsupported and no native 1.27a test is claimed.
+Synthetic native-palette tests cover body/other-model isolation, separate heads, resurrection, stale identities, invisible/disabled geosets, uncomputed authoring-parent matrices, blended neck skin and groups shared by two skulls. Shared groups preserve the other skull's native contribution. Relevant configuration, precise-shot, visual-pool and hidden HAL/WGL checks accompany the preview. Real 1.27a head removal is unsupported and no native 1.27a test is claimed.
+
+The stretching follow-up exercised fatal AWP contacts on Crypt Fiends, Naga Myrmidons and Naga Sirens in the private 1.26a OpenGL/Direct3D lab, plus an ogre check. Native logs confirmed anchors from the used mesh bones rather than unused authoring parents; screenshots and synthetic native averaging regressions checked the resulting shape. The stale-parent regression fails before the correction and passes after it, including 1/3 and 1/2 neck weights and validation before any palette write.
 
 <!-- launcher-summary
 - Added configurable fatal headshots that remove the struck head while preserving the body and native death events on verified 1.26a models.
@@ -33,4 +37,5 @@ Synthetic native-palette tests cover body/other-model isolation, separate heads,
 - Fixed a lethal pellet losing its blood burst immediately after a nonfatal head pellet.
 - Preserved custom blood settings, explicit visual opt-outs and existing gameplay defaults during updates.
 - Fixed Direct3D portrait animation freezing when the previous frame depth was left uncleared by the native world scissor.
+- Fixed stretched headshot meshes on naga and Crypt Fiends by using active skin bones and preserving blended neck and jaw contributions.
 -->

@@ -485,6 +485,8 @@ and exercised with the original historical collision regressions in addition to 
 
 `NativeHeadGore` owns the verified 1.26a per-instance corpse palette adapter. `AnimatedHitModel` carries the struck named-head root through `UnitHitboxes`/`WeaponTrace`; no camera-space pivot is compared to world coordinates. The adapter validates authored groups and mirrors native visible/enabled geoset eligibility before collapsing selected-head palettes. Invisible geosets retain stale indices and must never be written. Shared MDX, body palettes, other skulls, damage and death events remain native. Tracking is map-local/bounded and typed identity/life checks release resurrected or replaced objects. Synthetic memory fixtures cover selection, skipped stale output, body/other-instance isolation and resurrection.
 
+The anchor uses the closest head descendant actually referenced by current visible skin; unused authoring parents can have uncomputed native matrices. `HeadBone.depth` is parsed rig metadata, independent of renderer state. Blended groups retain native averaging for every nonselected bone and collapse only the selected skull's contribution, avoiding discontinuities at the neck/jaw or between skulls. The hit-classification weight controls accepted headshots, never a binary visual skin cutoff.
+
 `FixedFunctionState` owns OpenGL program/pipeline bindings and legacy-program/rasterizer-discard
 enables through an RAII scope. `Overlay` uses it around all mod world effects, held models and HUD;
 `HudRenderState` additionally uses it for standalone 2D passes. Unlike legacy attribute stacks, the

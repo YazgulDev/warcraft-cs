@@ -22,7 +22,7 @@ template<class T>bool Read(uintptr_t address,T& value) {
 uintptr_t Pointer(uintptr_t address) {uintptr_t value=0;Read(address,value);return value;}
 bool Alive(wc3::Handle unit) {return wc3::Real(wc3::GetUnitState(unit,0))>.405f;}
 bool BonePoint(uintptr_t matrices,const AnimatedHitModel::HeadBone& head,std::array<float,3>& point) {
-    std::array<float,12> matrix={};if(!Read(matrices+head.root*sizeof(matrix),matrix))return false;
+    std::array<float,12> matrix={};if(!Read(matrices+head.id*sizeof(matrix),matrix))return false;
     // Native palette matrices are row-vector 3x4 transforms in the current render space.
     for(int axis=0;axis<3;++axis) {
         point[axis]=matrix[9+axis];for(int row=0;row<3;++row)point[axis]+=head.pivot[row]*matrix[row*3+axis];
@@ -30,23 +30,17 @@ bool BonePoint(uintptr_t matrices,const AnimatedHitModel::HeadBone& head,std::ar
     }
     return true;
 }
-unsigned HeadRoot(const Rig& rig,const std::vector<unsigned>& group,float weight) {
-    std::map<unsigned,unsigned> votes;
-    for(unsigned bone:group)for(const auto& head:rig.heads)if(head.id==bone){++votes[head.root];break;}
-    // A shared group spanning two skulls cannot be collapsed without deforming the other head.
-    if(votes.size()!=1)return 0xffffffff;
-    const auto& vote=*votes.begin();return float(vote.second)/group.size()>=weight ? vote.first : 0xffffffff;
+const AnimatedHitModel::HeadBone* HeadBone(const Rig& rig,unsigned id,unsigned root) {
+    for(const auto& head:rig.heads)if(head.id==id && head.root==root)return &head;
+    return nullptr;
 }
 void Collapse(uintptr_t model,uintptr_t matrices,Corpse& corpse,const Rig& rig) {
     unsigned count=0;if(!Read(model+0x0C,count) || count>4096)return;
     uintptr_t entries=Pointer(model+0x10),output=Pointer(gameBase+0xACBC68);
     if(!entries || !output || !matrices)return;
-    std::array<float,3> anchor={};bool anchored=false;
-    // The accepted triangle carries the struck head's identity, independent of camera and death pose.
-    for(const auto& head:rig.heads)if(head.id==corpse.contact.root)
-        {anchored=BonePoint(matrices,head,anchor);break;}
-    if(!anchored)return;
-    std::vector<uintptr_t> palettes;
+    struct Group {uintptr_t output;std::vector<unsigned> bones;std::array<float,12> blended={};};
+    std::vector<Group> palettes;
+    const AnimatedHitModel::HeadBone* anchorBone=nullptr;
     for(unsigned i=0;i<count;++i) {
         uintptr_t entry=Pointer(entries+i*4),geometry=Pointer(entry ? entry+0x0C : 0);
         unsigned groups=0,index=0,disabled=0,geoset=0;unsigned char visible=0;
@@ -62,20 +56,45 @@ void Collapse(uintptr_t model,uintptr_t matrices,Corpse& corpse,const Rig& rig) 
             std::sort(ids.begin(),ids.end());
             // Refuse a palette that does not occur in this map's authored MDX; never infer a head by height alone.
             if(std::find(rig.groups.begin(),rig.groups.end(),ids)==rig.groups.end())continue;
-            if(HeadRoot(rig,ids,corpse.contact.weight)!=corpse.contact.root)continue;
+            bool affected=false;
+            for(unsigned id:ids)if(auto head=HeadBone(rig,id,corpse.contact.root)) {
+                affected=true;
+                // Crypt Fiend/Naga authoring parents can have no skinned vertices. Native skinning
+                // leaves their matrix slots stale: anchor only to a bone used by a visible palette.
+                if(!anchorBone || head->depth<anchorBone->depth || (head->depth==anchorBone->depth && head->id<anchorBone->id))anchorBone=head;
+            }
+            if(!affected)continue;
             if(index>0x100000 || group>0x100000-index)return;
             uintptr_t at=output+(index+group)*48;std::array<float,12> previous={};if(!Read(at,previous))return;
-            palettes.push_back(at);
+            palettes.push_back({at,std::move(ids)});
         }
     }
-    // Native per-instance palettes are regenerated before this hook. Collapse only selected head groups;
-    // shared MDX data, body groups, the second head and all other units remain untouched.
+    std::array<float,3> anchor={};if(!anchorBone || !BonePoint(matrices,*anchorBone,anchor))return;
+    // Replace only the selected skull's contribution to native matrix-group averaging. A binary
+    // whole-group collapse tears mixed neck/head skin; even a 1/3 head influence must use the same seam.
     std::array<float,12> collapsed={};for(int axis=0;axis<3;++axis)collapsed[9+axis]=anchor[axis];
-    unsigned written=0;for(uintptr_t at:palettes){SIZE_T got=0;if(WriteProcessMemory(GetCurrentProcess(),reinterpret_cast<void*>(at),collapsed.data(),sizeof(collapsed),&got) && got==sizeof(collapsed))++written;}
+    for(auto& group:palettes) {
+        bool valid=true;
+        for(unsigned id:group.bones) {
+            std::array<float,12> bone=collapsed;
+            if(!HeadBone(rig,id,corpse.contact.root) && !Read(matrices+id*sizeof(bone),bone)){valid=false;break;}
+            for(unsigned value=0;value<12;++value) {
+                if(!std::isfinite(bone[value]))valid=false;
+                group.blended[value]+=bone[value]/group.bones.size();
+            }
+        }
+        if(!valid)return;
+    }
+    // Validate every blend before the first write: a bad secondary matrix must not leave half a head deformed.
+    unsigned written=0;
+    for(const auto& group:palettes) {
+        SIZE_T got=0;
+        if(WriteProcessMemory(GetCurrentProcess(),reinterpret_cast<void*>(group.output),group.blended.data(),sizeof(group.blended),&got) && got==sizeof(group.blended))++written;
+    }
     if(!corpse.logged) {
         corpse.logged=true;
-        wc3::Log("Headshot head removal target=%08X root=%u palettes=%u anchor=%.1f,%.1f,%.1f contact=%.1f,%.1f,%.1f",
-            corpse.contact.target,corpse.contact.root,written,anchor[0],anchor[1],anchor[2],
+        wc3::Log("Headshot head removal target=%08X root=%u anchorBone=%u palettes=%u anchor=%.1f,%.1f,%.1f contact=%.1f,%.1f,%.1f",
+            corpse.contact.target,corpse.contact.root,anchorBone->id,written,anchor[0],anchor[1],anchor[2],
             corpse.contact.point[0],corpse.contact.point[1],corpse.contact.point[2]);
     }
 }
