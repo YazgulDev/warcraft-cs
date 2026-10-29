@@ -204,3 +204,17 @@ That fork retains the project's MIT OR Apache-2.0 licensing and upstream notices
 The shared presentation adapter is project-authored. No game binary, proprietary
 implementation, registration dump or converted game asset is included.
 https://github.com/TTT-ux-max/warcraft-cs
+
+Warcraft III 1.26a Direct3D mode uses crosire/d3d8to9 v1.16.0 by Patrick Mours
+and contributors, distributed under BSD-2-Clause. Developer setup builds pinned
+source with /MT; Player installs that static-runtime build without requiring a
+separate Visual C++ redistributable. Components stay in the private game directory.
+The upstream license is in licenses/d3d8to9-BSD-2-Clause.txt.
+https://github.com/crosire/d3d8to9/tree/v1.16.0
+
+The bridge's app-local D3DX9_43.dll and D3DCompiler_43.dll redistributables come from Microsoft's
+Microsoft.DXSDK.D3DX 9.29.952.8 NuGet package. Microsoft software license terms
+are retained in licenses/Microsoft-DXSDK-D3DX.txt and alongside installed modules.
+It is not covered by this project's MIT/Apache licenses. No system DirectX installer
+or proprietary Warcraft library is distributed; public source archives contain no DLLs.
+https://www.nuget.org/packages/Microsoft.DXSDK.D3DX/9.29.952.8

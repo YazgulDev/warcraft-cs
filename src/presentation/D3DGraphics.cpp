@@ -92,6 +92,16 @@ void EndFrame() {
     GraphicsDiagnostics::Result("StateBlock.Apply",s.saved->Apply());s.saved->Release();s.saved=nullptr;
     GraphicsDiagnostics::Result("SetStreamSource.restore",s.device->SetStreamSource(0,s.stream,s.streamOffset,s.streamStride));if(s.stream)s.stream->Release();s.stream=nullptr;
 }
+void DrawTexture(IDirect3DTexture9* texture,int x,int y,int width,int height) {
+    auto& s=Current();if(!s.active || !texture)return;
+    // A temporary canvas binding reuses its normal state normalization without taking ownership of the native image.
+    GLuint name=s.nextTexture++;detail::Texture borrowed;borrowed.object=texture;borrowed.minFilter=borrowed.magFilter=GL_LINEAR;borrowed.wrapS=borrowed.wrapT=GL_CLAMP;
+    s.textures.emplace(name,borrowed);PushAttrib(GL_ALL_ATTRIB_BITS);
+    Enable(GL_TEXTURE_2D);BindTexture(GL_TEXTURE_2D,name);Disable(GL_DEPTH_TEST);Disable(GL_BLEND);Color4f(1,1,1,1);
+    Begin(GL_QUADS);TexCoord2f(0,0);Vertex2i(x,y);TexCoord2f(1,0);Vertex2i(x+width,y);
+    TexCoord2f(1,1);Vertex2i(x+width,y+height);TexCoord2f(0,1);Vertex2i(x,y+height);End();
+    PopAttrib();s.textures.erase(name);
+}
 void APIENTRY Begin(GLenum mode) {auto& s=Current();s.primitive=mode;s.vertices.clear();}
 void APIENTRY End() {
     auto& s=Current();if(s.vertices.empty())return;detail::Apply();

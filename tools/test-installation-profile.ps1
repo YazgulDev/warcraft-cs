@@ -30,6 +30,13 @@ function Install-ClientBuildTools { }
 '@
 Set-Content -LiteralPath (Join-Path $source 'tools/export_models.py') -Value "raise RuntimeError('Conversion reached')"
 Set-Content -LiteralPath (Join-Path $source 'tools/fetch-dependencies.ps1') -Value '# synthetic dependency adapter'
+# Graphics acquisition is stubbed here; the separate Direct3D runtime test covers real pinned-file installation.
+Set-Content -LiteralPath (Join-Path $source 'tools/fetch-direct3d.ps1') -Value 'param($Destination) # synthetic graphics download adapter'
+Add-Content -LiteralPath (Join-Path $source 'setup/direct3d-runtime.ps1') -Value @'
+function Install-Direct3DRuntime($Directory,$Runtime) {
+    Set-Content -LiteralPath (Join-Path $Runtime 'graphics-prepared.fixture') -Value 'private Direct3D prepared'
+}
+'@
 Set-Content -LiteralPath (Join-Path $source 'tools/build.ps1') -Value @'
 param($OutputDirectory,$MinHookDirectory,$PythonExecutable)
 if($PythonExecutable -ne 'synthetic-python'){throw 'Developer Python not supplied'}
@@ -51,6 +58,7 @@ foreach($mode in @('Player','Developer')) {
     if(!(Get-Content -LiteralPath $config -Raw).Contains('WarcraftOnly=true')){throw 'Runtime profile missing'}
     if(Test-Path -LiteralPath (Join-Path $install 'Game/WarcraftCS/assets')){throw 'CS cache created'}
     if(Test-Path -LiteralPath (Join-Path $source '.local/venv')){throw 'Conversion environment created'}
+    if(!(Test-Path -LiteralPath (Join-Path $install 'Game/graphics-prepared.fixture'))){throw 'Setup skipped Direct3D preparation'}
     if((Get-Content -LiteralPath (Join-Path $install 'client-installed.json') -Raw | ConvertFrom-Json).warcraft_only -ne 'True'){throw 'Installed profile not remembered'}
 }
 Write-Output 'PASS real Player/Developer client setup with no CS path, no conversion/NumPy and no Player Python.'

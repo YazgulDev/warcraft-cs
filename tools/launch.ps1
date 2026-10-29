@@ -1,6 +1,6 @@
 param([string]$Map = '', [switch]$Menu, [switch]$Windowed,
     [ValidateSet('FrozenThrone','ReignOfChaos')][string]$Edition='FrozenThrone',
-    [ValidateSet('Auto','OpenGL','D3D9')][string]$Renderer='Auto')
+    [ValidateSet('Auto','OpenGL','Direct3D','D3D9')][string]$Renderer='Auto')
 $ErrorActionPreference = 'Stop'
 $modRoot=Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'paths.ps1')
@@ -14,7 +14,13 @@ if (Get-Process war3 -ErrorAction SilentlyContinue) { throw 'Close the existing 
 # The 1.27a host defaults to D3D9; explicit render selection remains available for diagnostics.
 . (Join-Path $modRoot 'setup/host-build.ps1')
 $hostBuild=Get-WarcraftHostBuild $labRoot
-if($Renderer -eq 'Auto') { $Renderer=if($hostBuild.Minor -eq 27){'D3D9'}else{'OpenGL'} }
+if($Renderer -eq 'Auto') { $Renderer=if($hostBuild.Minor -eq 27){'Direct3D'}else{'OpenGL'} }
+# Keep the old D3D9 spelling as an alias; 1.26a uses the prepared app-local D3D8-to-9 bridge.
+if($Renderer -eq 'D3D9'){$Renderer='Direct3D'}
+if($Renderer -eq 'Direct3D' -and $hostBuild.Minor -eq 26) {
+    . (Join-Path $modRoot 'setup/direct3d-runtime.ps1')
+    Assert-Direct3DFiles $labRoot
+}
 $arguments = if($Renderer -eq 'OpenGL'){'-opengl'}else{''}
 # RoC and TFT share war3.exe and the verified native ABI; the campaign menu is selected before startup.
 if ($Edition -eq 'ReignOfChaos') { $arguments += ' -classic' }

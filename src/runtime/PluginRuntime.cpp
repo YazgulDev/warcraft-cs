@@ -1,4 +1,5 @@
 #include "../platform/D3DHooks.hpp"
+#include "../platform/D3DNativeUi.hpp"
 #include "../presentation/D3DGraphics.hpp"
 #include "../platform/GameBuild.hpp"
 #include "PluginRuntime.hpp"
@@ -199,6 +200,10 @@ static int __fastcall WorldHook(uintptr_t ui, uintptr_t unused) {
 #endif
     // Keep layout evaluation running while hiding its final graphics after the world pass.
     nativeUIPhase = false;
+    // Match the GL submission boundary, so native cursor/HP batches cannot leak into FPS through D3D.
+    D3DNativeUi::Phase(false);
+    D3DNativeUi::Configure(healthy && controller.Visible(),
+        healthy && controller.Settings().showUnitHud ? controller.HudActor() : 0,!controller.CursorMode());
     // Presentation adapters consume an immutable camera snapshot after the simulation tick.
     WorldLabelView labelView;labelView.active=healthy && controller.Visible();
     if (labelView.active) {
@@ -234,6 +239,7 @@ static int __fastcall WorldHook(uintptr_t ui, uintptr_t unused) {
     RECT client={};if (windowInput.Window()) GetClientRect(windowInput.Window(),&client);
     minimap.BeginFrame(gameUI,client.right,client.bottom,healthy && controller.Visible() && controller.MinimapVisible());
     nativeUIPhase = true;
+    D3DNativeUi::Phase(true);
     return result;
 }
 static void __cdecl PauseHook(BOOL value) {
@@ -248,6 +254,7 @@ static void __fastcall UIHook(uintptr_t frame, uintptr_t unused) {
     uintptr_t ui = reinterpret_cast<GetUI>(gameBase + wc3::Rva(0x300710))(0, 0);
     // UI drawing is filtered at GL submission, preserving layout and frame update callbacks.
     nativeUIPhase = ui && !*reinterpret_cast<int*>(ui + 0x258) && !*reinterpret_cast<int*>(ui + 0x260);
+    D3DNativeUi::Phase(nativeUIPhase);
     originalUI(frame, unused);
 }
 static void APIENTRY DrawElementsHook(GLenum mode, GLsizei count, GLenum type, const void* indices) {
@@ -428,6 +435,10 @@ static DWORD WINAPI Initialize(void*) {
             D3DGraphics::EndFrame();
         }
         ReleaseDC(window,dc);
+        // Map/menu transitions can finish without another RenderWorld; release cursor/capture ownership here too.
+        D3DNativeUi::Configure(healthy && controller.Visible(),
+            healthy && controller.Settings().showUnitHud ? controller.HudActor() : 0,!controller.CursorMode());
+        D3DNativeUi::Phase(false);
         RECT region={0,height*80/593,width,height-height*178/593};
         D3DHooks::SetUiSuppression(healthy && controller.Visible(),region);
     },[](const float* matrix,const int* viewport) {

@@ -8,7 +8,8 @@
 // OpenGL or Direct3D 9; this module hooks the Direct3DCreate9 export, the returned factory's
 // CreateDevice vtable slot and the device Present/Reset slots, so the same overlay draws
 // through the D3D canvas without touching the OpenGL path. Only one renderer is active per
-// frame, so the GL present anchor and these hooks never race.
+// frame, so the GL present anchor and these hooks never race. Native D3D UI filtering/capture
+// is owned separately by D3DNativeUi.
 namespace D3DHooks {
 // Called from the device Present hook before the real Present flips the back buffer.
 using PresentCallback = std::function<void(IDirect3DDevice9*, HWND, int, int)>;
@@ -28,6 +29,6 @@ bool Installed();
 // While the FPS view is live, native 2D chrome (classic console strip and top bar) is clipped
 // to the given world region: batches drawn under an orthographic projection are scissored,
 // every perspective (world) draw disables the scissor again. Direct3D has no GL submission
-// pass, so this is the counterpart of the OpenGL geometry filter, not an extra hiding layer.
+// pass. D3DNativeUi provides the complete native UI geometry filter; this retains viewport/band handling.
 void SetUiSuppression(bool enabled, const RECT& worldRegion);
 }

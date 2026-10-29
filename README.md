@@ -10,6 +10,8 @@ quests and combat rules. Third-person and unarmed first-person views are also av
 
 **Release 0.14.0:** improved head contacts and blood, saved friendly-fire preferences, campaign economy startup, HUD/weapon graphics-state isolation and expanded diagnostics. Movement and weapon balance retain their defaults. See [downloads and all changes](docs/RELEASE-0.14.0.md). [1.27a/D3D9 support is experimental](docs/PORT-1.27.md).
 
+Development preview: [optional Direct3D for 1.26a and a saved graphics selector](docs/DIRECT3D-126A-PREVIEW.md), verified locally with weapons and HUD. Published 0.14.0 downloads retain their existing launch behavior.
+
 ## Start here
 
 - [Installation](INSTALL.md): choose a launcher, prepare your game and start playing.

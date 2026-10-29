@@ -17,6 +17,7 @@ namespace WarcraftCSLauncher {
         private readonly Label status = new Label();
         private readonly ProgressBar progress = new ProgressBar();
         private readonly ComboBox edition = new ComboBox();
+        private readonly ComboBox renderer = new ComboBox();
         private readonly Button readLogs = new Button();
         private bool busy;
         private bool checking;
@@ -29,7 +30,7 @@ namespace WarcraftCSLauncher {
             this.preview=preview;
             includesRuntime=runtimeIncluded ?? LauncherVariant.IncludesRuntime;
             Text = "Warcraft CS by Yazgul - Launcher";
-            ClientSize = new Size(780, 965); MinimumSize = Size; MaximizeBox = false;
+            ClientSize = new Size(780, 1010); MinimumSize = Size; MaximizeBox = false;
             Font = new Font("Segoe UI", 10); AutoScaleMode = AutoScaleMode.Dpi;
             StartPosition = FormStartPosition.CenterScreen;
             // Keep the agreement/actions reachable on small displays and Windows display scaling.
@@ -57,7 +58,7 @@ namespace WarcraftCSLauncher {
                      "This source-only EXE contains no prebuilt mod DLLs.\r\n"+
                      "Local installation and updates build DLLs; missing Build Tools / SDK may take several GB.\r\n")+
                      "Python (~26 MB if missing) and NumPy convert your local CS assets.\r\n"+
-                     "Source builds also obtain MinHook. Existing compatible tools are reused.\r\n"+
+                     "Source builds also obtain MinHook and Direct3D components. Existing tools are reused.\r\n"+
                      "Microsoft tools may request administrator approval or a restart.\r\n"+
                      "Warcraft-only skips CS conversion; Player also skips Python / NumPy.\r\n"+
                      "You supply Warcraft (and CS for weapons). Installation requires your agreement."};
@@ -67,6 +68,7 @@ namespace WarcraftCSLauncher {
             // Match the distributed launcher's release when presenting dependency and project notices.
             // Keep notices tied to the version actually running after a launcher update.
             AddLink("Project notices", "https://github.com/YazgulDev/warcraft-cs/blob/v"+CurrentVersion+"/NOTICE", 310, 489);
+            AddLink("Direct3D terms", "https://www.nuget.org/packages/Microsoft.DXSDK.D3DX/9.29.952.8/License", 465, 489);
             consent.SetBounds(24, 522, 732, 36);
             consent.Name="DownloadConsent";
             consent.Text="I agree to download/install project updates and the listed dependencies under their terms.";
@@ -96,6 +98,12 @@ namespace WarcraftCSLauncher {
             status.SetBounds(24,771,732,38); status.Text="Choose folders, agree to downloads, then click Install."; Controls.Add(status);
             log.SetBounds(24,813,732,80); log.Multiline=true; log.ReadOnly=true; log.ScrollBars=ScrollBars.Vertical;
             log.Font=new Font("Consolas", 9); Controls.Add(log);
+            // Reserve a second launch row without overlapping actions at high DPI or small-screen scrolling.
+            foreach(Control control in Controls)if(control.Top>=717)control.Top+=45;
+            AddLabel("Graphics",24,698,160,30,Font);
+            renderer.Name="GameRenderer";renderer.DropDownStyle=ComboBoxStyle.DropDownList;
+            renderer.Items.AddRange(new object[] {"Auto (recommended)","OpenGL","Direct3D"});renderer.SelectedIndex=0;
+            renderer.SetBounds(190,695,282,32);Controls.Add(renderer);
             // Insert the profile above consent, keeping the complete small-screen scroll layout together.
             foreach(Control control in Controls)if(control.Top>=323)control.Top+=58;
             warcraftOnly.Name="WarcraftOnly";warcraftOnly.Text="Only Warcraft modes: third person (F7) and first person without UI (F9)";
@@ -118,6 +126,8 @@ namespace WarcraftCSLauncher {
                 warcraft.Text=saved.WarcraftDirectory; cs.Text=saved.CounterStrikeDirectory; destination.Text=saved.InstallDirectory;
                 warcraftOnly.Checked=saved.WarcraftOnly;
                 edition.SelectedIndex=GameEdition.Normalize(saved.GameEdition)==GameEdition.ReignOfChaos ? 1 : 0;
+                string selected=GameRenderer.Normalize(saved.Renderer);
+                renderer.SelectedIndex=selected==GameRenderer.OpenGL ? 1 : selected==GameRenderer.Direct3D ? 2 : 0;
             } catch (Exception error) { Report("Preferences load failed: "+error);status.Text="Previous folder settings could not be loaded. Select folders again."; }
         }
         private void FolderRow(string title, TextBox box, int y) {
@@ -142,6 +152,7 @@ namespace WarcraftCSLauncher {
             update.Enabled=install.Enabled && !checking;
             play.Enabled=!busy && File.Exists(Path.Combine(destination.Text,"client-installed.json"));
             edition.Enabled=!busy;
+            renderer.Enabled=!busy;
             check.Enabled=!busy && !checking;
         }
         private void SetBusy(bool value) {
@@ -182,7 +193,8 @@ namespace WarcraftCSLauncher {
         private ClientRequest CurrentRequest(string mode) {
             return new ClientRequest {WarcraftDirectory=warcraft.Text,CounterStrikeDirectory=cs.Text,
                 InstallDirectory=destination.Text,InstallMode=mode,WarcraftOnly=warcraftOnly.Checked,
-                GameEdition=edition.SelectedIndex==1 ? GameEdition.ReignOfChaos : GameEdition.FrozenThrone};
+                GameEdition=edition.SelectedIndex==1 ? GameEdition.ReignOfChaos : GameEdition.FrozenThrone,
+                Renderer=renderer.SelectedIndex==1 ? GameRenderer.OpenGL : renderer.SelectedIndex==2 ? GameRenderer.Direct3D : GameRenderer.Auto};
         }
         private string InstalledMode() {
             var marker=Path.Combine(destination.Text,"client-installed.json");
@@ -252,7 +264,7 @@ namespace WarcraftCSLauncher {
         }
         private async Task Play() {
             SetBusy(true);
-            Report("Play requested edition="+edition.SelectedItem+" destination="+destination.Text);
+            Report("Play requested edition="+edition.SelectedItem+" renderer="+renderer.SelectedItem+" destination="+destination.Text);
             try {
                 var saved=new JavaScriptSerializer().Deserialize<System.Collections.Generic.Dictionary<string,string>>(File.ReadAllText(Path.Combine(destination.Text,"client-installed.json")));
                 var source=Path.GetFullPath(saved["source"]);
@@ -260,7 +272,7 @@ namespace WarcraftCSLauncher {
                 if (!source.StartsWith(allowed,StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("Invalid installed source path. Run Install again.");
                 // Play launches only the prepared private runtime; it does not install/download dependencies.
                 var request=CurrentRequest(InstalledMode());
-                await Task.Run(() => GameLaunch.Start(request.InstallDirectory,request.GameEdition));
+                await Task.Run(() => GameLaunch.Start(request.InstallDirectory,request.GameEdition,request.Renderer));
                 // Remember the chosen campaign after a successful launch without granting download consent.
                 Directory.CreateDirectory(Path.GetDirectoryName(Preferences)); request.Save(Preferences);
                 status.Text=saved.ContainsKey("warcraft_only") && saved["warcraft_only"]=="True" ?
