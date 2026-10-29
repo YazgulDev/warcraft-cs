@@ -235,6 +235,8 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
         else if(BackgroundGameplay::Enabled() && command=="strike") {
             // Aim/target creation uses the existing private request; this exercises production contact damage.
             int slot=2;input>>slot;controller.TestStrike(slot);
+            // Read confirmation immediately, before short body particles can expire between mailbox requests.
+            wc3::Log("fixture impact visuals blood=%u captions=%u",unsigned(controller.Visuals().BloodDrops().size()),unsigned(controller.Visuals().Criticals().size()));
         }
         else if(BackgroundGameplay::Enabled() && command=="blocker") {
             // A separate disposable effect/physical body tests the production nearest-hit selection.

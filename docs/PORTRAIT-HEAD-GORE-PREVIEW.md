@@ -12,6 +12,11 @@ The stretching fix resolves the anchor from a bone actually used by the current 
 
 | Key | Default | Meaning |
 | --- | --- | --- |
+| BodyBlood | true | Small spray on confirmed hostile nonbuilding body hits; true/false or 1/0. |
+| BodyBloodCount | 6 | 1–64 droplets per burst. |
+| BodyBloodScale | 0.65 | .25–4 size factor. |
+| BodyBloodSeconds | 0.35 | .1–3 seconds. |
+| BodyBloodSpeed | 110 | 0–500 world units/second; uses shared BloodGravity. |
 | HeadshotDecapitation | true | Remove the struck head on subsequent fatal hostile head contacts; false retains native whole models. |
 | FatalBloodMultiplier | 3 | Fatal spray multiplier, clamped to 1–4; shares the existing 256-droplet pool. |
 | BloodCount | 48 | 1–64 droplets per ordinary burst. |
@@ -20,7 +25,9 @@ The stretching fix resolves the anchor from a bone actually used by the current 
 | BloodSpeed | 220 | 0–500 world units/second. |
 | BloodVersion | 2 | Stock-upgrade marker; set 2 to preserve a deliberate return to old values. |
 
-`HeadshotBlood=false` disables all blood independently of head removal and the floating Headshot caption. F8 clears existing particles; head-removal preferences affect future deaths. Existing custom blood tuning and explicit opt-outs survive updates. Native corpse decay still occurs at the map's normal time.
+`HeadshotBlood=false` disables headshot blood independently of head removal and the floating Headshot caption. F8 clears existing particles; head-removal preferences affect future deaths. Existing custom blood tuning and explicit opt-outs survive updates. Native corpse decay still occurs at the map's normal time.
+
+Body wounds emit six small, short-lived droplets at the accepted impact after actual HP loss. They create no Headshot caption or head removal; misses, protected allies and buildings do not emit body blood. Body pellets/beams coalesce separately from head contacts. `BodyBlood=false` disables only body blood; disable both blood flags to hide all blood.
 
 ## Verification
 
@@ -30,7 +37,10 @@ Synthetic native-palette tests cover body/other-model isolation, separate heads,
 
 The stretching follow-up exercised fatal AWP contacts on Crypt Fiends, Naga Myrmidons and Naga Sirens in the private 1.26a OpenGL/Direct3D lab, plus an ogre check. Native logs confirmed anchors from the used mesh bones rather than unused authoring parents; screenshots and synthetic native averaging regressions checked the resulting shape. The stale-parent regression fails before the correction and passes after it, including 1/3 and 1/2 neck weights and validation before any palette write.
 
+The body-blood follow-up passed real 1.26a OpenGL and Direct3D contact checks: an ordinary footman body hit created six droplets and no caption, a head contact created 48 droplets and a caption, F8 BodyBlood=false suppressed the next body spray, and a damaging town-hall contact created none. Hidden WGL checks verify visible body particles; portable pool, settings and repeated installer-update tests cover bounds, independent opt-outs, head/body coalescing and preservation.
+
 <!-- launcher-summary
+- Added a small configurable blood spray at confirmed enemy body impacts, independent of headshot blood.
 - Added configurable fatal headshots that remove the struck head while preserving the body and native death events on verified 1.26a models.
 - Preserved the other head on two-headed creatures and restored complete models on native resurrection.
 - Improved headshot blood density, size and lifetime with a configurable fatal spray multiplier.

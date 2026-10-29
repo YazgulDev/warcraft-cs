@@ -6,6 +6,20 @@
 int main(){
     _set_error_mode(_OUT_TO_STDERR);
     CombatVisuals effects;CombatVisualSettings s;CombatVisuals::Point eye={0,0,96},ray={1,0,0},velocity={0,0,0},contact={160,0,96},above={160,0,120};
+    // A small body wound has no caption, cannot suppress a head pellet, and expires sooner.
+    effects.BodyHit(9,contact,ray,s);assert(effects.BloodDrops().size()==6 && effects.Criticals().empty());
+    for(const auto& drop:effects.BloodDrops())assert(drop.position==contact && drop.lifetime==.35f && drop.size<2.3f);
+    effects.BodyHit(9,contact,ray,s);assert(effects.BloodDrops().size()==6);
+    effects.Headshot(9,contact,above,ray,s);assert(effects.BloodDrops().size()==54 && effects.Criticals().size()==1);
+    effects.Step(.4f);assert(effects.BloodDrops().size()==48);
+    effects.Reset();auto bodyOnly=s;bodyOnly.headshotBlood=false;
+    effects.Headshot(9,contact,above,ray,bodyOnly,false);effects.BodyHit(9,contact,ray,bodyOnly);
+    assert(effects.BloodDrops().size()==6 && effects.Criticals().empty());
+    effects.Reset();auto headOnly=s;headOnly.bodyBlood=false;
+    effects.BodyHit(9,contact,ray,headOnly);assert(effects.BloodDrops().empty());
+    effects.Headshot(9,contact,above,ray,headOnly);assert(effects.BloodDrops().size()==48);
+    effects.Reset();for(unsigned target=1;target<100;++target)effects.BodyHit(target,contact,ray,s);
+    assert(effects.BloodDrops().size()==256);effects.Step(.4f);assert(effects.BloodDrops().empty());effects.Reset();
     for(int weapon=0;weapon<WeaponSlots::Count;++weapon)effects.Eject(weapon,eye,ray,velocity,0,s);
     assert(effects.Shells().size()==11); // Conventional firearms only, one shell per round, no energy/explosive/melee cases.
     int red=0;for(const auto& shell:effects.Shells()){red+=shell.shotgun;assert(shell.position[0]==20 && shell.position[1]==-10 && shell.position[2]==84);}

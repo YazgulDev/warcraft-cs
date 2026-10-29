@@ -206,6 +206,10 @@ Startup/F8 loads the same validated values as fresh installation. Damage accepts
 
 Setup and the loader upgrade former stock values once: RPG 100 damage and 525 radius (or unversioned 375), M3 x3, XM1014 x2.4, and HE 300 (or unversioned 100). Custom values, explicit zero and other preserved versioned settings remain authoritative. `[RPG] DamageVersion=2` / `BlastVersion=3`, each shotgun's `MultiplierVersion=2`, and `[HEGrenade] DamageVersion=3` record the current balance. After an update, editing values back to older stock numbers with those markers retains them. Prior version-2 HE 100 and RPG radius 375 are also preserved. Missing keys are inserted once; repeated upgrades do not duplicate/reset them.
 
+### Small body-impact blood (local preview)
+
+`[CombatVisuals] BodyBlood=true` emits a small spray on confirmed enemy body damage, excluding buildings. Defaults: `BodyBloodCount=6` (1–64), `BodyBloodScale=0.65` (.25–4), `BodyBloodSeconds=0.35` (.1–3 s), `BodyBloodSpeed=110` (0–500 world units/s). `BloodGravity` also applies. Startup/F8 apply changes and clear old particles; updates add missing keys and preserve custom values. `BodyBlood=false` and `HeadshotBlood=false` independently disable body and head sprays. Body impacts have no Headshot text or fatal multiplier.
+
 ## Headshot and campaign improvements (0.14.0)
 
 [Release 0.14.0](RELEASE-0.14.0.md) adds these editable startup/F8 settings; older installations need the new native module first. Installation updates add missing keys and preserve saved choices.

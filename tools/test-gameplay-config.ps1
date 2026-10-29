@@ -523,10 +523,10 @@ if((Get-FileHash $aimConfig).Hash -ne $aimHash){throw 'Aiming/currency migration
 
 # Preserve explicit alternate movement and every visual opt-out/custom value; defaults merge exactly once.
 $visualConfig=Join-Path $folder 'classic-blood-cases.ini'
-@('[Movement]','Mode=recovery','[CombatVisuals]','HeadshotBlood=false','HeadshotDecapitation=false','FatalBloodMultiplier=1.5','CriticalText=false','ShellCasings=false','BloodCount=7','ShellUp=-20','ShellSpeed=222','ShellMaximum=16') | Set-Content -LiteralPath $visualConfig -Encoding ascii
+@('[Movement]','Mode=recovery','[CombatVisuals]','BodyBlood=false','BodyBloodCount=4','BodyBloodScale=0.5','BodyBloodSeconds=0.2','BodyBloodSpeed=80','HeadshotBlood=false','HeadshotDecapitation=false','FatalBloodMultiplier=1.5','CriticalText=false','ShellCasings=false','BloodCount=7','ShellUp=-20','ShellSpeed=222','ShellMaximum=16') | Set-Content -LiteralPath $visualConfig -Encoding ascii
 Update-GameplayConfig $template $visualConfig
 $visualText=Get-Content -LiteralPath $visualConfig -Raw
-foreach($expected in @('Mode=recovery','HeadshotBlood=false','HeadshotDecapitation=false','FatalBloodMultiplier=1.5','CriticalText=false','ShellCasings=false','BloodCount=7','ShellUp=-20','ShellSpeed=222','ShellMaximum=16','CriticalSeconds=1','ShellBounce=0.35')) {
+foreach($expected in @('Mode=recovery','BodyBlood=false','BodyBloodCount=4','BodyBloodScale=0.5','BodyBloodSeconds=0.2','BodyBloodSpeed=80','HeadshotBlood=false','HeadshotDecapitation=false','FatalBloodMultiplier=1.5','CriticalText=false','ShellCasings=false','BloodCount=7','ShellUp=-20','ShellSpeed=222','ShellMaximum=16','CriticalSeconds=1','ShellBounce=0.35')) {
     if(!$visualText.Contains($expected)){throw ('Visual/movement update lost '+$expected)}
 }
 $visualHash=(Get-FileHash $visualConfig).Hash;Update-GameplayConfig $template $visualConfig
@@ -538,6 +538,8 @@ foreach($bloodCase in @(@('1','16','48'),@('2','16','16'),@('1','7','7'))) {
     @('[CombatVisuals]',('BloodVersion='+$bloodCase[0]),('BloodCount='+$bloodCase[1]),'BloodSeconds=0.5','BloodScale=1','BloodSpeed=180','HeadshotBlood=false') | Set-Content $bloodConfig -Encoding ascii
     Update-GameplayConfig $template $bloodConfig
     $bloodText=Get-Content $bloodConfig -Raw
+    # Missing body controls are added without changing the saved head-only opt-out.
+    foreach($value in @('BodyBlood=true','BodyBloodCount=6','BodyBloodScale=0.65','BodyBloodSeconds=0.35','BodyBloodSpeed=110')){if(!$bloodText.Contains($value)){throw ('Body defaults missing '+$value)}}
     if(!$bloodText.Contains('BloodCount='+$bloodCase[2]) -or !$bloodText.Contains('HeadshotBlood=false')){throw 'Blood update lost stock/custom count or opt-out.'}
     $expectedBlood=if($bloodCase[0] -eq '2'){@('BloodSeconds=0.5','BloodScale=1','BloodSpeed=180')}else{@('BloodSeconds=0.8','BloodScale=1.75','BloodSpeed=220')}
     foreach($value in $expectedBlood){if(!$bloodText.Contains($value)){throw ('Blood update lost '+$value)}}

@@ -1,3 +1,4 @@
+- Added a small configurable blood spray at confirmed enemy body impacts, independent of headshot blood.
 - Added configurable fatal headshots that remove the struck head while preserving the body and native death events on verified 1.26a models.
 - Preserved the other head on two-headed creatures and restored complete models on native resurrection.
 - Improved headshot blood density, size and lifetime with a configurable fatal spray multiplier.

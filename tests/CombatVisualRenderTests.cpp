@@ -29,6 +29,11 @@ int main(){
     for(int cycle=0;cycle<2;++cycle){HGLRC context=wglCreateContext(dc);assert(context && wglMakeCurrent(dc,context));glViewport(0,0,width,height);renderer.Reset(false);
         WorldLabelView view;view.active=true;view.eye[2]=96;view.aspect=float(width)/height;
         CombatVisualSettings settings;CombatVisuals effects;effects.Headshot(1,{151,-3,96},{160,0,124},{1,0,0},settings);
+        // The same world renderer produces visible small body blood without creating Headshot text.
+        CombatVisuals body;body.BodyHit(1,{151,-3,96},{1,0,0},settings);body.Step(.11f);
+        Clear(1);Scene(view);renderer.Draw(body,view,width,height,8,2000);auto bodyPixels=Pixels();int bodyRed=0;
+        for(size_t i=0;i<bodyPixels.size();i+=4)bodyRed+=bodyPixels[i]>100 && bodyPixels[i+1]<80;
+        assert(bodyRed>0 && body.Criticals().empty());if(!cycle)Save("body-blood-preview.bmp");
         effects.Eject(0,{0,0,96},{1,0,0},{0,0,0},0,settings);effects.Step(.11f);
         Clear(1);Scene(view);renderer.Draw(effects,view,width,height,8,2000);auto expected=Pixels();int red=0,brass=0;
         for(size_t i=0;i<expected.size();i+=4){red+=expected[i]>100 && expected[i+1]<80;brass+=expected[i]>120 && expected[i+1]>80 && expected[i+2]<80;}

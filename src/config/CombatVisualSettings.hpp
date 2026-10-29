@@ -8,6 +8,10 @@ struct CombatVisualSettings {
     float bloodSeconds=.8f,bloodScale=1.75f,criticalSeconds=1,criticalRise=40,criticalScale=1,bloodSpeed=220,bloodGravity=400,criticalOffset=24;
     unsigned bloodCount=48;
     float fatalBloodMultiplier=3;
+    // Body impacts use a separate small spray and opt-out without weakening headshot feedback.
+    bool bodyBlood=true;
+    unsigned bodyBloodCount=6;
+    float bodyBloodScale=.65f,bodyBloodSeconds=.35f,bodyBloodSpeed=110;
     float shellSeconds=3,shellSpeed=140,shellGravity=650,shellScale=1,shellBounce=.35f;
     unsigned shellMaximum=64;
     // Physical eye-relative right/up/forward offsets in Warcraft units, independent of screen resolution.

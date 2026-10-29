@@ -749,6 +749,21 @@ int main() {
             assert(aiming.hitDetection.headshotMultiplier==2 && aiming.itemHover.distance==1200 && aiming.itemHover.radius==32);
     }
     // Effects consume the same bounded F8 snapshot; disable flags, signed offsets and custom lifetimes survive loading.
+    {std::ofstream f(path);f<<"[CombatVisuals]\n";}
+    auto body=GameplaySettings::Load(path).combatVisuals;
+    assert(body.bodyBlood && body.bodyBloodCount==6 && body.bodyBloodScale==.65f && body.bodyBloodSeconds==.35f && body.bodyBloodSpeed==110);
+    {std::ofstream f(path);f<<"[CombatVisuals]\nBodyBlood=false\nBodyBloodCount=4\nBodyBloodScale=0.5\nBodyBloodSeconds=0.2\nBodyBloodSpeed=80\n";}
+    body=GameplaySettings::Load(path).combatVisuals;
+    assert(!body.bodyBlood && body.headshotBlood && body.bodyBloodCount==4 && body.bodyBloodScale==.5f && body.bodyBloodSeconds==.2f && body.bodyBloodSpeed==80);
+    // Malformed body tuning falls back; finite outliers clamp before reaching the particle pool.
+    for(const char* value:{"nan","inf","bad","","-1000","999999"}) {
+        {std::ofstream f(path);f<<"[CombatVisuals]\nBodyBloodCount="<<value<<"\nBodyBloodScale="<<value<<"\nBodyBloodSeconds="<<value<<"\nBodyBloodSpeed="<<value<<"\n";}
+        body=GameplaySettings::Load(path).combatVisuals;
+        assert(body.bodyBloodCount>=1 && body.bodyBloodCount<=64 && body.bodyBloodScale>=.25f && body.bodyBloodScale<=4);
+        assert(body.bodyBloodSeconds>=.1f && body.bodyBloodSeconds<=3 && body.bodyBloodSpeed>=0 && body.bodyBloodSpeed<=500);
+        if(!strcmp(value,"nan") || !strcmp(value,"inf") || !strcmp(value,"bad") || !*value)
+            assert(body.bodyBloodCount==6 && body.bodyBloodScale==.65f && body.bodyBloodSeconds==.35f && body.bodyBloodSpeed==110);
+    }
     {std::ofstream f(path);f<<"[CombatVisuals]\nHeadshotBlood=false\nCriticalText=0\nShellCasings=false\nBloodCount=7\nBloodSeconds=1.2\nShellUp=-20\nShellSpeed=200\nShellMaximum=16\n";}
     auto cv=GameplaySettings::Load(path).combatVisuals;
     assert(!cv.headshotBlood && !cv.criticalText && !cv.shellCasings && cv.bloodCount==7 && cv.bloodSeconds==1.2f && cv.shellOffset[1]==-20 && cv.shellSpeed==200 && cv.shellMaximum==16);

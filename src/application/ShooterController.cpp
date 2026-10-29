@@ -939,6 +939,8 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
         float damage = CombatDamage::Amount(baseDamage,allied,lethal,before,settings_.friendlyFirePercent);
         // Capture the exact model/contact before death triggers can remove or morph the target.
         bool hostileHead=!destructable && HeadshotPolicy::Direct(weapon_,contact.head) && wc3::IsUnitEnemy(target,wc3::GetOwningPlayer(unit_));
+        // Snapshot creature eligibility before native death/map triggers can remove the target.
+        bool hostileBody=!destructable && !contact.head && !wc3::IsUnitType(target,2) && wc3::IsUnitEnemy(target,wc3::GetOwningPlayer(unit_));
         auto headCorpse=NativeHeadGore::Prepare(target,{x+vx*nearest,y+vy*nearest,z+vz*nearest},
             settings_.hitDetection.headshotBoneWeight,hostileHead && damage>0 && settings_.combatVisuals.headshotDecapitation,contact.headRoot);
         if (settings_.heroDamage) wc3::Log("hero damage attack=%.1f multiplier=%.2f base=%.1f",attack,settings_.heroMultiplier[weapon_],baseDamage);
@@ -967,6 +969,8 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
             if(HeadshotPolicy::Direct(weapon_,contact.head))combatVisuals_.Headshot(target,{x+vx*nearest,y+vy*nearest,z+vz*nearest},
                 {x+vx*nearest,y+vy*nearest,z+vz*nearest+settings_.combatVisuals.criticalOffset},
                 {vx,vy,vz},settings_.combatVisuals,headshot,fatalHead);
+            // Ordinary enemy wounds stay small and require actual HP loss, just like head feedback.
+            else if(hostileBody)combatVisuals_.BodyHit(target,{x+vx*nearest,y+vy*nearest,z+vz*nearest},{vx,vy,vz},settings_.combatVisuals);
             if (WeaponSlots::Melee(weapon_) && weapon_!=WeaponSlots::Crowbar) {
                 static const char* contacts[] = {"knife_hit1.wav", "knife_hit2.wav", "knife_hit3.wav", "knife_hit4.wav"};
                 const char* sample = destructable ? "knife_hitwall1.wav" : (weapon_ == WeaponSlots::Sword || meleeAttack_.secondary) ? "knife_stab.wav" : contacts[knifeSwing_ % 4];

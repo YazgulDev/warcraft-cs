@@ -404,6 +404,12 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.itemHover.radius=std::max(4.f,number("Interface","ItemNameRadius",32,128));
     // Pool snapshots are visual only; F8 clears active fragments before replacing these bounded settings.
     auto& cv=result.combatVisuals;
+    // Independent body spray is deliberately smaller; startup/F8 validate the same editable controls.
+    cv.bodyBlood=enabled("CombatVisuals","BodyBlood");
+    cv.bodyBloodCount=unsigned(std::max(1.f,number("CombatVisuals","BodyBloodCount",6,64)));
+    cv.bodyBloodScale=std::max(.25f,number("CombatVisuals","BodyBloodScale",.65f,4));
+    cv.bodyBloodSeconds=std::max(.1f,number("CombatVisuals","BodyBloodSeconds",.35f,3));
+    cv.bodyBloodSpeed=number("CombatVisuals","BodyBloodSpeed",110,500);
     cv.headshotBlood=enabled("CombatVisuals","HeadshotBlood");cv.criticalText=enabled("CombatVisuals","CriticalText");
     cv.headshotDecapitation=enabled("CombatVisuals","HeadshotDecapitation");
     cv.fatalBloodMultiplier=std::max(1.f,number("CombatVisuals","FatalBloodMultiplier",3,4));
