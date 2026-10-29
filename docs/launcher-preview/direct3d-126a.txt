@@ -1,3 +1,5 @@
 - Added Direct3D rendering for Warcraft III 1.26a with automatic app-local compatibility components.
 - Added saved Auto, OpenGL and Direct3D launch choices in both launcher variants.
+- Fixed native cursor and oversized Warcraft health bars leaking into FPS in Direct3D.
+- Added the native animated portrait to the Direct3D HUD with isolated color/depth capture.
 - Preserved campaign selection, existing renderer defaults, saves and gameplay settings.

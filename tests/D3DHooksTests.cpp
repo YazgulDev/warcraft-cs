@@ -3,6 +3,12 @@
 // Exercise the real probe entry point without installing hooks or starting its background threads.
 #include "../src/platform/D3DHooks.cpp"
 namespace wc3 {void Log(const char*,...) {}}
+// This probe oracle never submits native UI; that adapter has its own real-device pixel test.
+namespace D3DNativeUi {
+void Attach(IDirect3DDevice9*) {} void Finish() {} void Overlay(bool) {}
+void BeforeReset(IDirect3DDevice9*) {} void Viewport(IDirect3DDevice9*,D3DVIEWPORT9&,int,int) {}
+void Projection(IDirect3DDevice9*,bool) {}
+}
 
 int main() {
     char directory[MAX_PATH]={};GetSystemDirectoryA(directory,MAX_PATH);

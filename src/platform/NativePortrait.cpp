@@ -1,5 +1,9 @@
 #include "NativePortrait.hpp"
 #include "WarcraftApi.hpp"
+#ifdef WCS_D3D9
+#include "D3DNativeUi.hpp"
+#include "../presentation/D3DGraphics.hpp"
+#endif
 #include <algorithm>
 
 namespace {
@@ -71,6 +75,10 @@ void NativePortrait::Finish() {
     capturing_=false;
 }
 void NativePortrait::Draw(int x,int y,int side) {
+#ifdef WCS_D3D9
+    // Direct3D captures the same animated native portrait into a device-owned texture.
+    if(D3DGraphics::Active()) {D3DNativeUi::DrawPortrait(x,y,side);return;}
+#endif
     if(!ready_ || context_!=wglGetCurrentContext() || !glIsTexture(texture_))return;
     glPushAttrib(GL_TEXTURE_BIT|GL_CURRENT_BIT);glEnable(GL_TEXTURE_2D);glBindTexture(GL_TEXTURE_2D,texture_);glColor4f(1,1,1,1);
     float u=(cropWidth_-.5f)/side_,v=(cropHeight_-.5f)/side_,edge=.5f/side_;

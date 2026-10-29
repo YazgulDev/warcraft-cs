@@ -1,4 +1,5 @@
 #include "D3DHooks.hpp"
+#include "D3DNativeUi.hpp"
 #include <d3d9.h>
 #include "../presentation/FullscreenView.hpp"
 #include "../platform/WarcraftApi.hpp"
@@ -29,8 +30,8 @@ constexpr int kDeviceSetTransformSlot = 44;
 constexpr int kDeviceSetViewportSlot = 47;
 // The draw entry points (81-84) were measured for a scissor-driven UI filter, but hooking them
 // by code address crashed inside this client: the wrapper's device exposes driver-generated
-// thunks there (EIP landed in anonymous memory on the first probe). The filter therefore runs
-// entirely off the already-hooked SetTransform state transitions instead.
+// thunks there (EIP landed in anonymous memory on the first probe). D3DNativeUi instead patches
+// COM draw slots; these transform hooks retain world expansion and the fallback band clipping.
 // A present can also arrive through the swap chain (IUnknown 0-2, then Present at 3), which is
 // what most Direct3D 9 render loops use, so both entry points are anchored.
 constexpr int kSwapChainPresentSlot = 3;
@@ -111,8 +112,8 @@ constexpr DWORD kBootstrapWaitMs = 40000;
 
 // Native UI band suppression, the Direct3D counterpart of the OpenGL geometry filter. The
 // classic console strip and top bar are clipped with the scissor test, driven entirely from the
-// projection transitions the engine already issues every frame, so no draw entry point needs
-// hooking. The engine manages the scissor itself - it confines the world pass to the region
+// projection transitions the engine already issues every frame. Full native submission filtering
+// and portrait redirection belong to D3DNativeUi. The engine confines the world pass to the region
 // above the console strip with its own rectangle and disables the test around its UI passes -
 // so the wanted state is re-asserted per projection and the world pass is released from it.
 bool uiSuppressRequested = false;
@@ -311,6 +312,7 @@ void DrawFrame(IDirect3DDevice9* device, const char* label) {
     // swap chain and, if the probe already released it, dereference freed memory.
     if (device == probeDevice) return;
     if (!SelectOverlayDevice(device, label)) return;
+    D3DNativeUi::Attach(device);D3DNativeUi::Finish();
     frameAnchorSeen = true;
     // First present from a device this session has not drawn through yet: rendering that moved to
     // a device whose creation was never observed used to look like a silent stall.
@@ -371,7 +373,9 @@ void DrawFrame(IDirect3DDevice9* device, const char* label) {
     int width = 0, height = 0;
     if (!callback || !ResolveWindow() || !FrameSize(width, height)) return;
     overlayActive = true;
+    D3DNativeUi::Overlay(true);
     callback(device, window, width, height);
+    D3DNativeUi::Overlay(false);
     overlayActive = false;
     // The canvas cleared the scissor for its own pass; the cache must say so or a later
     // ortho pass would believe the rect is still applied.
@@ -416,6 +420,7 @@ HRESULT STDMETHODCALLTYPE ResetDetour(IDirect3DDevice9* device, D3DPRESENT_PARAM
     if (!forward) return D3DERR_INVALIDCALL;
     // D3DPOOL_MANAGED textures survive a Reset, so the overlay keeps its handles; the canvas
     // re-saves device state on the next frame.
+    D3DNativeUi::BeforeReset(device);
     return forward(device, params);
 }
 template<int S>
@@ -445,6 +450,7 @@ HRESULT STDMETHODCALLTYPE SetTransformDetour(IDirect3DDevice9* device, D3DTRANSF
         // Direct3D orthographic matrices carry no perspective row (_34 = 0, _44 = 1); every
         // perspective world projection the engine issues has _34 = 1 and _44 = 0.
         orthoProjection = matrix->m[2][3] == 0.0f && matrix->m[3][3] == 1.0f;
+        D3DNativeUi::Projection(device,orthoProjection);
         // The world pass binds its reduced viewport (above the console strip) before its
         // projection on some setups, and nothing re-issues the viewport afterwards. While the
         // FPS view hides the chrome, re-assert the full client rect right here so the world
@@ -522,6 +528,7 @@ HRESULT STDMETHODCALLTYPE SetViewportDetour(IDirect3DDevice9* device, const D3DV
         D3DVIEWPORT9 outgoing = *viewport;
         RECT client = {};
         if (window && GetClientRect(window, &client) && client.right > 0 && client.bottom > 0) {
+            D3DNativeUi::Viewport(device,outgoing,client.right,client.bottom);
             // Mirror the OpenGL submission: the engine's world viewport is bottom-anchored above
             // the console strip, so the strip region would stay unrendered once the chrome is
             // hidden. Record the strip from the engine's own rectangle, then expand the world

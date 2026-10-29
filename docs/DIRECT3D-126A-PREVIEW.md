@@ -29,6 +29,17 @@ Recovery also avoids probing an inactive/minimized game, leaves a grace period
 after focus returns, and recognizes when search/system slots name the same
 already anchored runtime.
 
+The UI correction filters Warcraft's native UI draw submissions rather than just
+scissoring its top and bottom bands. Native cursor and long selected-unit HP bars
+therefore do not remain over the FPS world. The mod's health bars continue to use
+`Interface.ShowAllyHealthBars`, `ShowEnemyHealthBars`, `HealthBarDistance` and K;
+their defaults have not changed. Hardware cursor visibility follows mouse-look
+ownership and returns to the game's requested state in free-cursor menus/RTS.
+The native animated portrait renders to its own D3D color/depth target and is
+composited into the HUD. Capture ends on the next orthographic projection even
+when the engine omits another viewport call. Reset releases its default-pool
+surfaces; this does not introduce an external portrait asset or readback per frame.
+
 Only the marked private game directory receives `d3d8.dll`, `d3dx9_43.dll` and
 `d3dcompiler_43.dll`. The bridge is compiled with a static C++ runtime; its import
 table is checked to avoid a hidden dependency on a developer machine's Visual C++
@@ -60,8 +71,23 @@ The log recorded 81 `d3d9-present` summaries, accepted round serial 128, M4A1
 reload start/completion, ten weapon slots loaded/drawn and zero ERROR entries.
 This is actual game verification, separate from hidden-device rendering tests.
 
-The native minimap and portrait capture adapters still require OpenGL and have
-no D3D9 feed. Their images are omitted in Direct3D; other HUD panels remain drawn.
-Full campaign/fullscreen/Alt-Tab parity is not implied by this windowed test.
+The UI correction was additionally checked in the owned map with its actual
+native portrait, no leaking selected-building HP line, a buy menu, an ogre target,
+RTS exit and FPS re-entry. Real hidden HAL-device tests verify all four native draw
+forms, preservation of world/canvas pixels, actual portrait texture pixels,
+hardware cursor suppression despite engine show requests, free-cursor restoration,
+projection-only capture termination, Reset and native RTS restoration. The WGL
+portrait animation/world color/depth regression also passes.
+
+The corrected build also ran at native fullscreen 1920×1080 with `focus=1`:
+screenshots show the portrait and reticle, no native cursor/long HP line, working
+buy menu and RTS/FPS transitions. With mod health bars enabled the ogre has a
+normal-sized bar at distance 300; changing the lab-only `HealthBarDistance` from
+2000 to 200 produces zero candidates/submissions and removes that bar. The log
+contains no ERROR entries. All lab module/INI/caches/Save files were restored.
+
+The native minimap capture adapter still requires OpenGL and has no D3D9 feed.
+Its image is omitted in Direct3D; other HUD panels remain drawn.
+Full campaign and Alt-Tab recovery parity remain unverified.
 The change supplies an alternate graphics path, not a confirmed diagnosis or fix
 for the AMD OpenGL failure in issue 10.

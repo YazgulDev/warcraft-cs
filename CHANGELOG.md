@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Fix the 1.26a Direct3D preview leaking native cursor/health-bar geometry into FPS; filter the native UI submission phase and retain the configured mod health bars. Hide the D3D hardware cursor during mouse look and restore its requested visibility for free-cursor menus/RTS.
+- Capture the native animated portrait into a separate Direct3D color/depth target. End capture at the following UI projection even when Warcraft omits another viewport call; restore engine surfaces and release default-pool resources before Reset.
+
 - Add optional Direct3D for 1.26a through pinned app-local d3d8to9/D3DX components and the existing D3D9 presentation adapter; prepare automatically in Player/Developer setup, retain upstream notices, backup a replaced private wrapper and keep public source archives native-free.
 - Add validated, saved Auto/OpenGL/Direct3D choices in both launchers and Direct3D source launch spelling; Auto preserves OpenGL for 1.26a and D3D9 for 1.27a, independent of RoC/TFT edition. Changes apply on next launch. [Preview and native verification](docs/DIRECT3D-126A-PREVIEW.md).
 - Avoid Direct3D recovery probes while the game is inactive/minimized and give native reset a focus-return grace period; coalesce already anchored search/system aliases instead of creating another device.
