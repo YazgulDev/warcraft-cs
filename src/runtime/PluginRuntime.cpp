@@ -48,6 +48,7 @@
 #endif
 #ifdef WCS_MOVEMENT_TEST
 #include "../../tests/MovementScene.hpp"
+#include "../../tests/CameraTerrainScene.hpp"
 #endif
 
 static ShooterController controller;
@@ -194,6 +195,7 @@ static int __fastcall WorldHook(uintptr_t ui, uintptr_t unused) {
 #ifdef WCS_MOVEMENT_TEST
     // Native movement oracles are explicit and must run only in the developer's disposable map copy.
     if (healthy && gameUI) MovementScene::Tick(gameBase,root);
+    if (healthy && gameUI) CameraTerrainScene::BeforeWorld(gameBase,root);
 #endif
     // Keep layout evaluation running while hiding its final graphics after the world pass.
     nativeUIPhase = false;
@@ -221,6 +223,10 @@ static int __fastcall WorldHook(uintptr_t ui, uintptr_t unused) {
     RECT portraitClient={};if(windowInput.Window())GetClientRect(windowInput.Window(),&portraitClient);
     portrait.BeginFrame(portraitClient.right,portraitClient.bottom,healthy && controller.Settings().showUnitHud ? controller.HudActor() : 0);
     int result = originalWorld(ui, unused);
+#ifdef WCS_MOVEMENT_TEST
+    // Read the actual engine-updated eye, rather than proving only that native setters accepted values.
+    CameraTerrainScene::AfterWorld();
+#endif
     // A completed world belongs to this presentation even if native UI/driver work takes over 500 ms.
     worldPending=true;
     ActorRenderFilter::End();
@@ -373,7 +379,13 @@ static DWORD WINAPI Initialize(void*) {
     FramePresentationScene::Install(base,Hook); // Disposable swap oracle; absent from ordinary builds.
 #endif
     // Map timers may request RTS camera presets repeatedly; live FPS owns those native camera writes.
-    MapCameraGuard::Install(base, []() { return healthy && controller.BlocksMapCamera(); }, Hook);
+    MapCameraGuard::Install(base, []() {
+#ifdef WCS_MOVEMENT_TEST
+        // The disposable camera oracle owns only its render interval, never its native setter calls.
+        if(CameraTerrainScene::BlocksMapCamera())return true;
+#endif
+        return healthy && controller.BlocksMapCamera();
+    }, Hook);
     ActorRenderFilter::Install(base, Hook);
     actorJumpView.Install(base,Hook);
     // Scoped base-damage replacement leaves all ordinary RTS attacks untouched.

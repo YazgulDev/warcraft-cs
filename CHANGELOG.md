@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Remove the verified 1.26a camera helper's extra averaged terrain height only during controlled views, preventing slope-dependent view shifts without changing physical movement/collision. Preserve normal RTS/unrelated cameras and unverified-host fallback. Add native flat/slope/standing/walking/jumping camera oracles and pitched map-edge regressions. [Camera preview](docs/CAMERA-SLOPE-PREVIEW.md).
+
 ## 0.14.0 — 2026-10-28
 
 - Publish complete downloads, upgrade instructions, settings/ranges, verification and compatibility limits: [Release 0.14.0](docs/RELEASE-0.14.0.md). Retain 0.13.0 movement, economy and weapon-balance defaults.

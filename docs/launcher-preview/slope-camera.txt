@@ -1,0 +1,3 @@
+- Fixed extra native terrain height disturbing the FPS camera on slopes in verified Warcraft III 1.26a.
+- Preserved movement, collision, jumping, native RTS cameras and the fallback on unverified hosts.
+- Added isolated native slope, walking and jumping regressions without including test scenes in the player module.

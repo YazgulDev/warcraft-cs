@@ -159,6 +159,13 @@ channel; no shared constant or game file is patched. `FirstPersonCamera` writes 
 clip and `FpsProjection` matches the live native field when adjusting the world's near plane,
 leaving portrait and native cinematic projection independent, including a clamped fallback.
 
+`MapCameraGuard` also removes the verified 1.26a camera helper's averaged terrain Z only
+for the controlled live FPS camera, during owned setters and deferred render evaluations.
+`FirstPersonCamera` then supplies the physical eye height directly. Signature rejection
+retains the previous public-API compensation; RTS and unrelated cameras keep native terrain.
+The opt-in `CameraTerrainScene` exercises real slope, walking and jumping submissions in
+movement-test builds; it is excluded from normal clients. Physical movement is independent.
+
 Tree movement bounds reuse `TreeTrunkMesh`'s standing ground-connected components, the same decoded
 geometry used for destructable shots. Canopy cards and death-only stumps do not expand the player
 blocker. The platform adapter applies the existing native sprite transform and visual scale to those
