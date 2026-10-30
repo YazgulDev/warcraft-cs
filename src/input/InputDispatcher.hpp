@@ -10,4 +10,5 @@ public:
     std::optional<LRESULT> Handle(HWND window, UINT message, WPARAM key, LPARAM data, bool healthy);
 private:
     ShooterController& controller_;
+    int settingsDragRow_=-1; // Capture only the slider pressed by this window, until mouse-up/focus loss.
 };

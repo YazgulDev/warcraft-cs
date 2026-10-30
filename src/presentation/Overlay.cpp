@@ -9,6 +9,7 @@
 #include "ReticleDiagnostics.hpp"
 #include "BuyMenuView.hpp"
 #include "WeaponSelectionView.hpp"
+#include "SettingsMenuView.hpp"
 #include "HudHints.hpp"
 #include "HudRenderState.hpp"
 #include "FixedFunctionState.hpp"
@@ -39,6 +40,7 @@ void Overlay::ResetGraphics(bool deleteObjects) {
     for (int i = 0; i < WeaponSlots::Count; ++i) { guns_[i].Reset(deleteObjects); loaded_[i] = attempted_[i] = false; }
     // Menu models obey the same context ownership rules as first-person weapons.
     for (int i=0;i<WeaponSlots::Count;++i) { buyPreviews_[i].Reset(deleteObjects);previewLoaded_[i]=previewAttempted_[i]=false; }
+    settingsFont_.Reset(deleteObjects);
     font_.Reset(deleteObjects);statusFont_.Reset(deleteObjects);spellFont_.Reset(deleteObjects);itemName_.Reset(deleteObjects);combatView_.Reset(deleteObjects);
 }
 void Overlay::ContextDeleted(HGLRC context) {
@@ -64,7 +66,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
             glGetString(GL_VENDOR), glGetString(GL_RENDERER), glGetString(GL_VERSION), glIsEnabled(GL_LINE_STIPPLE));
     } else if (refreshPending_) {
         // Keep surviving resources: blind deletion after Alt-Tab can touch IDs recycled by the game.
-        bool valid=font_.Valid() && statusFont_.Valid() && spellFont_.Valid() && grenadeWorld_.Valid() && rocketView_.Valid();
+        bool valid=settingsFont_.Valid() && font_.Valid() && statusFont_.Valid() && spellFont_.Valid() && grenadeWorld_.Valid() && rocketView_.Valid();
         valid=valid && sky_.Valid() && spellHud_.Valid() && inventoryIcons_.Valid() && unitFont_.Valid() && inventoryFont_.Valid() && energyBeamArt_.Valid() && energyImpactArt_.Valid() && itemName_.Valid() && combatView_.Valid();
         for (int i=0;i<WeaponSlots::Count;++i) if (loaded_[i] && !guns_[i].TexturesValid()) valid=false;
         for (int i=0;i<WeaponSlots::Count;++i) if (previewLoaded_[i] && !buyPreviews_[i].TexturesValid()) valid=false;
@@ -114,8 +116,13 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     // Sky touches only far-depth pixels before the weapon's private depth clear, preserving native scenery.
-    if (controller.Settings().csSky && !controller.Status().contained && !controller.Status().hidden)
+    if (controller.Settings().skyVisible && controller.Settings().csSky && !controller.Status().contained && !controller.Status().hidden)
         sky_.Draw(root_,controller.SkyName(),controller.ViewYaw(),controller.ViewPitch(),controller.ViewFov(),float(width)/height);
+    auto drawSettings=[&] {
+        if(!controller.SettingsPanel().Open())return;
+        settingsFont_.Ensure(std::clamp(height/38,14,24));POINT cursor={};GetCursorPos(&cursor);ScreenToClient(WindowFromDC(dc),&cursor);
+        SettingsMenuView::Draw(controller.SettingsPanel(),width,height,cursor.x,cursor.y,[&](float x,float y,const char* label){Text(x,y,label,&settingsFont_);});
+    };
     // World depth still exists here; the first-person weapon clears it in the next pass.
     if(controller.UnitFirstPerson()) {
         graphics.Phase("clean-view-effects");
@@ -127,6 +134,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
             GrenadeView::Draw(controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
             GrenadeView::Flash(controller.FlashOpacity(),width,height);
         }
+        drawSettings();
         glMatrixMode(GL_TEXTURE);glPopMatrix();glMatrixMode(oldMode);glPopAttrib();
         if(activeTexture)activeTexture(oldTexture);
         return;
@@ -255,7 +263,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     auto mapLayout=MinimapLayout::Calculate(width,height,controller.Settings().minimapSizePercent);
     // Backend-owned native captures share the same minimap placement and controls.
     if(controller.MinimapVisible())minimap.Draw(mapLayout);
-    std::string controls="Warcraft CS by Yazgul | "+key(ShortcutAction::ToggleFPS)+": RTS | "+key(ShortcutAction::ReloadSettings)+": CONFIG | "+key(ShortcutAction::Minimap)+": MINIMAP | "+key(ShortcutAction::Speed)+": SPEED | "+key(ShortcutAction::Fog)+": FOG";
+    std::string controls="Warcraft CS by Yazgul | "+key(ShortcutAction::ToggleFPS)+": RTS | "+key(ShortcutAction::ReloadSettings)+": RELOAD INI | "+key(ShortcutAction::SettingsMenu)+": SETTINGS | "+key(ShortcutAction::Minimap)+": MINIMAP | "+key(ShortcutAction::Speed)+": SPEED | "+key(ShortcutAction::Fog)+": FOG";
     // The dedicated key exposes direct entry/RTS exit independently of the active view switch.
     controls+=" | "+key(ShortcutAction::ToggleThirdPerson)+(controller.ThirdPerson() ? ": RTS" : ": THIRD PERSON");
     controls+=" | "+key(ShortcutAction::ToggleView)+(controller.ThirdPerson() ? (controller.Settings().warcraftOnly ? ": UNIT VIEW" : ": FPS") : ": THIRD PERSON");
@@ -332,6 +340,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         [&](float x,float y,const char* title){Text(x,y,title,&statusFont_);},weaponPreview);
     WeaponSelectionView::Draw(controller,width,height,[&](float x,float y,const char* text){Text(x,y,text);},weaponPreview);
     InventoryHudView::Cursor(window,controller.UnitHud(),InventoryHudLayout::Calculate(width,height,controller.Settings().spellIconSizePercent,controller.Settings().showSpellIcons,true),inventoryIcons_,controller.ItemControls());
+    drawSettings();
     GrenadeView::Flash(controller.FlashOpacity(),width,height); // Blindness covers hands, scope and HUD together.
     HudDiagnostics::State("completed",sampledHud);
     }

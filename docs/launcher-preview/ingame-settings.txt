@@ -1,0 +1,9 @@
+- Added TMP and UMP45 SMGs, FAMAS and Galil rifles, and a scoped G3SG1 automatic sniper.
+- Added private weapon models, animations, reload audio, muzzle flashes, casings and buy previews for the new guns.
+- Changed smoke to a dense depth-tested volume with configurable short visibility and all-team AI attack occlusion on Warcraft 1.26a.
+- Fixed health bars, item names and target markers revealing targets through dense smoke.
+- Fixed carried-weapon browsing to keep long primary lists within the screen.
+- Added an F2 in-game settings panel for mouse sensitivity, CS volume, movement physics, view distance and sky controls.
+- Added main and scoped mouse sensitivity multipliers with defaults preserving previous aiming speeds.
+- Added atomic Apply and Save, draft cancellation, mouse sliders and keyboard navigation without firing through the menu.
+- Added controlled-view sky visibility with authored-map sky restoration and installed CS preset selection.

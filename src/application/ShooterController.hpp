@@ -1,5 +1,8 @@
 #pragma once
 #include "../presentation/CameraHeightMotion.hpp"
+#ifdef WCS_GAMEPLAY_TEST
+#include "../platform/GameBuild.hpp"
+#endif
 #include "../combat/ShotgunReload.hpp"
 #include "../combat/HalfLifeEnergy.hpp"
 #include "../presentation/EnergyBeam.hpp"
@@ -39,6 +42,7 @@
 #include "../input/WeaponSelection.hpp"
 #include "../input/CameraWheel.hpp"
 #include "../config/GameplaySettings.hpp"
+#include "../config/SettingsMenu.hpp"
 #include "../inventory/AmmoRecovery.hpp"
 #include "../inventory/ItemPickup.hpp"
 #include "../inventory/WeaponDropRules.hpp"
@@ -70,7 +74,7 @@ public:
     void ResetMouse() { mouseLook_.Reset(); weaponWheel_.Reset();cameraWheel_.Reset();squadOrderMode_.ClearInput();armyToggleRequested_=false;weaponMenuCancelRequested_=true; }
     // Zoom is presentation-only: it must not cancel channeling or switch a carried CS weapon in TPS.
     void RequestMouseWheel(int delta) {
-        if(!Visible() || Buying() || InventoryOpen() || UnitFirstPerson())return;
+        if(!Visible() || SettingsInputOpen() || Buying() || InventoryOpen() || UnitFirstPerson())return;
         if(ThirdPerson())cameraWheel_.Add(delta);
         else {RequestSpellCancel();weaponWheel_.Add(delta);}
     }
@@ -134,7 +138,12 @@ public:
     const InventoryControls& ItemControls() const {return itemInventory_.State();}
     bool InventoryOpen() const {return itemInventory_.State().Open();}
     bool InventoryInputOpen() const {return itemInventory_.State().RoutingOpen();}
-    bool CursorMode() const {return Buying() || InventoryOpen();}
+    bool SettingsInputOpen() const {return settingsMenu_.RoutingOpen();}
+    const SettingsMenu& SettingsPanel() const {return settingsMenu_;}
+    void RequestSettingsMenu(SettingsMenu::Event e) {settingsMenu_.Queue(e);}
+    int RequestSettingsClick(int x,int y,int width,int height);
+    void RequestSettingsSlider(int row,int x,int width,int height);
+    bool CursorMode() const {return Buying() || InventoryOpen() || SettingsInputOpen();}
     void RequestInventory(InventoryControls::Event e) {itemInventory_.Input(e);weaponMenuCancelRequested_=true;}
     void RequestInventoryClose() {inventoryEscape_=true;itemInventory_.Input({InventoryControls::Kind::Close});}
     void InventoryProjection(float verticalFov) {inventoryVerticalFov_=verticalFov;}
@@ -152,7 +161,7 @@ public:
     // Window events queue confirmation/cancel; only the game thread changes the equipped weapon.
     void RequestWeaponConfirm() {weaponMenuConfirmRequested_=true;}
     void RequestWeaponCancel() {weaponMenuCancelRequested_=true;}
-    bool SelectingWeapon() const {return Visible() && !ThirdPerson() && !UnitFirstPerson() && !Buying() && !InventoryInputOpen() && weaponSelection_.Open();}
+    bool SelectingWeapon() const {return Visible() && !SettingsInputOpen() && !ThirdPerson() && !UnitFirstPerson() && !Buying() && !InventoryInputOpen() && weaponSelection_.Open();}
     const WeaponSelection& WeaponChoice() const {return weaponSelection_;}
     WeaponSelection::Available AvailableWeapons() const;
     int Gold() const { return gold_; }
@@ -240,6 +249,17 @@ public:
     void TestLogTarget() const {wc3::Log("fixture target hp=%.1f actorMana=%.1f",fixtureTarget_ ? wc3::Real(wc3::GetUnitState(fixtureTarget_,0)) : -1,wc3::Real(wc3::GetUnitState(unit_,2)));}
     // Match the real movement key-down path, including deliberate channel interruption.
     void TestWalk(int key,DWORD duration,bool walking=false) {RequestSpellCancel();testWalkKey_=key;testWalking_=walking;testWalkUntil_=GetTickCount()+std::min(duration,DWORD(2000));}
+    void TestMapSky(const char* model) {
+        auto frame=ui_ ? *reinterpret_cast<uintptr_t*>(ui_+0x3BC) : 0;
+        if(frame)reinterpret_cast<void (__thiscall*)(uintptr_t,const char*)>(gameBase_+wc3::Rva(0x390590))(frame,model);
+    }
+    void TestLogSky() const {
+        auto frame=ui_ ? *reinterpret_cast<uintptr_t*>(ui_+0x3BC) : 0;
+        const char* model=frame ? reinterpret_cast<const char* (__fastcall*)(uintptr_t,uintptr_t)>(gameBase_+wc3::Rva(0x4C4630))(frame+0x348,0) : nullptr;
+        wc3::Log("fixture settings nativeSky=%s sprite=%08X",model && *model ? model : "none",frame ? *reinterpret_cast<uintptr_t*>(frame+0x354) : 0);
+    }
+    bool TestInputRoute() const {return testInputRoute_;}
+    void TestInputRoute(bool value) {testInputRoute_=value;}
     void TestEquip(int slot) {SwitchWeapon(slot);}
     void TestReload() {Reload();}
     void TestSecondary() {keys_[VK_RBUTTON]=false;testSecondaryUntil_=GetTickCount()+100;}
@@ -285,6 +305,7 @@ public:
     const Weapon& WeaponData(int slot) const {return settings_.weapons[slot];}
 private:
 #ifdef WCS_GAMEPLAY_TEST
+    bool testInputRoute_=false;
     int testWalkKey_=0;bool testWalking_=false;DWORD testWalkUntil_=0,testAttackUntil_=0,testSecondaryUntil_=0;
 #endif
     bool Pressed(int key);
@@ -334,6 +355,7 @@ private:
     wc3::Handle shop_=0;
     bool shopCloseRequested_=false;
     void ReloadSettings();
+    void ApplyMenuSettings();
     void ToggleHealthBars();
     void ResetLoadout();
     void Buy(int slot,bool ammunition);
@@ -408,6 +430,7 @@ private:
     CameraWheel cameraWheel_;
     float thirdPersonDistance_=500;
     GameplaySettings settings_;
+    SettingsMenu settingsMenu_;
     NativeUnitHud unitHudReader_;
     UnitHudSnapshot unitHud_;
     DWORD unitHudTick_=0;

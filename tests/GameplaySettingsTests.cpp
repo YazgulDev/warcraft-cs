@@ -15,6 +15,18 @@ int main() {
     // Headless regressions report assertion details to the captured journal instead of a desktop dialog.
     _set_error_mode(_OUT_TO_STDERR);
     GameplaySettings settings;
+    // Missing, malformed and finite-bounded mouse values share the real startup/F8 configuration loader.
+    const auto mousePath=(std::filesystem::current_path()/"mouse-menu-validation.ini").string();
+    const std::pair<const char*,float> mouseCases[]={{"",1},{"nan",1},{"inf",1},{"bad",1},{"-1",.1f},{"0",.1f},{"12",5},{"1.75",1.75f}};
+    for(auto test:mouseCases) {
+        {std::ofstream f(mousePath);f<<"[Mouse]\nSensitivity="<<test.first<<"\nScopeSensitivity="<<test.first<<"\n";}
+        auto mouse=GameplaySettings::Load(mousePath);assert(mouse.mouse.sensitivity==test.second && mouse.mouse.scopeSensitivity==test.second);
+    }
+    {std::ofstream f(mousePath);f<<"[Mouse]\nSensitivity=2\nScopeSensitivity=0.5\n[Sky]\nVisible=false\n[Shortcuts]\nReloadSettings=F2\n";}
+    auto menuConfig=GameplaySettings::Load(mousePath);
+    assert(menuConfig.mouse.Gain(0)==.28f && menuConfig.mouse.Gain(1)==.035f && !menuConfig.skyVisible);
+    assert(menuConfig.shortcuts.Key(ShortcutAction::ReloadSettings)==VK_F2 && menuConfig.shortcuts.Key(ShortcutAction::SettingsMenu)==VK_F3);
+    DeleteFileA(mousePath.c_str());
     // Appended CS guns remain available without optional Half-Life assets and own complete nonzero tuning.
     for(int slot=WeaponSlots::TMP;slot<=WeaponSlots::G3SG1;++slot) {
         assert(settings.WeaponEnabled(slot) && WeaponSlots::Firearm(slot) && !WeaponSlots::HalfLife(slot));

@@ -612,3 +612,13 @@ $arsenalSmokeHash=(Get-FileHash $arsenalSmoke).Hash;Update-GameplayConfig $templ
 if((Get-FileHash $arsenalSmoke).Hash -ne $arsenalSmokeHash){throw 'Arsenal/smoke migration is not idempotent.'}
 
 Write-Output 'PASS new CS sections and dense-smoke tuning preserve custom values across repeated updates.'
+
+# The settings menu fills missing sensitivity/sky keys and yields F2 to saved custom controls.
+$inGameConfig=Join-Path $folder 'ingame-settings.ini'
+@('[Mouse]','Sensitivity=2.75','ScopeSensitivity=0.6','[Audio]','CSVolumePercent=37','[Sky]','Visible=false','Default=forest','[Shortcuts]','ReloadSettings=F2') | Set-Content $inGameConfig
+Update-GameplayConfig $template $inGameConfig
+$inGameText=Get-Content $inGameConfig -Raw
+foreach($required in @('Sensitivity=2.75','ScopeSensitivity=0.6','CSVolumePercent=37','Visible=false','Default=forest','ReloadSettings=F2','SettingsMenu=F3')) {if(!$inGameText.Contains($required)){throw "Settings-menu migration lost $required"}}
+$inGameHash=(Get-FileHash $inGameConfig).Hash;Update-GameplayConfig $template $inGameConfig
+if((Get-FileHash $inGameConfig).Hash -ne $inGameHash){throw 'Settings-menu migration was not idempotent.'}
+Write-Output 'PASS in-game settings defaults, saved preferences and non-conflicting shortcut migration.'

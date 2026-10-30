@@ -26,6 +26,7 @@ $sources += '"'+(Join-Path $modRoot 'src/platform/D3DMinimap.cpp')+'"' # Private
 $sources += '"'+(Join-Path $modRoot 'src/platform/NativeFaultDiagnostics.cpp')+'"'
 # Native spell fixtures are opt-in and are excluded from the installed normal build.
 # Item pickup and temporary native squad policies remain independent of shooter input/rendering.
+$sources += @('config/SettingsMenu.cpp','platform/SettingsStore.cpp','presentation/SettingsMenuView.cpp') | ForEach-Object { '"' + (Join-Path $modRoot "src/$_") + '"' }
 $sources += @('config/GameplaySettings.cpp','inventory/ItemPickup.cpp','squad/SquadController.cpp','platform/FpsCombatGuard.cpp') | ForEach-Object { '"' + (Join-Path $modRoot "src/$_") + '"' }
 $sources += '"'+(Join-Path $modRoot 'src/squad/SquadFocusFire.cpp')+'"' # Temporary all-unit targeting stays separate from formation AI.
 $sources += '"'+(Join-Path $modRoot 'src/squad/ArmyAI.cpp')+'"' # Resource spending and support orders use only unreserved owned units.

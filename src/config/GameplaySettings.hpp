@@ -1,5 +1,6 @@
 #pragma once
 #include "HitDetectionSettings.hpp"
+#include "MouseSettings.hpp"
 #include "CombatVisualSettings.hpp"
 #include "ItemHoverSettings.hpp"
 #include "CameraHeightSettings.hpp"
@@ -30,6 +31,7 @@ struct GameplaySettings {
     bool warcraftOnly=false; // Installation profile excludes CS weapons, assets, economy and samples.
     LoggingSettings logging;
     RenderSettings render;
+    MouseSettings mouse;
     ViewmodelSettings viewmodel;
     GrenadeSettings grenades;
     RpgSettings rpg;
@@ -135,6 +137,7 @@ struct GameplaySettings {
     // C4 quick replenishment buys the same single charge as its catalog entry.
     std::array<int,WeaponSlots::Count> ammoPrice={80,60,25,125,0,3000,0,40,20,20,50,60,65,65,300,200,300,500,0,300,300,20,25,60,60,80};
     std::array<int,WeaponSlots::Count> ammoPack={30,30,12,10,0,1,0,7,20,30,50,100,8,7,1,1,1,1,0,20,20,30,25,25,35,20};
+    bool skyVisible=true; // Controlled-view visibility is independent of the saved native/CS sky selection.
     bool csSky=false;
     // Every FPS map gets Warcraft's own backdrop unless the player explicitly disables it.
     bool nativeSky=true;

@@ -203,7 +203,13 @@ function Update-GameplayConfig([string]$Template,[string]$Destination) {
                     # Adding the new Y default must not overwrite another saved action.
                     if($entry.name -eq 'Shortcuts' -and $Matches[1].Trim() -eq 'SquadOrders' -and $usedShortcuts.Contains('Y')){$line='SquadOrders=NONE'}
                     # U remains opt-in for AI; another saved action using it takes priority during migration.
-                    if($entry.name -eq 'Shortcuts' -and $Matches[1].Trim() -eq 'ArmyAI' -and $usedShortcuts.Contains('U')){$line='ArmyAI=NONE'}
+                    if($entry.name -eq 'Shortcuts' -and $Matches[1].Trim() -eq 'SettingsMenu') {
+                        # A new settings shortcut must yield to existing custom function keys.
+                        $settingsKey='NONE'
+                        foreach($candidate in @('F2','F3','F4','F5')) {if(!$usedShortcuts.Contains($candidate)){$settingsKey=$candidate;break}}
+                        $line='SettingsMenu='+$settingsKey;[void]$usedShortcuts.Add($settingsKey)
+                    }
+                    if($entry.name -eq 'Shortcuts' -and $Matches[1].Trim() -eq 'ArmyAI'  -and $usedShortcuts.Contains('U')){$line='ArmyAI=NONE'}
                     # A migrated/custom refill may already own the new F12 default in a partial old layout.
                     if($entry.name -eq 'Shortcuts' -and $Matches[1].Trim() -eq 'AllWeapons' -and $usedShortcuts.Contains('F12')) {
                         $replacement='NONE'

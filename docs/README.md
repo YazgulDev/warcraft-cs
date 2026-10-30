@@ -10,6 +10,7 @@
 | [Requirements](../REQUIREMENTS.md) | Supported host, owned game files and build dependencies |
 | [Controls](CONTROLS.md) | Movement, view modes, buying, spells, inventory and squads |
 | [Settings](CONFIGURATION.md) | INI location, live reload and configuration by topic |
+| [In-game settings](INGAME-SETTINGS.md) | F2 mouse sensitivity, audio, physics, view distance and sky controls |
 | [Compatibility](COMPATIBILITY.md) | Supported versions, map limits and missing features |
 | [Direct3D for 1.26a](DIRECT3D-126A-PREVIEW.md) | Renderer selection, automatic private components and local verification |
 | [Troubleshooting](../TROUBLESHOOTING.md) | Installation, graphics, audio and reporting a problem |

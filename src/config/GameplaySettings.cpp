@@ -24,6 +24,9 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         if (end==value.c_str() || *end || !std::isfinite(parsed)) { wc3::Log("Invalid config %s.%s; using default",section,key);return fallback; }
         return std::clamp(parsed,0.0f,maximum);
     };
+    // Both gains are multipliers: validated unit defaults retain the existing raw/fallback look speeds.
+    result.mouse.sensitivity=std::max(.1f,number("Mouse","Sensitivity",1,5));
+    result.mouse.scopeSensitivity=std::max(.1f,number("Mouse","ScopeSensitivity",1,5));
     // New session controls reload with F8; malformed toggles preserve their documented defaults.
     auto enabled=[&](const char* section,const char* key,bool fallback=true) {
         auto value=text(section,key,fallback ? "true" : "false");
@@ -310,6 +313,12 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
             result.shortcuts.Set(action,0);break;
         }
     }
+    if(text("Shortcuts","SettingsMenu","").empty()) {
+        for(int candidate:{VK_F2,VK_F3,VK_F4,VK_F5,0}) {
+            bool used=false;for(size_t i=0;i<size_t(ShortcutAction::SettingsMenu);++i)used|=candidate && result.shortcuts.Key(ShortcutAction(i))==candidate;
+            if(!used){result.shortcuts.Set(ShortcutAction::SettingsMenu,candidate);break;}
+        }
+    }
     if(!layoutValid || !result.shortcuts.Valid()) {result.shortcuts=ShortcutBindings();wc3::Log("Invalid/conflicting Shortcuts; using default keyboard layout");}
     // Rawcodes and order IDs describe existing abilities; they never grant skills or bypass native costs.
     auto spellsEnabled=text("Spells","Enabled","true");
@@ -476,9 +485,10 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     auto unlimitedBombs=text("Loadout","UnlimitedBombPurchases","true");
     if(!_stricmp(unlimitedBombs.c_str(),"false") || unlimitedBombs=="0")result.unlimitedBombPurchases=false;
     else if(_stricmp(unlimitedBombs.c_str(),"true") && unlimitedBombs!="1")wc3::Log("Invalid Loadout.UnlimitedBombPurchases; using true");
-    result.csSky=_stricmp(text("Sky","Enabled","false").c_str(),"false")!=0;
+    result.skyVisible=enabled("Sky","Visible");
+    result.csSky=enabled("Sky","Enabled",false);
     // Default to Warcraft's sky even for older configs missing this key; explicit CS sky still takes precedence.
-    result.nativeSky=_stricmp(text("Sky","WarcraftEnabled","true").c_str(),"true")==0;
+    result.nativeSky=enabled("Sky","WarcraftEnabled");
     // Only filename stems from private CS caches are accepted; INI strings never become arbitrary paths.
     auto sky=[&](const char* key,const char* fallback) {
         auto value=text("Sky",key,fallback);

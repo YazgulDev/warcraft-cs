@@ -14,6 +14,7 @@ show default bindings; `[Shortcuts]` in the INI can change keyboard actions.
 | F9 | Enter unarmed first person; press again to return to RTS |
 | T | Switch between first- and third-person control |
 | F10 | Open the Warcraft pause menu and return control to RTS |
+| F2 | Open main mod settings; mouse/arrows edit, Enter saves, Escape cancels |
 | WASD / mouse | Move / look and aim |
 | Shift / Ctrl / Space | Walk / crouch / jump |
 | Home (Mode=recovery) | Emergency return to nearby visited safe ground after a fall or invalid placement |

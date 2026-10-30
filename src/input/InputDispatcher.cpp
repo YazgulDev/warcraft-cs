@@ -12,10 +12,16 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM k
         (message==WM_KEYDOWN || message==WM_KEYUP || message==WM_CHAR) &&
         GetEnvironmentVariableA("WCS_LOAD_KEY",loadKey,2)==1 && loadKey[0]=='1')return std::nullopt;
     // A background oracle otherwise accepts only its file mailbox, even when its window becomes active.
-    if(BackgroundGameplay::Enabled() && (message==WM_INPUT ||
+    if(BackgroundGameplay::Enabled() && !controller_.TestInputRoute() && (message==WM_INPUT ||
         (message>=WM_KEYFIRST && message<=WM_KEYLAST) || (message>=WM_MOUSEFIRST && message<=WM_MOUSELAST)))
         return message==WM_INPUT ? DefWindowProcA(window,message,key,data) : 0;
 #endif
+    auto releaseSettingsDrag=[&] {
+        if(settingsDragRow_<0)return;
+        settingsDragRow_=-1;if(GetCapture()==window)ReleaseCapture();
+    };
+    // Teardown can originate from a map/view change between messages; never retain slider capture in RTS.
+    if(!healthy || !controller_.Visible() || !controller_.SettingsInputOpen())releaseSettingsDrag();
     const auto& bindings=controller_.Settings().shortcuts;
     auto match=[&](ShortcutAction action) {return bindings.Matches(action,int(key));};
     bool down=message==WM_KEYDOWN || message==WM_SYSKEYDOWN;
@@ -40,19 +46,19 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM k
     }
     if(message==WM_ACTIVATEAPP) {
         controller_.ResetMouse();
-        if(!key) {controller_.RequestInventory({InventoryControls::Kind::Close});if(GetCapture()==window)ReleaseCapture();}
+        if(!key) {settingsDragRow_=-1;controller_.RequestSettingsMenu({SettingsMenu::Kind::Cancel});controller_.RequestInventory({InventoryControls::Kind::Close});if(GetCapture()==window)ReleaseCapture();}
     }
     // F6 remains a recovery alias even after remapping ToggleFPS, including native campaign movie transitions.
     if((key==VK_F6 || match(ShortcutAction::ToggleFPS)) && (down || up)) {
-        if(tap)controller_.RequestToggle();return 0;
+        releaseSettingsDrag();if(tap)controller_.RequestToggle();return 0;
     }
     // The dedicated third-person entry works from RTS too; only the game-thread mailbox changes modes.
     if(healthy && match(ShortcutAction::ToggleThirdPerson) && (down || up)) {
-        if(tap)controller_.RequestThirdPersonToggle();return 0;
+        releaseSettingsDrag();if(tap)controller_.RequestThirdPersonToggle();return 0;
     }
     // F9 works directly from RTS and restores RTS on its second press, independently of F6/F7.
     if(healthy && match(ShortcutAction::ToggleUnitView) && (down || up)) {
-        if(tap)controller_.RequestUnitViewToggle();return 0;
+        releaseSettingsDrag();if(tap)controller_.RequestUnitViewToggle();return 0;
     }
     if(!healthy || !controller_.Visible())return std::nullopt;
     // Queue recovery for the game thread; the controller rejects cargo, stun, casting and cursor UI states.
@@ -60,7 +66,33 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM k
         if(tap)controller_.RequestPositionRecovery();return 0;
     }
     // Native pause is always available and regains ordinary RTS input before its system key is forwarded.
-    if(key==VK_F10 && (down || up)) {if(tap)controller_.RequestMenu();return 0;}
+    if(key==VK_F10 && (down || up)) {releaseSettingsDrag();if(tap)controller_.RequestMenu();return 0;}
+    if(match(ShortcutAction::SettingsMenu) && (down || up)) {
+        if(tap)controller_.RequestSettingsMenu({SettingsMenu::Kind::Toggle});
+        settingsDragRow_=-1;if(GetCapture()==window)ReleaseCapture();return 0;
+    }
+    if(controller_.SettingsInputOpen()) {
+        // The modal mailbox owns every input edge, including short clicks before its first game tick.
+        using K=SettingsMenu::Kind;
+        if(down) {
+            if(tap && key==VK_ESCAPE)controller_.RequestSettingsMenu({K::Cancel});
+            else if(tap && key==VK_RETURN)controller_.RequestSettingsMenu({K::Apply});
+            else if(key==VK_UP || key==VK_DOWN)controller_.RequestSettingsMenu({K::Navigate,-1,key==VK_DOWN ? 1.f : -1.f});
+            else if(key==VK_LEFT || key==VK_RIGHT)controller_.RequestSettingsMenu({K::Adjust,-1,key==VK_RIGHT ? 1.f : -1.f});
+            if(key==VK_ESCAPE || key==VK_RETURN){settingsDragRow_=-1;if(GetCapture()==window)ReleaseCapture();}
+        }
+        if(message==WM_MOUSEWHEEL && GET_WHEEL_DELTA_WPARAM(key))controller_.RequestSettingsMenu({K::Adjust,-1,GET_WHEEL_DELTA_WPARAM(key)>0 ? 1.f : -1.f});
+        if(message==WM_LBUTTONDOWN) {
+            RECT client={};GetClientRect(window,&client);
+            settingsDragRow_=controller_.RequestSettingsClick(short(LOWORD(data)),short(HIWORD(data)),client.right,client.bottom);
+            if(settingsDragRow_>=0)SetCapture(window);
+        }
+        if(message==WM_MOUSEMOVE && settingsDragRow_>=0 && (key&MK_LBUTTON)) {
+            RECT client={};GetClientRect(window,&client);controller_.RequestSettingsSlider(settingsDragRow_,short(LOWORD(data)),client.right,client.bottom);
+        }
+        if(message==WM_LBUTTONUP || (message==WM_MOUSEMOVE && !(key&MK_LBUTTON)))releaseSettingsDrag();
+        if(down || up || message==WM_CHAR || message==WM_SYSCHAR || (message>=WM_MOUSEFIRST && message<=WM_MOUSELAST))return 0;
+    }
     // CS selection keeps aiming live: either mouse button owns the menu edge before firing/orders.
     if(controller_.SelectingWeapon()) {
         if(message==WM_LBUTTONDOWN){controller_.RequestWeaponConfirm();return 0;}

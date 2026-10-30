@@ -16,6 +16,8 @@
 #include "../economy/BuyAccess.hpp"
 #include "../economy/ShopAccess.hpp"
 #include "../presentation/BuyMenuLayout.hpp"
+#include "../presentation/SettingsMenuLayout.hpp"
+#include "../platform/SettingsStore.hpp"
 #include "../economy/PurchasePayment.hpp"
 #include "../platform/WeaponTrace.hpp"
 #include "../combat/HeadshotPolicy.hpp"
@@ -34,6 +36,20 @@
 
 const Weapon* const ShooterController::weapons=WeaponDefaults::Weapons.data();
 static constexpr float radians = 0.01745329252f;
+int ShooterController::RequestSettingsClick(int x,int y,int width,int height) {
+    // Hit testing queues draft actions only; WindowProc never writes the INI or changes native state.
+    auto hit=SettingsMenuLayout(width,height).Test(x,y);using H=SettingsMenuLayout::HitKind;using K=SettingsMenu::Kind;
+    if(hit.kind==H::Apply)RequestSettingsMenu({K::Apply});
+    if(hit.kind==H::Cancel)RequestSettingsMenu({K::Cancel});
+    if(hit.kind==H::Defaults)RequestSettingsMenu({K::Defaults});
+    if(hit.row>=0)RequestSettingsMenu({K::Select,hit.row});
+    if(hit.kind==H::Minus || hit.kind==H::Plus)RequestSettingsMenu({K::Adjust,hit.row,hit.kind==H::Plus ? 1.f : -1.f});
+    if(hit.kind==H::Slide){RequestSettingsMenu({K::Slide,hit.row,hit.fraction});return hit.row;}
+    return -1;
+}
+void ShooterController::RequestSettingsSlider(int row,int x,int width,int height) {
+    RequestSettingsMenu({SettingsMenu::Kind::Slide,row,SettingsMenuLayout(width,height).Fraction(float(x))});
+}
 void ShooterController::Configure(const char* root, uintptr_t gameBase) {
     root_ = root;
     gameBase_ = gameBase;
@@ -248,6 +264,7 @@ void ShooterController::Disable(bool restoreCamera) {
         ownCameraRequest_ = false;
     }
     CancelPlant();
+    settingsMenu_.Reset();
     active_ = false; scopeLevel_ = 0; reloadEnd_ = 0;glockBurst_.Cancel();flashWeapon_=-1;viewmodelMotion_.Reset();cameraHeight_.Reset();
     nativeSky_.Update(ui_,false,mapTileset_);
     meleeContact_ = meleeReady_ = 0; recoil_.Reset();
@@ -261,6 +278,7 @@ void ShooterController::Disable(bool restoreCamera) {
     wc3::Log("FPS disabled");
 }
 void ShooterController::ResetMap() {
+    settingsMenu_.Reset();
     NativeHeadGore::Reset(); // Corpse palettes and map model definitions must not cross map generations.
     // Currency and local loot belong to the unloaded map, independently of view/loadout changes.
     ++rewardGeneration_;dollars_.Reset();droppedWeapons_.Reset();nearbyWeapon_=-1;money_=0;
@@ -343,6 +361,7 @@ void ShooterController::SelectView(ControlView next) {
     // Pending combat/UI mailboxes cannot execute after entering the unarmed view.
     refillRequested_=allWeaponsRequested_=itemRequested_=buyToggleRequested_=buyAmmoRequested_=false;
     buyKeyRequested_=spellRequested_=-1;spellCancelRequested_=false;
+    settingsMenu_.Reset();
     view_=next;pitch_=ThirdPerson() ? settings_.thirdPerson.initialPitch : 0;
     squadRequested_=0;squadOrderMode_.ClearInput();if(!SquadReticleOrdersEnabled())squad_.CancelFocus(); // No queued click crosses a view change.
     if(!ThirdPerson()) {wc3::Animate(unit_,"stand");if(!UnitFirstPerson())Play("draw");}
@@ -383,7 +402,7 @@ void ShooterController::AimAndMove(float dt) {
 #endif
     if (!sampleMouse) mouseLook_.Reset();else mouseLook_.Sample(dx,dy);
     if (!status_.incapacitated && !CursorMode()) {
-        float sensitivity = scopeLevel_ == 2 ? 0.009f : Scoped() ? 0.035f : 0.14f;
+        float sensitivity = settings_.mouse.Gain(scopeLevel_);
         LookAngles::Apply(yaw_,pitch_,dx,dy,sensitivity);
     }
     MoveInput input;
@@ -615,6 +634,19 @@ void ShooterController::ToggleHealthBars() {
     wc3::Log("Health bars toggled enabled=%d alliesSaved=%d enemiesSaved=%d",settings_.healthBars.allies,alliesSaved,enemiesSaved);
     Notice(saved ? (settings_.healthBars.allies ? "HEALTH BARS ON" : "HEALTH BARS OFF") : "HEALTH BAR SETTINGS COULD NOT BE SAVED");
 }
+void ShooterController::ApplyMenuSettings() {
+    // Validate through the shared loader, applying only the menu's domains. Session M/N/Y choices,
+    // weapon inventory, zoom, live reload clocks and unrelated INI edits keep their existing ownership.
+    auto next=GameplaySettings::Load(root_+"\\WarcraftCS.ini");
+    settings_.mouse=next.mouse;settings_.csVolumePercent=next.csVolumePercent;settings_.render.drawDistance=next.render.drawDistance;
+    settings_.movement.classicCollision=next.movement.classicCollision;settings_.movement.platformRecovery=next.movement.platformRecovery;
+    settings_.skyVisible=next.skyVisible;settings_.csSky=next.csSky;settings_.nativeSky=next.nativeSky;
+    settings_.defaultSky=next.defaultSky;settings_.tilesetSky=std::move(next.tilesetSky);
+    audio_.SetVolumePercent(settings_.csVolumePercent);movement_.Configure(settings_.movement);
+    wc3::Log("In-game settings applied sensitivity=%.3f scope=%.3f volume=%.1f draw=%.0f classic=%d recovery=%d sky=%d cs=%d preset=%s",
+        settings_.mouse.sensitivity,settings_.mouse.scopeSensitivity,settings_.csVolumePercent,settings_.render.drawDistance,
+        settings_.movement.classicCollision,settings_.movement.platformRecovery,settings_.skyVisible,settings_.csSky,SkyName().c_str());
+}
 void ShooterController::ReloadSettings() {
     cameraHeight_.Reset(); // F8 discards the previous ground response.
     combatVisuals_.Reset(); // F8 drops fragments and labels from the old visual policy.
@@ -678,6 +710,7 @@ void ShooterController::ReloadSettings() {
     if(unit_ && wc3::GetUnitTypeId(unit_))money_=PurchaseBalance(wc3::GetOwningPlayer(unit_));
     showSpeed_=settings_.showSpeed;
     showMinimap_=settings_.showMinimap;
+    wc3::Log("Mouse configured sensitivity=%.3f scopeSensitivity=%.3f",settings_.mouse.sensitivity,settings_.mouse.scopeSensitivity);
     wc3::Log("Minimap configured visible=%d sizePercent=%.1f",showMinimap_,settings_.minimapSizePercent);
     fogOfWarDisabled_=settings_.disableFogOfWar;
     wc3::Log("Fog of war configured disabled=%d",fogOfWarDisabled_);
@@ -1131,6 +1164,7 @@ void ShooterController::Tick(uintptr_t ui) {
     requireForeground=!BackgroundGameplay::Enabled();
 #endif
     if (requireForeground && foregroundPid != GetCurrentProcessId()) {
+        settingsMenu_.Reset();
         flashWeapon_=-1;viewmodelMotion_.Reset();cameraHeight_.Reset();
         glockBurst_.Cancel(); // Focus loss cancels the rest of a burst instead of resuming it on return.
         thirdPersonRequested_=unitViewRequested_=false; // A background tap cannot acquire native control on refocus.
@@ -1157,10 +1191,11 @@ void ShooterController::Tick(uintptr_t ui) {
     suspended_ = suspended;
     if(suspended_) {flashWeapon_=-1;viewmodelMotion_.Reset();cameraHeight_.Reset();}
     if(!active_ || suspended_)glockBurst_.Cancel(); // Menus/cinematics cannot resume queued bullets later.
-    if (suspended_) { unitLocomotion_.Release();heroAttack_.Cancel();viewToggleRequested_=false;CancelCasting();spellRequested_=-1;spellCancelRequested_=false;CancelPlant(); meleeContact_ = 0;buyMenu_.Close();CloseWeaponSelection();itemInventory_.ClearInput();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1; }
+    if (suspended_) { settingsMenu_.Reset();unitLocomotion_.Release();heroAttack_.Cancel();viewToggleRequested_=false;CancelCasting();spellRequested_=-1;spellCancelRequested_=false;CancelPlant(); meleeContact_ = 0;buyMenu_.Close();CloseWeaponSelection();itemInventory_.ClearInput();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1; }
     // Advance copied visual pools only while the controlled simulation is active; native pause/menu ticks freeze them.
     if(active_ && !suspended_)combatVisuals_.Step(dt);
     if(Shopping()) {
+        settingsMenu_.Reset();
         if(shopCloseRequested_ || wc3::GetOwningPlayer(unit_)!=wc3::GetLocalPlayer() || !ShopAccess::Nearby(unit_,shop_,settings_.shopInteractionRadius))CloseShop();
         return;
     }
@@ -1198,11 +1233,25 @@ void ShooterController::Tick(uintptr_t ui) {
         }
     }
     // Menus/cinematics return ownership to the map; live FPS may temporarily fill a missing native sky.
-    nativeSky_.Update(ui_,Visible() && settings_.nativeSky && !settings_.csSky,mapTileset_);
+    nativeSky_.Update(ui_,Visible() && settings_.nativeSky && !settings_.csSky,mapTileset_,Visible() && !settings_.skyVisible);
     nativeFog_.Update(Visible() && fogOfWarDisabled_);
     // A queued display tap cannot take effect after FPS is suspended or left.
-    if (!active_ || suspended_) { CancelEnergy();CloseWeaponSelection();itemInventory_.ClearInput();squadOrderMode_.ClearInput();mouseLook_.Reset();weaponWheel_.Reset();cameraWheel_.Reset();itemRequested_=false;squadRequested_=0;speedToggleRequested_=fogToggleRequested_=minimapToggleRequested_=healthBarToggleRequested_=allyTargetToggleRequested_=false;spellRequested_=-1;spellCancelRequested_=false;return; }
-    if (settingsRequested_) { settingsRequested_=false;ReloadSettings();if(!Visible())return; } // Unit-view opt-out may return to RTS.
+    if (!active_ || suspended_) { settingsMenu_.Reset();CancelEnergy();CloseWeaponSelection();itemInventory_.ClearInput();squadOrderMode_.ClearInput();mouseLook_.Reset();weaponWheel_.Reset();cameraWheel_.Reset();itemRequested_=false;squadRequested_=0;speedToggleRequested_=fogToggleRequested_=minimapToggleRequested_=healthBarToggleRequested_=allyTargetToggleRequested_=false;spellRequested_=-1;spellCancelRequested_=false;return; }
+    if (settingsRequested_) { settingsMenu_.Reset();settingsRequested_=false;ReloadSettings();if(!Visible())return; } // Unit-view opt-out may return to RTS.
+    bool settingsInput=settingsMenu_.RoutingOpen(),wasSettingsOpen=settingsMenu_.Open();
+    bool applied=settingsMenu_.Update(settings_,mapTileset_,[&]{return SettingsStore::Skies(root_);},
+        [&](const auto& changes){return SettingsStore::Save(root_+"\\WarcraftCS.ini",changes);});
+    if(settingsInput || wasSettingsOpen) {Pressed(VK_ESCAPE);Pressed(VK_LBUTTON);Pressed(VK_RBUTTON);}
+    if(settingsInput || wasSettingsOpen || applied) {
+        // Modal transitions consume held fire and discard queued gameplay/UI actions before any can execute.
+        buyMenu_.Close();CloseWeaponSelection();itemInventory_.ClearInput();CancelEnergy();CancelCasting();CancelPlant();
+        heroAttack_.Cancel();glockBurst_.Cancel();meleeContact_=0;suppressFire_=true;
+        spellRequested_=-1;spellCancelRequested_=false;itemRequested_=false;squadRequested_=0;armyToggleRequested_=false;
+        refillRequested_=allWeaponsRequested_=buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1;
+        speedToggleRequested_=fogToggleRequested_=minimapToggleRequested_=healthBarToggleRequested_=allyTargetToggleRequested_=false;
+        mouseLook_.Reset();weaponWheel_.Reset();cameraWheel_.Reset();
+    }
+    if(applied){ApplyMenuSettings();Notice("SETTINGS SAVED");}
     if(armyToggleRequested_) {
         armyToggleRequested_=false;
         if(settings_.armyAI.enabled){armyAI_.Toggle();armyStatus_=ArmyAIStatus::Scanning;Notice(ArmyAIStatusText(armyAI_.Status()));}else Notice("ARMY AI DISABLED IN CONFIG");
@@ -1362,6 +1411,12 @@ void ShooterController::Tick(uintptr_t ui) {
         unitHudTick_=now;unitHud_=unitHudReader_.Read(unit_,settings_.showInventory || InventoryOpen() || ItemControls().Numbers());
     }
     UpdateStatus();
+    if(settingsMenu_.Open()) {
+        // Settings do not pause the map or gravity; movement and combat input remain exclusively owned by the panel.
+        unitLocomotion_.Release();UpdateReload(now);FpsCombatGuard::CancelOrders(unit_);
+        for(int key='0';key<='9';++key)Pressed(key);Pressed(ShortcutAction::Reload);
+        movement_.Stop();AimAndMove(dt);Camera();audio_.Tick(now);return;
+    }
     if(grenadeThrow_.Active() && (ThirdPerson() || UnitFirstPerson() || status_.incapacitated || status_.disarmed ||
         status_.contained || status_.hidden || Casting() || suppressFire_ || InventoryInputOpen() || Buying()))CancelPlant();
     if(weapon_!=WeaponSlots::Glock || ThirdPerson() || UnitFirstPerson() || status_.incapacitated || status_.disarmed ||

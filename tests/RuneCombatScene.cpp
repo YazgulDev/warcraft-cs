@@ -1,5 +1,6 @@
 #include "RuneCombatScene.hpp"
 #include "BackgroundGameplay.hpp"
+#include "../src/input/InputDispatcher.hpp"
 #include "FramePresentationScene.hpp"
 #include "../src/platform/NativeSpellSlots.hpp"
 #include "../src/platform/WeaponTargetFilter.hpp"
@@ -236,6 +237,23 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
         else if(BackgroundGameplay::Enabled() && command=="buttons")Buttons(base);
         // New tuning follows production mailboxes; only disposable fixture builds expose these commands.
         else if(BackgroundGameplay::Enabled() && command=="settings")controller.RequestSettingsReload();
+        else if(BackgroundGameplay::Enabled() && command=="settingskey") {
+            // Call the production dispatcher directly with this process's own window, without desktop input.
+            int key=0;input>>key;InputDispatcher dispatcher(controller);controller.TestInputRoute(true);
+            dispatcher.Handle(GetActiveWindow(),WM_KEYDOWN,WPARAM(key),0,true);
+            dispatcher.Handle(GetActiveWindow(),WM_KEYUP,WPARAM(key),1L<<31,true);controller.TestInputRoute(false);
+        }
+        else if(BackgroundGameplay::Enabled() && command=="settingssky")controller.TestLogSky();
+        else if(BackgroundGameplay::Enabled() && command=="settingsmapsky")controller.TestMapSky("Environment\\Sky\\LordaeronWinterSky\\LordaeronWinterSky.mdl");
+        else if(BackgroundGameplay::Enabled() && command=="settingsrow") {int row=0;float steps=0;input>>row>>steps;controller.RequestSettingsMenu({SettingsMenu::Kind::Adjust,row,steps});}
+        else if(BackgroundGameplay::Enabled() && command=="settingsclick") {
+            int x=0,y=0,w=0,h=0;input>>x>>y>>w>>h;controller.RequestSettingsClick(x,y,w,h);
+        }
+        else if(BackgroundGameplay::Enabled() && command=="settingsinspect") {
+            // Values expose the actual applied snapshot, not merely the pending draft displayed by the menu.
+            auto& s=controller.Settings();wc3::Log("fixture settings open=%d dirty=%d sensitivity=%.3f scope=%.3f volume=%.1f draw=%.0f classic=%d recovery=%d sky=%d csSky=%d preset=%s visible=%d ammo=%d serial=%u",
+                controller.SettingsPanel().Open(),controller.SettingsPanel().Dirty(),s.mouse.sensitivity,s.mouse.scopeSensitivity,s.csVolumePercent,s.render.drawDistance,s.movement.classicCollision,s.movement.platformRecovery,s.skyVisible,s.csSky,controller.SkyName().c_str(),controller.Visible(),controller.Ammo(),controller.ShotSerial());
+        }
         else if(BackgroundGameplay::Enabled() && command=="equip") {int slot=-1;input>>slot;controller.TestEquip(slot);}
         else if(BackgroundGameplay::Enabled() && command=="reload")controller.TestReload();
         else if(BackgroundGameplay::Enabled() && command=="secondary")controller.TestSecondary();
