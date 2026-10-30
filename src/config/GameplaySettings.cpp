@@ -34,6 +34,22 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         if(!_stricmp(value.c_str(),"false") || value=="0")return false;
         return fallback; // Malformed values retain the documented default, including opt-in native audio.
     };
+    // Code-only nuclear settings are validated in the same F8 snapshot as ordinary weapons.
+    result.chatEnabled=enabled("Chat","Enabled");
+    result.chatMessageSeconds=number("Chat","MessageSeconds",10,60);
+    auto& nuclear=result.nuclear;
+    nuclear.enabled=enabled("NuclearBomb","Enabled");
+    nuclear.repeatCodes=enabled("NuclearBomb","RepeatCodes",false);
+    nuclear.buildings=enabled("NuclearBomb","DestroyBuildings",false);
+    nuclear.rewards=enabled("NuclearBomb","KillRewards");
+    nuclear.delay=std::max(.5f,number("NuclearBomb","DelaySeconds",3,30));
+    nuclear.radius=number("NuclearBomb","Radius",0,50000);
+    nuclear.targetDistance=std::max(100.f,number("NuclearBomb","TargetDistance",800,5000));
+    nuclear.flashSeconds=number("NuclearBomb","FlashSeconds",.65f,3);
+    nuclear.shakeDegrees=number("NuclearBomb","ShakeDegrees",.6f,3);
+    nuclear.effectSeconds=std::max(3.f,number("NuclearBomb","EffectSeconds",8,20));
+    auto nuclearCode=text("NuclearBomb","Code","PUTINMOLODEC");
+    if(!nuclearCode.empty() && nuclearCode.size()<=64 && nuclearCode.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-" )==std::string::npos)nuclear.code=nuclearCode;
     // Visual-only settings share the real startup/F8 snapshot and bounded migration path.
     result.viewmodel.bob=enabled("Viewmodel","BobEnabled");
     result.viewmodel.bobAmount=number("Viewmodel","BobAmount",1,3);

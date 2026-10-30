@@ -1,6 +1,7 @@
 #pragma once
 #include "HitDetectionSettings.hpp"
 #include "MouseSettings.hpp"
+#include "NuclearSettings.hpp"
 #include "CombatVisualSettings.hpp"
 #include "ItemHoverSettings.hpp"
 #include "CameraHeightSettings.hpp"
@@ -32,6 +33,9 @@ struct GameplaySettings {
     LoggingSettings logging;
     RenderSettings render;
     MouseSettings mouse;
+    NuclearSettings nuclear;
+    bool chatEnabled=true;
+    float chatMessageSeconds=10;
     ViewmodelSettings viewmodel;
     GrenadeSettings grenades;
     RpgSettings rpg;

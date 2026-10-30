@@ -243,6 +243,33 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
             dispatcher.Handle(GetActiveWindow(),WM_KEYDOWN,WPARAM(key),0,true);
             dispatcher.Handle(GetActiveWindow(),WM_KEYUP,WPARAM(key),1L<<31,true);controller.TestInputRoute(false);
         }
+        else if(BackgroundGameplay::Enabled() && command=="textchar") {
+            unsigned codepoint=0;input>>codepoint;InputDispatcher dispatcher(controller);controller.TestInputRoute(true);
+            dispatcher.Handle(GetActiveWindow(),WM_UNICHAR,codepoint,0,true);controller.TestInputRoute(false);
+        }
+        else if(BackgroundGameplay::Enabled() && command=="textline") {
+            // Simulate text characters through the production dispatcher; no desktop keystrokes are injected.
+            std::string typedLine;std::getline(input,typedLine);if(!typedLine.empty() && typedLine[0]==' ')typedLine.erase(0,1);
+            InputDispatcher dispatcher(controller);controller.TestInputRoute(true);
+            for(unsigned char c:typedLine)dispatcher.Handle(GetActiveWindow(),WM_CHAR,c,0,true);controller.TestInputRoute(false);
+        }
+        else if(BackgroundGameplay::Enabled() && command=="nuclearinspect") {
+            wc3::Log("fixture nuclear textOpen=%d selected=%d active=%d remaining=%.2f age=%.2f serial=%u ammo=%d gold=%d speed=%.2f",controller.TextInputOpen(),controller.NuclearSelected(),controller.NuclearBomb().Active(),controller.NuclearBomb().Remaining(),controller.NuclearBomb().Age(),controller.ShotSerial(),controller.Ammo(),wc3::GetPlayerState(wc3::GetLocalPlayer(),1),controller.DisplaySpeed());
+        }
+        else if(BackgroundGameplay::Enabled() && command=="nuclearscene") {
+            // A disposable mixed team fixture verifies map-wide air/ground kills and preserved allies/buildings.
+            party.clear();float x=wc3::Real(wc3::GetUnitX(unit)),y=wc3::Real(wc3::GetUnitY(unit)),angle=0;
+            const int owners[]={12,12,12,0,12};const int types[]={0x6E6F6772,0x75676172,0x756E706C,0x68666F6F,0x68746F77};
+            for(int i=0;i<5;++i){float px=x+float(i+1)*260,py=y+150;auto target=wc3::CreateUnit(wc3::Player(owners[i]),types[i],&px,&py,&angle);party.push_back(target);if(target)wc3::PauseUnit(target,TRUE);}
+            // An ordinary native invulnerable creature must survive as well.
+            float px=x+260,py=y+600;auto protectedUnit=wc3::CreateUnit(wc3::Player(12),0x6E6F6772,&px,&py,&angle);party.push_back(protectedUnit);
+            float distantX=x+3500,distantY=y+1800;auto distant=wc3::CreateUnit(wc3::Player(12),0x75637279,&distantX,&distantY,&angle);party.push_back(distant);wc3::PauseUnit(distant,TRUE);
+            using Add=BOOL (__cdecl*)(wc3::Handle,int);reinterpret_cast<Add>(base+0x3C82A0)(protectedUnit,0x4176756C);
+            wc3::PauseUnit(protectedUnit,TRUE);wc3::Log("fixture nuclear scene created=%u",unsigned(party.size()));
+        }
+        else if(BackgroundGameplay::Enabled() && command=="nuclearsceneinspect") {
+            for(size_t i=0;i<party.size();++i)wc3::Log("fixture nuclear target index=%u type=%08X hp=%.2f",unsigned(i),wc3::GetUnitTypeId(party[i]),wc3::GetUnitTypeId(party[i]) ? wc3::Real(wc3::GetUnitState(party[i],0)) : 0);
+        }
         else if(BackgroundGameplay::Enabled() && command=="settingssky")controller.TestLogSky();
         else if(BackgroundGameplay::Enabled() && command=="settingsmapsky")controller.TestMapSky("Environment\\Sky\\LordaeronWinterSky\\LordaeronWinterSky.mdl");
         else if(BackgroundGameplay::Enabled() && command=="settingsrow") {int row=0;float steps=0;input>>row>>steps;controller.RequestSettingsMenu({SettingsMenu::Kind::Adjust,row,steps});}

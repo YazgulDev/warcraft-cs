@@ -10,6 +10,8 @@
 #include "BuyMenuView.hpp"
 #include "WeaponSelectionView.hpp"
 #include "SettingsMenuView.hpp"
+#include "NuclearView.hpp"
+#include "FpsTextView.hpp"
 #include "HudHints.hpp"
 #include "HudRenderState.hpp"
 #include "FixedFunctionState.hpp"
@@ -123,6 +125,8 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         settingsFont_.Ensure(std::clamp(height/38,14,24));POINT cursor={};GetCursorPos(&cursor);ScreenToClient(WindowFromDC(dc),&cursor);
         SettingsMenuView::Draw(controller.SettingsPanel(),width,height,cursor.x,cursor.y,[&](float x,float y,const char* label){Text(x,y,label,&settingsFont_);});
     };
+    auto drawTextInput=[&] {FpsTextView::Draw(controller.TextEntry(),controller.ChatMessage(),controller.ChatMessageVisible(),width,height,font_);};
+    NuclearView::World(controller.NuclearBomb(),barView,nearPlane,farPlane);
     // World depth still exists here; the first-person weapon clears it in the next pass.
     if(controller.UnitFirstPerson()) {
         graphics.Phase("clean-view-effects");
@@ -134,7 +138,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
             GrenadeView::Draw(controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
             GrenadeView::Flash(controller.FlashOpacity(),width,height);
         }
-        drawSettings();
+        drawSettings();drawTextInput();GrenadeView::Flash(controller.NuclearBomb().Flash(),width,height);
         glMatrixMode(GL_TEXTURE);glPopMatrix();glMatrixMode(oldMode);glPopAttrib();
         if(activeTexture)activeTexture(oldTexture);
         return;
@@ -179,7 +183,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     float top = std::tan(45.0f * 0.01745329252f) * projectionScale; float side = top * width / height;
     glFrustum(-side, side, -top, top, 1, 200);
     glMatrixMode(GL_MODELVIEW); glPushMatrix(); glLoadIdentity();
-    bool heldModel=!controller.ThirdPerson() && loaded_[index] && !controller.Status().contained && !controller.Status().hidden && (index!=WeaponSlots::C4 || controller.Ammo()>0);
+    bool heldModel=!controller.NuclearSelected() && !controller.ThirdPerson() && loaded_[index] && !controller.Status().contained && !controller.Status().hidden && (index!=WeaponSlots::C4 || controller.Ammo()>0);
     HudDiagnostics::Weapon(index,controller.ShotSerial(),controller.Animation(),animationSeconds,loaded_[index],heldModel,controller.Scoped(),
         controller.Status().contained,controller.Status().hidden);
     const auto& visuals=controller.Settings().viewmodel;
@@ -248,6 +252,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         else if(WeaponSlots::Melee(index))sprintf_s(status,"%s   %s",controller.WeaponData(index).name,controller.MoneyText().c_str());
         else sprintf_s(status,"%s   %d / %d   %s",controller.WeaponData(index).name,controller.Ammo(),controller.Reserve(),controller.MoneyText().c_str());
     }
+    if(controller.NuclearSelected())sprintf_s(status,"NUCLEAR BOMB x1   %s",controller.MoneyText().c_str());
     glColor4f(1.0f, 0.85f, 0.3f, 1); Text(statusPad, statusY, status, &statusFont_);
     // Installation progress and fuse are independent of which weapon is currently equipped.
     if (controller.PlantProgress() > 0) {
@@ -263,7 +268,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     auto mapLayout=MinimapLayout::Calculate(width,height,controller.Settings().minimapSizePercent);
     // Backend-owned native captures share the same minimap placement and controls.
     if(controller.MinimapVisible())minimap.Draw(mapLayout);
-    std::string controls="Warcraft CS by Yazgul | "+key(ShortcutAction::ToggleFPS)+": RTS | "+key(ShortcutAction::ReloadSettings)+": RELOAD INI | "+key(ShortcutAction::SettingsMenu)+": SETTINGS | "+key(ShortcutAction::Minimap)+": MINIMAP | "+key(ShortcutAction::Speed)+": SPEED | "+key(ShortcutAction::Fog)+": FOG";
+    std::string controls="Warcraft CS by Yazgul | ENTER: CHAT | "+key(ShortcutAction::ToggleFPS)+": RTS | "+key(ShortcutAction::ReloadSettings)+": RELOAD INI | "+key(ShortcutAction::SettingsMenu)+": SETTINGS | "+key(ShortcutAction::Minimap)+": MINIMAP | "+key(ShortcutAction::Speed)+": SPEED | "+key(ShortcutAction::Fog)+": FOG";
     // The dedicated key exposes direct entry/RTS exit independently of the active view switch.
     controls+=" | "+key(ShortcutAction::ToggleThirdPerson)+(controller.ThirdPerson() ? ": RTS" : ": THIRD PERSON");
     controls+=" | "+key(ShortcutAction::ToggleView)+(controller.ThirdPerson() ? (controller.Settings().warcraftOnly ? ": UNIT VIEW" : ": FPS") : ": THIRD PERSON");
@@ -340,7 +345,13 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         [&](float x,float y,const char* title){Text(x,y,title,&statusFont_);},weaponPreview);
     WeaponSelectionView::Draw(controller,width,height,[&](float x,float y,const char* text){Text(x,y,text);},weaponPreview);
     InventoryHudView::Cursor(window,controller.UnitHud(),InventoryHudLayout::Calculate(width,height,controller.Settings().spellIconSizePercent,controller.Settings().showSpellIcons,true),inventoryIcons_,controller.ItemControls());
-    drawSettings();
+    if(controller.NuclearSelected()) {
+        NuclearView::Held(width,height);glColor4f(1,.65f,.2f,1);
+        Text(width*.5f-240,height*.70f,"NUCLEAR BOMB: LMB LAUNCH / RMB HOLSTER");
+    }
+    if(controller.NuclearBomb().Remaining()>=0){char message[80];sprintf_s(message,"NUCLEAR STRIKE IN %.1f",controller.NuclearBomb().Remaining());glColor4f(1,.4f,.15f,1);Text(width*.5f-140,height*.42f,message);}
+    drawSettings();drawTextInput();
+    GrenadeView::Flash(controller.NuclearBomb().Flash(),width,height);
     GrenadeView::Flash(controller.FlashOpacity(),width,height); // Blindness covers hands, scope and HUD together.
     HudDiagnostics::State("completed",sampledHud);
     }

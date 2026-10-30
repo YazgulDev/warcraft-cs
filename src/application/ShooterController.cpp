@@ -18,6 +18,7 @@
 #include "../presentation/BuyMenuLayout.hpp"
 #include "../presentation/SettingsMenuLayout.hpp"
 #include "../platform/SettingsStore.hpp"
+#include "../platform/NativeChat.hpp"
 #include "../economy/PurchasePayment.hpp"
 #include "../platform/WeaponTrace.hpp"
 #include "../combat/HeadshotPolicy.hpp"
@@ -52,6 +53,7 @@ void ShooterController::RequestSettingsSlider(int row,int x,int width,int height
 }
 void ShooterController::Configure(const char* root, uintptr_t gameBase) {
     root_ = root;
+    NativeChat::Configure(gameBase); // Verify the real host chat handler before any custom text can be submitted.
     gameBase_ = gameBase;
     // Loot randomness is local to the mod and never advances Warcraft's scripted random stream.
     lootRandom_.seed(GetTickCount()^GetCurrentProcessId());
@@ -264,6 +266,8 @@ void ShooterController::Disable(bool restoreCamera) {
         ownCameraRequest_ = false;
     }
     CancelPlant();
+    // Losing this view discards unfinished text and holsters an unlaunched secret charge.
+    textEntry_.Reset();nuclearInventory_.Holster();nuclearHolsterRequested_=false;
     settingsMenu_.Reset();
     active_ = false; scopeLevel_ = 0; reloadEnd_ = 0;glockBurst_.Cancel();flashWeapon_=-1;viewmodelMotion_.Reset();cameraHeight_.Reset();
     nativeSky_.Update(ui_,false,mapTileset_);
@@ -278,6 +282,10 @@ void ShooterController::Disable(bool restoreCamera) {
     wc3::Log("FPS disabled");
 }
 void ShooterController::ResetMap() {
+    // Native map unload owns timer destruction; no charge, draft or victim handle crosses into the next map.
+    nuclearInventory_.Reset();nuclearBomb_.Reset();chatMessage_.clear();chatMessageTick_=0;
+    // Losing this view discards unfinished text and holsters an unlaunched secret charge.
+    textEntry_.Reset();nuclearInventory_.Holster();nuclearHolsterRequested_=false;
     settingsMenu_.Reset();
     NativeHeadGore::Reset(); // Corpse palettes and map model definitions must not cross map generations.
     // Currency and local loot belong to the unloaded map, independently of view/loadout changes.
@@ -361,6 +369,8 @@ void ShooterController::SelectView(ControlView next) {
     // Pending combat/UI mailboxes cannot execute after entering the unarmed view.
     refillRequested_=allWeaponsRequested_=itemRequested_=buyToggleRequested_=buyAmmoRequested_=false;
     buyKeyRequested_=spellRequested_=-1;spellCancelRequested_=false;
+    // Losing this view discards unfinished text and holsters an unlaunched secret charge.
+    textEntry_.Reset();nuclearInventory_.Holster();nuclearHolsterRequested_=false;
     settingsMenu_.Reset();
     view_=next;pitch_=ThirdPerson() ? settings_.thirdPerson.initialPitch : 0;
     squadRequested_=0;squadOrderMode_.ClearInput();if(!SquadReticleOrdersEnabled())squad_.CancelFocus(); // No queued click crosses a view change.
@@ -572,6 +582,7 @@ void ShooterController::RefillAmmo(bool grantAll) {
         Shortcut(grantAll ? ShortcutAction::AllWeapons : ShortcutAction::Refill).c_str(),ammo_[0],reserve_[0],ammo_[1],reserve_[1],ammo_[2],reserve_[2],ammo_[3],reserve_[3],ammo_[5],gold_);
 }
 void ShooterController::SwitchWeapon(int slot) {
+    nuclearInventory_.Holster();
     if (slot<0 || slot>=WeaponSlots::Count || !inventory_.owned[slot] || !settings_.WeaponEnabled(slot) || weapon_ == slot) return;
     // Number keys and the wheel share deployment: cancel reload, scope, planting and pending melee cues.
     CancelPlant(); audio_.CancelAnimation(); meleeContact_ = meleeReady_ = 0;
@@ -1139,6 +1150,9 @@ void ShooterController::Tick(uintptr_t ui) {
     DWORD foregroundPid = 0; GetWindowThreadProcessId(GetForegroundWindow(), &foregroundPid);
     droppedWeapons_.Tick(settings_.weaponDrops,!settings_.warcraftOnly);
     auto rewardGeneration=rewardGeneration_;
+    nuclearBomb_.Tick(audio_,[this,rewardGeneration](const KillReward& reward){if(rewardGeneration==rewardGeneration_)RewardKill(reward);});
+    // A mass-death trigger may unload the map synchronously; the rest of this tick owns the old UI.
+    if(rewardGeneration!=rewardGeneration_ || ui_!=ui)return;
     if (bombs_.Tick(audio_,[this,rewardGeneration](const KillReward& reward){
         if(rewardGeneration==rewardGeneration_)RewardKill(reward);
     }) && Visible()) hits_.Record();
@@ -1164,6 +1178,8 @@ void ShooterController::Tick(uintptr_t ui) {
     requireForeground=!BackgroundGameplay::Enabled();
 #endif
     if (requireForeground && foregroundPid != GetCurrentProcessId()) {
+        // Losing this view discards unfinished text and holsters an unlaunched secret charge.
+    textEntry_.Reset();nuclearInventory_.Holster();nuclearHolsterRequested_=false;
         settingsMenu_.Reset();
         flashWeapon_=-1;viewmodelMotion_.Reset();cameraHeight_.Reset();
         glockBurst_.Cancel(); // Focus loss cancels the rest of a burst instead of resuming it on return.
@@ -1191,10 +1207,12 @@ void ShooterController::Tick(uintptr_t ui) {
     suspended_ = suspended;
     if(suspended_) {flashWeapon_=-1;viewmodelMotion_.Reset();cameraHeight_.Reset();}
     if(!active_ || suspended_)glockBurst_.Cancel(); // Menus/cinematics cannot resume queued bullets later.
-    if (suspended_) { settingsMenu_.Reset();unitLocomotion_.Release();heroAttack_.Cancel();viewToggleRequested_=false;CancelCasting();spellRequested_=-1;spellCancelRequested_=false;CancelPlant(); meleeContact_ = 0;buyMenu_.Close();CloseWeaponSelection();itemInventory_.ClearInput();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1; }
+    if (suspended_) { textEntry_.Reset();nuclearInventory_.Holster();settingsMenu_.Reset();unitLocomotion_.Release();heroAttack_.Cancel();viewToggleRequested_=false;CancelCasting();spellRequested_=-1;spellCancelRequested_=false;CancelPlant(); meleeContact_ = 0;buyMenu_.Close();CloseWeaponSelection();itemInventory_.ClearInput();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1; }
     // Advance copied visual pools only while the controlled simulation is active; native pause/menu ticks freeze them.
     if(active_ && !suspended_)combatVisuals_.Step(dt);
     if(Shopping()) {
+        // Losing this view discards unfinished text and holsters an unlaunched secret charge.
+    textEntry_.Reset();nuclearInventory_.Holster();nuclearHolsterRequested_=false;
         settingsMenu_.Reset();
         if(shopCloseRequested_ || wc3::GetOwningPlayer(unit_)!=wc3::GetLocalPlayer() || !ShopAccess::Nearby(unit_,shop_,settings_.shopInteractionRadius))CloseShop();
         return;
@@ -1236,13 +1254,31 @@ void ShooterController::Tick(uintptr_t ui) {
     nativeSky_.Update(ui_,Visible() && settings_.nativeSky && !settings_.csSky,mapTileset_,Visible() && !settings_.skyVisible);
     nativeFog_.Update(Visible() && fogOfWarDisabled_);
     // A queued display tap cannot take effect after FPS is suspended or left.
-    if (!active_ || suspended_) { settingsMenu_.Reset();CancelEnergy();CloseWeaponSelection();itemInventory_.ClearInput();squadOrderMode_.ClearInput();mouseLook_.Reset();weaponWheel_.Reset();cameraWheel_.Reset();itemRequested_=false;squadRequested_=0;speedToggleRequested_=fogToggleRequested_=minimapToggleRequested_=healthBarToggleRequested_=allyTargetToggleRequested_=false;spellRequested_=-1;spellCancelRequested_=false;return; }
-    if (settingsRequested_) { settingsMenu_.Reset();settingsRequested_=false;ReloadSettings();if(!Visible())return; } // Unit-view opt-out may return to RTS.
+    if (!active_ || suspended_) { textEntry_.Reset();nuclearInventory_.Holster();settingsMenu_.Reset();CancelEnergy();CloseWeaponSelection();itemInventory_.ClearInput();squadOrderMode_.ClearInput();mouseLook_.Reset();weaponWheel_.Reset();cameraWheel_.Reset();itemRequested_=false;squadRequested_=0;speedToggleRequested_=fogToggleRequested_=minimapToggleRequested_=healthBarToggleRequested_=allyTargetToggleRequested_=false;spellRequested_=-1;spellCancelRequested_=false;return; }
+    if (settingsRequested_) { textEntry_.Reset();nuclearInventory_.Holster();settingsMenu_.Reset();settingsRequested_=false;ReloadSettings();if(!Visible())return; } // Unit-view opt-out may return to RTS.
+    bool textTransition=textEntry_.Transition();
+    for(auto line=textEntry_.Take();!line.empty();line=textEntry_.Take()) {
+        if(FpsTextEntry::NuclearCode(line,settings_.nuclear.code)) {
+            if(!ThirdPerson() && !UnitFirstPerson() && !settings_.warcraftOnly && !nuclearBomb_.Active() && nuclearInventory_.Grant(settings_.nuclear.enabled,settings_.nuclear.repeatCodes)) {
+                Notice("NUCLEAR BOMB READY: LMB LAUNCH / RMB HOLSTER");scopeLevel_=0;
+                wc3::Log("Nuclear bomb granted or reselected");
+            } else Notice("NUCLEAR BOMB UNAVAILABLE (ONE LAUNCH PER MAP BY DEFAULT)");
+        } else {
+            // Native chat owns campaign text triggers and built-in cheats. Never log user message contents.
+            bool sent=NativeChat::Send(line);
+            if(rewardGeneration!=rewardGeneration_ || ui_!=ui || !Visible())return; // Chat commands can load another map.
+            if(sent){chatMessage_=line;chatMessageTick_=now;}
+            else Notice("CHAT MESSAGE COULD NOT BE SENT");
+            wc3::Log("FPS chat submitted success=%d",sent);
+        }
+    }
+    if(nuclearHolsterRequested_){nuclearHolsterRequested_=false;nuclearInventory_.Holster();suppressFire_=true;}
     bool settingsInput=settingsMenu_.RoutingOpen(),wasSettingsOpen=settingsMenu_.Open();
+    if(settingsInput)nuclearInventory_.Holster();
     bool applied=settingsMenu_.Update(settings_,mapTileset_,[&]{return SettingsStore::Skies(root_);},
         [&](const auto& changes){return SettingsStore::Save(root_+"\\WarcraftCS.ini",changes);});
-    if(settingsInput || wasSettingsOpen) {Pressed(VK_ESCAPE);Pressed(VK_LBUTTON);Pressed(VK_RBUTTON);}
-    if(settingsInput || wasSettingsOpen || applied) {
+    if(settingsInput || wasSettingsOpen || TextInputOpen() || textTransition) {Pressed(VK_ESCAPE);Pressed(VK_LBUTTON);Pressed(VK_RBUTTON);}
+    if(settingsInput || wasSettingsOpen || applied || TextInputOpen() || textTransition) {
         // Modal transitions consume held fire and discard queued gameplay/UI actions before any can execute.
         buyMenu_.Close();CloseWeaponSelection();itemInventory_.ClearInput();CancelEnergy();CancelCasting();CancelPlant();
         heroAttack_.Cancel();glockBurst_.Cancel();meleeContact_=0;suppressFire_=true;
@@ -1411,8 +1447,8 @@ void ShooterController::Tick(uintptr_t ui) {
         unitHudTick_=now;unitHud_=unitHudReader_.Read(unit_,settings_.showInventory || InventoryOpen() || ItemControls().Numbers());
     }
     UpdateStatus();
-    if(settingsMenu_.Open()) {
-        // Settings do not pause the map or gravity; movement and combat input remain exclusively owned by the panel.
+    if(settingsMenu_.Open() || TextInputOpen()) {
+        // Modal settings/text do not pause the map or gravity; movement and combat stay owned by the editor.
         unitLocomotion_.Release();UpdateReload(now);FpsCombatGuard::CancelOrders(unit_);
         for(int key='0';key<='9';++key)Pressed(key);Pressed(ShortcutAction::Reload);
         movement_.Stop();AimAndMove(dt);Camera();audio_.Tick(now);return;
@@ -1494,6 +1530,7 @@ void ShooterController::Tick(uintptr_t ui) {
     UpdateBuyMenu();
     if (!Down(VK_LBUTTON) && !Down(VK_RBUTTON)) suppressFire_=false;
     if (Buying()) {
+        nuclearInventory_.Holster();
         glockBurst_.Cancel();
         unitLocomotion_.Release();
         heroAttack_.Cancel();
@@ -1506,6 +1543,7 @@ void ShooterController::Tick(uintptr_t ui) {
         movement_.Stop();weaponWheel_.Reset();cameraWheel_.Reset();AimAndMove(dt);Camera();audio_.Tick(now);return;
     }
     if(InventoryOpen()) {
+        nuclearInventory_.Holster();
         glockBurst_.Cancel();
         // Native item channels continue while the panel owns pointer/movement; clicks cannot become attacks.
         spellRequested_=-1;spellCancelRequested_=false;itemRequested_=false;squadRequested_=0;
@@ -1513,6 +1551,19 @@ void ShooterController::Tick(uintptr_t ui) {
         for(int key='0';key<='9';++key)Pressed(key);
         Pressed(VK_LBUTTON);Pressed(VK_RBUTTON);Pressed(ShortcutAction::Reload);
         movement_.Stop();weaponWheel_.Reset();cameraWheel_.Reset();UpdateSquad(now);
+        AimAndMove(dt);Camera();audio_.Tick(now);return;
+    }
+    if(nuclearInventory_.Selected()) {
+        bool launch=Pressed(VK_LBUTTON),cancel=Pressed(VK_RBUTTON);
+        if(cancel){nuclearInventory_.Holster();suppressFire_=true;}
+        else if(launch && !suppressFire_ && !Casting() && !status_.disarmed && !status_.incapacitated) {
+            float origin[3],direction[3];AimRay(origin,direction);
+            std::array<float,3> center={origin[0]+direction[0]*settings_.nuclear.targetDistance,origin[1]+direction[1]*settings_.nuclear.targetDistance,0};center[2]=wc3::Ground(center[0],center[1]);
+            if(nuclearBomb_.Launch(unit_,center,settings_.nuclear)){nuclearInventory_.Launch();Notice("NUCLEAR STRIKE INCOMING");}
+            suppressFire_=true;
+        }
+        // An armed action replaces the gun; no round, native autoattack, scope or delayed melee can leak.
+        FpsCombatGuard::CancelOrders(unit_);CancelEnergy();glockBurst_.Cancel();CancelPlant();meleeContact_=0;
         AimAndMove(dt);Camera();audio_.Tick(now);return;
     }
     // TPS zoom and FPS weapon selection consume separate queues; scrolling never crosses view modes.

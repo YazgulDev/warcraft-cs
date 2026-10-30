@@ -1,4 +1,5 @@
 #include "InputDispatcher.hpp"
+#include "../platform/NativeChat.hpp"
 #ifdef WCS_GAMEPLAY_TEST
 #include "../../tests/BackgroundGameplay.hpp"
 #endif
@@ -27,6 +28,27 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM k
     bool down=message==WM_KEYDOWN || message==WM_SYSKEYDOWN;
     bool up=message==WM_KEYUP || message==WM_SYSKEYUP;
     bool tap=down && !(data&(1L<<30));
+    if(healthy && controller_.Visible() && !controller_.Shopping() && !controller_.SettingsInputOpen()) {
+        auto& text=controller_.TextEntry();
+        if(tap && key==VK_RETURN && controller_.Settings().chatEnabled) {if(text.Opened())text.Submit();else text.Open();return 0;}
+        if(text.Opened()) {
+            // Modal typing wins over F6/F7, shortcuts, mouse orders and raw look until submit/cancel.
+            if(tap && key==VK_ESCAPE)text.Cancel();
+            if(down && key=='V' && (GetKeyState(VK_CONTROL)&0x8000))for(auto c:NativeChat::Clipboard(window))text.Character(c);
+            if(message==WM_CHAR && key!=VK_RETURN && key!=VK_ESCAPE)text.Character(NativeChat::Character(key));
+            if(message==WM_UNICHAR && key!=UNICODE_NOCHAR)text.Character(uint32_t(key));
+            if(message==WM_INPUT){controller_.ResetMouse();return DefWindowProcA(window,message,key,data);}
+            if(down || up || message==WM_CHAR || message==WM_UNICHAR || message==WM_SYSCHAR || (message>=WM_MOUSEFIRST && message<=WM_MOUSELAST))return 0;
+        }
+        if(controller_.NuclearSelected()) {
+            // A normal weapon gesture holsters the unlaunched secret charge before its queued selection runs.
+            bool weaponGesture=message==WM_MOUSEWHEEL;
+            if(tap)for(int i=0;i<WeaponSlots::ShortcutCount;++i)weaponGesture|=match(ShortcutAction(int(ShortcutAction::Weapon1)+i));
+            if(weaponGesture)controller_.RequestNuclearHolster();
+        }
+        if(controller_.NuclearSelected() && (down || up) && key==VK_ESCAPE){if(tap)controller_.RequestNuclearHolster();return 0;}
+        if(controller_.NuclearSelected() && (message==WM_RBUTTONDOWN || message==WM_RBUTTONUP)){if(message==WM_RBUTTONDOWN)controller_.RequestNuclearHolster();return 0;}
+    }
     // A native shop owns its command card and pointer; E/Escape return to the captured view.
     if(controller_.Shopping()) {
         if((match(ShortcutAction::Pickup) || key==VK_ESCAPE || key==VK_F6 || key==VK_F7 || key==VK_F9) && (down || up)) {
@@ -45,7 +67,7 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM k
         if(healthy && controller_.Visible())return DefWindowProcA(window,message,key,data);
     }
     if(message==WM_ACTIVATEAPP) {
-        controller_.ResetMouse();
+        controller_.ResetMouse();if(!key)controller_.TextEntry().Reset();
         if(!key) {settingsDragRow_=-1;controller_.RequestSettingsMenu({SettingsMenu::Kind::Cancel});controller_.RequestInventory({InventoryControls::Kind::Close});if(GetCapture()==window)ReleaseCapture();}
     }
     // F6 remains a recovery alias even after remapping ToggleFPS, including native campaign movie transitions.

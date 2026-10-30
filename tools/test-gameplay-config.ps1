@@ -622,3 +622,12 @@ foreach($required in @('Sensitivity=2.75','ScopeSensitivity=0.6','CSVolumePercen
 $inGameHash=(Get-FileHash $inGameConfig).Hash;Update-GameplayConfig $template $inGameConfig
 if((Get-FileHash $inGameConfig).Hash -ne $inGameHash){throw 'Settings-menu migration was not idempotent.'}
 Write-Output 'PASS in-game settings defaults, saved preferences and non-conflicting shortcut migration.'
+# Installer migration must insert new keys and preserve independent custom nuclear/chat choices.
+$nuclearConfig=Join-Path $folder 'nuclear-chat.ini'
+@('[NuclearBomb]','Code=PRIVATE_CODE','RepeatCodes=true','Radius=789','DelaySeconds=7','FlashSeconds=0','ShakeDegrees=0','DestroyBuildings=true','[Chat]','Enabled=false','MessageSeconds=19') | Set-Content $nuclearConfig
+Update-GameplayConfig $template $nuclearConfig
+$nuclearText=Get-Content $nuclearConfig -Raw
+foreach($required in @('Code=PRIVATE_CODE','RepeatCodes=true','Radius=789','DelaySeconds=7','FlashSeconds=0','ShakeDegrees=0','DestroyBuildings=true','KillRewards=true','EffectSeconds=8','TargetDistance=800','Enabled=false','MessageSeconds=19')) {if(!$nuclearText.Contains($required)){throw "Nuclear/chat migration lost $required"}}
+$nuclearHash=(Get-FileHash $nuclearConfig).Hash;Update-GameplayConfig $template $nuclearConfig
+if((Get-FileHash $nuclearConfig).Hash -ne $nuclearHash){throw 'Nuclear/chat migration was not idempotent.'}
+Write-Output 'PASS nuclear/chat defaults and custom values across repeated upgrades.'

@@ -49,3 +49,5 @@ Detailed notes: [0.15.0](RELEASE-0.15.0.md), [0.14.0](RELEASE-0.14.0.md), [0.13.
 [0.9.1](RELEASE-0.9.1.md), [0.9.0](RELEASE-0.9.0.md), [0.8.0](RELEASE-0.8.0.md),
 [0.7.0](RELEASE-0.7.0.md), [0.6.1](RELEASE-0.6.1.md), [0.6.0](RELEASE-0.6.0.md),
 [0.5.1](RELEASE-0.5.1.md).
+
+- [Nuclear bomb and FPS text input preview](NUCLEAR-CHAT-PREVIEW.md)

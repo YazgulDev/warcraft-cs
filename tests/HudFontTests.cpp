@@ -84,6 +84,9 @@ int main() {
             Require(ink>4 && ink<advance*size/2,"Glyph must have visible ink and transparent counters");
             Require(Coverage(expected,10+advance,100-size,10+advance*2,100)==0,"Space became an opaque rectangle");
             Require(Coverage(expected,10+advance*2,100-size,10+advance*3,100)==ink,"Glyph advances are inconsistent");
+            Clear();font.Draw(10,100,"\xD0\x96 \xD0\x96");auto cyrillic=Pixels();
+            Require(Coverage(cyrillic,10,100-size,10+advance,100)>4,"Cyrillic glyph has no visible pixels");
+            Clear();font.Draw(10,100,"? ?");Require(Pixels()!=cyrillic,"Cyrillic text fell back to question marks");
             font.Reset(true);PoisonUpload();Require(font.Ensure(size),"Cannot build font with inherited pixel state");
             CheckUploadState();Clear();font.Draw(10,100,"O O");
             Require(Pixels()==expected,"Inherited upload state changed glyph coverage");
