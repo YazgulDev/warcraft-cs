@@ -268,7 +268,7 @@ def main():
     args.output.mkdir(parents=True, exist_ok=True)
     manifest = []
     weapon_sounds = set()
-    for weapon in ("ak47", "m4a1", "usp", "awp", "knife", "c4", "deagle", "glock18", "mp5", "p90", "m249", "m3", "xm1014", "hegrenade", "flashbang", "smokegrenade"):
+    for weapon in ("ak47", "m4a1", "usp", "awp", "knife", "c4", "deagle", "glock18", "mp5", "p90", "m249", "m3", "xm1014", "tmp", "ump45", "famas", "galil", "g3sg1", "hegrenade", "flashbang", "smokegrenade"):
         model = StudioModel(args.cstrike / "models" / f"v_{weapon}.mdl")
         # Both silencer-capable weapons are permanently unsilenced in this mod, including their geometry.
         excluded = ("silencer.bmp",) if weapon in ("m4a1", "usp") else ()
@@ -292,7 +292,7 @@ def main():
     # Keep retail-derived files in the private lab, with their source fingerprints.
     sounds = args.output / "sounds"
     sounds.mkdir(exist_ok=True)
-    required_sounds={"deagle-1.wav", "glock18-2.wav", "mp5-1.wav", "p90-1.wav", "m249-1.wav", "m3-1.wav", "xm1014-1.wav", "ak47-1.wav", "m4a1_unsil-1.wav", "usp_unsil-1.wav", "awp1.wav", "knife_slash1.wav", "knife_hit1.wav", "knife_hit2.wav", "knife_hit3.wav", "knife_hit4.wav", "knife_stab.wav", "knife_hitwall1.wav", "c4_plant.wav", "c4_click.wav",
+    required_sounds={"tmp-1.wav", "ump45-1.wav", "famas-1.wav", "galil-1.wav", "g3sg1-1.wav", "deagle-1.wav", "glock18-2.wav", "mp5-1.wav", "p90-1.wav", "m249-1.wav", "m3-1.wav", "xm1014-1.wav", "ak47-1.wav", "m4a1_unsil-1.wav", "usp_unsil-1.wav", "awp1.wav", "knife_slash1.wav", "knife_hit1.wav", "knife_hit2.wav", "knife_hit3.wav", "knife_hit4.wav", "knife_stab.wav", "knife_hitwall1.wav", "c4_plant.wav", "c4_click.wav",
                           "c4_explode1.wav", "c4_beep1.wav", "c4_beep3.wav", "c4_beep4.wav", "c4_beep5.wav"}
     # Engine-driven shell sounds are needed even when an owned shotgun model has no sound event.
     required_sounds.update({"m3_insertshell.wav", "m3_pump.wav"})

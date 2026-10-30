@@ -119,7 +119,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     // World depth still exists here; the first-person weapon clears it in the next pass.
     if(controller.UnitFirstPerson()) {
         graphics.Phase("clean-view-effects");
-        itemName_.Draw(controller.HoveredItemName(),width,height,std::clamp(height/45,16,30));
+        itemName_.Draw(controller.HoveredItemVisible(barView.eye) ? controller.HoveredItemName() : std::string{},width,height,std::clamp(height/45,16,30));
         HudDiagnostics::Omitted("clean-unit-view",sampledHud);
         if(!controller.Status().contained && !controller.Status().hidden) {
             grenadeWorld_.Draw(root_,controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
@@ -144,8 +144,11 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     if(!controller.Status().contained && !controller.Status().hidden)
         combatView_.Draw(controller.Visuals(),barView,width,height,nearPlane,farPlane);
     unsigned barCount=0;
-    if(!controller.Status().contained && !controller.Status().hidden && !controller.Buying())
-        barCount=HealthBarRenderer::Draw(bars,barView,width,height,nearPlane,farPlane);
+    if(!controller.Status().contained && !controller.Status().hidden && !controller.Buying()) {
+        std::vector<UnitHealthBar> visibleBars;
+        for(const auto& bar:bars)if(controller.VisibleThroughSmoke(barView.eye,bar.position))visibleBars.push_back(bar);
+        barCount=HealthBarRenderer::Draw(visibleBars,barView,width,height,nearPlane,farPlane);
+    }
     if(!controller.Status().contained && !controller.Status().hidden) {
         if(!controller.ThirdPerson() && !controller.Buying() && WeaponSlots::Energy(index)) {
             auto beam=controller.Beam();std::array<float,3> anchor;
@@ -205,7 +208,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     else if (controller.Scoped()) ScopeView::Draw(float(width), float(height));
     else ReticleView::DrawHipFire(float(width), float(height), controller.Recoil());
     // The circle and brackets identify the next reachable contact without a text caption.
-    if(!unavailableView && !controller.Buying() && controller.ThirdPerson() && controller.Settings().thirdPerson.showTargetIndicator)
+    if(!unavailableView && !controller.Buying() && controller.ThirdPerson() && controller.Settings().thirdPerson.showTargetIndicator && controller.VisibleThroughSmoke(barView.eye,controller.AimTarget().position))
         TargetMarkerView::Draw(controller.AimTarget(),barView,width,height,nearPlane,farPlane);
     // Scale the bottom HUD from a readable 42-pixel font at 1080p, with safe edge padding.
     int statusSize = std::clamp(int(std::lround(height * (42.0f / 1080.0f))), 26, 84);
@@ -215,7 +218,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     Font(statusSize);
     controller.Hits().Draw(float(width), float(height));
     if(!unavailableView && !controller.Buying()) {
-        itemName_.Draw(controller.HoveredItemName(),width,height,std::clamp(height/45,16,30));
+        itemName_.Draw(controller.HoveredItemVisible(barView.eye) ? controller.HoveredItemName() : std::string{},width,height,std::clamp(height/45,16,30));
     }
 
     // Money formatting follows the active purchase currency in both HUD layouts.

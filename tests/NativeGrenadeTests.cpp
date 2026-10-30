@@ -1,6 +1,7 @@
 #include "../src/platform/NativeRockets.hpp"
 #include "../src/platform/NativeGrenades.hpp"
 #include <cassert>
+#include "../src/platform/SpriteTransform.hpp"
 #include <cstring>
 #include <map>
 #include <cstdlib>
@@ -25,6 +26,9 @@ void Log(const char*,...) {}
 void Trace(const char*,...) {}
 Handle Effect(const char*,float,float){return 42;}
 std::vector<Handle> NearbyDestructables(float,float,float){return {10};}
+}
+namespace SpriteTransform {
+bool Read(uintptr_t sprite,ModelTransform& transform){transform.position[0]=sprite==1 ? -400.f : 400.f;return sprite!=0;}
 }
 void GameAudio::Play(const char*,float){++sounds;}
 void GameAudio::SetLoop(const char*,bool,float){}
@@ -100,7 +104,16 @@ int main() {
     settings.grenades.worldModelScale=3;clockSeconds=.1f;field.Tick(audio,1,{0,0,100},{1,0,0});
     assert(field.Visuals().size()==1 && field.Visuals()[0].modelScale==1.25f && field.Visuals()[0].spin>0); // Launch snapshot owns world appearance.
     clockSeconds=2;field.Tick(audio,1,{0,0,100},{1,0,0});assert(field.Visuals().size()==1 && field.Visuals()[0].smoke && damages==0);
+    // Read-only owner/sprite routing blocks both directions; neither target allegiance nor unit stats are consulted.
+    alignas(uintptr_t) unsigned char source[0x40]={},victim[0x40]={},attack[0x40]={};
+    *reinterpret_cast<uintptr_t*>(source+0x28)=1;*reinterpret_cast<uintptr_t*>(victim+0x28)=2;
+    *reinterpret_cast<uintptr_t*>(attack+0x30)=uintptr_t(source);
+    assert(field.BlocksSight(uintptr_t(attack),uintptr_t(victim)));
+    *reinterpret_cast<uintptr_t*>(source+0x28)=2;*reinterpret_cast<uintptr_t*>(victim+0x28)=1;
+    assert(field.BlocksSight(uintptr_t(attack),uintptr_t(victim)));
+    assert(!field.BlocksSight(1,1)); // Unreadable objects fail safely rather than dereferencing stale memory.
     clockSeconds=30;field.Tick(audio,1,{0,0,100},{1,0,0});assert(field.Visuals().empty());
+    assert(!field.BlocksSight(uintptr_t(attack),uintptr_t(victim)));
     field.Reset();Scene();cover={Bounds3{{12,-30,0},{14,30,200}}};
     assert(field.Throw(1,WeaponSlots::HE,{0,0,100},{1,0,0},{},settings));clockSeconds=.3f;field.Tick(audio,1,{0,0,100},{1,0,0});assert(hp[2]==1000 && hp[10]==1000);
     GameplaySettings stock;

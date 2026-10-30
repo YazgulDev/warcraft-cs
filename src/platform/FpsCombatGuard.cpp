@@ -6,6 +6,8 @@
 namespace {
 uintptr_t gameBase=0;
 bool targetVerified=false;
+thread_local uintptr_t blindAttack=0;
+bool (*blockedSight)(uintptr_t,uintptr_t)=nullptr;
 wc3::Handle (*viewActor)()=nullptr;
 wc3::Handle (*protectedActor)()=nullptr;
 bool eligibilityVerified=false;
@@ -26,7 +28,7 @@ using Eligibility=int (__thiscall*)(uintptr_t,uintptr_t,int*);
 Eligibility nativeEligibility=nullptr;
 int __fastcall EligibilityHook(uintptr_t attack,uintptr_t,uintptr_t target,int* index) {
     // Warcraft's shared target test covers acquisition and retained windups, before chase/attack orders.
-    if(FpsCombatGuard::BlocksIncomingAttack(attack,target)) {
+    if(FpsCombatGuard::BlocksIncomingAttack(attack,target) || FpsCombatGuard::BlocksUnseenTarget(attack,target)) {
         if(index)*index=-1;
         return 0xDD; // Same native no-valid-attack rejection returned by this verified routine.
     }
@@ -58,6 +60,7 @@ bool BlockScriptOrder(wc3::Handle unit,int order,wc3::Handle target=0) {
     bool attack=order==851983 || order==851984 || (order==851971 && target && wc3::UnitObject(target));
     // Map-issued basic attacks obey the same F9 policy as automatic acquisition.
     auto protectedUnit=eligibilityVerified && protectedActor ? protectedActor() : 0;
+    if(attack && object && target && FpsCombatGuard::BlocksUnseenTarget(*reinterpret_cast<uintptr_t*>(object+0x1E8),wc3::UnitObject(target)))return true;
     if(attack && target==protectedUnit && protectedUnit && wc3::IsUnitEnemy(protectedUnit,wc3::GetOwningPlayer(unit)))return true;
     if(!controlled || !attack)return false;
     LogBlocked("script",*reinterpret_cast<uintptr_t*>(object+0x1E8));return true;
@@ -97,11 +100,11 @@ float* __fastcall AttackRangeHook(uintptr_t attack,uintptr_t,float* result) {
     if (ControlledAttack(attack)) { *result=0;return result; }return attackRange(attack,result);
 }
 }
-void FpsCombatGuard::Install(uintptr_t base,wc3::Handle (*actor)(),bool (*unitPredicate)(uintptr_t),bool (*attackPredicate)(uintptr_t),HookInstaller hook,wc3::Handle (*protectedUnit)()) {
+void FpsCombatGuard::Install(uintptr_t base,wc3::Handle (*actor)(),bool (*unitPredicate)(uintptr_t),bool (*attackPredicate)(uintptr_t),HookInstaller hook,wc3::Handle (*protectedUnit)(),bool (*sightPolicy)(uintptr_t,uintptr_t)) {
     // This adapter requires engine internals that are not yet verified on 1.27a.
     if(wc3::ActiveBuild()==wc3::GameBuildKind::Classic127a) return;
 
-    gameBase=base;viewActor=actor;protectedActor=protectedUnit;
+    gameBase=base;blockedSight=sightPolicy;viewActor=actor;protectedActor=protectedUnit;
     // Verified 1.26a target eligibility: thiscall(attack,target,int*), ret 8. Other versions retain native behavior.
     const unsigned char eligibilitySignature[]={0x83,0xEC,0x18,0x53,0x55,0x56,0x57,0x8B,0xF9};
     if(!memcmp(reinterpret_cast<void*>(base + wc3::Rva(0xC93E0)),eligibilitySignature,sizeof(eligibilitySignature)))
@@ -142,6 +145,10 @@ void FpsCombatGuard::Install(uintptr_t base,wc3::Handle (*actor)(),bool (*unitPr
     bool targetText=hook(reinterpret_cast<void*>(base + wc3::Rva(0x3C8E20)),reinterpret_cast<void*>(TargetStringHook),reinterpret_cast<void**>(&targetString));
     bool pointText=hook(reinterpret_cast<void*>(base + wc3::Rva(0x3C8DA0)),reinterpret_cast<void*>(PointStringHook),reinterpret_cast<void**>(&pointString));
     wc3::Log("FPS map attack order guard targetId=%d pointId=%d targetString=%d pointString=%d",targetNumeric,pointNumeric,targetText,pointText);
+}
+uintptr_t FpsCombatGuard::PermitBlindContact(uintptr_t attack) {auto previous=blindAttack;blindAttack=attack;return previous;}
+bool FpsCombatGuard::BlocksUnseenTarget(uintptr_t attack,uintptr_t target) {
+    return attack!=blindAttack && eligibilityVerified && blockedSight && blockedSight(attack,target);
 }
 bool FpsCombatGuard::BlocksIncomingAttack(uintptr_t attack,uintptr_t target) {
     auto actor=eligibilityVerified && protectedActor ? protectedActor() : 0;

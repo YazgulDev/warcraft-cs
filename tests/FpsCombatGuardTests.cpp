@@ -22,6 +22,9 @@ BOOL (__cdecl* targetOrder)(wc3::Handle,int,wc3::Handle)=nullptr;
 BOOL (__cdecl* pointOrder)(wc3::Handle,int,float*,float*)=nullptr;
 int scriptOrders=0;
 bool passiveUnitEnabled=false;
+using Eligibility=int (__fastcall*)(uintptr_t,uintptr_t,uintptr_t,int*);
+Eligibility eligibility=nullptr;
+int __fastcall NativeEligibility(uintptr_t,uintptr_t,uintptr_t,int*){return 17;}
 BOOL __cdecl NativeTarget(wc3::Handle,int,wc3::Handle) {++scriptOrders;return TRUE;}
 BOOL __cdecl NativePoint(wc3::Handle,int,float* x,float*) {++scriptOrders;arguments[0]=uintptr_t(*x);return TRUE;}
 int __fastcall NativeCheck(uintptr_t,uintptr_t,uintptr_t a,uintptr_t b,uintptr_t c,uintptr_t d) {
@@ -33,7 +36,8 @@ void __fastcall NativeStart(uintptr_t,uintptr_t,uintptr_t a,uintptr_t b,uintptr_
 }
 float* __fastcall NativeRange(uintptr_t,uintptr_t,float* result) {*result=500;return result;}
 bool Hook(void* at,void* detour,void** original) {
-    if(uintptr_t(at)==base+0x7C2C0) {targetGetter=reinterpret_cast<decltype(targetGetter)>(detour);*original=reinterpret_cast<void*>(NativeTargetGetter);}
+    if(uintptr_t(at)==base+0xC93E0){eligibility=reinterpret_cast<Eligibility>(detour);*original=reinterpret_cast<void*>(NativeEligibility);}
+    else if(uintptr_t(at)==base+0x7C2C0) {targetGetter=reinterpret_cast<decltype(targetGetter)>(detour);*original=reinterpret_cast<void*>(NativeTargetGetter);}
     else if(uintptr_t(at)==base+0xC5E30) {checked=reinterpret_cast<Check>(detour);*original=reinterpret_cast<void*>(NativeCheck);}
     else if(uintptr_t(at)==base+0xC6210) {started=reinterpret_cast<Start>(detour);*original=reinterpret_cast<void*>(NativeStart);}
     else if(at==reinterpret_cast<void*>(wc3::IssueTargetOrderById)) {targetOrder=reinterpret_cast<decltype(targetOrder)>(detour);*original=reinterpret_cast<void*>(NativeTarget);}
@@ -104,5 +108,18 @@ int main() {
     started(passiveAttack,0,1,2,3,4,5,6,7,8,9,10);assert(starts==2);
     assert(!targetOrder(2,851983,1) && !pointOrder(2,851983,&x,&y) && scriptOrders==6);
     assert(targetOrder(1,851983,2) && scriptOrders==7);
+    // Verified eligibility enforces all-team smoke for acquisition, retained targets and scripted attacks.
+    const unsigned char valid[]={0x83,0xEC,0x18,0x53,0x55,0x56,0x57,0x8B,0xF9};
+    std::memcpy(image.data()+0xC93E0,valid,sizeof(valid));passiveUnitEnabled=false;
+    FpsCombatGuard::Install(base,actorGetter,unitPolicy,attackPolicy,Hook,nullptr,[](uintptr_t a,uintptr_t b){return a==13 && b==uintptr_t(actorObject.data());});
+    int index=0;assert(eligibility && eligibility(13,0,uintptr_t(actorObject.data()),&index)==0xDD && index==-1);
+    assert(eligibility(13,0,uintptr_t(otherObject.data()),&index)==17);
+    assert(!targetOrder(2,851983,1) && targetOrder(2,852089,1)); // Area/spell rules retain their native behavior.
+    auto previous=FpsCombatGuard::PermitBlindContact(13);
+    assert(eligibility(13,0,uintptr_t(actorObject.data()),&index)==17); // Player's blind bullet may hit.
+    assert(previous==0);FpsCombatGuard::PermitBlindContact(previous);
+    assert(eligibility(13,0,uintptr_t(actorObject.data()),&index)==0xDD);
+    FpsCombatGuard::Install(base,actorGetter,unitPolicy,attackPolicy,Hook); // Expired/disabled smoke releases immediately.
+    assert(eligibility(13,0,uintptr_t(actorObject.data()),&index)==17 && targetOrder(2,851983,1));
     std::puts("PASS basic attack validation/retaliation blocked in FPS; spells, other units and RTS dispatch preserved.");
 }

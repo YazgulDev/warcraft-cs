@@ -3,6 +3,7 @@
 #include "../src/combat/ShotgunReload.hpp"
 #include "../src/presentation/BuyMenuLayout.hpp"
 #include <cassert>
+#include "../src/presentation/CombatVisuals.hpp"
 
 int main() {
     // Currency buttons are available on every page, without purchasing or changing that page.
@@ -128,6 +129,15 @@ int main() {
         --loaded;assert(fresh.Buy(slot,true,settings,wallet,loaded,spare,magazines[slot],0)==BuyInventory::Result::Bought && loaded==magazines[slot] && spare==0);
         assert(wallet==saved-settings.ammoPrice[slot]);
         settings.grenades.enabled=false;assert(fresh.Buy(slot,false,settings,wallet,loaded,spare,magazines[slot],0)==BuyInventory::Result::Invalid);settings.grenades.enabled=true;
+    }
+    for(int slot=WeaponSlots::TMP;slot<=WeaponSlots::G3SG1;++slot) {
+        BuyInventory fresh;int wallet=settings.weaponPrice[slot],loaded=0,spare=0;
+        assert(fresh.Buy(slot,false,settings,wallet,loaded,spare,settings.weapons[slot].magazine,settings.maxReserve[slot])==BuyInventory::Result::Bought);
+        assert(wallet==0 && loaded==settings.weapons[slot].magazine && fresh.owned[slot]);
+        wallet=settings.ammoPrice[slot];spare=settings.maxReserve[slot]-1;
+        assert(fresh.Buy(slot,true,settings,wallet,loaded,spare,settings.weapons[slot].magazine,settings.maxReserve[slot])==BuyInventory::Result::Bought);
+        assert(wallet==0 && spare==settings.maxReserve[slot]);
+        assert(CombatVisuals::UsesCases(slot));
     }
     BuyMenu menu;menu.Toggle();menu.Select(9,2);assert(menu.Current()==BuyMenu::Page::HalfLife);menu.Select(0,2);
     assert(menu.Select(6,2).primaryAmmo && menu.Select(7,2).secondaryAmmo);

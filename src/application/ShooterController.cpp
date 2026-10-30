@@ -155,7 +155,7 @@ void ShooterController::UpdateBuyMenu() {
 bool ShooterController::Down(int key) const {
 #ifdef WCS_GAMEPLAY_TEST
     // Background fixtures must never interpret keys typed into the user's other applications.
-    if(BackgroundGameplay::Enabled())return (key==VK_LBUTTON && GetTickCount()<testAttackUntil_) ||
+    if(BackgroundGameplay::Enabled())return (key==VK_RBUTTON && GetTickCount()<testSecondaryUntil_) || (key==VK_LBUTTON && GetTickCount()<testAttackUntil_) ||
         ((key==testWalkKey_ || (testWalking_ && key==settings_.shortcuts.Key(ShortcutAction::Walk))) && GetTickCount()<testWalkUntil_);
 #endif
     return key>0 && key<256 && (GetAsyncKeyState(key) & 0x8000) != 0;
@@ -180,6 +180,9 @@ const char* ShooterController::Sequence(const char* name) const {
     }
     // The owned Glock model's shoot/shoot2 animate three kicks; shoot3 is its ordinary single shot.
     if(weapon_==WeaponSlots::Glock && !strcmp(name,"shoot1"))return "shoot3";
+    // TMP and G3SG1 author their first shot as shoot, rather than shoot1.
+    if((weapon_==WeaponSlots::TMP || weapon_==WeaponSlots::G3SG1) && !strcmp(name,"shoot1"))return "shoot";
+    if((weapon_==WeaponSlots::TMP || weapon_==WeaponSlots::UMP45 || weapon_==WeaponSlots::G3SG1) && !strcmp(name,"idle"))return "idle1";
     if((weapon_==WeaponSlots::Deagle || weapon_==WeaponSlots::Glock || weapon_==WeaponSlots::MP5 || weapon_==WeaponSlots::M249) && !strcmp(name,"idle"))return "idle1";
     // The exported M4/USP body is unsilenced, so pose and shot sound must agree.
     if (weapon_ == 1 || weapon_ == 2) {
@@ -395,7 +398,7 @@ void ShooterController::AimAndMove(float dt) {
     input.stanceLocked = status_.incapacitated;
     if (status_.incapacitated) input.duck = movement_.Duck() >= 0.5f;
     const auto& weaponSpeeds=settings_.weaponMoveSpeed;
-    float speed = weapon_ == 3 && Scoped() ? 150.0f : weaponSpeeds[weapon_];
+    float speed = WeaponSlots::Scoped(weapon_) && Scoped() ? 150.0f : weaponSpeeds[weapon_];
     // Apply Warcraft's current modifier to CS weapon speeds; roots stop movement but still allow falling.
     float speedScale=UnitScaling::MoveScale(settings_.movement.scaleFromUnitMoveSpeed,status_.nativeSpeed,
         settings_.movement.unitMoveSpeedReference,status_.speedScale);
@@ -705,6 +708,7 @@ void ShooterController::ReloadSettings() {
     for (int slot = 0; slot < WeaponSlots::Count; ++slot)
         wc3::Trace("settings weapon=%s damage=%.1f heroMultiplier=%.2f price=%d ammoPrice=%d ammoPack=%d maxReserve=%d",
             settings_.weapons[slot].name, settings_.damage[slot], settings_.heroMultiplier[slot], settings_.weaponPrice[slot], settings_.ammoPrice[slot], settings_.ammoPack[slot],settings_.maxReserve[slot]);
+    wc3::Log("Smoke configured radius=%.1f duration=%.1f opacity=%.3f visibilityDistance=%.1f blocksAI=%d",settings_.grenades.smokeRadius,settings_.grenades.smokeSeconds,settings_.grenades.smokeOpacity,settings_.grenades.smokeVisibilityDistance,settings_.grenades.smokeBlocksAI);
     wc3::Trace("settings secondaryDamage knife=%.1f sword=%.1f", settings_.knifeSecondaryDamage, settings_.swordSecondaryDamage);
     for (unsigned code = 0; code < settings_.tilesetSky.size(); ++code)
         if (!settings_.tilesetSky[code].empty()) wc3::Trace("settings tileset=%c sky=%s", code, settings_.tilesetSky[code].c_str());
@@ -1470,10 +1474,10 @@ void ShooterController::Tick(uintptr_t ui) {
     if(!ThirdPerson() && !suppressFire_ && weapon_==WeaponSlots::RPG && secondaryPressed) {
         rpgLaser_=!rpgLaser_;Notice(rpgLaser_ ? "RPG LASER ON" : "RPG LASER OFF");wc3::Log("RPG laser enabled=%d",rpgLaser_);
     }
-    if (!ThirdPerson() && !suppressFire_ && weapon_ == 3 && secondaryPressed) {
+    if (!ThirdPerson() && !suppressFire_ && WeaponSlots::Scoped(weapon_) && secondaryPressed) {
         // CS-style right-click cycle: normal view, first zoom, second zoom, normal view.
         scopeLevel_ = (scopeLevel_ + 1) % 3;
-        wc3::Log("AWP scope level=%d fov=%.0f", scopeLevel_, scopeLevel_ == 2 ? 10.0f : Scoped() ? 40.0f : 85.0f);
+        wc3::Log("scope weapon=%s level=%d fov=%.0f",settings_.weapons[weapon_].name, scopeLevel_, scopeLevel_ == 2 ? 10.0f : Scoped() ? 40.0f : 85.0f);
     }
     // Refresh input/fire timing after menu and weapon selection work.
     now=GetTickCount();

@@ -424,7 +424,7 @@ $grenades=Join-Path $folder 'custom-grenades.ini'
 @('[Grenades]','Enabled=false','FuseSeconds=2.25','WorldModelScale=1.25','WorldSpinDegrees=180','[HEGrenade]','Price=777','Capacity=4','[Flashbang]','UnitStunSeconds=0','[SmokeGrenade]','DurationSeconds=7') | Set-Content -LiteralPath $grenades -Encoding ascii
 Update-GameplayConfig $template $grenades
 $grenadeText=Get-Content -LiteralPath $grenades -Raw
-foreach($setting in @('Enabled=false','FuseSeconds=2.25','WorldModelScale=1.25','WorldSpinDegrees=180','Price=777','Capacity=4','UnitStunSeconds=0','DurationSeconds=7','ThrowSpeed=1125','AmmoPrice=300','BlindSeconds=3','Opacity=0.85')) {
+foreach($setting in @('Enabled=false','FuseSeconds=2.25','WorldModelScale=1.25','WorldSpinDegrees=180','Price=777','Capacity=4','UnitStunSeconds=0','DurationSeconds=7','ThrowSpeed=1125','AmmoPrice=300','BlindSeconds=3','Opacity=0.99','VisibilityDistance=96','BlocksAI=true')) {
     if(!$grenadeText.Contains($setting)){throw "Grenade migration lost preference/default: $setting"}
 }
 foreach($section in @('Grenades','HEGrenade','Flashbang','SmokeGrenade')) {
@@ -599,3 +599,16 @@ Update-GameplayConfig $template $repairFresh
 $freshRepairText=Get-Content -LiteralPath $repairFresh -Raw
 foreach($key in @('EnergyHeadshots=true','HeadshotBoneWeight=0.35','ShowStatus=true','PlacementAttempts=12','LumberWorkers=2')) {if(!$freshRepairText.Contains($key)){throw ('Missing repair default: '+$key)}}
 Write-Output 'PASS head/contact and campaign economy config defaults and saved custom policies.'
+
+# Newly appended CS slots inherit complete defaults, while an existing smoke choice survives both updates.
+$arsenalSmoke=Join-Path $folder 'arsenal-smoke.ini'
+@('[TMP]','Price=987','Magazine=17','[G3SG1]','FireInterval=0.3','[SmokeGrenade]','Opacity=0.72','VisibilityDistance=52','BlocksAI=false') | Set-Content $arsenalSmoke
+Update-GameplayConfig $template $arsenalSmoke
+$upgraded=Get-Content $arsenalSmoke -Raw
+foreach($required in @('[TMP]','[UMP45]','[FAMAS]','[Galil]','[G3SG1]','Price=987','Magazine=17','FireInterval=0.3','Opacity=0.72','VisibilityDistance=52','BlocksAI=false')) {
+    if(!$upgraded.Contains($required)){throw "Arsenal/smoke migration missing $required"}
+}
+$arsenalSmokeHash=(Get-FileHash $arsenalSmoke).Hash;Update-GameplayConfig $template $arsenalSmoke
+if((Get-FileHash $arsenalSmoke).Hash -ne $arsenalSmokeHash){throw 'Arsenal/smoke migration is not idempotent.'}
+
+Write-Output 'PASS new CS sections and dense-smoke tuning preserve custom values across repeated updates.'

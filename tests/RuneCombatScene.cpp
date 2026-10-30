@@ -236,6 +236,11 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
         else if(BackgroundGameplay::Enabled() && command=="buttons")Buttons(base);
         // New tuning follows production mailboxes; only disposable fixture builds expose these commands.
         else if(BackgroundGameplay::Enabled() && command=="settings")controller.RequestSettingsReload();
+        else if(BackgroundGameplay::Enabled() && command=="equip") {int slot=-1;input>>slot;controller.TestEquip(slot);}
+        else if(BackgroundGameplay::Enabled() && command=="reload")controller.TestReload();
+        else if(BackgroundGameplay::Enabled() && command=="secondary")controller.TestSecondary();
+        else if(BackgroundGameplay::Enabled() && command=="arsenal")controller.TestArsenalState();
+        else if(BackgroundGameplay::Enabled() && command=="smoke") {float x=0,y=0,z=0;input>>x>>y>>z;controller.TestSmoke(x,y,z);}
         else if(BackgroundGameplay::Enabled() && command=="refill")controller.RequestRefill();
         else if(BackgroundGameplay::Enabled() && command=="grant")controller.RequestAllWeapons();
         else if(BackgroundGameplay::Enabled() && command=="pickup")controller.RequestItemPickup();

@@ -64,7 +64,9 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     grenades.flashStunDistanceFalloff=enabled("Flashbang","StunDistanceFalloff",false);
     grenades.smokeRadius=std::max(32.f,number("SmokeGrenade","Radius",300,1000));
     grenades.smokeSeconds=std::max(1.f,number("SmokeGrenade","DurationSeconds",18,60));
-    grenades.smokeOpacity=number("SmokeGrenade","Opacity",.85f,1);
+    grenades.smokeOpacity=number("SmokeGrenade","Opacity",.99f,1);
+    grenades.smokeVisibilityDistance=std::max(16.f,number("SmokeGrenade","VisibilityDistance",96,600));
+    grenades.smokeBlocksAI=enabled("SmokeGrenade","BlocksAI");
     grenades.maxActive=unsigned(std::max(1.f,number("Grenades","MaxActive",32,128)));
     grenades.worldModelScale=std::max(.25f,number("Grenades","WorldModelScale",1,4));
     grenades.worldSpin=number("Grenades","WorldSpinDegrees",360,1440);

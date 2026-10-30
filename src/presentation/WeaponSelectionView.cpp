@@ -23,8 +23,10 @@ void WeaponSelectionView::Draw(const ShooterController& controller,int width,int
         if(g==group){glColor4f(1,.72f,.22f,1);Rect(gx,y+header-2,column-3,2);}
     }
     auto items=WeaponSelection::Items(group,available);float listX=x+(group-1)*column,listWidth=width*.225f;
-    for(size_t i=0;i<items.size();++i) {
-        int slot=items[i];float ry=y+header+3+float(i)*row;
+    size_t selectedIndex=0;for(size_t i=0;i<items.size();++i)if(items[i]==pending)selectedIndex=i;
+    size_t count=std::min(size_t(8),items.size()),first=std::min(selectedIndex>3 ? selectedIndex-3 : 0,items.size()-count);
+    for(size_t i=first;i<first+count;++i) {
+        int slot=items[i];float ry=y+header+3+float(i-first)*row;
         bool selected=slot==pending;
         glColor4f(selected ? .22f : 0,selected ? .15f : 0,0,.88f);Rect(listX,ry,listWidth,row-2);
         glColor4f(1,.72f,.22f,1);
@@ -33,7 +35,7 @@ void WeaponSelectionView::Draw(const ShooterController& controller,int width,int
         preview(slot,listX+5,ry+2,listWidth*.42f,row-6);
         glColor4f(1,.72f,.22f,1);text(listX+listWidth*.44f,ry+row*.57f,controller.WeaponData(slot).name);
     }
-    float footer=y+header+3+float(items.size())*row;
+    float footer=y+header+3+float(count)*row;
     glColor4f(0,0,0,.85f);Rect(listX,footer,listWidth,height*.065f);
     glColor4f(1,.72f,.22f,1);text(listX+6,footer+height*.025f,"LMB: SELECT | WHEEL: BROWSE");
     text(listX+6,footer+height*.05f,"RMB / 0 / ESC: CANCEL");

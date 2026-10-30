@@ -4,6 +4,7 @@
 #include "../combat/HalfLifeEnergy.hpp"
 #include "../presentation/EnergyBeam.hpp"
 #include "../audio/CrowbarContact.hpp"
+#include "../combat/SmokeVisibility.hpp"
 #include "../combat/BurstFire.hpp"
 #include "../presentation/ViewmodelMotion.hpp"
 #include "../combat/GrenadeThrow.hpp"
@@ -189,6 +190,9 @@ public:
     float AnimationTime() const;
     const ViewmodelPose& WeaponPose() const {return viewmodelMotion_.Pose();}
     unsigned ShotSerial() const {return shotSerial_;}
+    bool HoveredItemVisible(const float* eye) const {return VisibleThroughSmoke(eye,itemHover_.Position().data());}
+    bool BlocksSmokeSight(uintptr_t attack,uintptr_t target) const {return grenades_.BlocksSight(attack,target);}
+    bool VisibleThroughSmoke(const float* from,const float* to) const {return SmokeVisibility::Visible(grenades_.Visuals(),{from[0],from[1],from[2]},{to[0],to[1],to[2]});}
     const std::vector<GrenadeVisual>& GrenadeVisuals() const {return grenades_.Visuals();}
     float FlashOpacity() const {return grenades_.FlashOpacity();}
     bool ShowMuzzleFlash() const {
@@ -236,6 +240,15 @@ public:
     void TestLogTarget() const {wc3::Log("fixture target hp=%.1f actorMana=%.1f",fixtureTarget_ ? wc3::Real(wc3::GetUnitState(fixtureTarget_,0)) : -1,wc3::Real(wc3::GetUnitState(unit_,2)));}
     // Match the real movement key-down path, including deliberate channel interruption.
     void TestWalk(int key,DWORD duration,bool walking=false) {RequestSpellCancel();testWalkKey_=key;testWalking_=walking;testWalkUntil_=GetTickCount()+std::min(duration,DWORD(2000));}
+    void TestEquip(int slot) {SwitchWeapon(slot);}
+    void TestReload() {Reload();}
+    void TestSecondary() {keys_[VK_RBUTTON]=false;testSecondaryUntil_=GetTickCount()+100;}
+    void TestSmoke(float x,float y,float z) {
+        grenades_.Throw(unit_,WeaponSlots::Smoke,{x,y,z},{1,0,0},{},settings_);
+    }
+    void TestArsenalState() const {
+        wc3::Log("fixture arsenal slot=%d owned=%d ammo=%d reserve=%d serial=%u scoped=%d reload=%d animation=%s actorHP=%.2f",weapon_,inventory_.owned[weapon_],ammo_[weapon_],reserve_[weapon_],shotSerial_,scopeLevel_,reloadEnd_!=0,Animation(),wc3::Real(wc3::GetUnitState(unit_,0)));
+    }
     // Disposable scenes exercise the real weapon contact path without desktop mouse input.
     void TestStrike(int slot) {
         if(slot<0 || slot>=WeaponSlots::Count || slot==WeaponSlots::C4)return;
@@ -272,7 +285,7 @@ public:
     const Weapon& WeaponData(int slot) const {return settings_.weapons[slot];}
 private:
 #ifdef WCS_GAMEPLAY_TEST
-    int testWalkKey_=0;bool testWalking_=false;DWORD testWalkUntil_=0,testAttackUntil_=0;
+    int testWalkKey_=0;bool testWalking_=false;DWORD testWalkUntil_=0,testAttackUntil_=0,testSecondaryUntil_=0;
 #endif
     bool Pressed(int key);
     bool Down(int key) const;

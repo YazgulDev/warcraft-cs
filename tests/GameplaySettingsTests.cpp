@@ -15,6 +15,14 @@ int main() {
     // Headless regressions report assertion details to the captured journal instead of a desktop dialog.
     _set_error_mode(_OUT_TO_STDERR);
     GameplaySettings settings;
+    // Appended CS guns remain available without optional Half-Life assets and own complete nonzero tuning.
+    for(int slot=WeaponSlots::TMP;slot<=WeaponSlots::G3SG1;++slot) {
+        assert(settings.WeaponEnabled(slot) && WeaponSlots::Firearm(slot) && !WeaponSlots::HalfLife(slot));
+        assert(settings.weapons[slot].magazine>0 && settings.maxReserve[slot]>0 && settings.weaponMoveSpeed[slot]>=50);
+        assert(settings.heroMultiplier[slot]>0 && settings.damage[slot]>0 && settings.weaponPrice[slot]>0 && settings.ammoPack[slot]>0);
+    }
+    assert(WeaponSlots::Scoped(WeaponSlots::G3SG1) && !WeaponSlots::Scoped(WeaponSlots::FAMAS));
+    assert(settings.grenades.smokeVisibilityDistance==96 && settings.grenades.smokeBlocksAI && settings.grenades.smokeOpacity==.99f);
     // Missing configs and F8 share the requested defaults; invalid values are rejected at the INI boundary.
     assert(settings.economy.currency==EconomySettings::Currency::Dollars && settings.economy.startingMoney==800);
     assert(settings.economy.killReward==200 && settings.economy.maximumMoney==16000);
@@ -615,17 +623,18 @@ int main() {
     assert(GameplaySettings::Load(path).viewmodel.bobAmount==.7f && GameplaySettings::Load(path).viewmodel.flashMilliseconds==90);
     // Grenade limits and effect clocks come from the same validated startup/F8 snapshot as all weapons.
     for(auto value:{"-1","99999","nan","inf","bad","","0.4"}) {
-        {std::ofstream f(path);f<<"[Grenades]\nFuseSeconds="<<value<<"\nThrowSpeed="<<value<<"\nGravity="<<value<<"\nBounce="<<value<<"\nMaxActive="<<value<<"\n[HEGrenade]\nCapacity="<<value<<"\nDamage="<<value<<"\nRadius="<<value<<"\n[Flashbang]\nBlindSeconds="<<value<<"\nUnitStunSeconds="<<value<<"\n[SmokeGrenade]\nDurationSeconds="<<value<<"\nOpacity="<<value<<"\n";}
+        {std::ofstream f(path);f<<"[Grenades]\nFuseSeconds="<<value<<"\nThrowSpeed="<<value<<"\nGravity="<<value<<"\nBounce="<<value<<"\nMaxActive="<<value<<"\n[HEGrenade]\nCapacity="<<value<<"\nDamage="<<value<<"\nRadius="<<value<<"\n[Flashbang]\nBlindSeconds="<<value<<"\nUnitStunSeconds="<<value<<"\n[SmokeGrenade]\nDurationSeconds="<<value<<"\nOpacity="<<value<<"\nVisibilityDistance="<<value<<"\n";}
         const auto profile=GameplaySettings::Load(path);const auto& g=profile.grenades;
         assert(g.fuse>=.2f && g.fuse<=10 && g.throwSpeed>=50 && g.throwSpeed<=2000 && g.gravity>=50 && g.gravity<=2000);
         assert(g.bounce>=0 && g.bounce<=.9f && g.maxActive>=1 && g.maxActive<=128 && g.heRadius>=32 && g.heRadius<=2000);
+        assert(g.smokeVisibilityDistance>=16 && g.smokeVisibilityDistance<=600);
         assert(g.flashSeconds>=0 && g.flashSeconds<=10 && g.flashUnitStunSeconds>=0 && g.flashUnitStunSeconds<=10 && g.smokeSeconds>=1 && g.smokeSeconds<=60 && g.smokeOpacity>=0 && g.smokeOpacity<=1);
         assert(profile.weapons[WeaponSlots::HE].magazine>=1 && profile.weapons[WeaponSlots::HE].magazine<=100);
         assert(profile.ContactDamage(WeaponSlots::HE,false,999)==profile.damage[WeaponSlots::HE]);
         if(!strcmp(value,"nan") || !strcmp(value,"inf") || !strcmp(value,"bad") || !*value)assert(g.fuse==1.5f && g.throwSpeed==1125 && g.gravity==660 && g.smokeSeconds==18);
     }
-    {std::ofstream f(path);f<<"[Grenades]\nEnabled=false\nFuseSeconds=2.25\n[Flashbang]\nCapacity=3\nUnitStunSeconds=0\n[SmokeGrenade]\nDurationSeconds=7\n";}
-    const auto grenades=GameplaySettings::Load(path);assert(!grenades.grenades.enabled && grenades.grenades.fuse==2.25f && grenades.weapons[WeaponSlots::Flashbang].magazine==3 && grenades.grenades.flashUnitStunSeconds==0 && grenades.grenades.smokeSeconds==7);
+    {std::ofstream f(path);f<<"[Grenades]\nEnabled=false\nFuseSeconds=2.25\n[Flashbang]\nCapacity=3\nUnitStunSeconds=0\n[SmokeGrenade]\nDurationSeconds=7\nVisibilityDistance=64\nBlocksAI=false\n";}
+    const auto grenades=GameplaySettings::Load(path);assert(!grenades.grenades.enabled && grenades.grenades.fuse==2.25f && grenades.weapons[WeaponSlots::Flashbang].magazine==3 && grenades.grenades.flashUnitStunSeconds==0 && grenades.grenades.smokeSeconds==7 && grenades.grenades.smokeVisibilityDistance==64 && !grenades.grenades.smokeBlocksAI);
     // World geometry tuning uses the real F8 parser and never permits a zero/unsafe scale.
     for(auto value:{"-1","99999","nan","bad","","0.5"}) {
         WritePrivateProfileStringA("Grenades","WorldModelScale",value,path.c_str());WritePrivateProfileStringA("Grenades","WorldSpinDegrees",value,path.c_str());
