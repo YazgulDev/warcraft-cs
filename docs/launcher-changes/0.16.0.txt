@@ -1,0 +1,9 @@
+- Improved first-person camera stability over small ground-height steps with configurable smoothing and matching aim height.
+- Added a small configurable blood spray at confirmed enemy body impacts, independent of headshot blood.
+- Added configurable fatal headshots that remove the struck head while preserving the body and native death events on verified 1.26a models.
+- Preserved the other head on two-headed creatures and restored complete models on native resurrection.
+- Improved headshot blood density, size and lifetime with a configurable fatal spray multiplier.
+- Fixed a lethal pellet losing its blood burst immediately after a nonfatal head pellet.
+- Preserved custom blood settings, explicit visual opt-outs and existing gameplay defaults during updates.
+- Fixed Direct3D portrait animation freezing when the previous frame depth was left uncleared by the native world scissor.
+- Fixed stretched headshot meshes on naga and Crypt Fiends by using active skin bones and preserving blended neck and jaw contributions.

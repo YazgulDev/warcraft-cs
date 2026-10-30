@@ -4,7 +4,7 @@
 
 ## Supported setup
 
-Release **0.15.0** targets Windows 10/11 x64 and **Warcraft III 1.26a
+Release **0.16.0** targets Windows 10/11 x64 and **Warcraft III 1.26a
 x86**, with `Game.dll` version **1.26.0.6401**, using OpenGL or Direct3D. It additionally accepts
 experimental **1.27a (1.27.0.52240)** with D3D9 in both Player and Developer setup.
 [1.27a remains a partial port without real-game verification](PORT-1.27.md). Both Reign of Chaos
@@ -33,6 +33,7 @@ Check the notes bundled with a development build before assuming it supports ano
 - Native Warcraft health, armor, mana, cooldowns, targeting and quest immunity remain
   authoritative. Custom spell orders and map-specific effects may need configuration.
 - Verified 1.26a firearm/energy rays use posed model surfaces and named head contacts; unsupported models/hosts retain conservative approximate targeting. Native animation blending and texture cutout pixels are not fully reproduced.
+- Fatal head removal is cosmetic and limited to verified 1.26a named-head rigs. Unsupported models and 1.27a retain native death; body/other-head preservation depends on validated visible skin palettes. [0.16.0 details](RELEASE-0.16.0.md).
 - CS recoil is adapted; complete GoldSrc bullet spread/accuracy and the original
   client are not implemented. Purchases use a map-local dollar wallet by default;
   `Economy.Currency=gold` selects Warcraft gold. CS rounds and team economy are not implemented.

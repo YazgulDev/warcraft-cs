@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.16.0 — 2026-10-30
+
+- Publish [complete downloads, upgrade instructions and Release Notes](docs/RELEASE-0.16.0.md), with both launchers, source-only archives, compact summaries and updated current-version documentation. Extend the full regression runner with the camera-height suite.
+
 - Smooth small first-person ground-height steps with configurable Interface.CameraHeightSmoothing=true and CameraHeightSeconds=.08 (.01–.3 s). Keep collision/jump physics unchanged, bound the eye inside the physical body and use the same height for camera and aiming; clear old correction on lifecycle/F8 transitions. Add physical/presented eye diagnostics and portable/native camera checks.
 
 - Add a small configurable blood spray at confirmed enemy body impacts (six droplets, scale .65, .35 seconds, speed 110 by default), excluding buildings. Keep headshot blood and captions independent; preserve saved settings and support F8 reload.

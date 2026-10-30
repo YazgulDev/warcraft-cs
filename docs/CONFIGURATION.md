@@ -190,9 +190,9 @@ Unsupported model/pose adapters never invent a head location. Experimental 1.27a
 
 ## Visual combat feedback
 
-Release 0.13.0 defaults movement to `classic`; explicit `hull` and `recovery` remain available. `[CombatVisuals]` controls confirmed headshot blood, floating **Headshot** text and cosmetic casing pools. All defaults/ranges are in [release settings](RELEASE-0.13.0.md#visual-settings) and the annotated INI. F8 clears old visual pools before applying the new settings. There is no centered HEADSHOT word.
+Release 0.13.0 defaults movement to `classic`; explicit `hull` and `recovery` remain available. `[CombatVisuals]` controls confirmed headshot blood, floating **Headshot** text and cosmetic casing pools. Current blood defaults/ranges are in [0.16.0 settings](RELEASE-0.16.0.md#blood-settings-and-upgrades) and the annotated INI; [0.13.0](RELEASE-0.13.0.md#visual-settings) records the original visual controls. F8 clears old visual pools before applying the new settings. There is no centered HEADSHOT word.
 
-The local [head-removal preview](PORTRAIT-HEAD-GORE-PREVIEW.md) increases stock blood and adds `HeadshotDecapitation=true` and `FatalBloodMultiplier=3` (1–4). Removal affects subsequent fatal hostile direct head contacts on verified 1.26a named-head models; the body follows native death/decay and resurrection restores the model. Blood can be disabled independently. Startup/F8 reload the settings; updates preserve custom values and opt-outs. `BloodVersion=2` preserves an intentional return to old blood defaults.
+[Release 0.16.0](RELEASE-0.16.0.md) increases stock blood and adds `HeadshotDecapitation=true` and `FatalBloodMultiplier=3` (1–4). Removal affects subsequent fatal hostile direct head contacts on verified 1.26a named-head models; the body follows native death/decay and resurrection restores the model. Blood can be disabled independently. Startup/F8 reload the settings; updates preserve custom values and opt-outs. `BloodVersion=2` preserves an intentional return to old blood defaults.
 
 ## Flash area stun
 
@@ -206,7 +206,7 @@ Startup/F8 loads the same validated values as fresh installation. Damage accepts
 
 Setup and the loader upgrade former stock values once: RPG 100 damage and 525 radius (or unversioned 375), M3 x3, XM1014 x2.4, and HE 300 (or unversioned 100). Custom values, explicit zero and other preserved versioned settings remain authoritative. `[RPG] DamageVersion=2` / `BlastVersion=3`, each shotgun's `MultiplierVersion=2`, and `[HEGrenade] DamageVersion=3` record the current balance. After an update, editing values back to older stock numbers with those markers retains them. Prior version-2 HE 100 and RPG radius 375 are also preserved. Missing keys are inserted once; repeated upgrades do not duplicate/reset them.
 
-### Small body-impact blood (local preview)
+### Small body-impact blood (0.16.0)
 
 `[CombatVisuals] BodyBlood=true` emits a small spray on confirmed enemy body damage, excluding buildings. Defaults: `BodyBloodCount=6` (1–64), `BodyBloodScale=0.65` (.25–4), `BodyBloodSeconds=0.35` (.1–3 s), `BodyBloodSpeed=110` (0–500 world units/s). `BloodGravity` also applies. Startup/F8 apply changes and clear old particles; updates add missing keys and preserve custom values. `BodyBlood=false` and `HeadshotBlood=false` independently disable body and head sprays. Body impacts have no Headshot text or fatal multiplier.
 
@@ -227,7 +227,7 @@ Head/contact policy applies to subsequent shots; visual-only beam tracking canno
 
 GraphicsDebug is independent of Logging.Detailed. Detailed=false suppresses optional TRACE summaries/snapshots, while enabled graphics ERROR/WARN messages and essential handled-fault data remain. Repeated graphics errors share bounded suppression with counts; existing file rotation remains 8 MiB plus three archives by default. Synchronous driver delivery and additional state queries can affect frame time; GraphicsDebug=false disables the added observer live on F8. See [diagnostic coverage and limits](DIAGNOSTICS.md).
 
-## Ground-height camera response (local preview)
+## Ground-height camera response (0.16.0)
 
 `[Interface] CameraHeightSmoothing=true` softens small support-height transitions while walking in first person. `CameraHeightSeconds=0.08` is the response time in seconds, clamped to .01–.3; smaller values follow ground more closely. Missing, malformed and non-finite values use .08. Startup/F8 apply the settings; F8 clears the old correction. Updates add missing keys and preserve custom values. Set `CameraHeightSmoothing=false` for the previous direct height response.
 
