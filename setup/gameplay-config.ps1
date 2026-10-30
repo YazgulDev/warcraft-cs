@@ -13,6 +13,24 @@ function Update-GameplayConfig([string]$Template,[string]$Destination) {
     $lines=[Collections.Generic.List[string]]::new()
     $lines.AddRange([string[]]@(Get-Content -LiteralPath $Destination))
     $changed=$false
+    # Upgrade the former stock head spray together once; custom values and versioned opt-backs remain intact.
+    $bloodSection=$false;$bloodVersion=1;$bloodVersionIndex=-1;$bloodValues=@{}
+    for($i=0;$i -lt $lines.Count;$i++) {
+        if($lines[$i] -match '^\s*\[([^\]]+)\]\s*$'){$bloodSection=$Matches[1] -eq 'CombatVisuals';continue}
+        if(!$bloodSection -or $lines[$i] -notmatch '^\s*([^=;]+?)\s*=\s*(.*?)\s*$'){continue}
+        $key=$Matches[1];$value=$Matches[2].Trim()
+        if($key -eq 'BloodVersion'){$bloodVersionIndex=$i;if(![int]::TryParse($value,[ref]$bloodVersion)){$bloodVersion=1}}
+        $bloodValues[$key]=@($i,$value)
+    }
+    if($bloodVersion -lt 2) {
+        foreach($upgrade in @(@('BloodCount',16,48),@('BloodSeconds',0.5,0.8),@('BloodScale',1,1.75),@('BloodSpeed',180,220))) {
+            $saved=$bloodValues[$upgrade[0]];[double]$oldBlood=0
+            if($saved -and [double]::TryParse($saved[1],[Globalization.NumberStyles]::Float,[Globalization.CultureInfo]::InvariantCulture,[ref]$oldBlood) -and $oldBlood -eq $upgrade[1]) {
+                $lines[$saved[0]]=$upgrade[0]+'='+([double]$upgrade[2]).ToString([Globalization.CultureInfo]::InvariantCulture);$changed=$true
+            }
+        }
+        if($bloodVersionIndex -ge 0){$lines[$bloodVersionIndex]='BloodVersion=2';$changed=$true}
+    }
     # Upgrade only the former HE stock peak once; keep custom damage, explicit zero and versioned stock choices.
     $heSection=$false;$heDamageIndex=-1;$heVersionIndex=-1;$heVersion='1'
     for($i=0;$i -lt $lines.Count;$i++) {

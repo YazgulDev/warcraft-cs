@@ -38,6 +38,8 @@ foreach ($name in @('window-input','fog-of-war','diagnostic-log','native-frame-r
 & (Join-Path $PSScriptRoot 'test-precise-shots.ps1')
 & (Join-Path $PSScriptRoot 'test-buy-hover-view.ps1')
 & (Join-Path $PSScriptRoot 'test-combat-visuals.ps1')
+# Native corpse head palettes retain body, typed identity and resurrection without game binaries.
+& (Join-Path $PSScriptRoot 'test-head-gore.ps1')
 & (Join-Path $PSScriptRoot 'test-weapon-selection.ps1')
 # Alternate graphics and host selection use synthetic fixtures and a real hidden D3D device, without Warcraft files.
 & (Join-Path $PSScriptRoot 'test-d3d9.ps1')

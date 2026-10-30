@@ -8,6 +8,7 @@
 #include "../platform/NativeHoverView.hpp"
 #include "../platform/NativeMinimap.hpp"
 #include "../platform/NativePortrait.hpp"
+#include "../platform/NativeHeadGore.hpp"
 #include "../platform/WarcraftApi.hpp"
 #include "../platform/DiagnosticLog.hpp"
 #include "../platform/NativeFaultDiagnostics.hpp"
@@ -395,6 +396,7 @@ static DWORD WINAPI Initialize(void*) {
     }, Hook);
     ActorRenderFilter::Install(base, Hook);
     actorJumpView.Install(base,Hook);
+    NativeHeadGore::Install(base,Hook); // Native per-instance head palettes serve OpenGL and Direct3D equally.
     // Scoped base-damage replacement leaves all ordinary RTS attacks untouched.
     // Manual contacts may prepare/fire while direct control rejects autonomous wind-up and extra impacts.
     NativeWeaponAttack::Install(base,Hook,[]() {return healthy ? controller.ViewActor() : 0;},

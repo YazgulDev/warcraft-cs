@@ -71,7 +71,8 @@ bool UnitHitboxes::Pose(uintptr_t model,const AnimatedHitModel& mesh,int& sequen
     const auto& range=mesh.Sequences()[active];if(clock<range.start || clock>range.end)return false;
     sequence=active;time=float(clock);return true;
 }
-bool UnitHitboxes::IntersectShot(wc3::Handle unit,const float* origin,const float* direction,float limit,float& entry,bool& head,float headWeight,bool diagnostic) {
+bool UnitHitboxes::IntersectShot(wc3::Handle unit,const float* origin,const float* direction,float limit,float& entry,bool& head,float headWeight,bool diagnostic,unsigned* headRoot) {
+    if(headRoot)*headRoot=0xffffffff;
     head=false;int type=wc3::GetUnitTypeId(unit);if(!type)return false;
     auto found=models_.find(type);bool building=wc3::IsUnitType(unit,2)!=FALSE;
     if(found==models_.end())found=models_.emplace(type,Load(type,building)).first;
@@ -107,7 +108,9 @@ bool UnitHitboxes::IntersectShot(wc3::Handle unit,const float* origin,const floa
     if(rendered && posed) {
         AnimatedHitModel::Contact contact;
         if(!mesh->second.Intersect(localOrigin,localDirection,limit,sequence,time,contact,headWeight))return report(false);
-        entry=contact.distance;head=contact.head && !building;return report(true);
+        entry=contact.distance;head=contact.head && !building;
+        if(headRoot && head)*headRoot=contact.headRoot;
+        return report(true);
     }
     // Missing/unsupported model or pose keeps bounded damage with no invented head location.
     // Buildings retain their authored volumes; unknown creatures use an ellipsoid instead of empty box corners.

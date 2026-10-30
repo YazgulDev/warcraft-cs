@@ -1,15 +1,28 @@
 #include "CombatVisuals.hpp"
 
-void CombatVisuals::Headshot(uint32_t target,const Point& contact,const Point& above,const Point& direction,const CombatVisualSettings& s,bool showCritical) {
+void CombatVisuals::Headshot(uint32_t target,const Point& contact,const Point& above,const Point& direction,const CombatVisualSettings& s,bool showCritical,bool fatal) {
     // Shotgun pellets/continuous beams share a brief per-target interval instead of stacking unreadable labels.
-    if(target==lastTarget_ && sinceCritical_<.08f)return;
+    bool coalesced=target==lastTarget_ && sinceCritical_<.08f;
+    // A fatal pellet/beam contact must still burst after a preceding nonfatal head pellet in the same frame.
+    if(coalesced && !fatal)return;
     lastTarget_=target;sinceCritical_=0;
     // Blood is tied to the anatomical contact; disabling bonus text must not suppress it.
-    if(showCritical && s.criticalText){if(criticals_.size()>=32)criticals_.erase(criticals_.begin());criticals_.push_back({above,0,s.criticalSeconds,s.criticalRise,s.criticalScale});}
-    if(s.headshotBlood)for(unsigned i=0;i<s.bloodCount;++i){
+    if(showCritical && s.criticalText && !coalesced){if(criticals_.size()>=32)criticals_.erase(criticals_.begin());criticals_.push_back({above,0,s.criticalSeconds,s.criticalRise,s.criticalScale});}
+    unsigned count=unsigned(s.bloodCount*(fatal ? s.fatalBloodMultiplier : 1));
+    if(s.headshotBlood)Spray(contact,direction,count,s.bloodSeconds,s.bloodScale,s.bloodSpeed,s.bloodGravity);
+}
+void CombatVisuals::BodyHit(uint32_t target,const Point& contact,const Point& direction,const CombatVisualSettings& s) {
+    // Coalesce body pellets/beams separately so a body impact cannot swallow a subsequent headshot.
+    if(!s.bodyBlood || (target==lastBodyTarget_ && sinceBody_<.08f))return;
+    lastBodyTarget_=target;sinceBody_=0;
+    Spray(contact,direction,s.bodyBloodCount,s.bodyBloodSeconds,s.bodyBloodScale,s.bodyBloodSpeed,s.bloodGravity);
+}
+void CombatVisuals::Spray(const Point& contact,const Point& direction,unsigned count,float seconds,float scale,float speed,float gravity) {
+    // Both impact types share the bounded cosmetic pool and copied contact coordinates.
+    for(unsigned i=0;i<count;++i){
         if(blood_.size()>=256)blood_.erase(blood_.begin());
-        Point velocity;for(int axis=0;axis<3;++axis)velocity[axis]=(Random()-.5f)*s.bloodSpeed+direction[axis]*s.bloodSpeed*.3f;
-        velocity[2]+=s.bloodSpeed*.2f;blood_.push_back({contact,velocity,0,s.bloodSeconds,(1.5f+Random()*2)*s.bloodScale,s.bloodGravity});
+        Point velocity;for(int axis=0;axis<3;++axis)velocity[axis]=(Random()-.5f)*speed+direction[axis]*speed*.3f;
+        velocity[2]+=speed*.2f;blood_.push_back({contact,velocity,0,seconds,(1.5f+Random()*2)*scale,gravity});
     }
 }
 void CombatVisuals::Eject(int weapon,const Point& eye,const Point& direction,const Point& inherited,float floor,const CombatVisualSettings& s) {
@@ -27,7 +40,7 @@ void CombatVisuals::Eject(int weapon,const Point& eye,const Point& direction,con
 }
 void CombatVisuals::Step(float dt) {
     if(!std::isfinite(dt) || dt<=0)return;
-    sinceCritical_+=dt;
+    sinceCritical_+=dt;sinceBody_+=dt;
     // Short substeps give debris stable arcs/bounces at ordinary and high frame rates. It has no collision authority.
     unsigned steps=unsigned(std::ceil(std::min(dt,1.f)*120));float h=dt/steps;
     for(unsigned step=0;step<steps;++step){
