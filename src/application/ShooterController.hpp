@@ -1,4 +1,5 @@
 #pragma once
+#include "../presentation/CameraHeightMotion.hpp"
 #include "../combat/ShotgunReload.hpp"
 #include "../combat/HalfLifeEnergy.hpp"
 #include "../presentation/EnergyBeam.hpp"
@@ -173,6 +174,8 @@ public:
     wc3::Handle HiddenActor() const {return ThirdPerson() ? 0 : ViewActor();}
     // Physical feet are a presentation snapshot; the render adapter never changes native fly height.
     float ActorFeet() const {return movement_.FeetZ();}
+    // Aiming and camera submission share the same eye; collision and rendered body keep physical feet.
+    float ViewEyeZ() const {return movement_.EyeZ()+(ThirdPerson() ? 0 : cameraHeight_.EyeOffset(movement_.EyeZ()-movement_.FeetZ(),movement_.BodyHeight()));}
     wc3::Handle JumpViewActor() const {return ThirdPerson() && !status_.contained && !status_.hidden ? ViewActor() : 0;}
     // Block only map camera writes during live FPS; our camera pass and cinematic/RTS writes remain allowed.
     bool BlocksMapCamera() const { return Visible() && !ownCameraRequest_; }
@@ -376,6 +379,7 @@ private:
     MovementPhysics movement_;
     WarcraftCollision collision_;
     FirstPersonCamera camera_;
+    CameraHeightMotion cameraHeight_;
     ThirdPersonCamera thirdCamera_;
     UnitAttack heroAttack_;
     UnitLocomotion unitLocomotion_;

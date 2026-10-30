@@ -245,7 +245,7 @@ void ShooterController::Disable(bool restoreCamera) {
         ownCameraRequest_ = false;
     }
     CancelPlant();
-    active_ = false; scopeLevel_ = 0; reloadEnd_ = 0;glockBurst_.Cancel();flashWeapon_=-1;viewmodelMotion_.Reset();
+    active_ = false; scopeLevel_ = 0; reloadEnd_ = 0;glockBurst_.Cancel();flashWeapon_=-1;viewmodelMotion_.Reset();cameraHeight_.Reset();
     nativeSky_.Update(ui_,false,mapTileset_);
     meleeContact_ = meleeReady_ = 0; recoil_.Reset();
     audio_.Stop(); stepDistance_ = 0;
@@ -261,7 +261,7 @@ void ShooterController::ResetMap() {
     NativeHeadGore::Reset(); // Corpse palettes and map model definitions must not cross map generations.
     // Currency and local loot belong to the unloaded map, independently of view/loadout changes.
     ++rewardGeneration_;dollars_.Reset();droppedWeapons_.Reset();nearbyWeapon_=-1;money_=0;
-    flashWeapon_=-1;viewmodelMotion_.Reset(); // No viewmodel offset or unpresented flash crosses a map boundary.
+    flashWeapon_=-1;viewmodelMotion_.Reset();cameraHeight_.Reset(); // No viewmodel offset or unpresented flash crosses a map boundary.
     glockBurst_={}; // A new map has neither queued rounds nor a cooldown inherited from the previous actor.
     shop_=0;shopCloseRequested_=false; // Forget native selection handles after unload.
     armyAI_.Reset();armyToggleRequested_=false;
@@ -335,7 +335,7 @@ void ShooterController::SelectView(ControlView next) {
     }
     // Inventory and physical position stay intact; no queued gunshot or delayed swing crosses the transition.
     unitLocomotion_.Release();unitLocomotion_.Reset();
-    CancelCasting();heroAttack_.Cancel();CancelPlant();glockBurst_.Cancel();meleeContact_=0;reloadEnd_=0;scopeLevel_=0;flashWeapon_=-1;viewmodelMotion_.Reset();
+    CancelCasting();heroAttack_.Cancel();CancelPlant();glockBurst_.Cancel();meleeContact_=0;reloadEnd_=0;scopeLevel_=0;flashWeapon_=-1;viewmodelMotion_.Reset();cameraHeight_.Reset();
     buyMenu_.Close();CloseWeaponSelection();itemInventory_.ClearInput();recoil_.Reset();audio_.Stop();mouseLook_.Reset();weaponWheel_.Reset();cameraWheel_.Reset();suppressFire_=true;
     // Pending combat/UI mailboxes cannot execute after entering the unarmed view.
     refillRequested_=allWeaponsRequested_=itemRequested_=buyToggleRequested_=buyAmmoRequested_=false;
@@ -349,7 +349,7 @@ void ShooterController::SelectView(ControlView next) {
 void ShooterController::AimRay(float* origin,float* direction) {
     float yaw=ViewYaw()*radians,pitch=ViewPitch()*radians;
     origin[0]=wc3::Real(wc3::GetUnitX(unit_));origin[1]=wc3::Real(wc3::GetUnitY(unit_));
-    origin[2]=movement_.EyeZ()+wc3::Real(wc3::GetUnitFlyHeight(unit_));
+    origin[2]=ViewEyeZ()+wc3::Real(wc3::GetUnitFlyHeight(unit_));
     for(int i=0;i<3;++i)direction[i]=i==0 ? std::cos(pitch)*std::cos(yaw) : i==1 ? std::cos(pitch)*std::sin(yaw) : std::sin(pitch);
     // TPS spells pick through the visible reticle from the shortened camera boom, excluding the actor itself.
     if(ThirdPerson()) {
@@ -370,7 +370,7 @@ void ShooterController::AimAndMove(float dt) {
     // Consume once, even when cargo/status blocks control, so a failed Home tap cannot replay later.
     bool recover=positionRecoveryRequested_;positionRecoveryRequested_=false;
     // A contained unit belongs to native cargo: changing XY/stance would fake an escape without releasing it.
-    if (status_.contained || status_.hidden) { mouseLook_.Reset();movement_.Stop();viewmodelMotion_.Reset(); stepDistance_ = 0; return; }
+    if (status_.contained || status_.hidden) { mouseLook_.Reset();movement_.Stop();viewmodelMotion_.Reset();cameraHeight_.Reset(); stepDistance_ = 0; return; }
     if(recover && !status_.immobilized && !status_.incapacitated && !Casting() && !CursorMode())collision_.RequestRecovery();
     // Mouse capture occurs only in the foreground and only after the player enables FPS.
     float dx=0,dy=0;
@@ -434,6 +434,9 @@ void ShooterController::AimAndMove(float dt) {
             }
         } else stepDistance_ = 0;
     }
+    // Smooth only ground-height presentation after collision; weapon rays consume the same eye.
+    cameraHeight_.Step(wc3::Real(wc3::GetUnitX(unit_)),wc3::Real(wc3::GetUnitY(unit_)),movement_.FeetZ(),
+        movement_.Grounded(),dt,movement_.StepHeight(),settings_.cameraHeight);
     if (!status_.incapacitated && !Casting()) {
         float facing = LookAngles::Normalize(yaw_); wc3::SetUnitFacing(unit_, &facing);
     }
@@ -479,16 +482,16 @@ void ShooterController::Camera() {
     ownCameraRequest_ = true;
     // Body/attachments are hidden by the world-only render filter; preserve native portrait tint/alpha.
     if(ThirdPerson()) {
-        auto pose=thirdCamera_.Position(unit_,movement_.EyeZ()+wc3::Real(wc3::GetUnitFlyHeight(unit_)),
+        auto pose=thirdCamera_.Position(unit_,ViewEyeZ()+wc3::Real(wc3::GetUnitFlyHeight(unit_)),
             yaw_,pitch_,CameraSettings(),hitboxes_,destructableHitboxes_);
         camera_.Update(pose.eye[0],pose.eye[1],pose.eye[2],yaw_,pitch_,85,settings_.render.drawDistance);
     } else camera_.Update(wc3::Real(wc3::GetUnitX(unit_)), wc3::Real(wc3::GetUnitY(unit_)),
-            movement_.EyeZ() + wc3::Real(wc3::GetUnitFlyHeight(unit_)), yaw_ + recoil_.Yaw(), std::clamp(pitch_ + recoil_.Pitch(), -65.0f, 65.0f),
+            ViewEyeZ() + wc3::Real(wc3::GetUnitFlyHeight(unit_)), yaw_ + recoil_.Yaw(), std::clamp(pitch_ + recoil_.Pitch(), -65.0f, 65.0f),
             scopeLevel_ == 2 ? 10.0f : Scoped() ? 40.0f : 85.0f, settings_.render.drawDistance);
     ownCameraRequest_ = false;
     if(ThirdPerson() || Buying() || InventoryInputOpen() || !settings_.itemHover.enabled)itemHover_.Clear();
     else {
-        float origin[]={wc3::Real(wc3::GetUnitX(unit_)),wc3::Real(wc3::GetUnitY(unit_)),movement_.EyeZ()+wc3::Real(wc3::GetUnitFlyHeight(unit_))};
+        float origin[]={wc3::Real(wc3::GetUnitX(unit_)),wc3::Real(wc3::GetUnitY(unit_)),ViewEyeZ()+wc3::Real(wc3::GetUnitFlyHeight(unit_))};
         float yaw=ViewYaw()*radians,pitch=ViewPitch()*radians;
         float direction[]={std::cos(pitch)*std::cos(yaw),std::cos(pitch)*std::sin(yaw),std::sin(pitch)};
         itemHover_.Update(unit_,origin,direction,settings_,hitboxes_,destructableHitboxes_,gameBase_);
@@ -610,6 +613,7 @@ void ShooterController::ToggleHealthBars() {
     Notice(saved ? (settings_.healthBars.allies ? "HEALTH BARS ON" : "HEALTH BARS OFF") : "HEALTH BAR SETTINGS COULD NOT BE SAVED");
 }
 void ShooterController::ReloadSettings() {
+    cameraHeight_.Reset(); // F8 discards the previous ground response.
     combatVisuals_.Reset(); // F8 drops fragments and labels from the old visual policy.
     itemHover_.Reset(); // F8 cannot retain handles, names or distances from the previous query policy.
     CancelEnergy(); // F8 cannot complete a charge using a different damage or resource snapshot.
@@ -898,7 +902,7 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
 
     float x = wc3::Real(wc3::GetUnitX(unit_)), y = wc3::Real(wc3::GetUnitY(unit_));
     // Shots originate at the same eye used by the camera, including airborne/crouched poses.
-    float z = movement_.EyeZ() + wc3::Real(wc3::GetUnitFlyHeight(unit_));
+    float z = ViewEyeZ() + wc3::Real(wc3::GetUnitFlyHeight(unit_));
     float yaw = (yaw_ + recoil_.Yaw()+yawOffset) * radians, pitch = std::clamp(pitch_ + recoil_.Pitch()+pitchOffset, -65.0f, 65.0f) * radians;
     float vx = std::cos(pitch) * std::cos(yaw), vy = std::cos(pitch) * std::sin(yaw), vz = std::sin(pitch);
     float attackRange = WeaponSlots::Melee(weapon_) ? meleeAttack_.range : settings_.FirearmRange(weapon_);
@@ -1123,7 +1127,7 @@ void ShooterController::Tick(uintptr_t ui) {
     requireForeground=!BackgroundGameplay::Enabled();
 #endif
     if (requireForeground && foregroundPid != GetCurrentProcessId()) {
-        flashWeapon_=-1;viewmodelMotion_.Reset();
+        flashWeapon_=-1;viewmodelMotion_.Reset();cameraHeight_.Reset();
         glockBurst_.Cancel(); // Focus loss cancels the rest of a burst instead of resuming it on return.
         thirdPersonRequested_=unitViewRequested_=false; // A background tap cannot acquire native control on refocus.
         unitLocomotion_.Release();
@@ -1147,7 +1151,7 @@ void ShooterController::Tick(uintptr_t ui) {
         wc3::Log("FPS %s for campaign/UI", suspended ? "suspended" : "resumed");
     }
     suspended_ = suspended;
-    if(suspended_) {flashWeapon_=-1;viewmodelMotion_.Reset();}
+    if(suspended_) {flashWeapon_=-1;viewmodelMotion_.Reset();cameraHeight_.Reset();}
     if(!active_ || suspended_)glockBurst_.Cancel(); // Menus/cinematics cannot resume queued bullets later.
     if (suspended_) { unitLocomotion_.Release();heroAttack_.Cancel();viewToggleRequested_=false;CancelCasting();spellRequested_=-1;spellCancelRequested_=false;CancelPlant(); meleeContact_ = 0;buyMenu_.Close();CloseWeaponSelection();itemInventory_.ClearInput();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1; }
     // Advance copied visual pools only while the controlled simulation is active; native pause/menu ticks freeze them.
@@ -1266,7 +1270,7 @@ void ShooterController::Tick(uintptr_t ui) {
                 if (input>>command>>x>>y>>z) {
                     float dx=x-wc3::Real(wc3::GetUnitX(unit_)),dy=y-wc3::Real(wc3::GetUnitY(unit_));
                     yaw_=std::atan2(dy,dx)/radians;
-                    pitch_=std::atan2(z-movement_.EyeZ()-wc3::Real(wc3::GetUnitFlyHeight(unit_))-(ThirdPerson() ? settings_.thirdPerson.height : 0),std::hypot(dx,dy))/radians;
+                    pitch_=std::atan2(z-ViewEyeZ()-wc3::Real(wc3::GetUnitFlyHeight(unit_))-(ThirdPerson() ? settings_.thirdPerson.height : 0),std::hypot(dx,dy))/radians;
                     recoil_.Reset();
                     wc3::Log("verification aim=%.1f,%.1f,%.1f yaw=%.2f pitch=%.2f",x,y,z,yaw_,pitch_);
                 }
@@ -1282,7 +1286,7 @@ void ShooterController::Tick(uintptr_t ui) {
                 float x=wc3::Real(wc3::GetUnitX(unit_))+distance*std::cos(yaw_*radians);
                 float y=wc3::Real(wc3::GetUnitY(unit_))+distance*std::sin(yaw_*radians);
                 fixtureGate_=wc3::CreateDestructable(type,&x,&y,&facing,&scale,0);
-                pitch_=std::atan2(wc3::Ground(x,y)+120-movement_.EyeZ(),distance)/radians;
+                pitch_=std::atan2(wc3::Ground(x,y)+120-ViewEyeZ(),distance)/radians;
                 wc3::Log("verification gate=%08X type=%08X facing=%.1f nativeFacing=%.3f scale=%.2f hp=%.1f",fixtureGate_,type,facing,wc3::DestructableFacing(fixtureGate_),scale,wc3::Real(wc3::GetDestructableLife(fixtureGate_)));
             } else if (fixture == "blast" || fixture == "blast2500" || fixture == "blast50") {
                 // This consumed local request tests friendly fire and the radius boundary without touching normal maps.
@@ -1331,7 +1335,7 @@ void ShooterController::Tick(uintptr_t ui) {
                         distance = std::hypot(dx, dy); yaw_ = std::atan2(dy, dx) / radians;
                     }
                     float z = wc3::Ground(x, y) + wc3::Real(wc3::GetUnitFlyHeight(fixtureTarget_)) + aimHeight;
-                    pitch_ = std::atan2(z - movement_.EyeZ()-(ThirdPerson() ? settings_.thirdPerson.height : 0), distance) / radians;
+                    pitch_ = std::atan2(z - ViewEyeZ()-(ThirdPerson() ? settings_.thirdPerson.height : 0), distance) / radians;
                 }
                 wc3::Log("verification target=%08X type=%08X at=%.1f,%.1f fly=%.1f side=%.1f height=%.1f scale=%.1f ownerSlot=%d neutral=%d",
                     fixtureTarget_, type, x, y, wc3::Real(wc3::GetUnitFlyHeight(fixtureTarget_)), side, aimHeight, scale, fixtureOwner, wc3::IsNeutralUnit(fixtureTarget_));
@@ -1541,12 +1545,13 @@ void ShooterController::Tick(uintptr_t ui) {
     if (DiagnosticLog::Due(lastState)) {
         const auto& pose=viewmodelMotion_.Pose();
         wc3::Trace("viewmodel pose bob=%d speed=%.1f offset=%.4f,%.4f,%.4f roll=%.4f",settings_.viewmodel.bob,DisplaySpeed(),pose.x,pose.y,pose.z,pose.roll);
-        wc3::Trace("movement x=%.1f y=%.1f ground=%.1f feet=%.1f eye=%.1f speed=%.1f duck=%.2f grounded=%d cameraEye=%.1f cameraX=%.1f cameraY=%.1f pitch=%.1f distance=%.1f fly=%.1f yaw=%.3f cameraYaw=%.3f rawMouse=%d",
+        // Distinguish the physical support from presentation correction when reviewing later camera reports.
+        wc3::Trace("movement x=%.1f y=%.1f ground=%.1f feet=%.1f eye=%.1f speed=%.1f duck=%.2f grounded=%d cameraEye=%.1f cameraX=%.1f cameraY=%.1f pitch=%.1f distance=%.1f fly=%.1f yaw=%.3f cameraYaw=%.3f rawMouse=%d physicalEye=%.1f eyeCorrection=%.2f",
             wc3::Real(wc3::GetUnitX(unit_)), wc3::Real(wc3::GetUnitY(unit_)),
             wc3::Ground(wc3::Real(wc3::GetUnitX(unit_)), wc3::Real(wc3::GetUnitY(unit_))),
-            movement_.FeetZ(), movement_.EyeZ(), movement_.Speed(), movement_.Duck(), movement_.Grounded(),
+            movement_.FeetZ(), ViewEyeZ(), movement_.Speed(), movement_.Duck(), movement_.Grounded(),
             wc3::Real(wc3::GetCameraEyePositionZ()), wc3::Real(wc3::GetCameraEyePositionX()),
             wc3::Real(wc3::GetCameraEyePositionY()), pitch_, wc3::Real(wc3::GetCameraField(0)), wc3::Real(wc3::GetUnitFlyHeight(unit_)),
-            yaw_,wc3::Real(wc3::GetCameraField(5)),mouseLook_.Raw());
+            yaw_,wc3::Real(wc3::GetCameraField(5)),mouseLook_.Raw(),movement_.EyeZ(),ViewEyeZ()-movement_.EyeZ());
     }
 }

@@ -400,6 +400,9 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.squadOrderIntervalMs=unsigned(std::max(50.f,number("Squad","OrderIntervalMs",150,1000)));
     // Item naming is independent of inventory ownership; distance/radius bound the reticle query.
     result.itemHover.enabled=_stricmp(text("Interface","ItemNames","true").c_str(),"false")!=0;
+    // F8 uses the same validated ground-camera response as a fresh installation.
+    result.cameraHeight.enabled=enabled("Interface","CameraHeightSmoothing");
+    result.cameraHeight.seconds=std::max(.01f,number("Interface","CameraHeightSeconds",.08f,.3f));
     result.itemHover.distance=std::max(160.f,number("Interface","ItemNameDistance",1200,5000));
     result.itemHover.radius=std::max(4.f,number("Interface","ItemNameRadius",32,128));
     // Pool snapshots are visual only; F8 clears active fragments before replacing these bounded settings.

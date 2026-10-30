@@ -42,6 +42,14 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
     static std::vector<wc3::Handle> items;
     static std::vector<wc3::Handle> party;
     static wc3::Handle enemy=0,blocker=0,motionActor=0;static DWORD check=0,observeUntil=0;
+    static DWORD motionUntil=0;
+    // A disposable per-render audit distinguishes physical placement jumps from cached camera latency.
+    if(BackgroundGameplay::Enabled() && controller.Visible() && GetTickCount()<motionUntil) {
+        LARGE_INTEGER clock;QueryPerformanceCounter(&clock);auto actor=controller.TestUnit();
+        wc3::Log("fixture motion clock=%lld x=%.5f y=%.5f feet=%.5f speed=%.5f eyeX=%.5f eyeY=%.5f eyeZ=%.5f wantedZ=%.5f",
+            clock.QuadPart,wc3::Real(wc3::GetUnitX(actor)),wc3::Real(wc3::GetUnitY(actor)),controller.ActorFeet(),controller.DisplaySpeed(),
+            wc3::Real(wc3::GetCameraEyePositionX()),wc3::Real(wc3::GetCameraEyePositionY()),wc3::Real(wc3::GetCameraEyePositionZ()),controller.ViewEyeZ());
+    }
     if ((!controller.Visible() && !BackgroundGameplay::Enabled()) || GetTickCount()-check<250) return;
     check=GetTickCount();auto unit=controller.TestUnit();
     std::string path=std::string(root)+"\\test-gameplay.request";
@@ -50,6 +58,15 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
         std::istringstream input(line);std::string command;input>>command;
         // The background oracle uses the same controller mailboxes without sending desktop input.
         if(BackgroundGameplay::Enabled() && command=="toggle")controller.RequestToggle();
+        else if(BackgroundGameplay::Enabled() && command=="lowstep") {
+            // A real native low prop exercises abrupt support changes without a synthetic physics floor.
+            float x=0,y=0,angle=0,scale=.2f;input>>x>>y>>scale;scale=std::clamp(scale,.05f,1.f);
+            wc3::CreateDestructable(0x4C546261,&x,&y,&angle,&scale,0);
+        }
+        else if(BackgroundGameplay::Enabled() && command=="motionaudit") {
+            DWORD ms=0;input>>ms;motionUntil=GetTickCount()+std::min(ms,DWORD(20000));
+            wc3::Log("fixture motion start smoothing=%d seconds=%.3f",controller.Settings().cameraHeight.enabled,controller.Settings().cameraHeight.seconds);
+        }
         else if(BackgroundGameplay::Enabled() && command=="swapbackend") {
             // Reproduce frame completion without the old swap hook after a restored campaign.
             int value=0;input>>value;FramePresentationScene::Alternate(value!=0);

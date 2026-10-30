@@ -512,10 +512,10 @@ if((Get-FileHash $hlConfig).Hash -ne $hlHash){throw 'Half-Life migration is not 
 
 # Reinstall fills the new defaults without overriding saved currency, aiming or label preferences.
 $aimConfig=Join-Path $folder 'dual-currency-headshots.ini'
-@('[Economy]','Currency=gold','FallbackToGold=false','KillReward=200','[Combat]','PreciseUnitHits=false','Headshots=false','HeadshotMultiplier=3','[Interface]','ItemNames=false','ItemNameDistance=2400','ItemNameRadius=18','[Movement]','Mode=recovery') | Set-Content -LiteralPath $aimConfig -Encoding ascii
+@('[Economy]','Currency=gold','FallbackToGold=false','KillReward=200','[Combat]','PreciseUnitHits=false','Headshots=false','HeadshotMultiplier=3','[Interface]','ItemNames=false','ItemNameDistance=2400','ItemNameRadius=18','CameraHeightSmoothing=false','CameraHeightSeconds=0.12','[Movement]','Mode=recovery') | Set-Content -LiteralPath $aimConfig -Encoding ascii
 Update-GameplayConfig $template $aimConfig
 $aimText=Get-Content -LiteralPath $aimConfig -Raw
-foreach($expected in @('Currency=gold','FallbackToGold=false','PreciseUnitHits=false','Headshots=false','HeadshotMultiplier=3','ItemNames=false','ItemNameDistance=2400','ItemNameRadius=18','KillReward=200','Mode=recovery')) {
+foreach($expected in @('Currency=gold','FallbackToGold=false','PreciseUnitHits=false','Headshots=false','HeadshotMultiplier=3','ItemNames=false','ItemNameDistance=2400','ItemNameRadius=18','CameraHeightSmoothing=false','CameraHeightSeconds=0.12','KillReward=200','Mode=recovery')) {
     if(!$aimText.Contains($expected)){throw ('Aiming/currency migration lost '+$expected)}
 }
 $aimHash=(Get-FileHash $aimConfig).Hash;Update-GameplayConfig $template $aimConfig
@@ -526,7 +526,7 @@ $visualConfig=Join-Path $folder 'classic-blood-cases.ini'
 @('[Movement]','Mode=recovery','[CombatVisuals]','BodyBlood=false','BodyBloodCount=4','BodyBloodScale=0.5','BodyBloodSeconds=0.2','BodyBloodSpeed=80','HeadshotBlood=false','HeadshotDecapitation=false','FatalBloodMultiplier=1.5','CriticalText=false','ShellCasings=false','BloodCount=7','ShellUp=-20','ShellSpeed=222','ShellMaximum=16') | Set-Content -LiteralPath $visualConfig -Encoding ascii
 Update-GameplayConfig $template $visualConfig
 $visualText=Get-Content -LiteralPath $visualConfig -Raw
-foreach($expected in @('Mode=recovery','BodyBlood=false','BodyBloodCount=4','BodyBloodScale=0.5','BodyBloodSeconds=0.2','BodyBloodSpeed=80','HeadshotBlood=false','HeadshotDecapitation=false','FatalBloodMultiplier=1.5','CriticalText=false','ShellCasings=false','BloodCount=7','ShellUp=-20','ShellSpeed=222','ShellMaximum=16','CriticalSeconds=1','ShellBounce=0.35')) {
+foreach($expected in @('Mode=recovery','BodyBlood=false','BodyBloodCount=4','BodyBloodScale=0.5','BodyBloodSeconds=0.2','BodyBloodSpeed=80','HeadshotBlood=false','HeadshotDecapitation=false','FatalBloodMultiplier=1.5','CriticalText=false','ShellCasings=false','BloodCount=7','ShellUp=-20','ShellSpeed=222','ShellMaximum=16','CriticalSeconds=1','ShellBounce=0.35','CameraHeightSmoothing=true','CameraHeightSeconds=0.08')) {
     if(!$visualText.Contains($expected)){throw ('Visual/movement update lost '+$expected)}
 }
 $visualHash=(Get-FileHash $visualConfig).Hash;Update-GameplayConfig $template $visualConfig

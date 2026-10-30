@@ -1,4 +1,4 @@
-# Portrait and head gore preview
+# Portrait, gore and camera preview
 
 Local work after 0.15.0; published 0.15.0 assets remain unchanged.
 
@@ -29,6 +29,12 @@ The stretching fix resolves the anchor from a bone actually used by the current 
 
 Body wounds emit six small, short-lived droplets at the accepted impact after actual HP loss. They create no Headshot caption or head removal; misses, protected allies and buildings do not emit body blood. Body pellets/beams coalesce separately from head contacts. `BodyBlood=false` disables only body blood; disable both blood flags to hide all blood.
 
+## Walking camera
+
+Small ground-support changes previously changed first-person eye height immediately. `Interface.CameraHeightSmoothing=true` and `CameraHeightSeconds=0.08` (.01–.3 seconds) add a bounded vertical response after collision, while camera and all aiming origins share `ViewEyeZ`. Physical feet, collision, jump velocity and third-person behavior retain their existing rules. The correction stays within the current collision body and resets on large relocation, view/map/focus transitions and F8. Updates preserve custom settings; false restores the former direct height response.
+
+The previous OpenGL session logs confirmed native terrain normalization was active, but their one-second movement samples cannot identify each short-lived reported shake. Plain terrain and a smooth ridge showed no growing native camera error in the isolated reproduction. A separate native low-barrier A/B test reproduced an 8.4177-unit support/eye step with smoothing disabled; enabling the default reduced the largest displayed change per frame to 1.47843 units. The native camera followed the preceding requested eye within .00002 units. A further 1,220 native flat/ridge frames matched the preceding requested eye within .00002 units, with maximum correction 9.03 units. Native USP body/head contacts, independent blood opt-out and building exclusion also passed with the shared eye. This verifies the ground-step fix, not every possible source of intermittent frame stutter or the exact historical incident. Sampled movement logs now separate physical eye and presentation correction.
+
 ## Verification
 
 Real 1.26a OpenGL and Direct3D shots were verified on a footman and a two-headed ogre in the isolated test map. The ogre retained its body and the other head in both renderers. A disposable test-only clock freeze made the first corpse pose inspectable; ordinary modules never freeze corpses. Eight consecutive Arthas portrait samples continued changing after the fix; the earlier Direct3D capture became almost static, while the OpenGL reference animated normally. The native portrait clock and skin data also continued advancing.
@@ -40,6 +46,7 @@ The stretching follow-up exercised fatal AWP contacts on Crypt Fiends, Naga Myrm
 The body-blood follow-up passed real 1.26a OpenGL and Direct3D contact checks: an ordinary footman body hit created six droplets and no caption, a head contact created 48 droplets and a caption, F8 BodyBlood=false suppressed the next body spray, and a damaging town-hall contact created none. Hidden WGL checks verify visible body particles; portable pool, settings and repeated installer-update tests cover bounds, independent opt-outs, head/body coalescing and preservation.
 
 <!-- launcher-summary
+- Improved first-person camera stability over small ground-height steps with configurable smoothing and matching aim height.
 - Added a small configurable blood spray at confirmed enemy body impacts, independent of headshot blood.
 - Added configurable fatal headshots that remove the struck head while preserving the body and native death events on verified 1.26a models.
 - Preserved the other head on two-headed creatures and restored complete models on native resurrection.

@@ -1,3 +1,4 @@
+- Improved first-person camera stability over small ground-height steps with configurable smoothing and matching aim height.
 - Added a small configurable blood spray at confirmed enemy body impacts, independent of headshot blood.
 - Added configurable fatal headshots that remove the struck head while preserving the body and native death events on verified 1.26a models.
 - Preserved the other head on two-headed creatures and restored complete models on native resurrection.

@@ -749,6 +749,15 @@ int main() {
             assert(aiming.hitDetection.headshotMultiplier==2 && aiming.itemHover.distance==1200 && aiming.itemHover.radius==32);
     }
     // Effects consume the same bounded F8 snapshot; disable flags, signed offsets and custom lifetimes survive loading.
+    // Camera response is a validated live-reload preference, independent of physical movement tuning.
+    {std::ofstream f(path);f<<"[Interface]\n";}
+    auto cameraHeight=GameplaySettings::Load(path).cameraHeight;
+    assert(cameraHeight.enabled && cameraHeight.seconds==.08f);
+    for(const auto& value:std::vector<std::pair<const char*,float>>{{"nan",.08f},{"inf",.08f},{"",.08f},{"bad",.08f},{"-10",.01f},{"10",.3f},{".12",.12f}}) {
+        {std::ofstream f(path);f<<"[Interface]\nCameraHeightSmoothing=false\nCameraHeightSeconds="<<value.first<<"\n";}
+        cameraHeight=GameplaySettings::Load(path).cameraHeight;
+        assert(!cameraHeight.enabled && cameraHeight.seconds==value.second);
+    }
     {std::ofstream f(path);f<<"[CombatVisuals]\n";}
     auto body=GameplaySettings::Load(path).combatVisuals;
     assert(body.bodyBlood && body.bodyBloodCount==6 && body.bodyBloodScale==.65f && body.bodyBloodSeconds==.35f && body.bodyBloodSpeed==110);

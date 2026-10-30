@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Smooth small first-person ground-height steps with configurable Interface.CameraHeightSmoothing=true and CameraHeightSeconds=.08 (.01–.3 s). Keep collision/jump physics unchanged, bound the eye inside the physical body and use the same height for camera and aiming; clear old correction on lifecycle/F8 transitions. Add physical/presented eye diagnostics and portable/native camera checks.
+
 - Add a small configurable blood spray at confirmed enemy body impacts (six droplets, scale .65, .35 seconds, speed 110 by default), excluding buildings. Keep headshot blood and captions independent; preserve saved settings and support F8 reload.
 
 - Fix stretched fatal-headshot meshes on naga and Crypt Fiends: choose an anchor from bones actually skinned by visible geosets, never an uncomputed authoring-parent matrix. Replace only the struck head's contribution to blended neck/jaw groups, including weights below the hit-classification threshold; retain body and other-head contributions.
