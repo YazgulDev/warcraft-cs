@@ -1,4 +1,5 @@
 #pragma once
+#include "../presentation/CameraHeightMotion.hpp"
 #include "../combat/ShotgunReload.hpp"
 #include "../combat/HalfLifeEnergy.hpp"
 #include "../presentation/EnergyBeam.hpp"
@@ -173,6 +174,8 @@ public:
     wc3::Handle HiddenActor() const {return ThirdPerson() ? 0 : ViewActor();}
     // Physical feet are a presentation snapshot; the render adapter never changes native fly height.
     float ActorFeet() const {return movement_.FeetZ();}
+    // Aiming and camera submission share the same eye; collision and rendered body keep physical feet.
+    float ViewEyeZ() const {return movement_.EyeZ()+(ThirdPerson() ? 0 : cameraHeight_.EyeOffset(movement_.EyeZ()-movement_.FeetZ(),movement_.BodyHeight()));}
     wc3::Handle JumpViewActor() const {return ThirdPerson() && !status_.contained && !status_.hidden ? ViewActor() : 0;}
     // Block only map camera writes during live FPS; our camera pass and cinematic/RTS writes remain allowed.
     bool BlocksMapCamera() const { return Visible() && !ownCameraRequest_; }
@@ -201,6 +204,20 @@ public:
     wc3::Handle TestUnit() const { return Visible() ? unit_ : 0; }
 #endif
 #ifdef WCS_GAMEPLAY_TEST
+    bool TestAimHead(wc3::Handle target,int side=0) {
+        // Search only the disposable target's verified posed head surfaces, then use the ordinary contact path.
+        float x=wc3::Real(wc3::GetUnitX(target)),y=wc3::Real(wc3::GetUnitY(target)),floor=wc3::Ground(x,y);
+        for(float dy: {0.f,25.f,-25.f,50.f,-50.f,75.f,-75.f}) {
+            if((side<0 && dy>=0) || (side>0 && dy<=0))continue;
+            for(float z=300;z>=30;z-=5) {
+                TestAimPoint(x,y+dy,floor+z);float origin[3],direction[3],entry=0;bool head=false;AimRay(origin,direction);
+                if(hitboxes_.IntersectShot(target,origin,direction,5000,entry,head,settings_.hitDetection.headshotBoneWeight) && head) {
+                    wc3::Log("fixture verified head aim target=%08X side=%d contact=%.2f,%.2f,%.2f",target,side,origin[0]+direction[0]*entry,origin[1]+direction[1]*entry,origin[2]+direction[2]*entry);return true;
+                }
+            }
+        }
+        wc3::Log("fixture verified head aim unavailable target=%08X",target);return false;
+    }
     // Aim the actual FPS/TPS camera ray at a disposable submerged target, including boom parallax.
     void TestAimPoint(float x,float y,float z) {
         recoil_.Reset();
@@ -362,6 +379,7 @@ private:
     MovementPhysics movement_;
     WarcraftCollision collision_;
     FirstPersonCamera camera_;
+    CameraHeightMotion cameraHeight_;
     ThirdPersonCamera thirdCamera_;
     UnitAttack heroAttack_;
     UnitLocomotion unitLocomotion_;

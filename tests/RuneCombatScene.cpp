@@ -42,6 +42,14 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
     static std::vector<wc3::Handle> items;
     static std::vector<wc3::Handle> party;
     static wc3::Handle enemy=0,blocker=0,motionActor=0;static DWORD check=0,observeUntil=0;
+    static DWORD motionUntil=0;
+    // A disposable per-render audit distinguishes physical placement jumps from cached camera latency.
+    if(BackgroundGameplay::Enabled() && controller.Visible() && GetTickCount()<motionUntil) {
+        LARGE_INTEGER clock;QueryPerformanceCounter(&clock);auto actor=controller.TestUnit();
+        wc3::Log("fixture motion clock=%lld x=%.5f y=%.5f feet=%.5f speed=%.5f eyeX=%.5f eyeY=%.5f eyeZ=%.5f wantedZ=%.5f",
+            clock.QuadPart,wc3::Real(wc3::GetUnitX(actor)),wc3::Real(wc3::GetUnitY(actor)),controller.ActorFeet(),controller.DisplaySpeed(),
+            wc3::Real(wc3::GetCameraEyePositionX()),wc3::Real(wc3::GetCameraEyePositionY()),wc3::Real(wc3::GetCameraEyePositionZ()),controller.ViewEyeZ());
+    }
     if ((!controller.Visible() && !BackgroundGameplay::Enabled()) || GetTickCount()-check<250) return;
     check=GetTickCount();auto unit=controller.TestUnit();
     std::string path=std::string(root)+"\\test-gameplay.request";
@@ -50,6 +58,15 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
         std::istringstream input(line);std::string command;input>>command;
         // The background oracle uses the same controller mailboxes without sending desktop input.
         if(BackgroundGameplay::Enabled() && command=="toggle")controller.RequestToggle();
+        else if(BackgroundGameplay::Enabled() && command=="lowstep") {
+            // A real native low prop exercises abrupt support changes without a synthetic physics floor.
+            float x=0,y=0,angle=0,scale=.2f;input>>x>>y>>scale;scale=std::clamp(scale,.05f,1.f);
+            wc3::CreateDestructable(0x4C546261,&x,&y,&angle,&scale,0);
+        }
+        else if(BackgroundGameplay::Enabled() && command=="motionaudit") {
+            DWORD ms=0;input>>ms;motionUntil=GetTickCount()+std::min(ms,DWORD(20000));
+            wc3::Log("fixture motion start smoothing=%d seconds=%.3f",controller.Settings().cameraHeight.enabled,controller.Settings().cameraHeight.seconds);
+        }
         else if(BackgroundGameplay::Enabled() && command=="swapbackend") {
             // Reproduce frame completion without the old swap hook after a restored campaign.
             int value=0;input>>value;FramePresentationScene::Alternate(value!=0);
@@ -93,6 +110,28 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
         else if(BackgroundGameplay::Enabled() && command=="heroattack")controller.TestHeroAttack();
         else if(BackgroundGameplay::Enabled() && command=="holdattack") {DWORD duration=0;input>>duration;controller.TestHoldAttack(duration);}
         else if(BackgroundGameplay::Enabled() && command=="targetstats")controller.TestLogTarget();
+        else if(BackgroundGameplay::Enabled() && (command=="aimhead" || command=="headstrike") && enemy) {
+            // Verification uses the same named-head ray and shooter damage as real inputs; no forced kill or body flag.
+            int side=0;input>>side;
+            if(controller.TestAimHead(enemy,side) && command=="headstrike") {
+                controller.TestStrike(WeaponSlots::AWP);
+                // Keep the first native death pose visible; ordinary modules never freeze a corpse.
+                wc3::AnimationRate(enemy,0);
+                wc3::Log("fixture head corpse sequence=%d active=%d",wc3::AnimationSequence(enemy),wc3::ActiveAnimationSequence(enemy));
+            }
+        }
+        else if(BackgroundGameplay::Enabled() && command=="enemyrate" && enemy) {
+            // Freeze only the disposable corpse pose for visual inspection before native decay.
+            float rate=1;input>>rate;wc3::AnimationRate(enemy,rate);
+        }
+        else if(BackgroundGameplay::Enabled() && command=="enemypause" && enemy) {
+            // Let a newly created native model initialize its pose before freezing an oracle target.
+            int value=1;input>>value;wc3::PauseUnit(enemy,value!=0);
+        }
+        else if(BackgroundGameplay::Enabled() && command=="enemyhealth" && enemy) {
+            float health=100;input>>health;using SetState=void (__cdecl*)(wc3::Handle,int,float*);
+            reinterpret_cast<SetState>(base+0x3C5EA0)(enemy,0,&health);
+        }
         else if(BackgroundGameplay::Enabled() && command=="waterenemy") {
             // Force only disposable targets onto authored shallow/deep-water cells, without pathing relocation.
             float x=256,y=0,facing=180,scale=1;std::string raw="hfoo";input>>x>>y>>raw>>scale;
@@ -213,6 +252,8 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
         else if(BackgroundGameplay::Enabled() && command=="strike") {
             // Aim/target creation uses the existing private request; this exercises production contact damage.
             int slot=2;input>>slot;controller.TestStrike(slot);
+            // Read confirmation immediately, before short body particles can expire between mailbox requests.
+            wc3::Log("fixture impact visuals blood=%u captions=%u",unsigned(controller.Visuals().BloodDrops().size()),unsigned(controller.Visuals().Criticals().size()));
         }
         else if(BackgroundGameplay::Enabled() && command=="blocker") {
             // A separate disposable effect/physical body tests the production nearest-hit selection.

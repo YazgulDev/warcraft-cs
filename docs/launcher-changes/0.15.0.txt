@@ -1,0 +1,8 @@
+- Added optional Direct3D for Warcraft III 1.26a with automatically prepared private graphics components.
+- Added saved Auto, OpenGL and Direct3D choices in both launchers, applied on the next game launch.
+- Added the native Direct3D minimap with the shared placement, size setting and visibility toggle.
+- Fixed animated Direct3D portrait capture and square HUD framing.
+- Fixed native cursor and oversized health bars leaking into first-person Direct3D views.
+- Improved Direct3D surface restoration and recovery probe safety.
+- Fixed extra native terrain height shifting the controlled camera on slopes without changing movement or collision.
+- Preserved shared native inventory controls, graphics preferences, custom settings and saves during updates.

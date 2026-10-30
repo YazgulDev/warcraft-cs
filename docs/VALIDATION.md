@@ -1,5 +1,18 @@
 # Validation
 
+## Release 0.15.0 (2026-10-29)
+
+Source audit and native compilation pass. Fresh combined native runs on the owned 1.26a map pass six camera cases in each renderer (flat, level eye on a slope, ground following, standing, walking and jumping), with zero submitted-eye error after accounting for native getter latency. The same runs confirm portrait/minimap/item panels, native potion use and slot 3-to-5 moves, M/I controls and RTS/FPS transitions, with no ERROR records. Screenshots were inspected.
+
+Fresh regression checks pass for map-camera guards, FPS projection, movement invariants, the complete launcher/install/update/reinstall suite, pinned app-local graphics installation and preservation, actual hidden-device Direct3D UI pixels/draw filtering/Reset, and safe Direct3D probe aliasing. Both final EXEs and source/distribution ZIPs are checked for matching source snapshots, full release-body/manifest summaries, independent checksums and native-free public archives; bundled runtime checks cover version/source/hash/layout validation and malformed-package rejection.
+
+Earlier 1.26a Direct3D fullscreen checks verify 1920×1080, weapons/reload, native
+portrait/minimap, cursor/health-bar filtering, buy menus, third-person transitions
+and live HUD scaling. The combined camera-map run does not substitute for the
+earlier weapon/reload checks. Full campaign, Alt-Tab restore, RX 580 issue #10
+and real 1.27a gameplay remain unverified. All native checks use a separate lab;
+its module, INI, caches, graphics components and Save are restored.
+
 ## HUD and installer diagnostic coverage (2026-10-19)
 
 One sampled frame records `HUD state` / `HUD raster` / `HUD texture` / `HUD matrices`

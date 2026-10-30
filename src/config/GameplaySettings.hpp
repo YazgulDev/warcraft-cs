@@ -2,6 +2,7 @@
 #include "HitDetectionSettings.hpp"
 #include "CombatVisualSettings.hpp"
 #include "ItemHoverSettings.hpp"
+#include "CameraHeightSettings.hpp"
 #include "../combat/WeaponSlots.hpp"
 #include "LoggingSettings.hpp"
 #include "RenderSettings.hpp"
@@ -64,6 +65,7 @@ struct GameplaySettings {
     HitDetectionSettings hitDetection;
     CombatVisualSettings combatVisuals;
     ItemHoverSettings itemHover;
+    CameraHeightSettings cameraHeight;
     float runeAmmoPercent = 40;
     float runePickupRadius = 160;
     bool runeAmmoAllWeapons = true;

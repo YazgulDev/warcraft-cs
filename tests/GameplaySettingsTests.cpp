@@ -749,6 +749,30 @@ int main() {
             assert(aiming.hitDetection.headshotMultiplier==2 && aiming.itemHover.distance==1200 && aiming.itemHover.radius==32);
     }
     // Effects consume the same bounded F8 snapshot; disable flags, signed offsets and custom lifetimes survive loading.
+    // Camera response is a validated live-reload preference, independent of physical movement tuning.
+    {std::ofstream f(path);f<<"[Interface]\n";}
+    auto cameraHeight=GameplaySettings::Load(path).cameraHeight;
+    assert(cameraHeight.enabled && cameraHeight.seconds==.08f);
+    for(const auto& value:std::vector<std::pair<const char*,float>>{{"nan",.08f},{"inf",.08f},{"",.08f},{"bad",.08f},{"-10",.01f},{"10",.3f},{".12",.12f}}) {
+        {std::ofstream f(path);f<<"[Interface]\nCameraHeightSmoothing=false\nCameraHeightSeconds="<<value.first<<"\n";}
+        cameraHeight=GameplaySettings::Load(path).cameraHeight;
+        assert(!cameraHeight.enabled && cameraHeight.seconds==value.second);
+    }
+    {std::ofstream f(path);f<<"[CombatVisuals]\n";}
+    auto body=GameplaySettings::Load(path).combatVisuals;
+    assert(body.bodyBlood && body.bodyBloodCount==6 && body.bodyBloodScale==.65f && body.bodyBloodSeconds==.35f && body.bodyBloodSpeed==110);
+    {std::ofstream f(path);f<<"[CombatVisuals]\nBodyBlood=false\nBodyBloodCount=4\nBodyBloodScale=0.5\nBodyBloodSeconds=0.2\nBodyBloodSpeed=80\n";}
+    body=GameplaySettings::Load(path).combatVisuals;
+    assert(!body.bodyBlood && body.headshotBlood && body.bodyBloodCount==4 && body.bodyBloodScale==.5f && body.bodyBloodSeconds==.2f && body.bodyBloodSpeed==80);
+    // Malformed body tuning falls back; finite outliers clamp before reaching the particle pool.
+    for(const char* value:{"nan","inf","bad","","-1000","999999"}) {
+        {std::ofstream f(path);f<<"[CombatVisuals]\nBodyBloodCount="<<value<<"\nBodyBloodScale="<<value<<"\nBodyBloodSeconds="<<value<<"\nBodyBloodSpeed="<<value<<"\n";}
+        body=GameplaySettings::Load(path).combatVisuals;
+        assert(body.bodyBloodCount>=1 && body.bodyBloodCount<=64 && body.bodyBloodScale>=.25f && body.bodyBloodScale<=4);
+        assert(body.bodyBloodSeconds>=.1f && body.bodyBloodSeconds<=3 && body.bodyBloodSpeed>=0 && body.bodyBloodSpeed<=500);
+        if(!strcmp(value,"nan") || !strcmp(value,"inf") || !strcmp(value,"bad") || !*value)
+            assert(body.bodyBloodCount==6 && body.bodyBloodScale==.65f && body.bodyBloodSeconds==.35f && body.bodyBloodSpeed==110);
+    }
     {std::ofstream f(path);f<<"[CombatVisuals]\nHeadshotBlood=false\nCriticalText=0\nShellCasings=false\nBloodCount=7\nBloodSeconds=1.2\nShellUp=-20\nShellSpeed=200\nShellMaximum=16\n";}
     auto cv=GameplaySettings::Load(path).combatVisuals;
     assert(!cv.headshotBlood && !cv.criticalText && !cv.shellCasings && cv.bloodCount==7 && cv.bloodSeconds==1.2f && cv.shellOffset[1]==-20 && cv.shellSpeed==200 && cv.shellMaximum==16);
@@ -758,7 +782,27 @@ int main() {
         assert(cv.bloodCount>=1 && cv.bloodCount<=64 && cv.bloodSeconds>=.1f && cv.bloodSeconds<=3);
         assert(cv.shellGravity>=50 && cv.shellGravity<=2000 && cv.shellSpeed>=20 && cv.shellSpeed<=500 && cv.shellMaximum>=1 && cv.shellMaximum<=128);
         assert(cv.shellOffset[1]>=-64 && cv.shellOffset[1]<=64 && cv.criticalScale>=.5f && cv.criticalScale<=2 && cv.shellBounce>=0 && cv.shellBounce<=.9f);
-        if(!strcmp(value,"nan") || !strcmp(value,"inf") || !strcmp(value,"bad") || !*value)assert(cv.shellOffset[1]==-12 && cv.shellSpeed==140 && cv.bloodSeconds==.5f);
+        if(!strcmp(value,"nan") || !strcmp(value,"inf") || !strcmp(value,"bad") || !*value)assert(cv.shellOffset[1]==-12 && cv.shellSpeed==140 && cv.bloodSeconds==.8f);
+    }
+    // Startup/F8 migrates only former stock spray; explicit versioned old values and custom tuning survive.
+    {std::ofstream f(path);f<<"[CombatVisuals]\nBloodCount=16\nBloodSeconds=0.5\nBloodScale=1\nBloodSpeed=180\n";}
+    cv=GameplaySettings::Load(path).combatVisuals;
+    assert(cv.bloodCount==48 && cv.bloodSeconds==.8f && cv.bloodScale==1.75f && cv.bloodSpeed==220);
+    {std::ofstream f(path);f<<"[CombatVisuals]\nBloodVersion=2\nBloodCount=16\nBloodSeconds=0.5\nBloodScale=1\nBloodSpeed=180\n";}
+    cv=GameplaySettings::Load(path).combatVisuals;
+    assert(cv.bloodCount==16 && cv.bloodSeconds==.5f && cv.bloodScale==1 && cv.bloodSpeed==180);
+    // Startup and F8 share this parser: head removal has its own opt-out and fatal spray stays bounded.
+    for(const char* value:{"", "broken", "true", "false", "0", "1"}) {
+        {std::ofstream f(path);f<<"[CombatVisuals]\nHeadshotDecapitation="<<value<<"\n";}
+        cv=GameplaySettings::Load(path).combatVisuals;
+        assert(cv.headshotDecapitation==(strcmp(value,"false") && strcmp(value,"0")));
+        assert(cv.fatalBloodMultiplier==3);
+    }
+    for(const auto& value:std::vector<std::pair<const char*,float>>{
+        {"nan",3},{"inf",3},{"broken",3},{"",3},{"-10",1},{"0",1},{"1.5",1.5f},{"999",4}}) {
+        {std::ofstream f(path);f<<"[CombatVisuals]\nHeadshotBlood=false\nHeadshotDecapitation=false\nFatalBloodMultiplier="<<value.first<<"\n";}
+        cv=GameplaySettings::Load(path).combatVisuals;
+        assert(!cv.headshotBlood && !cv.headshotDecapitation && cv.fatalBloodMultiplier==value.second);
     }
     // Startup/F8 upgrades old stock and preserves custom, disabled and explicit newer-version values.
     for(const auto& tuning:std::vector<std::tuple<const char*,const char*,const char*,int,int,float,float>>{

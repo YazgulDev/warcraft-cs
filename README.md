@@ -8,9 +8,7 @@ quests and combat rules. Third-person and unarmed first-person views are also av
 [Install and play](INSTALL.md) · [Documentation](docs/README.md) ·
 [Discussions](https://github.com/YazgulDev/warcraft-cs/discussions)
 
-**Release 0.14.0:** improved head contacts and blood, saved friendly-fire preferences, campaign economy startup, HUD/weapon graphics-state isolation and expanded diagnostics. Movement and weapon balance retain their defaults. See [downloads and all changes](docs/RELEASE-0.14.0.md). [1.27a/D3D9 support is experimental](docs/PORT-1.27.md).
-
-Development preview: [optional Direct3D for 1.26a and a saved graphics selector](docs/DIRECT3D-126A-PREVIEW.md), verified locally with weapons and HUD. Published 0.14.0 downloads retain their existing launch behavior.
+**Release 0.15.0:** optional Direct3D for 1.26a, saved OpenGL/Direct3D selection, native minimap and corrected portrait/inventory presentation in Direct3D, and a steadier camera on slopes. See [downloads and all changes](docs/RELEASE-0.15.0.md). [1.27a/D3D9 support remains experimental](docs/PORT-1.27.md).
 
 ## Start here
 
@@ -30,7 +28,7 @@ Development preview: [optional Direct3D for 1.26a and a saved graphics selector]
 ## Requirements
 
 Windows 10/11 x64 and your own **Warcraft III 1.26a** installation
-(`Game.dll` **1.26.0.6401**, OpenGL), or experimental **1.27a** (**1.27.0.52240**, D3D9).
+(`Game.dll` **1.26.0.6401**, OpenGL or Direct3D), or experimental **1.27a** (**1.27.0.52240**, D3D9).
 CS weapons require your own **Counter-Strike 1.6**; optional Half-Life weapons also use your owned **Half-Life** files;
 the **Only Warcraft modes** option works without it. See [full requirements](REQUIREMENTS.md).
 

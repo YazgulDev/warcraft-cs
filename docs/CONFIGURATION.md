@@ -19,6 +19,15 @@ The [annotated INI](../config/WarcraftCS.ini) is the complete list of keys, defa
 units, bounds and reload rules. Values below describe the published release;
 an older installation may retain different saved choices.
 
+## Renderer selection
+
+In launcher 0.15.0 or newer, choose **Graphics → Auto / OpenGL / Direct3D** before Play.
+Auto uses OpenGL on 1.26a and Direct3D 9 on experimental 1.27a. The validated choice
+is saved as `Renderer` in `%LOCALAPPDATA%/WarcraftCSLauncher/last-install.json`,
+independently of the gameplay INI and RoC/TFT edition. Missing old preferences use Auto.
+Restart Warcraft to apply a renderer change; F8 reloads game settings only. Install/Update
+prepares the private 1.26a graphics components automatically.
+
 ## Guides by topic
 
 | Topic | Guide |
@@ -183,6 +192,8 @@ Unsupported model/pose adapters never invent a head location. Experimental 1.27a
 
 Release 0.13.0 defaults movement to `classic`; explicit `hull` and `recovery` remain available. `[CombatVisuals]` controls confirmed headshot blood, floating **Headshot** text and cosmetic casing pools. All defaults/ranges are in [release settings](RELEASE-0.13.0.md#visual-settings) and the annotated INI. F8 clears old visual pools before applying the new settings. There is no centered HEADSHOT word.
 
+The local [head-removal preview](PORTRAIT-HEAD-GORE-PREVIEW.md) increases stock blood and adds `HeadshotDecapitation=true` and `FatalBloodMultiplier=3` (1–4). Removal affects subsequent fatal hostile direct head contacts on verified 1.26a named-head models; the body follows native death/decay and resurrection restores the model. Blood can be disabled independently. Startup/F8 reload the settings; updates preserve custom values and opt-outs. `BloodVersion=2` preserves an intentional return to old blood defaults.
+
 ## Flash area stun
 
 `[Flashbang] StunAllUnits=true` and `StunDistanceFalloff=false` apply the full `UnitStunSeconds=2` to every exposed creature, including the actor and allies. False on the first restores enemy-only filtering; true on the second enables distance falloff. Both booleans accept true/false or 1/0. Physical cover blocks exposure, and existing map pauses are never released by the adapter. F8 affects subsequent throws; updates preserve saved choices.
@@ -194,6 +205,10 @@ Release 0.13.0 defaults movement to `classic`; explicit `hull` and `recovery` re
 Startup/F8 loads the same validated values as fresh installation. Damage accepts 0–1000000, RPG radius 32–3000 world units, and multipliers 0–1000. F8 applies to new shots/launches/throws; active projectiles keep their original snapshot.
 
 Setup and the loader upgrade former stock values once: RPG 100 damage and 525 radius (or unversioned 375), M3 x3, XM1014 x2.4, and HE 300 (or unversioned 100). Custom values, explicit zero and other preserved versioned settings remain authoritative. `[RPG] DamageVersion=2` / `BlastVersion=3`, each shotgun's `MultiplierVersion=2`, and `[HEGrenade] DamageVersion=3` record the current balance. After an update, editing values back to older stock numbers with those markers retains them. Prior version-2 HE 100 and RPG radius 375 are also preserved. Missing keys are inserted once; repeated upgrades do not duplicate/reset them.
+
+### Small body-impact blood (local preview)
+
+`[CombatVisuals] BodyBlood=true` emits a small spray on confirmed enemy body damage, excluding buildings. Defaults: `BodyBloodCount=6` (1–64), `BodyBloodScale=0.65` (.25–4), `BodyBloodSeconds=0.35` (.1–3 s), `BodyBloodSpeed=110` (0–500 world units/s). `BloodGravity` also applies. Startup/F8 apply changes and clear old particles; updates add missing keys and preserve custom values. `BodyBlood=false` and `HeadshotBlood=false` independently disable body and head sprays. Body impacts have no Headshot text or fatal multiplier.
 
 ## Headshot and campaign improvements (0.14.0)
 
@@ -211,3 +226,9 @@ Setup and the loader upgrade former stock values once: RPG 100 damage and 525 ra
 Head/contact policy applies to subsequent shots; visual-only beam tracking cannot emit damage or blood. A confirmed damaging named-head contact emits blood independently of the optional Headshots bonus; the existing HeadshotBlood flag can still disable it. A disabled bonus produces no Headshot label. Army settings apply on the next active AI decision. F8 requests a current status report; already accepted native orders retain ownership. Lumber changes never cancel existing manual harvesting. No resources or workers are created to bypass a campaign restriction.
 
 GraphicsDebug is independent of Logging.Detailed. Detailed=false suppresses optional TRACE summaries/snapshots, while enabled graphics ERROR/WARN messages and essential handled-fault data remain. Repeated graphics errors share bounded suppression with counts; existing file rotation remains 8 MiB plus three archives by default. Synchronous driver delivery and additional state queries can affect frame time; GraphicsDebug=false disables the added observer live on F8. See [diagnostic coverage and limits](DIAGNOSTICS.md).
+
+## Ground-height camera response (local preview)
+
+`[Interface] CameraHeightSmoothing=true` softens small support-height transitions while walking in first person. `CameraHeightSeconds=0.08` is the response time in seconds, clamped to .01–.3; smaller values follow ground more closely. Missing, malformed and non-finite values use .08. Startup/F8 apply the settings; F8 clears the old correction. Updates add missing keys and preserve custom values. Set `CameraHeightSmoothing=false` for the previous direct height response.
+
+Only camera/aim height receives the bounded correction. Horizontal position, collision, physical feet, jump acceleration and third-person boom behavior retain their existing rules. Camera, firearm contacts, spell/item aim and hover queries share one eye height. The correction stays inside the standing/crouched collision body, resets on large relocations and view/map/focus transitions, and decays through airborne movement without filtering the jump trajectory. Movement logs distinguish `physicalEye`, requested `eye` and `eyeCorrection`.

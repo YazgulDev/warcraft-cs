@@ -4,17 +4,17 @@
 
 ## Supported setup
 
-Release **0.12.0** targets Windows 10/11 x64 and **Warcraft III 1.26a
-x86**, with `Game.dll` version **1.26.0.6401**, using OpenGL. It additionally accepts
+Release **0.15.0** targets Windows 10/11 x64 and **Warcraft III 1.26a
+x86**, with `Game.dll` version **1.26.0.6401**, using OpenGL or Direct3D. It additionally accepts
 experimental **1.27a (1.27.0.52240)** with D3D9 in both Player and Developer setup.
 [1.27a remains a partial port without real-game verification](PORT-1.27.md). Both Reign of Chaos
 and The Frozen Throne can be selected in the launcher.
 
-The [development Direct3D preview](DIRECT3D-126A-PREVIEW.md) additionally supports
+The [Direct3D path](DIRECT3D-126A-PREVIEW.md) supports
 1.26a through an app-local D3D8-to-9 bridge and a saved graphics selector. Native
 minimap, animated portraits, shared item inventory, other HUD panels and weapons
-were verified in the isolated game in windowed/fullscreen mode. The preview filters native cursor/health-bar
-geometry during FPS. Published 0.14.0 assets do not contain this option.
+were verified in the isolated game in windowed/fullscreen mode. It filters native cursor/health-bar
+geometry during FPS. Auto retains OpenGL on 1.26a; select Direct3D before Play.
 
 CS weapon mode requires an owned Counter-Strike 1.6 installation. Optional Crowbar,
 Tau Cannon, Gluon Gun and RPG also require complete owned Half-Life resources. **Only Warcraft modes** provides
@@ -32,7 +32,7 @@ Check the notes bundled with a development build before assuming it supports ano
   missions retain their intended player-count requirements.
 - Native Warcraft health, armor, mana, cooldowns, targeting and quest immunity remain
   authoritative. Custom spell orders and map-specific effects may need configuration.
-- Hitboxes approximate model bounds rather than individual bones.
+- Verified 1.26a firearm/energy rays use posed model surfaces and named head contacts; unsupported models/hosts retain conservative approximate targeting. Native animation blending and texture cutout pixels are not fully reproduced.
 - CS recoil is adapted; complete GoldSrc bullet spread/accuracy and the original
   client are not implemented. Purchases use a map-local dollar wallet by default;
   `Economy.Currency=gold` selects Warcraft gold. CS rounds and team economy are not implemented.

@@ -8,10 +8,11 @@ namespace wc3 {void Log(const char*,...) {}}
 namespace {
 void Require(bool condition,const char* message) {if(!condition){std::fprintf(stderr,"FAIL %s\n",message);std::exit(1);}}
 struct Vertex {float x,y,z,w;DWORD color;};
-void Triangle(IDirect3DDevice9* device,float x,float y,DWORD color) {
-    Vertex vertices[]={{x,y,0,1,color},{x+36,y,0,1,color},{x,y+36,0,1,color}};
+void Triangle(IDirect3DDevice9* device,float x,float y,DWORD color,float z=0,bool depth=false) {
+    Vertex vertices[]={{x,y,z,1,color},{x+36,y,z,1,color},{x,y+36,z,1,color}};
     device->SetFVF(D3DFVF_XYZRHW|D3DFVF_DIFFUSE);device->SetTexture(0,nullptr);
-    device->SetRenderState(D3DRS_CULLMODE,D3DCULL_NONE);device->SetRenderState(D3DRS_ZENABLE,FALSE);
+    device->SetRenderState(D3DRS_CULLMODE,D3DCULL_NONE);device->SetRenderState(D3DRS_ZENABLE,depth);
+    device->SetRenderState(D3DRS_ZWRITEENABLE,TRUE);device->SetRenderState(D3DRS_ZFUNC,D3DCMP_LESS);
     device->SetRenderState(D3DRS_LIGHTING,FALSE);device->SetRenderState(D3DRS_ALPHABLENDENABLE,FALSE);
     device->SetTextureStageState(0,D3DTSS_COLOROP,D3DTOP_SELECTARG2);device->SetTextureStageState(0,D3DTSS_COLORARG2,D3DTA_DIFFUSE);
     Require(SUCCEEDED(device->DrawPrimitiveUP(D3DPT_TRIANGLELIST,1,vertices,sizeof(Vertex))),"native triangle");
@@ -51,12 +52,13 @@ int main() {
     device->Clear(0,nullptr,D3DCLEAR_TARGET,0xFFFF0000,1,0);
     D3DNativeUi::Overlay(true);Triangle(device,130,10,0xFF00FF00);D3DNativeUi::Overlay(false);
     D3DVIEWPORT9 portrait={70,180,40,40,0,1};D3DNativeUi::Viewport(device,portrait,320,240);
-    Require(portrait.X==0 && portrait.Y==0,"portrait redirects into private local viewport");device->SetViewport(&portrait);Triangle(device,0,0,0xFFFFFF00);
+    Require(portrait.X==0 && portrait.Y==0,"portrait redirects into private local viewport");device->SetViewport(&portrait);Triangle(device,0,0,0xFFFFFF00,.2f,true);
     D3DMATRIX nativeProjection={};nativeProjection.m[0][0]=1;nativeProjection.m[1][1]=1.6f;nativeProjection.m[2][3]=1;
     D3DNativeUi::PortraitProjection(device,nativeProjection);
     Require(nativeProjection.m[0][0]==nativeProjection.m[1][1],"square portrait framing preserves face proportions without changing vertical FOV");
     // The real engine changes projection after portraits and can omit another SetViewport call.
-    D3DNativeUi::Projection(device,true);D3DVIEWPORT9 full={0,0,320,240,0,1};device->SetViewport(&full);
+    D3DNativeUi::Projection(device,true);D3DVIEWPORT9 full={0,0,320,240,0,1},restored={};device->GetViewport(&restored);
+    Require(restored.X==0 && restored.Y==0 && restored.Width==320 && restored.Height==240,"projection-only portrait end restores the native viewport");
     Triangle(device,70,60,0xFFFF0000);device->EndScene();
     HDC dc=GetDC(window);D3DNativeUi::Overlay(true);Require(D3DGraphics::BeginFrame(device,dc,320,240),"portrait canvas");
     D3DGraphics::MatrixMode(GL_PROJECTION);D3DGraphics::LoadIdentity();D3DGraphics::Ortho(0,320,240,0,-1,1);
@@ -65,6 +67,20 @@ int main() {
     Require(Pixel(device,75,15)==0x101010,"native cursor and HP geometry suppressed in the world region");
     Require(Pixel(device,135,15)==0x00FF00,"own overlay geometry remains visible");
     Require(Pixel(device,205,65)==0xFFFF00,"actual native portrait pixels reach the HUD");
+    // Successive animation frames must replace the face and restore full-size native UI without
+    // an extra engine SetViewport call (the static-pixel check previously masked this transition).
+    D3DNativeUi::Phase(false);device->BeginScene();D3DNativeUi::Phase(true);
+    portrait={70,180,40,40,0,1};D3DNativeUi::Viewport(device,portrait,320,240);device->SetViewport(&portrait);
+    // The engine leaves its world-band scissor active at the first portrait batch. A clipped
+    // depth clear retains the earlier face's nearer depth and freezes successive skinned frames.
+    RECT worldBand={0,40,320,160};device->SetScissorRect(&worldBand);device->SetRenderState(D3DRS_SCISSORTESTENABLE,TRUE);
+    Triangle(device,0,0,0xFF00FFFF,.8f,true);
+    D3DNativeUi::Projection(device,true);device->GetViewport(&restored);
+    Require(restored.Width==320 && restored.Height==240,"animated portrait restores the previous viewport each frame");device->EndScene();
+    D3DNativeUi::Overlay(true);Require(D3DGraphics::BeginFrame(device,dc,320,240),"next portrait animation frame");
+    D3DGraphics::MatrixMode(GL_PROJECTION);D3DGraphics::LoadIdentity();D3DGraphics::Ortho(0,320,240,0,-1,1);
+    D3DGraphics::MatrixMode(GL_MODELVIEW);D3DGraphics::LoadIdentity();D3DNativeUi::DrawPortrait(200,60,40);D3DGraphics::EndFrame();D3DNativeUi::Overlay(false);
+    Require(Pixel(device,205,65)==0x00FFFF,"animated portrait changes rather than retaining its previous frame");
     // Capture a real native minimap draw and a nested portrait without touching world pixels.
     D3DNativeUi::Phase(false);device->Clear(0,nullptr,D3DCLEAR_TARGET|D3DCLEAR_ZBUFFER,0xFF0000FF,.25f,0);
     D3DMinimap::Configure({0,160,80,240},320,240,true);device->BeginScene();D3DNativeUi::Phase(true);

@@ -1,6 +1,6 @@
-# Slope camera preview
+# Slope camera correction
 
-Local follow-up to 0.14.0; not a published release.
+Included in [release 0.15.0](RELEASE-0.15.0.md). The earlier local verification is retained below.
 
 The verified Warcraft III 1.26a camera helper adds its own averaged terrain height
 after the FPS controller has already supplied the physical eye position. On uneven

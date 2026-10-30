@@ -42,9 +42,9 @@ float Ground(float,float){return 0;}
 std::string ItemName(Handle){++nameCalls;return u8"|cffff0000\u0420\u0443\u043d\u0430|r";}
 }
 namespace WeaponTargetFilter {bool PassThrough(wc3::Handle h,uintptr_t){return scene[h].effect;}}
-bool UnitHitboxes::IntersectShot(wc3::Handle h,const float*,const float*,float limit,float& entry,bool& head,float,bool diagnostic) {
+bool UnitHitboxes::IntersectShot(wc3::Handle h,const float*,const float*,float limit,float& entry,bool& head,float,bool diagnostic,unsigned* root) {
     diagnosticSeen=diagnostic; // The production query forwards fired-round diagnostics to the hitbox adapter.
-    const auto& u=scene[h];entry=u.entry;head=u.head;return u.hit && entry<=limit;
+    const auto& u=scene[h];entry=u.entry;head=u.head;if(root)*root=head ? 43 : 0xffffffff;return u.hit && entry<=limit;
 }
 bool UnitHitboxes::Intersect(wc3::Handle h,const float*,const float*,float limit,float& entry,float){volumeCalled=true;entry=scene[h].entry;return entry<=limit;}
 bool DestructableHitboxes::Intersect(wc3::Handle,const float*,const float*,float limit,float& entry){entry=gate;return gate<=limit;}
@@ -54,9 +54,9 @@ int main() {
     float origin[]={0,0,24},ray[]={1,0,0};WeaponTrace::Options options;
     auto cast=[&]{return WeaponTrace::Cast(1,origin,ray,200,settings,units,destructables,0,options);};
     scene[2]={20,false,false};scene[3]={100,true};order={2,3};
-    auto hit=cast();assert(hit.target==3 && hit.head); // Near broad-box ghost cannot steal an actual head surface.
+    auto hit=cast();assert(hit.target==3 && hit.head && hit.headRoot==43); // Preserve the exact skull through nearest-hit selection.
     assert(!diagnosticSeen);options.diagnostic=true;assert(cast().target==3 && diagnosticSeen);options.diagnostic=false;
-    scene[2].hit=true;hit=cast();assert(hit.target==2 && !hit.head);
+    scene[2].hit=true;hit=cast();assert(hit.target==2 && !hit.head && hit.headRoot==0xffffffff);
     for(bool Unit::*flag:{&Unit::hidden,&Unit::loaded,&Unit::effect}){scene[2].*flag=true;assert(cast().target==3);scene[2].*flag=false;}
     scene[2].visible=false;assert(cast().target==3);scene[2].visible=true;
     scene[2].alive=false;assert(cast().target==3);scene[2].alive=true;

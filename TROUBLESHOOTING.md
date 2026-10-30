@@ -38,7 +38,7 @@ Verify these requirements first:
 
 | Symptom | What to do |
 | --- | --- |
-| Unsupported Game.dll | Select the installed 1.26a x86 game. Other patches and Reforged are unsupported. Check `Game.dll` Properties → Details. |
+| Unsupported Game.dll | Select the installed 1.26a x86 game, or experimental 1.27a (1.27.0.52240). Other patches and Reforged are unsupported. Check `Game.dll` Properties → Details. |
 | Missing owned Warcraft file or Miles provider | Use a complete working installation of your own Warcraft. Retry setup to copy its audio providers into the private runtime. Do not download individual DLLs from third-party sites. |
 | Missing `v_*.mdl`, model or CS sound | Select the actual `cstrike` folder containing the required loose model/sound files, then retry setup. Neither launcher downloads game content. |
 | Compiler, MSVC or Windows SDK missing | Standard/Developer mode needs Microsoft C++ Build Tools, x86 MSVC and a Windows SDK. Check the C++ workload in Visual Studio Installer. Use the DLL-included launcher in Player mode to install without Build Tools/SDK. |
@@ -67,7 +67,7 @@ Verify these requirements first:
 
 | Symptom | What to do |
 | --- | --- |
-| Black window, rendering or driver problem | The mod uses OpenGL. Try a windowed launch (`play.cmd -Windowed` for source installs) and check your GPU driver. Include GPU/driver version and whether Alt-Tab triggered it. |
+| Black window, rendering or driver problem | On 1.26a, try Graphics → OpenGL or Direct3D in the current launcher, then restart the game; run Install once if upgrading from an older launcher. Auto uses OpenGL. Source installs accept `play.cmd -Windowed` and `tools/launch.ps1 -Renderer Direct3D`. Check your GPU driver. Include GPU/driver version and whether Alt-Tab triggered it. |
 | Crosshair missing in FPS | Attach an FPS screenshot showing whether the weapon and HP/ammunition HUD remain visible, plus the runtime log, mod version, launcher/Player or Developer mode, GPU and driver version. The crosshair is drawn by code and has no separate image to reinstall. A successfully acquired overlay context does not prove the crosshair's pixels were visible. Test builds with renderer diagnostics also log `Overlay GL vendor=... renderer=... version=... lineStipple=...`. |
 | CS audio is too loud or muted | Set `[Audio] CSVolumePercent` in the private `WarcraftCS.ini` to 0–100; 100 is the original mix and 0 mutes CS. Press F8 in FPS to apply it. This key requires 0.6.1 or newer. |
 | Warcraft music/native effects have the wrong volume | Adjust Warcraft's own sound settings. The CS volume parameter affects only the CS mixer. |

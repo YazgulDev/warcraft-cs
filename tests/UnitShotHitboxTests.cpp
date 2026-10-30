@@ -46,7 +46,8 @@ int main() {
     *reinterpret_cast<uintptr_t*>(model+0x98)=reinterpret_cast<uintptr_t>(animation);
     *reinterpret_cast<uintptr_t*>(animation+8)=reinterpret_cast<uintptr_t>(clocks);*reinterpret_cast<unsigned*>(animation+0x0C)=1;
     UnitHitboxes boxes;boxes.Configure(reinterpret_cast<uintptr_t>(image));float origin[]={1000,1800,420},ray[]={0,1,0},entry=0;bool head=false;
-    assert(boxes.IntersectShot(1,origin,ray,500,entry,head) && head && std::abs(entry-220)<.001f);
+    unsigned headRoot=0xffffffff;
+    assert(boxes.IntersectShot(1,origin,ray,500,entry,head,.35f,false,&headRoot) && head && headRoot==1 && std::abs(entry-220)<.001f);
     // Only an actual-shot opt-in emits the bounded candidate record; reticle queries stay quiet.
     assert(candidateLogs==0);
     assert(boxes.IntersectShot(1,origin,ray,500,entry,head,.35f,true) && candidateLogs==1);
@@ -61,7 +62,7 @@ int main() {
     renderedOrigin[2]=600;assert(!boxes.IntersectShot(1,renderedOrigin,ray,500,entry,head));
     position[0]=1000;position[1]=2000;position[2]=200;const float flat[]={0,1,0,-1,0,0,0,0,1};std::memcpy(basis,flat,sizeof(basis));
     building=true;assert(boxes.IntersectShot(1,origin,ray,500,entry,head) && !head);building=false;
-    clocks[0]=999999;assert(boxes.IntersectShot(1,origin,ray,500,entry,head) && !head);
+    clocks[0]=999999;assert(boxes.IntersectShot(1,origin,ray,500,entry,head,.35f,false,&headRoot) && !head && headRoot==0xffffffff);
     clocks[0]=500;image[0x512500]=0;assert(boxes.IntersectShot(1,origin,ray,500,entry,head) && !head);
     image[0x512500]=0x8B;visualScale=0;assert(boxes.IntersectShot(1,origin,ray,500,entry,head) && !head);
     boxes.Reset();VirtualFree(image,0,MEM_RELEASE);

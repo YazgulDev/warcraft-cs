@@ -43,6 +43,8 @@ $sources += '"' + (Join-Path $modRoot 'src/presentation/HudFont.cpp') + '"' # Dr
 $sources += '"' + (Join-Path $modRoot 'src/presentation/HudDiagnostics.cpp') + '"' # Bounded phase/font diagnostics, separate from drawing.
 # Unit state, native portrait redirection and reusable icon textures keep separate ownership.
 $sources += @('platform/NativeUnitHud.cpp','platform/NativePortrait.cpp','presentation/HudIconCache.cpp','presentation/UnitHudView.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
+# Corpse head deformation owns native palettes separately from contact/damage and HUD presentation.
+$sources += '"'+(Join-Path $modRoot 'src/platform/NativeHeadGore.cpp')+'"'
 # Interactive inventory owns its gestures, native command adapter, lifecycle and presentation independently.
 $sources += @('platform/NativeItemCommands.cpp','platform/NativeItemActions.cpp','application/InventoryController.cpp','presentation/InventoryHudView.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 # Draw diagnostics are shared by the real reticle and frame/overlay skip paths.

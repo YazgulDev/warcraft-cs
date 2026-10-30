@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- Smooth small first-person ground-height steps with configurable Interface.CameraHeightSmoothing=true and CameraHeightSeconds=.08 (.01–.3 s). Keep collision/jump physics unchanged, bound the eye inside the physical body and use the same height for camera and aiming; clear old correction on lifecycle/F8 transitions. Add physical/presented eye diagnostics and portable/native camera checks.
+
+- Add a small configurable blood spray at confirmed enemy body impacts (six droplets, scale .65, .35 seconds, speed 110 by default), excluding buildings. Keep headshot blood and captions independent; preserve saved settings and support F8 reload.
+
+- Fix stretched fatal-headshot meshes on naga and Crypt Fiends: choose an anchor from bones actually skinned by visible geosets, never an uncomputed authoring-parent matrix. Replace only the struck head's contribution to blended neck/jaw groups, including weights below the hit-classification threshold; retain body and other-head contributions.
+- Fix frozen Direct3D portraits by disabling inherited scissor before clearing private color/depth, preventing old face depth from rejecting later animation frames. Restore the pre-portrait viewport even when native UI resumes by projection alone; add an actual HAL regression that fails before the clear-order fix.
+- Add configurable fatal headshot removal for verified 1.26a named-head models. Preserve the body, native death events and resurrection; carry the struck skull's identity from the accepted triangle so two-headed creatures lose only the struck head. Refuse stale/invisible native palettes.
+- Increase stock headshot blood to 48 droplets, 1.75 scale, 0.8 seconds and speed 220; fatal contacts use a configurable 3x burst, including a lethal pellet immediately after a nonfatal pellet. Preserve custom/disabled/versioned settings on startup, F8 and update.
+
+## 0.15.0 — 2026-10-29
+
+- Publish [complete downloads, upgrade instructions and Release Notes](docs/RELEASE-0.15.0.md), with both launcher variants, current renderer requirements and compact launcher summaries. Preserve movement, weapon balance and economy defaults.
+
 - Remove the verified 1.26a camera helper's extra averaged terrain height only during controlled views, preventing slope-dependent view shifts without changing physical movement/collision. Preserve normal RTS/unrelated cameras and unverified-host fallback. Add native flat/slope/standing/walking/jumping camera oracles and pitched map-edge regressions. [Camera preview](docs/CAMERA-SLOPE-PREVIEW.md).
 - Add the native minimap to Direct3D with the same placement, M toggle, size setting and hint wrapping as OpenGL. Capture native UI on a private GPU canvas and crop terrain/fog/markers without world color/depth writes or per-frame CPU readback; release capture surfaces on Reset and restore the world target on a second world submission before Present.
 - Correct the Direct3D portrait camera for the square HUD while retaining native vertical framing. Verify the shared item icons, charges, potion use, mouse inventory and slot moves on an owned hero in OpenGL/Direct3D, including fullscreen and live HUD scaling.

@@ -15,12 +15,12 @@ WeaponTrace::Contact WeaponTrace::Cast(wc3::Handle actor,const float* origin,con
             wc3::IsUnitLoaded(candidate) || !wc3::IsUnitVisible(candidate,local))continue;
         if(!options.includeAllies && !settings.targetAllies && AttackTargetPolicy::Allied(candidate,owner))continue;
         if(settings.ignorePassableInvulnerableObjects && WeaponTargetFilter::PassThrough(candidate,base))continue;
-        float entry=0,limit=std::min(distance,result.distance+.001f);bool head=false;
+        float entry=0,limit=std::min(distance,result.distance+.001f);bool head=false;unsigned headRoot=0xffffffff;
         bool hit=options.volumes || !settings.hitDetection.preciseModels ? units.Intersect(candidate,origin,direction,limit,entry,options.padding) :
-            units.IntersectShot(candidate,origin,direction,limit,entry,head,settings.hitDetection.headshotBoneWeight,options.diagnostic);
+            units.IntersectShot(candidate,origin,direction,limit,entry,head,settings.hitDetection.headshotBoneWeight,options.diagnostic,&headRoot);
         // Stable ties do not depend on group enumeration order; a real nearer surface always wins.
         if(hit && (entry<result.distance-.0001f || (std::abs(entry-result.distance)<.0001f && candidate<result.target)))
-            result={candidate,entry,false,head};
+            result={candidate,entry,false,head,headRoot};
     }
     wc3::DestroyGroup(group);
     for(auto object:wc3::NearbyDestructables(x,y,radius)) {
