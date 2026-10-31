@@ -17,11 +17,13 @@ public:
     float VolumePercent() const;
     void Play(const char* name, float volume = 0.75f);
     bool HasClip(const char* name) const; // Optional private composites fall back without muting the strike.
+    void StopClip(const char* name); // Cancel an owned weapon cue without cutting unrelated shots or Warcraft audio.
     // Load an owned Warcraft MPQ sample lazily into the same voice pool and master gain as CS audio.
     bool PlayArchive(const char* path,float volume=1);
     void SetLoop(const char* name,bool playing,float volume=.75f);
     void SetLoopPitch(const char* name,float ratio);
     float LoopPitch(const char* name) const;
+    uint64_t SamplesPlayed(const char* name) const; // Native cursor diagnostics distinguish queued buffers from actual playback.
     float Duration(int weapon,const char* name) const;
     float BeginAnimation(int weapon, const char* name, DWORD start,float rate=1);
     void Tick(DWORD now);
@@ -32,12 +34,13 @@ private:
         std::vector<BYTE> data;
         std::array<IXAudio2SourceVoice*, 8> voices{};
         size_t next = 0;
-        bool looping=false;
+        bool looping=false,loopReserved=false;
     };
     struct Event { float time; std::string sound; };
     struct Sequence { float duration; std::vector<Event> events; };
     bool LoadClip(const std::string& path, Clip& clip);
     bool LoadClipBytes(const std::vector<BYTE>& bytes,Clip& clip);
+    static void SilenceClip(Clip& clip);
     void LoadTimelines(const std::string& root);
     IXAudio2* engine_ = nullptr;
     IXAudio2MasteringVoice* master_ = nullptr;

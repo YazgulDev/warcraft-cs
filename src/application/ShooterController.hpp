@@ -284,6 +284,9 @@ public:
     }
     void TestArsenalState() const {
         wc3::Log("fixture arsenal slot=%d owned=%d ammo=%d reserve=%d serial=%u scoped=%d reload=%d animation=%s actorHP=%.2f",weapon_,inventory_.owned[weapon_],ammo_[weapon_],reserve_[weapon_],shotSerial_,scopeLevel_,reloadEnd_!=0,Animation(),wc3::Real(wc3::GetUnitState(unit_,0)));
+        // Read actual device cursors after release; a loop-stop log alone cannot prove that audio stopped.
+        wc3::Log("fixture energy audio active=%d run=%llu windup=%llu off=%llu",energy_.Active(),
+            audio_.SamplesPlayed("hl_egon_run3.wav"),audio_.SamplesPlayed("hl_egon_windup2.wav"),audio_.SamplesPlayed("hl_egon_off1.wav"));
     }
     // Disposable scenes exercise the real weapon contact path without desktop mouse input.
     void TestStrike(int slot) {

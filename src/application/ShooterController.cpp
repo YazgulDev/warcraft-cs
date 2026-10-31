@@ -898,7 +898,7 @@ void ShooterController::FireGlock(bool primaryPressed,bool secondaryPressed,DWOR
 void ShooterController::CancelEnergy() {
     if(energy_.Active()) {
         audio_.SetLoop("hl_gauss_charge.wav",false);audio_.SetLoop("hl_egon_run3.wav",false);
-        if(weapon_==WeaponSlots::Gluon)Sound("hl_egon_off1.wav");
+        if(weapon_==WeaponSlots::Gluon){audio_.StopClip("hl_egon_windup2.wav");Sound("hl_egon_off1.wav");}
         energy_.Cancel();audio_.CancelAnimation();Play("idle");wc3::Log("Half-Life energy canceled");
     }
     energyBeam_.tick=0;
@@ -910,7 +910,8 @@ void ShooterController::FireEnergy(bool primaryPressed,bool secondaryHeld,DWORD 
     if(event.started) {
         tauFeedbackBand_=-1;
         Play(gluon ? "fire3" : "spinup"); // Gluon's authored firing cycle, not its unused alternate opening action.
-        if(gluon)Sound("hl_egon_windup2.wav");
+        // Startup/stop cues share the channel lifetime; a short tap must not leave the long windup playing.
+        if(gluon){audio_.StopClip("hl_egon_off1.wav");Sound("hl_egon_windup2.wav");}
         audio_.SetLoop(gluon ? "hl_egon_run3.wav" : "hl_gauss_charge.wav",true);
         wc3::Log("Half-Life energy started weapon=%s cells=%d",w.name,ammo_[weapon_]);
     }
@@ -929,7 +930,7 @@ void ShooterController::FireEnergy(bool primaryPressed,bool secondaryHeld,DWORD 
     }
     if(event.stopped) {
         audio_.SetLoop(gluon ? "hl_egon_run3.wav" : "hl_gauss_charge.wav",false);
-        if(gluon){Sound("hl_egon_off1.wav");Play("idle");energyBeam_.tick=0;}
+        if(gluon){audio_.StopClip("hl_egon_windup2.wav");Sound("hl_egon_off1.wav");Play("idle");energyBeam_.tick=0;}
     }
     if(!event.shot) {
         // A channel tracks the current aim every game frame; only accepted ticks spend cells or damage targets.

@@ -1,0 +1,30 @@
+- Added TMP and UMP45 SMGs, FAMAS and Galil rifles, and a scoped G3SG1 automatic sniper.
+- Added private weapon models, animations, reload audio, muzzle flashes, casings and buy previews for the new guns.
+- Changed smoke to a dense depth-tested volume with configurable short visibility and all-team AI attack occlusion on Warcraft 1.26a.
+- Fixed health bars, item names and target markers revealing targets through dense smoke.
+- Fixed carried-weapon browsing to keep long primary lists within the screen.
+- Added an F2 in-game settings panel for mouse sensitivity, CS volume, movement physics, view distance and sky controls.
+- Added main and scoped mouse sensitivity multipliers with defaults preserving previous aiming speeds.
+- Added atomic Apply and Save, draft cancellation, mouse sliders and keyboard navigation without firing through the menu.
+- Added controlled-view sky visibility with authored-map sky restoration and installed CS preset selection.
+- Added FPS/TPS/unit-view text input with Cyrillic, cancellation and native Warcraft chat/command handling.
+- Added a code-only nuclear RPG round using the existing RPG model, firing animation, rocket flight, trail and impact collisions.
+- Added a local scaled Warcraft explosion, followed by Flame Strike and fading smoke.
+- Added a default 8000-unit blast that destroys nearby hostiles, neutral shops, trees, gates and barrels while preserving distant targets and nonneutral allies.
+- Added configurable blast/effect sizes, phase durations, neutral/destructable eligibility, rewards, repeat grants and distance-limited flash/shake.
+- Updated the old global nuclear stock radius once while preserving customized settings and ordinary RPG ammunition.
+- Improved nuclear blast size from 1600 to 8000 units and increased the native explosion and Flame Strike scale.
+- Improved final smoke from 7 to 37 larger emitters, with an 18-second duration and configurable density.
+- Changed the nuclear impact from a debris sample to an owned Warcraft explosion, with configurable cue and volume.
+- Updated old nuclear stock settings once while preserving custom values and explicit opt-backs.
+- Enabled destruction of hostile buildings alongside enemy units in the nuclear blast radius by default.
+- Fixed invulnerable and damage-immune hostile survivors by finishing them through native death while preserving allies.
+- Added independent hostile-death settings, one-time building-policy migration and impact-policy diagnostics.
+- Improved the nuclear impact with layered owned CS C4 and Half-Life mortar, fading rocket rumble and quiet debris.
+- Added automatic private audio preparation during installation, with Warcraft explosion fallback when optional source sounds are unavailable.
+- Added configurable layer gains, pitches, timing and rumble fade, preserving saved settings across updates.
+- Updated the former stock sapper cue once to the layered preset while preserving custom and muted selections.
+- Changed the default nuclear grant code to warneverchanges, upgrading the former stock code and preserving custom commands.
+- Fixed Gluon windup audio continuing after trigger release, canceled attacks and weapon changes.
+- Fixed stopped audio voices restarting immediately and kept released motor voices separate from ordinary sounds.
+- Fixed a previous Gluon shutdown cue overlapping a newly started channel.
