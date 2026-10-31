@@ -13,17 +13,23 @@ function Update-GameplayConfig([string]$Template,[string]$Destination) {
     $lines=[Collections.Generic.List[string]]::new()
     $lines.AddRange([string[]]@(Get-Content -LiteralPath $Destination))
     $changed=$false
-    # Nuclear v2 replaces the former map-wide stock radius with a local RPG impact once.
-    $nuclearSection=$false;$nuclearVersion=1;$nuclearRadius=-1;$nuclearVersionIndex=-1
+    # Upgrade former nuclear stock tuning once, while retaining deliberate v3 and customized values.
+    $nuclearSection=$false;$nuclearVersion=1;$nuclearVersionIndex=-1;$nuclearValues=@{}
     for($i=0;$i -lt $lines.Count;$i++) {
         if($lines[$i] -match '^\s*\[([^\]]+)\]\s*$'){$nuclearSection=$Matches[1] -eq 'NuclearBomb';continue}
-        if(!$nuclearSection){continue}
-        if($lines[$i] -match '^\s*BehaviorVersion\s*=\s*(.*?)\s*$'){$nuclearVersionIndex=$i;if(![int]::TryParse($Matches[1],[ref]$nuclearVersion)){$nuclearVersion=1}}
-        if($lines[$i] -match '^\s*Radius\s*=\s*0(?:\.0*)?\s*$'){$nuclearRadius=$i}
+        if(!$nuclearSection -or $lines[$i] -notmatch '^\s*([^=;]+?)\s*=\s*(.*?)\s*$'){continue}
+        $key=$Matches[1];$value=$Matches[2].Trim();$nuclearValues[$key]=@($i,$value)
+        if($key -eq 'BehaviorVersion'){$nuclearVersionIndex=$i;if(![int]::TryParse($value,[ref]$nuclearVersion)){$nuclearVersion=1}}
     }
-    if($nuclearVersion -lt 2) {
-        if($nuclearRadius -ge 0){$lines[$nuclearRadius]='Radius=1600';$changed=$true}
-        if($nuclearVersionIndex -ge 0){$lines[$nuclearVersionIndex]='BehaviorVersion=2';$changed=$true}
+    if($nuclearVersion -lt 3) {
+        foreach($upgrade in @(@('Radius',1600,8000),@('VisualRadius',1200,3200),@('ExplosionScale',8,12),@('FlameScale',5,7),@('SmokeScale',6,14),@('SmokeSeconds',8,18),@('ScreenEffectRadius',2400,10000))) {
+            $saved=$nuclearValues[$upgrade[0]];[double]$oldNuclear=0
+            if($saved -and [double]::TryParse($saved[1],[Globalization.NumberStyles]::Float,[Globalization.CultureInfo]::InvariantCulture,[ref]$oldNuclear) -and
+                ($oldNuclear -eq $upgrade[1] -or ($upgrade[0] -eq 'Radius' -and $nuclearVersion -lt 2 -and $oldNuclear -eq 0))) {
+                $lines[$saved[0]]=$upgrade[0]+'='+([double]$upgrade[2]).ToString([Globalization.CultureInfo]::InvariantCulture);$changed=$true
+            }
+        }
+        if($nuclearVersionIndex -ge 0){$lines[$nuclearVersionIndex]='BehaviorVersion=3';$changed=$true}
     }
     # Upgrade the former stock head spray together once; custom values and versioned opt-backs remain intact.
     $bloodSection=$false;$bloodVersion=1;$bloodVersionIndex=-1;$bloodValues=@{}

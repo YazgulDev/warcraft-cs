@@ -42,21 +42,35 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     nuclear.repeatCodes=enabled("NuclearBomb","RepeatCodes",false);
     nuclear.buildings=enabled("NuclearBomb","DestroyBuildings",false);
     nuclear.rewards=enabled("NuclearBomb","KillRewards");
-    nuclear.radius=std::max(100.f,number("NuclearBomb","Radius",1600,5000));
-    nuclear.visualRadius=std::max(64.f,number("NuclearBomb","VisualRadius",1200,4000));
+    nuclear.radius=std::max(100.f,number("NuclearBomb","Radius",8000,20000));
+    nuclear.visualRadius=std::max(64.f,number("NuclearBomb","VisualRadius",3200,8000));
     nuclear.neutralBuildings=enabled("NuclearBomb","DestroyNeutralBuildings");
     nuclear.neutralUnits=enabled("NuclearBomb","DestroyNeutralUnits");
     nuclear.destructables=enabled("NuclearBomb","DestroyDestructables");
-    nuclear.explosionScale=std::max(.25f,number("NuclearBomb","ExplosionScale",8,20));
-    nuclear.flameScale=std::max(.25f,number("NuclearBomb","FlameScale",5,15));
-    nuclear.smokeScale=std::max(.25f,number("NuclearBomb","SmokeScale",6,15));
+    nuclear.explosionScale=std::max(.25f,number("NuclearBomb","ExplosionScale",12,20));
+    nuclear.flameScale=std::max(.25f,number("NuclearBomb","FlameScale",7,15));
+    nuclear.smokeScale=std::max(.25f,number("NuclearBomb","SmokeScale",14,30));
     nuclear.flameDelay=number("NuclearBomb","FlameDelaySeconds",.8f,5);
     nuclear.flameSeconds=std::max(.5f,number("NuclearBomb","FlameSeconds",7,15));
-    nuclear.smokeSeconds=std::max(1.f,number("NuclearBomb","SmokeSeconds",8,30));
-    nuclear.screenRadius=number("NuclearBomb","ScreenEffectRadius",2400,8000);
-    // Only the former unversioned global default upgrades; positive custom radii remain authoritative.
-    auto savedRadius=text("NuclearBomb","Radius","");char* radiusEnd=nullptr;float legacyRadius=std::strtof(savedRadius.c_str(),&radiusEnd);
-    if(text("NuclearBomb","BehaviorVersion","1")=="1" && radiusEnd!=savedRadius.c_str() && !*radiusEnd && legacyRadius==0)nuclear.radius=1600;
+    nuclear.smokeSeconds=std::max(1.f,number("NuclearBomb","SmokeSeconds",18,45));
+    nuclear.screenRadius=number("NuclearBomb","ScreenEffectRadius",10000,20000);
+    nuclear.smokeEmitters=int(std::max(1.f,number("NuclearBomb","SmokeEmitters",37,49)));
+    nuclear.explosionVolumePercent=number("NuclearBomb","ExplosionVolumePercent",100,100);
+    auto cue=text("NuclearBomb","ExplosionSound","sapper");
+    for(const char* allowed:{"sapper","city","artillery","off"})if(!_stricmp(cue.c_str(),allowed))nuclear.explosionSound=allowed;
+    // Versioned stock tuning upgrades once; explicit v3/custom values and opt-outs remain authoritative.
+    float nuclearVersion=number("NuclearBomb","BehaviorVersion",1,3);
+    if(nuclearVersion<3){
+        auto upgrade=[&](const char* key,float oldValue,float replacement,float& setting){
+            auto raw=text("NuclearBomb",key,"");char* end=nullptr;float value=std::strtof(raw.c_str(),&end);
+            if(end!=raw.c_str() && !*end && value==oldValue)setting=replacement;
+        };
+        upgrade("Radius",1600,8000,nuclear.radius);
+        if(nuclearVersion<2)upgrade("Radius",0,8000,nuclear.radius);
+        upgrade("VisualRadius",1200,3200,nuclear.visualRadius);upgrade("ExplosionScale",8,12,nuclear.explosionScale);
+        upgrade("FlameScale",5,7,nuclear.flameScale);upgrade("SmokeScale",6,14,nuclear.smokeScale);
+        upgrade("SmokeSeconds",8,18,nuclear.smokeSeconds);upgrade("ScreenEffectRadius",2400,10000,nuclear.screenRadius);
+    }
     nuclear.flashSeconds=number("NuclearBomb","FlashSeconds",.65f,3);
     nuclear.shakeDegrees=number("NuclearBomb","ShakeDegrees",.6f,3);
     auto nuclearCode=text("NuclearBomb","Code","PUTINMOLODEC");

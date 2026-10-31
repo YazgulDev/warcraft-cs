@@ -30,13 +30,24 @@ void NativeNuclearBomb::Flames(){
 }
 void NativeNuclearBomb::Smoke(){
     float reach=std::min(settings_.radius,settings_.visualRadius)*.4f;
-    for(int i=0;i<7;++i){auto point=center_;if(i){float a=(i-1)*6.2831853f/6;point[0]+=std::cos(a)*reach;point[1]+=std::sin(a)*reach;point[2]=wc3::Ground(point[0],point[1]);}
-        effects_.Spawn("Doodads\\LordaeronSummer\\Props\\SmokeSmudge\\SmokeSmudge0.mdl",point,settings_.smokeScale*(i ? .65f : 1),settings_.FinishedAt(),true);}
-    wc3::Log("Nuclear effect phase=smoke age=%.2f",age_);
+    // A sunflower disk fills the cloud evenly as density changes, avoiding a sparse fixed ring of puffs.
+    int count=settings_.smokeEmitters;
+    for(int i=0;i<count;++i){auto point=center_;if(i){float a=i*2.39996323f,radius=reach*std::sqrt(float(i)/std::max(1,count-1));
+        point[0]+=std::cos(a)*radius;point[1]+=std::sin(a)*radius;point[2]=wc3::Ground(point[0],point[1]);}
+        effects_.Spawn("Doodads\\LordaeronSummer\\Props\\SmokeSmudge\\SmokeSmudge0.mdl",point,settings_.smokeScale*(i ? .8f : 1),settings_.FinishedAt(),true);}
+
+    wc3::Log("Nuclear effect phase=smoke age=%.2f emitters=%d scale=%.1f seconds=%.1f",age_,count,settings_.smokeScale,settings_.smokeSeconds);
 }
 void NativeNuclearBomb::Tick(GameAudio& audio,const KillReward::Sink& rewards){
     if(!timer_ || flying_)return;age_=std::max(0.f,wc3::Real(wc3::TimerGetElapsed(timer_))-impactTime_);unsigned generation=generation_;
-    if(!exploded_){exploded_=true;audio.Play("hl_rpg_explode.wav",1);Explosion();
+    if(!exploded_){exploded_=true;
+        // The old Half-Life debris clip is not an explosion. Read a real blast from the owner's Warcraft archive.
+        if(settings_.explosionVolumePercent>0 && settings_.explosionSound!="off"){
+            const char* path=settings_.explosionSound=="city" ? "Sound\\Buildings\\Death\\CityBuildingDeath1.wav" :
+                settings_.explosionSound=="artillery" ? "Sound\\Units\\Death\\ArtilleryCorpseExplodeDeath1.wav" : "Units\\Creeps\\GoblinSapper\\SapperBlowsUp.wav";
+            if(!audio.PlayArchive(path,settings_.explosionVolumePercent*.01f))audio.Play("c4_explode1.wav",settings_.explosionVolumePercent*.01f);
+        }
+        Explosion();
         if(generation_!=generation)return;
         NativeNuclearDestruction::Apply(actor_,actorType_,actorObject_,owner_,center_,settings_,[&]{return generation_==generation;},rewards);
         if(generation_!=generation)return;

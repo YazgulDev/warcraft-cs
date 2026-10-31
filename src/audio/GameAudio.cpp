@@ -1,5 +1,6 @@
 #include "GameAudio.hpp"
 #include "../platform/WarcraftApi.hpp"
+#include "../platform/NativeArchive.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -10,6 +11,10 @@
 bool GameAudio::LoadClip(const std::string& path, Clip& clip) {
     std::ifstream file(path, std::ios::binary);
     std::vector<BYTE> bytes((std::istreambuf_iterator<char>(file)), {});
+    return LoadClipBytes(bytes,clip);
+}
+bool GameAudio::LoadClipBytes(const std::vector<BYTE>& bytes,Clip& clip) {
+    // File and owned archive samples share the same bounded PCM decoder and voice lifetime.
     if (bytes.size() < 12 || memcmp(bytes.data(), "RIFF", 4) || memcmp(bytes.data() + 8, "WAVE", 4)) return false;
     WAVEFORMATEX format{};
     // RIFF chunks are padded to even bytes; samples stay owned until every voice finishes.
@@ -121,6 +126,18 @@ void GameAudio::Play(const char* name, float volume) {
     voice->SetFrequencyRatio(1); // A voice released by a loop must not pitch-shift the next ordinary impact/shot.
     HRESULT result = voice->SubmitSourceBuffer(&buffer);
     wc3::Log("CS sound=%s volume=%.2f overlapping=%u queued=%08X", name, volume, occupied, result);
+}
+bool GameAudio::PlayArchive(const char* path,float volume){
+    if(!engine_ || !path || !*path)return false;std::string key=std::string("warcraft:")+path;
+    if(clips_.find(key)==clips_.end()){
+        auto bytes=NativeArchive::Read(path);auto clip=std::make_unique<Clip>();
+        if(!LoadClipBytes(bytes,*clip)){
+            for(auto voice:clip->voices)if(voice)voice->DestroyVoice();
+            wc3::Log("CS archive sound rejected path=%s bytes=%zu",path,bytes.size());return false;
+        }
+        clips_.emplace(key,std::move(clip));wc3::Log("CS archive sound loaded path=%s bytes=%zu",path,bytes.size());
+    }
+    Play(key.c_str(),volume);return true;
 }
 void GameAudio::SetLoop(const char* name,bool playing,float volume) {
     auto found=clips_.find(name);if(found==clips_.end())return;auto& clip=*found->second;

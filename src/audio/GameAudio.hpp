@@ -16,6 +16,8 @@ public:
     void SetVolumePercent(float percent);
     float VolumePercent() const;
     void Play(const char* name, float volume = 0.75f);
+    // Load an owned Warcraft MPQ sample lazily into the same voice pool and master gain as CS audio.
+    bool PlayArchive(const char* path,float volume=1);
     void SetLoop(const char* name,bool playing,float volume=.75f);
     void SetLoopPitch(const char* name,float ratio);
     float LoopPitch(const char* name) const;
@@ -34,6 +36,7 @@ private:
     struct Event { float time; std::string sound; };
     struct Sequence { float duration; std::vector<Event> events; };
     bool LoadClip(const std::string& path, Clip& clip);
+    bool LoadClipBytes(const std::vector<BYTE>& bytes,Clip& clip);
     void LoadTimelines(const std::string& root);
     IXAudio2* engine_ = nullptr;
     IXAudio2MasteringVoice* master_ = nullptr;

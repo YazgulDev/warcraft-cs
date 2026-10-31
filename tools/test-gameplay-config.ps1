@@ -627,19 +627,31 @@ $nuclearConfig=Join-Path $folder 'nuclear-chat.ini'
 @('[NuclearBomb]','Code=PRIVATE_CODE','RepeatCodes=true','Radius=789','DelaySeconds=7','FlashSeconds=0','ShakeDegrees=0','DestroyBuildings=true','[Chat]','Enabled=false','MessageSeconds=19') | Set-Content $nuclearConfig
 Update-GameplayConfig $template $nuclearConfig
 $nuclearText=Get-Content $nuclearConfig -Raw
-foreach($required in @('Code=PRIVATE_CODE','RepeatCodes=true','Radius=789','DelaySeconds=7','FlashSeconds=0','ShakeDegrees=0','DestroyBuildings=true','KillRewards=true','BehaviorVersion=2','ExplosionScale=8','FlameDelaySeconds=0.8','FlameSeconds=7','SmokeSeconds=8','DestroyNeutralBuildings=true','DestroyDestructables=true','Enabled=false','MessageSeconds=19')) {if(!$nuclearText.Contains($required)){throw "Nuclear/chat migration lost $required"}}
+foreach($required in @('Code=PRIVATE_CODE','RepeatCodes=true','Radius=789','DelaySeconds=7','FlashSeconds=0','ShakeDegrees=0','DestroyBuildings=true','KillRewards=true','BehaviorVersion=3','ExplosionScale=12','FlameDelaySeconds=0.8','FlameSeconds=7','SmokeSeconds=18','SmokeEmitters=37','ExplosionSound=sapper','DestroyNeutralBuildings=true','DestroyDestructables=true','Enabled=false','MessageSeconds=19')) {if(!$nuclearText.Contains($required)){throw "Nuclear/chat migration lost $required"}}
 $nuclearHash=(Get-FileHash $nuclearConfig).Hash;Update-GameplayConfig $template $nuclearConfig
 if((Get-FileHash $nuclearConfig).Hash -ne $nuclearHash){throw 'Nuclear/chat migration was not idempotent.'}
 Write-Output 'PASS nuclear/chat defaults and custom values across repeated upgrades.'
 
 # Upgrade only the former global stock radius, once; customized local radii remain intact.
-foreach($case in @(@('0','','1600'),@('0.0','1','1600'),@('789','','789'),@('0','2','0'))) {
+foreach($case in @(@('0','','8000'),@('0.0','1','8000'),@('789','','789'),@('0','2','0'))) {
     $localNuclear=Join-Path $folder ('nuclear-radius-'+[guid]::NewGuid().ToString('N')+'.ini')
     @('[NuclearBomb]',('Radius='+$case[0]),$(if($case[1]){'BehaviorVersion='+$case[1]}),'DestroyNeutralBuildings=false','DestroyDestructables=false') | Set-Content $localNuclear
     Update-GameplayConfig $template $localNuclear
     $updated=Get-Content $localNuclear -Raw
-    foreach($required in @(('Radius='+$case[2]),'BehaviorVersion=2','DestroyNeutralBuildings=false','DestroyDestructables=false')){if(!$updated.Contains($required)){throw "Local nuclear migration lost $required"}}
+    foreach($required in @(('Radius='+$case[2]),'BehaviorVersion=3','DestroyNeutralBuildings=false','DestroyDestructables=false')){if(!$updated.Contains($required)){throw "Local nuclear migration lost $required"}}
     $once=(Get-FileHash $localNuclear).Hash;Update-GameplayConfig $template $localNuclear
     if((Get-FileHash $localNuclear).Hash -ne $once){throw 'Local nuclear migration repeats.'}
 }
 Write-Output 'PASS local nuclear radius migration, preserved opt-outs and idempotence.'
+
+# The increased nuclear default applies to stock v2 saves, while v3 opt-backs and custom values survive.
+foreach($case in @(@('2','1600','6','8','8000','14','18'),@('3','1600','6','8','1600','6','8'),@('2','4321','9','12','4321','9','12'))) {
+    $tuningFile=Join-Path $folder ('nuclear-heavy-'+[guid]::NewGuid().ToString('N')+'.ini')
+    @('[NuclearBomb]',('BehaviorVersion='+$case[0]),('Radius='+$case[1]),('SmokeScale='+$case[2]),('SmokeSeconds='+$case[3]),'SmokeEmitters=12','ExplosionSound=off','ExplosionVolumePercent=23') | Set-Content $tuningFile
+    Update-GameplayConfig $template $tuningFile
+    $updated=Get-Content $tuningFile -Raw
+    foreach($required in @(('Radius='+$case[4]),('SmokeScale='+$case[5]),('SmokeSeconds='+$case[6]),'BehaviorVersion=3','SmokeEmitters=12','ExplosionSound=off','ExplosionVolumePercent=23')){if(!$updated.Contains($required)){throw "Heavy nuclear migration lost $required"}}
+    $once=(Get-FileHash $tuningFile).Hash;Update-GameplayConfig $template $tuningFile
+    if((Get-FileHash $tuningFile).Hash -ne $once){throw 'Heavy nuclear migration repeats.'}
+}
+Write-Output 'PASS increased nuclear stock radius/smoke and saved density/sound opt-outs.'
