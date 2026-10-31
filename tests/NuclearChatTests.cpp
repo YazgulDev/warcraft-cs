@@ -27,10 +27,14 @@ int main(){
     // Stock tuning upgrades once; explicit v3 opt-backs and custom density/sound settings survive.
     {std::ofstream f(path);f<<"[NuclearBomb]\nBehaviorVersion=2\nRadius=1600\nSmokeSeconds=8\nSmokeScale=6\n";}s=GameplaySettings::Load(path);assert(s.nuclear.radius==8000 && s.nuclear.smokeSeconds==18 && s.nuclear.smokeScale==14 && s.nuclear.smokeEmitters==37);
     {std::ofstream f(path);f<<"[NuclearBomb]\nBehaviorVersion=3\nRadius=1600\nSmokeSeconds=8\nSmokeScale=6\nSmokeEmitters=999\nExplosionSound=CiTy\nExplosionVolumePercent=999\n";}s=GameplaySettings::Load(path);assert(s.nuclear.radius==1600 && s.nuclear.smokeSeconds==8 && s.nuclear.smokeScale==6 && s.nuclear.smokeEmitters==49 && s.nuclear.explosionSound=="city" && s.nuclear.explosionVolumePercent==100);
-    {std::ofstream f(path);f<<"[NuclearBomb]\nSmokeEmitters=-1\nExplosionSound=unknown\nExplosionVolumePercent=nan\n";}s=GameplaySettings::Load(path);assert(s.nuclear.smokeEmitters==1 && s.nuclear.explosionSound=="sapper" && s.nuclear.explosionVolumePercent==100);
+    {std::ofstream f(path);f<<"[NuclearBomb]\nSmokeEmitters=-1\nExplosionSound=unknown\nExplosionVolumePercent=nan\n";}s=GameplaySettings::Load(path);assert(s.nuclear.smokeEmitters==1 && s.nuclear.explosionSound=="layered" && s.nuclear.explosionVolumePercent==100);
     // Building policy migrates independently from balance, and deliberate versioned opt-outs remain selectable.
     {std::ofstream f(path);f<<"[NuclearBomb]\nDestroyBuildings=false\n";}s=GameplaySettings::Load(path);assert(s.nuclear.buildings && s.nuclear.forceEnemyDeath);
     {std::ofstream f(path);f<<"[NuclearBomb]\nDestructionVersion=2\nDestroyBuildings=false\nForceEnemyDeath=false\n";}s=GameplaySettings::Load(path);assert(!s.nuclear.buildings && !s.nuclear.forceEnemyDeath);
+    // The new preset replaces only the former stock cue, leaving custom/muted and versioned choices intact.
+    {std::ofstream f(path);f<<"[NuclearBomb]\nExplosionSound=sapper\n";}assert(GameplaySettings::Load(path).nuclear.explosionSound=="layered");
+    {std::ofstream f(path);f<<"[NuclearBomb]\nSoundVersion=2\nExplosionSound=sapper\n";}assert(GameplaySettings::Load(path).nuclear.explosionSound=="sapper");
+    {std::ofstream f(path);f<<"[NuclearBomb]\nExplosionSound=off\n";}assert(GameplaySettings::Load(path).nuclear.explosionSound=="off");
     DeleteFileA(path.c_str());
     puts("PASS modal UTF-8 input, code matching, charge lifetime, real INI validation and visual opt-outs.");
 }

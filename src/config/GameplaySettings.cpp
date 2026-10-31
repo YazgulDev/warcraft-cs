@@ -59,8 +59,10 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     nuclear.screenRadius=number("NuclearBomb","ScreenEffectRadius",10000,20000);
     nuclear.smokeEmitters=int(std::max(1.f,number("NuclearBomb","SmokeEmitters",37,49)));
     nuclear.explosionVolumePercent=number("NuclearBomb","ExplosionVolumePercent",100,100);
-    auto cue=text("NuclearBomb","ExplosionSound","sapper");
-    for(const char* allowed:{"sapper","city","artillery","off"})if(!_stricmp(cue.c_str(),allowed))nuclear.explosionSound=allowed;
+    auto cue=text("NuclearBomb","ExplosionSound","layered");
+    for(const char* allowed:{"layered","sapper","city","artillery","off"})if(!_stricmp(cue.c_str(),allowed))nuclear.explosionSound=allowed;
+    // Replace the former stock cue once; explicit new-version choices and older custom cues remain selectable.
+    if(number("NuclearBomb","SoundVersion",1,2)<2 && nuclear.explosionSound=="sapper")nuclear.explosionSound="layered";
     // Versioned stock tuning upgrades once; explicit v3/custom values and opt-outs remain authoritative.
     float nuclearVersion=number("NuclearBomb","BehaviorVersion",1,3);
     if(nuclearVersion<3){

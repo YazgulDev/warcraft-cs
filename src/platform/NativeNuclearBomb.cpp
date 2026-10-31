@@ -41,11 +41,17 @@ void NativeNuclearBomb::Smoke(){
 void NativeNuclearBomb::Tick(GameAudio& audio,const KillReward::Sink& rewards){
     if(!timer_ || flying_)return;age_=std::max(0.f,wc3::Real(wc3::TimerGetElapsed(timer_))-impactTime_);unsigned generation=generation_;
     if(!exploded_){exploded_=true;
-        // The old Half-Life debris clip is not an explosion. Read a real blast from the owner's Warcraft archive.
+        // The private composite already includes pitch, timing and a finite rumble fade; the CS master still applies.
         if(settings_.explosionVolumePercent>0 && settings_.explosionSound!="off"){
-            const char* path=settings_.explosionSound=="city" ? "Sound\\Buildings\\Death\\CityBuildingDeath1.wav" :
-                settings_.explosionSound=="artillery" ? "Sound\\Units\\Death\\ArtilleryCorpseExplodeDeath1.wav" : "Units\\Creeps\\GoblinSapper\\SapperBlowsUp.wav";
-            if(!audio.PlayArchive(path,settings_.explosionVolumePercent*.01f))audio.Play("c4_explode1.wav",settings_.explosionVolumePercent*.01f);
+            if(settings_.explosionSound=="layered" && audio.HasClip("nuclear_blast.wav")){
+                audio.Play("nuclear_blast.wav",settings_.explosionVolumePercent*.01f);
+                wc3::Log("Nuclear audio preset=layered private CS/Half-Life composite");
+            }else{
+                const char* path=settings_.explosionSound=="city" ? "Sound\\Buildings\\Death\\CityBuildingDeath1.wav" :
+                    settings_.explosionSound=="artillery" ? "Sound\\Units\\Death\\ArtilleryCorpseExplodeDeath1.wav" : "Units\\Creeps\\GoblinSapper\\SapperBlowsUp.wav";
+                if(settings_.explosionSound=="layered")wc3::Log("Nuclear layered audio unavailable; using owned Warcraft fallback");
+                if(!audio.PlayArchive(path,settings_.explosionVolumePercent*.01f))audio.Play("c4_explode1.wav",settings_.explosionVolumePercent*.01f);
+            }
         }
         Explosion();
         if(generation_!=generation)return;

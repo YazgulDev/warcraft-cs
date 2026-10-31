@@ -627,7 +627,7 @@ $nuclearConfig=Join-Path $folder 'nuclear-chat.ini'
 @('[NuclearBomb]','Code=PRIVATE_CODE','RepeatCodes=true','Radius=789','DelaySeconds=7','FlashSeconds=0','ShakeDegrees=0','DestroyBuildings=true','[Chat]','Enabled=false','MessageSeconds=19') | Set-Content $nuclearConfig
 Update-GameplayConfig $template $nuclearConfig
 $nuclearText=Get-Content $nuclearConfig -Raw
-foreach($required in @('Code=PRIVATE_CODE','RepeatCodes=true','Radius=789','DelaySeconds=7','FlashSeconds=0','ShakeDegrees=0','DestroyBuildings=true','KillRewards=true','BehaviorVersion=3','ExplosionScale=12','FlameDelaySeconds=0.8','FlameSeconds=7','SmokeSeconds=18','SmokeEmitters=37','ExplosionSound=sapper','DestroyNeutralBuildings=true','DestroyDestructables=true','Enabled=false','MessageSeconds=19')) {if(!$nuclearText.Contains($required)){throw "Nuclear/chat migration lost $required"}}
+foreach($required in @('Code=PRIVATE_CODE','RepeatCodes=true','Radius=789','DelaySeconds=7','FlashSeconds=0','ShakeDegrees=0','DestroyBuildings=true','KillRewards=true','BehaviorVersion=3','ExplosionScale=12','FlameDelaySeconds=0.8','FlameSeconds=7','SmokeSeconds=18','SmokeEmitters=37','ExplosionSound=layered','SoundVersion=2','DestroyNeutralBuildings=true','DestroyDestructables=true','Enabled=false','MessageSeconds=19')) {if(!$nuclearText.Contains($required)){throw "Nuclear/chat migration lost $required"}}
 $nuclearHash=(Get-FileHash $nuclearConfig).Hash;Update-GameplayConfig $template $nuclearConfig
 if((Get-FileHash $nuclearConfig).Hash -ne $nuclearHash){throw 'Nuclear/chat migration was not idempotent.'}
 Write-Output 'PASS nuclear/chat defaults and custom values across repeated upgrades.'
@@ -667,3 +667,15 @@ foreach($case in @(@('','false','true'),@('1','0','true'),@('2','false','false')
     if((Get-FileHash $policyFile).Hash -ne $once){throw 'Enemy policy migration repeats.'}
 }
 Write-Output 'PASS nuclear hostile-building policy upgrade and explicit opt-out preservation.'
+
+# Composite audio selection upgrades stock once and retains authored mix preferences across installs.
+foreach($case in @(@('','sapper','layered'),@('1','city','city'),@('','off','off'),@('2','sapper','sapper'))) {
+    $audioFile=Join-Path $folder ('nuclear-audio-'+[guid]::NewGuid().ToString('N')+'.ini')
+    @('[NuclearBomb]',('ExplosionSound='+$case[1]),$(if($case[0]){'SoundVersion='+$case[0]}),'ExplosionVolumePercent=23','[NuclearAudio]','MortarPitch=0.9','RumbleSeconds=4','DebrisVolume=0') | Set-Content $audioFile
+    Update-GameplayConfig $template $audioFile
+    $updated=Get-Content $audioFile -Raw
+    foreach($required in @(('ExplosionSound='+$case[2]),'SoundVersion=2','ExplosionVolumePercent=23','MortarPitch=0.9','RumbleSeconds=4','DebrisVolume=0','C4Volume=0.85')){if(!$updated.Contains($required)){throw "Nuclear mix migration lost $required"}}
+    $once=(Get-FileHash $audioFile).Hash;Update-GameplayConfig $template $audioFile
+    if((Get-FileHash $audioFile).Hash -ne $once){throw 'Nuclear mix migration repeats.'}
+}
+Write-Output 'PASS layered nuclear cue migration, muted/custom selection and saved mix controls.'

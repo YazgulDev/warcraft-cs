@@ -16,6 +16,7 @@ public:
     void SetVolumePercent(float percent);
     float VolumePercent() const;
     void Play(const char* name, float volume = 0.75f);
+    bool HasClip(const char* name) const; // Optional private composites fall back without muting the strike.
     // Load an owned Warcraft MPQ sample lazily into the same voice pool and master gain as CS audio.
     bool PlayArchive(const char* path,float volume=1);
     void SetLoop(const char* name,bool playing,float volume=.75f);

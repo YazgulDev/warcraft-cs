@@ -40,6 +40,14 @@ function Update-GameplayConfig([string]$Template,[string]$Destination) {
         if($saved -and $saved[1] -in @('false','0')){$lines[$saved[0]]='DestroyBuildings=true';$changed=$true}
         if($destructionVersionIndex -ge 0){$lines[$destructionVersionIndex]='DestructionVersion=2';$changed=$true}
     }
+    # Upgrade only the old stock explosion cue; saved city/artillery/off and versioned sapper choices survive.
+    $soundVersion=1;$soundVersionIndex=-1;$saved=$nuclearValues['SoundVersion']
+    if($saved){$soundVersionIndex=$saved[0];if(![int]::TryParse($saved[1],[ref]$soundVersion)){$soundVersion=1}}
+    if($soundVersion -lt 2){
+        $saved=$nuclearValues['ExplosionSound']
+        if($saved -and $saved[1] -eq 'sapper'){$lines[$saved[0]]='ExplosionSound=layered';$changed=$true}
+        if($soundVersionIndex -ge 0){$lines[$soundVersionIndex]='SoundVersion=2';$changed=$true}
+    }
     # Upgrade the former stock head spray together once; custom values and versioned opt-backs remain intact.
     $bloodSection=$false;$bloodVersion=1;$bloodVersionIndex=-1;$bloodValues=@{}
     for($i=0;$i -lt $lines.Count;$i++) {

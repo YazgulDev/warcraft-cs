@@ -12,7 +12,7 @@ struct NuclearSettings {
     float flameDelay=.8f,flameSeconds=7,smokeSeconds=18,flashSeconds=.65f,shakeDegrees=.6f,screenRadius=10000;
     // A bounded plume count controls density independently of size and time; sound stays on the CS master bus.
     int smokeEmitters=37;float explosionVolumePercent=100;
-    std::string explosionSound="sapper";
+    std::string explosionSound="layered";
     std::string code="PUTINMOLODEC";
     float SmokeStart() const{return flameDelay+flameSeconds;}
     float FinishedAt() const{return std::max(8.f,SmokeStart()+smokeSeconds);}

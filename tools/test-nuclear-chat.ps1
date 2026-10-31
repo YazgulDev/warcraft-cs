@@ -16,3 +16,8 @@ $sources=@('tests/NativeNuclearTests.cpp','src/platform/NativeNuclearBomb.cpp','
 Push-Location $build
 try {& $env:COMSPEC /d /c $script;if($LASTEXITCODE){throw 'Native nuclear regression failed.'}}
 finally {Pop-Location}
+
+# Synthetic PCM verifies private composition without loading or redistributing any game audio.
+. (Join-Path $PSScriptRoot 'paths.ps1')
+& (Get-WarcraftCsPython $root) (Join-Path $root 'tests/test_nuclear_audio.py')
+if($LASTEXITCODE){throw 'Nuclear audio conversion tests failed.'}

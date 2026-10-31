@@ -6,11 +6,11 @@
 #include <cstdio>
 #include <algorithm>
 namespace {
-float clockSeconds=0;unsigned sounds=0,damages=0,destroyed=0,rewardCount=0,forced=0,props=0;bool archiveReady=true;std::string lastSound;float lastGain=0;bool single=true,actorPresent=true,transfer=false;
+float clockSeconds=0;unsigned sounds=0,damages=0,destroyed=0,rewardCount=0,forced=0,props=0;bool layeredReady=true;bool archiveReady=true;std::string lastSound;float lastGain=0;bool single=true,actorPresent=true,transfer=false;
 std::map<wc3::Handle,float> health;std::vector<wc3::Handle> group;NativeNuclearBomb* resetOnDamage=nullptr;
 NativeRockets::ImpactSink payload;std::vector<std::string> effectModels;
 wc3::Bits Bits(float x){wc3::Bits b;std::memcpy(&b,&x,4);return b;}
-void Scene(){clockSeconds=0;sounds=damages=destroyed=rewardCount=forced=props=0;single=actorPresent=true;transfer=false;resetOnDamage=nullptr;payload={};archiveReady=true;lastSound.clear();lastGain=0;effectModels.clear();health.clear();for(int i=1;i<=23;++i)health[i]=1000;}
+void Scene(){clockSeconds=0;sounds=damages=destroyed=rewardCount=forced=props=0;single=actorPresent=true;transfer=false;resetOnDamage=nullptr;payload={};layeredReady=true;archiveReady=true;lastSound.clear();lastGain=0;effectModels.clear();health.clear();for(int i=1;i<=23;++i)health[i]=1000;}
 }
 namespace wc3 {
 #define NATIVE(result,name,arguments,offset) result (__cdecl* name) arguments=nullptr;
@@ -26,6 +26,7 @@ bool IsNeutralUnit(Handle unit){return unit==5 || unit==9 || unit==12;}
 std::vector<Handle> NearbyDestructables(float,float,float){return {21,22,23};}
 void KillDestructable(Handle unit){health[unit]=0;++props;}
 }
+bool GameAudio::HasClip(const char*) const{return layeredReady;}
 void GameAudio::Play(const char* name,float gain){++sounds;lastSound=name;lastGain=gain;}
 bool GameAudio::PlayArchive(const char* path,float gain){if(!archiveReady)return false;++sounds;lastSound=path;lastGain=gain;return true;}
 bool NativeRockets::Launch(wc3::Handle,const GrenadePoint&,const GrenadePoint&,const GrenadePoint&,const GameplaySettings&,ImpactSink sink){payload=std::move(sink);return true;}
@@ -56,7 +57,7 @@ int main(){
     GameAudio audio;NativeNuclearBomb bomb;NativeRockets rockets;GameplaySettings settings;auto sink=[](const KillReward& reward){assert(reward.owner==100);++rewardCount;};
     Scene();assert(bomb.Launch(1,{0,0,96},{1,0,0},{},settings,rockets));assert(bomb.Flying() && payload);assert(!bomb.Launch(1,{0,0,96},{1,0,0},{},settings,rockets));clockSeconds=5;bomb.Tick(audio,sink);assert(!damages && effectModels.empty());
     payload({0,0,0});bomb.Tick(audio,sink);assert(!bomb.Flying() && damages==6 && rewardCount==3 && forced==3 && props==2);
-    assert(sounds==1 && lastSound.find("SapperBlowsUp.wav")!=std::string::npos && lastGain==1);
+    assert(sounds==1 && lastSound=="nuclear_blast.wav" && lastGain==1);
     assert(health[2]<0 && health[3]<0 && health[5]<0 && health[9]==0 && health[8]==0 && health[11]==0);for(int i:{1,4,6,7,10,12,23})assert(health[i]==1000);
     assert(effectModels.size()==1 && effectModels[0].find("NeutralBuildingExplosion")!=std::string::npos);assert(bomb.Exposure({30000,0,0})==0 && bomb.Exposure({0,0,0})==1);
     clockSeconds=5.9f;bomb.Tick(audio,sink);assert(effectModels.size()==9 && effectModels[1].find("FlameStrike1")!=std::string::npos);
@@ -73,6 +74,10 @@ int main(){
     bomb.Reset();Scene();assert(bomb.Launch(1,{0,0,96},{1,0,0},{},settings,rockets));transfer=true;payload({0,0,0});bomb.Tick(audio,sink);assert(!damages);
     // Native death callbacks can unload a map; neither later victims nor stale effects/timers may be touched.
     bomb.Reset();Scene();assert(bomb.Launch(1,{0,0,96},{1,0,0},{},settings,rockets));resetOnDamage=&bomb;payload({0,0,0});bomb.Tick(audio,sink);assert(damages==1 && !bomb.Active() && destroyed==0);
+    // Missing optional CS/HL files select an owned Warcraft blast; no silent or duplicate composite plays.
+    bomb.Reset();Scene();layeredReady=false;
+    assert(bomb.Launch(1,{0,0,96},{1,0,0},{},settings,rockets));payload({0,0,0});bomb.Tick(audio,sink);
+    assert(sounds==1 && lastSound.find("SapperBlowsUp.wav")!=std::string::npos);
     // Explicit mute and archive failure cannot replay the old debris sound; missing owned audio uses a real C4 blast.
     bomb.Reset();Scene();settings.nuclear.explosionSound="off";
     assert(bomb.Launch(1,{0,0,96},{1,0,0},{},settings,rockets));payload({0,0,0});bomb.Tick(audio,sink);assert(sounds==0);

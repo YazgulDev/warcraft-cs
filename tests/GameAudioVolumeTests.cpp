@@ -76,6 +76,7 @@ int main(int count,char** arguments) {
     // Failed/uninitialized audio remains safe; configured tests query the actual XAudio2 master gain.
     audio.SetVolumePercent(50);RequireVolume(audio,0);
     audio.Configure(root.string());RequireVolume(audio,100);
+    assert(audio.HasClip("odd-pin.wav") && !audio.HasClip("nuclear_blast.wav"));
     audio.Play("odd-pin.wav",0);assert(SoundCount("odd-pin.wav")==1);
     // Motor loops start/stop once, including repeated render updates and the ordinary stop-all boundary.
     auto loopEvents=[&]{return std::count_if(output.begin(),output.end(),[](const std::string& s){return s.find("CS loop=volume-test.wav")==0;});};

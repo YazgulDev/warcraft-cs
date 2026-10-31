@@ -260,6 +260,7 @@ def main():
     parser.add_argument("--cstrike", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--sword-model", type=Path)
+    parser.add_argument("--nuclear-config", type=Path)
     args = parser.parse_args()
     # Prefer the owner's private Grudge sword even when invoking the converter outside setup.
     preferred_sword = Path(__file__).resolve().parents[1] / '.local/models/v_grudge_sword.mdl'
@@ -319,6 +320,10 @@ def main():
     print(json.dumps(export_rpg(args.cstrike, args.output), indent=2))
     from export_halflife_weapons import export as export_halflife
     print(json.dumps(export_halflife(args.cstrike, args.output), indent=2))
+    # Composite audio is generated only from the owner's files and remains optional for CS-only installations.
+    from export_nuclear_audio import export as export_nuclear_audio
+    mix_config = args.nuclear_config or args.output.parent / 'WarcraftCS.ini'
+    print(json.dumps(export_nuclear_audio(args.cstrike, args.output, mix_config), indent=2))
     print(json.dumps(manifest, indent=2))
 
 

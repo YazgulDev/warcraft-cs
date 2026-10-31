@@ -70,7 +70,11 @@ if (!$WarcraftOnly) {
 if ($InstallMode -eq 'Developer') { & (Join-Path $root 'tools/fetch-dependencies.ps1') }
 if (!$WarcraftOnly) {
     $assets=Join-Path $runtime 'WarcraftCS/assets'
-    $arguments=@((Join-Path $root 'tools/export_models.py'),'--cstrike',$cstrike,'--output',$assets)
+    # Merge before conversion so fresh and upgraded clients render the composite using their saved mix controls.
+    $mixConfig=Join-Path $runtime 'WarcraftCS/WarcraftCS.ini'
+    New-Item -ItemType Directory -Path (Split-Path -Parent $mixConfig) -Force | Out-Null
+    Update-GameplayConfig (Join-Path $root 'config/WarcraftCS.ini') $mixConfig
+    $arguments=@((Join-Path $root 'tools/export_models.py'),'--cstrike',$cstrike,'--output',$assets,'--nuclear-config',$mixConfig)
     # Convert owned CS hands/animations with the selected private sword or original generated geometry.
     if ($SwordModel) { $arguments+=@('--sword-model',$SwordModel) }
     & $python @arguments

@@ -106,6 +106,7 @@ float GameAudio::VolumePercent() const {
     if (master_) master_->GetVolume(&gain);
     return gain*100.0f;
 }
+bool GameAudio::HasClip(const char* name) const{return name && clips_.find(name)!=clips_.end();}
 void GameAudio::Play(const char* name, float volume) {
     auto found = clips_.find(name);
     if (found == clips_.end()) { wc3::Log("CS sound missing: %s", name); return; }
