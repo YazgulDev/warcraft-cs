@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## 0.17.0 — 2026-10-31
+
+- Publish [downloads, upgrade instructions and complete Release Notes](docs/RELEASE-0.17.0.md), with direct downloads first, both launchers, native-free public ZIPs, updated current-version guides and compact launcher summaries.
+- Add TMP, UMP45, FAMAS, Galil and G3SG1 with private models/previews, animation/audio, buying, reloads, flashes/casings, editable firearm tuning and scoped G3SG1; scroll the expanded carried PRIMARY list.
+- Replace sparse smoke puffs with dense depth-tested smoke: Opacity=.99, VisibilityDistance=96 and BlocksAI=true for all teams on verified 1.26a. Hide health bars, item names and target markers behind smoke; preserve physical blind shots and custom opacity.
+- Add F2 main settings for mouse/scoped sensitivity, CS volume, classic/recovery/hull physics, view distance and Warcraft/CS sky. Save changed keys atomically, preserve unrelated controls/inventory, cancel drafts safely and prevent menu clicks from firing. Restore authored map sky outside controlled views.
+- Add controlled-view UTF-8 text input with Cyrillic, paste and cancellation; submit ordinary chat/commands through verified 1.26a native handling without logging typed text.
+- Add a code-only nuclear RPG: warneverchanges selects one charge per map; LMB launches through shared RPG flight/collision without ordinary ammo cost. Local radius8000 destroys eligible enemy units/buildings including immunity, neutral shops and runtime destructables while preserving allies. Add configurable destruction/reward/repeat policies and scaled Warcraft explosion, Flame Strike, 37-source18-second smoke, local flash/shake and automatic expiry.
+- Add automatically generated private CS C4/Half-Life mortar/rumble/debris nuclear audio, configurable mix gains/pitches/timing/fade and owned Warcraft fallback. Preserve custom controls and migrate old stock radius/building/cue/code policies; F8 changes future launch snapshots while mix edits require reconversion.
+- Fix Gluon windup continuing after release, menus and holster, and shutdown overlap on restart. Leave stopped private voices stopped until accepted playback and retain motor voice reservation. Add actual XAudio2 cursor regressions, nuclear/chat/settings/migration tests and module/setup documentation.
+
 ## 0.16.0 — 2026-10-30
 
 - Publish [complete downloads, upgrade instructions and Release Notes](docs/RELEASE-0.16.0.md), with both launchers, source-only archives, compact summaries and updated current-version documentation. Extend the full regression runner with the camera-height suite.

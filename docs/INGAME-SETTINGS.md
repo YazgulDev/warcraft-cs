@@ -1,8 +1,8 @@
-# In-game settings preview
+# In-game settings
 
 [Documentation](README.md) · [Configuration](CONFIGURATION.md) · [Previous arsenal preview](ARSENAL-SMOKE-PREVIEW.md)
 
-This local preview builds on 0.16.0 and includes the TMP/UMP45/FAMAS/Galil/G3SG1 and dense-smoke preview. Published release assets are unchanged.
+Available in [release 0.17.0](RELEASE-0.17.0.md), alongside the expanded CS arsenal and dense smoke.
 
 Press **F2** during first-person control, third-person control or clean F9 unit view. The panel deliberately covers the requested main settings: mouse sensitivity, CS audio, movement physics, view distance and sky. Native Warcraft shops and RTS keep their own controls. `[Shortcuts] SettingsMenu=F2` can be remapped; old custom layouts using F2 receive a free F3/F4/F5 binding, or NONE if all are occupied. F6 remains the recovery shortcut and F10 retains the Warcraft menu.
 

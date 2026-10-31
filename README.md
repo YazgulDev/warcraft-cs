@@ -8,7 +8,7 @@ quests and combat rules. Third-person and unarmed first-person views are also av
 [Install and play](INSTALL.md) · [Documentation](docs/README.md) ·
 [Discussions](https://github.com/YazgulDev/warcraft-cs/discussions)
 
-**Release 0.16.0:** animated Direct3D portrait fixes, head removal on fatal headshots, stronger head blood, small body-impact blood and smoother first-person ground-height transitions. See [downloads and all changes](docs/RELEASE-0.16.0.md). [1.27a/D3D9 support remains experimental](docs/PORT-1.27.md).
+**Release 0.17.0:** TMP, UMP45, FAMAS, Galil and G3SG1, dense smoke, F2 settings and mouse sensitivity, controlled-view chat, a nuclear RPG granted by `warneverchanges`, and Gluon sound fixes. See [downloads and all changes](docs/RELEASE-0.17.0.md). [1.27a/D3D9 support remains experimental](docs/PORT-1.27.md).
 
 ## Start here
 

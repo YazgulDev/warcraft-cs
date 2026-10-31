@@ -1,5 +1,9 @@
 # Validation
 
+## Release 0.17.0 (2026-10-31)
+
+See [the complete release validation and limitations](RELEASE-0.17.0.md#source-setup-and-verification). Native feature oracles use only the owned 1.26a lab in OpenGL and Direct3D, restoring its files/saves by hash. Actual XAudio2 sample cursors verify Gluon run/windup cancellation after release, menus, holster and F8; the authored shutdown cue decays separately. Full native-independent regressions and final launcher/package/install checks pass. Real 1.27a and RX580 OpenGL issue #10 remain unverified/unresolved.
+
 ## Release 0.15.0 (2026-10-29)
 
 Source audit and native compilation pass. Fresh combined native runs on the owned 1.26a map pass six camera cases in each renderer (flat, level eye on a slope, ground following, standing, walking and jumping), with zero submitted-eye error after accounting for native getter latency. The same runs confirm portrait/minimap/item panels, native potion use and slot 3-to-5 moves, M/I controls and RTS/FPS transitions, with no ERROR records. Screenshots were inspected.

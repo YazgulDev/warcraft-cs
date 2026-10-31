@@ -2,7 +2,7 @@
 
 [Project home](README.md) · [Documentation](docs/README.md) · [Installation](INSTALL.md)
 
-Applies to **0.16.0**. See [Release Notes](docs/RELEASE-0.16.0.md) for changes and
+Applies to **0.17.0**. See [Release Notes](docs/RELEASE-0.17.0.md) for changes and
 [antivirus troubleshooting](TROUBLESHOOTING.md#antivirus) for unsigned-module detections.
 
 This release additionally accepts experimental **1.27a, Game.dll 1.27.0.52240**,

@@ -1,0 +1,17 @@
+- Added TMP and UMP45 SMGs, FAMAS and Galil rifles, and a scoped G3SG1 automatic sniper.
+- Added owned-CS models, animations, reload audio, muzzle flashes, casings and buy previews for the new guns.
+- Improved smoke density and added configurable short visibility with all-team basic-attack obstruction on verified Warcraft 1.26a.
+- Fixed health bars, item names and target markers revealing targets through dense smoke.
+- Fixed scrolling in the expanded carried PRIMARY weapon list.
+- Added an F2 settings panel for mouse sensitivity, CS volume, movement physics, view distance and sky.
+- Added main and scoped sensitivity multipliers, atomic Apply and Save, cancellation and fire suppression while editing.
+- Added controlled-view sky visibility, authored-map sky restoration and installed CS sky preset selection.
+- Added controlled-view text input with Cyrillic, paste, cancellation and native Warcraft chat/commands on verified 1.26a.
+- Added a code-only nuclear RPG round granted by warneverchanges, using shared rocket flight, trail and collisions.
+- Added an 8000-unit local nuclear blast with scaled Warcraft explosion, Flame Strike, 37 smoke emitters and local flash/shake.
+- Added hostile unit/building destruction through immunity, neutral shop and destructable death, with allied protection and configurable policies.
+- Added automatic private layered CS/Half-Life nuclear audio with configurable mixing and owned Warcraft fallback.
+- Preserved custom settings and migrated prior nuclear stock radius, building policy, cue and grant code during upgrades.
+- Fixed Gluon startup audio continuing after firing and previous shutdown audio overlapping a restarted channel.
+- Fixed stopped voices restarting immediately and kept released loop voices separate from ordinary playback.
+- Updated configuration guides, module documentation and regression coverage for the included features.
