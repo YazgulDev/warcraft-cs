@@ -168,6 +168,7 @@ extern Bits (__cdecl* GetRectMaxY)(Handle);
 extern void (__cdecl* RemoveRect)(Handle);
 extern Handle (__cdecl* CreateDestructable)(int, float*, float*, float*, float*, int);
 extern void (__cdecl* RemoveDestructable)(Handle);
+void KillDestructable(Handle);
 extern int (__cdecl* GetDestructableTypeId)(Handle);
 extern Bits (__cdecl* GetDestructableX)(Handle);
 extern Bits (__cdecl* GetDestructableY)(Handle);

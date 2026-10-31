@@ -9,6 +9,9 @@
 #include "ReticleDiagnostics.hpp"
 #include "BuyMenuView.hpp"
 #include "WeaponSelectionView.hpp"
+#include "SettingsMenuView.hpp"
+#include "NuclearView.hpp"
+#include "FpsTextView.hpp"
 #include "HudHints.hpp"
 #include "HudRenderState.hpp"
 #include "FixedFunctionState.hpp"
@@ -39,6 +42,7 @@ void Overlay::ResetGraphics(bool deleteObjects) {
     for (int i = 0; i < WeaponSlots::Count; ++i) { guns_[i].Reset(deleteObjects); loaded_[i] = attempted_[i] = false; }
     // Menu models obey the same context ownership rules as first-person weapons.
     for (int i=0;i<WeaponSlots::Count;++i) { buyPreviews_[i].Reset(deleteObjects);previewLoaded_[i]=previewAttempted_[i]=false; }
+    settingsFont_.Reset(deleteObjects);
     font_.Reset(deleteObjects);statusFont_.Reset(deleteObjects);spellFont_.Reset(deleteObjects);itemName_.Reset(deleteObjects);combatView_.Reset(deleteObjects);
 }
 void Overlay::ContextDeleted(HGLRC context) {
@@ -64,7 +68,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
             glGetString(GL_VENDOR), glGetString(GL_RENDERER), glGetString(GL_VERSION), glIsEnabled(GL_LINE_STIPPLE));
     } else if (refreshPending_) {
         // Keep surviving resources: blind deletion after Alt-Tab can touch IDs recycled by the game.
-        bool valid=font_.Valid() && statusFont_.Valid() && spellFont_.Valid() && grenadeWorld_.Valid() && rocketView_.Valid();
+        bool valid=settingsFont_.Valid() && font_.Valid() && statusFont_.Valid() && spellFont_.Valid() && grenadeWorld_.Valid() && rocketView_.Valid();
         valid=valid && sky_.Valid() && spellHud_.Valid() && inventoryIcons_.Valid() && unitFont_.Valid() && inventoryFont_.Valid() && energyBeamArt_.Valid() && energyImpactArt_.Valid() && itemName_.Valid() && combatView_.Valid();
         for (int i=0;i<WeaponSlots::Count;++i) if (loaded_[i] && !guns_[i].TexturesValid()) valid=false;
         for (int i=0;i<WeaponSlots::Count;++i) if (previewLoaded_[i] && !buyPreviews_[i].TexturesValid()) valid=false;
@@ -114,12 +118,19 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     // Sky touches only far-depth pixels before the weapon's private depth clear, preserving native scenery.
-    if (controller.Settings().csSky && !controller.Status().contained && !controller.Status().hidden)
+    if (controller.Settings().skyVisible && controller.Settings().csSky && !controller.Status().contained && !controller.Status().hidden)
         sky_.Draw(root_,controller.SkyName(),controller.ViewYaw(),controller.ViewPitch(),controller.ViewFov(),float(width)/height);
+    auto drawSettings=[&] {
+        if(!controller.SettingsPanel().Open())return;
+        settingsFont_.Ensure(std::clamp(height/38,14,24));POINT cursor={};GetCursorPos(&cursor);ScreenToClient(WindowFromDC(dc),&cursor);
+        SettingsMenuView::Draw(controller.SettingsPanel(),width,height,cursor.x,cursor.y,[&](float x,float y,const char* label){Text(x,y,label,&settingsFont_);});
+    };
+    auto drawTextInput=[&] {FpsTextView::Draw(controller.TextEntry(),controller.ChatMessage(),controller.ChatMessageVisible(),width,height,font_);};
+    NuclearView::World(controller.NuclearBomb(),barView,nearPlane,farPlane);
     // World depth still exists here; the first-person weapon clears it in the next pass.
     if(controller.UnitFirstPerson()) {
         graphics.Phase("clean-view-effects");
-        itemName_.Draw(controller.HoveredItemName(),width,height,std::clamp(height/45,16,30));
+        itemName_.Draw(controller.HoveredItemVisible(barView.eye) ? controller.HoveredItemName() : std::string{},width,height,std::clamp(height/45,16,30));
         HudDiagnostics::Omitted("clean-unit-view",sampledHud);
         if(!controller.Status().contained && !controller.Status().hidden) {
             grenadeWorld_.Draw(root_,controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
@@ -127,12 +138,13 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
             GrenadeView::Draw(controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
             GrenadeView::Flash(controller.FlashOpacity(),width,height);
         }
+        drawSettings();drawTextInput();GrenadeView::Flash(controller.NuclearFlash(),width,height);
         glMatrixMode(GL_TEXTURE);glPopMatrix();glMatrixMode(oldMode);glPopAttrib();
         if(activeTexture)activeTexture(oldTexture);
         return;
     }
     // Load the held model before world effects so its actual animated attachment can anchor an energy beam.
-    int index=controller.WeaponIndex();float projectionScale=controller.Settings().weaponModelScale[index];
+    int index=controller.PresentationWeapon();float projectionScale=controller.Settings().weaponModelScale[index];
     graphics.Phase("weapon-resource-load");
     float animationSeconds=controller.AnimationTime(); // Attachment and mesh must sample one identical animation phase.
     if(!controller.Settings().warcraftOnly && !attempted_[index]) {
@@ -144,8 +156,11 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     if(!controller.Status().contained && !controller.Status().hidden)
         combatView_.Draw(controller.Visuals(),barView,width,height,nearPlane,farPlane);
     unsigned barCount=0;
-    if(!controller.Status().contained && !controller.Status().hidden && !controller.Buying())
-        barCount=HealthBarRenderer::Draw(bars,barView,width,height,nearPlane,farPlane);
+    if(!controller.Status().contained && !controller.Status().hidden && !controller.Buying()) {
+        std::vector<UnitHealthBar> visibleBars;
+        for(const auto& bar:bars)if(controller.VisibleThroughSmoke(barView.eye,bar.position))visibleBars.push_back(bar);
+        barCount=HealthBarRenderer::Draw(visibleBars,barView,width,height,nearPlane,farPlane);
+    }
     if(!controller.Status().contained && !controller.Status().hidden) {
         if(!controller.ThirdPerson() && !controller.Buying() && WeaponSlots::Energy(index)) {
             auto beam=controller.Beam();std::array<float,3> anchor;
@@ -168,11 +183,11 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     float top = std::tan(45.0f * 0.01745329252f) * projectionScale; float side = top * width / height;
     glFrustum(-side, side, -top, top, 1, 200);
     glMatrixMode(GL_MODELVIEW); glPushMatrix(); glLoadIdentity();
-    bool heldModel=!controller.ThirdPerson() && loaded_[index] && !controller.Status().contained && !controller.Status().hidden && (index!=WeaponSlots::C4 || controller.Ammo()>0);
+    bool heldModel= !controller.ThirdPerson() && loaded_[index] && !controller.Status().contained && !controller.Status().hidden && (index!=WeaponSlots::C4 || controller.Ammo()>0);
     HudDiagnostics::Weapon(index,controller.ShotSerial(),controller.Animation(),animationSeconds,loaded_[index],heldModel,controller.Scoped(),
         controller.Status().contained,controller.Status().hidden);
     const auto& visuals=controller.Settings().viewmodel;
-    float flash=muzzleFlash_.Sample(controller.ShotSerial(),heldModel && controller.ShowMuzzleFlash(),GetTickCount(),visuals.flashMilliseconds);
+    float flash=muzzleFlash_.Sample(controller.ShotSerial(),heldModel && (!controller.NuclearPresentation() && controller.ShowMuzzleFlash()),GetTickCount(),visuals.flashMilliseconds);
     if (heldModel && (!controller.Scoped() || flash>0)) {
         // Give the weapon its own depth pass: back faces must not paint over the skin.
         glDepthMask(GL_TRUE); glClearDepth(1); glClear(GL_DEPTH_BUFFER_BIT);
@@ -205,7 +220,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     else if (controller.Scoped()) ScopeView::Draw(float(width), float(height));
     else ReticleView::DrawHipFire(float(width), float(height), controller.Recoil());
     // The circle and brackets identify the next reachable contact without a text caption.
-    if(!unavailableView && !controller.Buying() && controller.ThirdPerson() && controller.Settings().thirdPerson.showTargetIndicator)
+    if(!unavailableView && !controller.Buying() && controller.ThirdPerson() && controller.Settings().thirdPerson.showTargetIndicator && controller.VisibleThroughSmoke(barView.eye,controller.AimTarget().position))
         TargetMarkerView::Draw(controller.AimTarget(),barView,width,height,nearPlane,farPlane);
     // Scale the bottom HUD from a readable 42-pixel font at 1080p, with safe edge padding.
     int statusSize = std::clamp(int(std::lround(height * (42.0f / 1080.0f))), 26, 84);
@@ -215,7 +230,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     Font(statusSize);
     controller.Hits().Draw(float(width), float(height));
     if(!unavailableView && !controller.Buying()) {
-        itemName_.Draw(controller.HoveredItemName(),width,height,std::clamp(height/45,16,30));
+        itemName_.Draw(controller.HoveredItemVisible(barView.eye) ? controller.HoveredItemName() : std::string{},width,height,std::clamp(height/45,16,30));
     }
 
     // Money formatting follows the active purchase currency in both HUD layouts.
@@ -237,6 +252,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         else if(WeaponSlots::Melee(index))sprintf_s(status,"%s   %s",controller.WeaponData(index).name,controller.MoneyText().c_str());
         else sprintf_s(status,"%s   %d / %d   %s",controller.WeaponData(index).name,controller.Ammo(),controller.Reserve(),controller.MoneyText().c_str());
     }
+    if(controller.NuclearSelected())sprintf_s(status,"NUCLEAR BOMB x1   %s",controller.MoneyText().c_str());
     glColor4f(1.0f, 0.85f, 0.3f, 1); Text(statusPad, statusY, status, &statusFont_);
     // Installation progress and fuse are independent of which weapon is currently equipped.
     if (controller.PlantProgress() > 0) {
@@ -252,7 +268,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     auto mapLayout=MinimapLayout::Calculate(width,height,controller.Settings().minimapSizePercent);
     // Backend-owned native captures share the same minimap placement and controls.
     if(controller.MinimapVisible())minimap.Draw(mapLayout);
-    std::string controls="Warcraft CS by Yazgul | "+key(ShortcutAction::ToggleFPS)+": RTS | "+key(ShortcutAction::ReloadSettings)+": CONFIG | "+key(ShortcutAction::Minimap)+": MINIMAP | "+key(ShortcutAction::Speed)+": SPEED | "+key(ShortcutAction::Fog)+": FOG";
+    std::string controls="Warcraft CS by Yazgul | ENTER: CHAT | "+key(ShortcutAction::ToggleFPS)+": RTS | "+key(ShortcutAction::ReloadSettings)+": RELOAD INI | "+key(ShortcutAction::SettingsMenu)+": SETTINGS | "+key(ShortcutAction::Minimap)+": MINIMAP | "+key(ShortcutAction::Speed)+": SPEED | "+key(ShortcutAction::Fog)+": FOG";
     // The dedicated key exposes direct entry/RTS exit independently of the active view switch.
     controls+=" | "+key(ShortcutAction::ToggleThirdPerson)+(controller.ThirdPerson() ? ": RTS" : ": THIRD PERSON");
     controls+=" | "+key(ShortcutAction::ToggleView)+(controller.ThirdPerson() ? (controller.Settings().warcraftOnly ? ": UNIT VIEW" : ": FPS") : ": THIRD PERSON");
@@ -329,6 +345,13 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         [&](float x,float y,const char* title){Text(x,y,title,&statusFont_);},weaponPreview);
     WeaponSelectionView::Draw(controller,width,height,[&](float x,float y,const char* text){Text(x,y,text);},weaponPreview);
     InventoryHudView::Cursor(window,controller.UnitHud(),InventoryHudLayout::Calculate(width,height,controller.Settings().spellIconSizePercent,controller.Settings().showSpellIcons,true),inventoryIcons_,controller.ItemControls());
+    if(controller.NuclearSelected()) {
+        glColor4f(1,.65f,.2f,1);
+        Text(width*.5f-240,height*.70f,"NUCLEAR RPG: LMB FIRE / RMB HOLSTER");
+    }
+    if(controller.NuclearBomb().Flying()){glColor4f(1,.5f,.15f,1);Text(width*.5f-120,height*.42f,"NUCLEAR ROCKET IN FLIGHT");}
+    drawSettings();drawTextInput();
+    GrenadeView::Flash(controller.NuclearFlash(),width,height);
     GrenadeView::Flash(controller.FlashOpacity(),width,height); // Blindness covers hands, scope and HUD together.
     HudDiagnostics::State("completed",sampledHud);
     }

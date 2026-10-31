@@ -37,7 +37,7 @@ Assert-WarcraftAudioRuntime $warcraft
 # Reject mismatched Player modules before copying a runtime or installing Python dependencies.
 if ($InstallMode -eq 'Player') { Assert-PrebuiltHost $PrebuiltDirectory $warcraft }
 # Preflight all owned weapon/consumable models before modifying a client.
-foreach ($weapon in $(if ($WarcraftOnly) { @() } else { @('ak47','m4a1','usp','awp','knife','c4','deagle','glock18','mp5','p90','m249','m3','xm1014','hegrenade','flashbang','smokegrenade') })) {
+foreach ($weapon in $(if ($WarcraftOnly) { @() } else { @('ak47','m4a1','usp','awp','knife','c4','deagle','glock18','mp5','p90','m249','m3','xm1014','tmp','ump45','famas','galil','g3sg1','hegrenade','flashbang','smokegrenade') })) {
     if (!(Test-Path -LiteralPath (Join-Path $cstrike "models/v_$weapon.mdl"))) { throw "Missing owned CS model v_$weapon.mdl. Supply the cstrike folder with its loose model files." }
     # Real thrown bodies have separate retail geometry/textures from the hands shown in v_ models.
     if ($weapon -in @('hegrenade','flashbang','smokegrenade') -and !(Test-Path -LiteralPath (Join-Path $cstrike "models/w_$weapon.mdl"))) { throw "Missing owned CS world model w_$weapon.mdl." }
@@ -70,7 +70,11 @@ if (!$WarcraftOnly) {
 if ($InstallMode -eq 'Developer') { & (Join-Path $root 'tools/fetch-dependencies.ps1') }
 if (!$WarcraftOnly) {
     $assets=Join-Path $runtime 'WarcraftCS/assets'
-    $arguments=@((Join-Path $root 'tools/export_models.py'),'--cstrike',$cstrike,'--output',$assets)
+    # Merge before conversion so fresh and upgraded clients render the composite using their saved mix controls.
+    $mixConfig=Join-Path $runtime 'WarcraftCS/WarcraftCS.ini'
+    New-Item -ItemType Directory -Path (Split-Path -Parent $mixConfig) -Force | Out-Null
+    Update-GameplayConfig (Join-Path $root 'config/WarcraftCS.ini') $mixConfig
+    $arguments=@((Join-Path $root 'tools/export_models.py'),'--cstrike',$cstrike,'--output',$assets,'--nuclear-config',$mixConfig)
     # Convert owned CS hands/animations with the selected private sword or original generated geometry.
     if ($SwordModel) { $arguments+=@('--sword-model',$SwordModel) }
     & $python @arguments

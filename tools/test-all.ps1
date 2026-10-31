@@ -2,9 +2,9 @@ $ErrorActionPreference='Stop'
 $root=Split-Path -Parent $PSScriptRoot
 # Standalone checkouts start without build output; each numerical regression runs without game files.
 New-Item -ItemType Directory -Path (Join-Path $root 'build') -Force | Out-Null
-# Camera edge ownership and static mesh contacts join the synthetic adapter suites;
+# Camera edge ownership, ground-height response and static mesh contacts join the synthetic adapter suites;
 # none of these checks controls an active Warcraft game or campaign.
-foreach ($name in @('window-input','fog-of-war','diagnostic-log','native-frame-rate','native-frame-presentation','native-camera-far-clip','map-camera-guard','movement','movement-obstacles','static-collision','warcraft-collision','fullscreen-view','minimap-layout','native-minimap','fps-projection','world-labels','mouse-look','hitboxes','melee','combat-damage','gameplay-settings','recoil')) {
+foreach ($name in @('window-input','fog-of-war','diagnostic-log','native-frame-rate','native-frame-presentation','native-camera-far-clip','map-camera-guard','camera-height','movement','movement-obstacles','static-collision','warcraft-collision','fullscreen-view','minimap-layout','native-minimap','fps-projection','world-labels','mouse-look','hitboxes','melee','combat-damage','gameplay-settings','recoil')) {
     & (Join-Path $PSScriptRoot "test-$name.ps1")
 }
 & (Join-Path $PSScriptRoot 'test-tree-and-wheel.ps1')
@@ -32,6 +32,8 @@ foreach ($name in @('window-input','fog-of-war','diagnostic-log','native-frame-r
 & (Join-Path $PSScriptRoot 'test-rpg.ps1')
 & (Join-Path $PSScriptRoot 'test-halflife.ps1')
 # Buying/sky decoding are independent of Warcraft and use only synthetic/private-free test inputs.
+& (Join-Path $PSScriptRoot 'test-settings-menu.ps1')
+& (Join-Path $PSScriptRoot 'test-nuclear-chat.ps1')
 & (Join-Path $PSScriptRoot 'test-buy-menu.ps1')
 & (Join-Path $PSScriptRoot 'test-dollar-loot.ps1')
 # Posed shot selection and item occlusion use authored meshes and synthetic native scenes.

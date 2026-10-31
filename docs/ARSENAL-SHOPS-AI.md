@@ -6,6 +6,8 @@ In [release 0.13.0](RELEASE-0.13.0.md), **B** shows dollar and gold buttons abov
 
 The [0.13.0 release](RELEASE-0.13.0.md) doubles whole-shell native attack multipliers: M3 **x6**, XM1014 **x4.8**. These apply in `Damage.Mode=unit`/`hero`; the fixed weapon-mode shell damage stays 104/80. HE now defaults to **600** peak damage; flash and smoke still deal zero health damage. F8 applies to subsequent shots/throws, and updates preserve custom tuning.
 
+The [expanded arsenal preview](ARSENAL-SMOKE-PREVIEW.md) adds TMP/UMP45 SMGs, FAMAS/Galil rifles and a scoped self-loading G3SG1. It also introduces dense smoke with all-team basic-attack sight obstruction on 1.26a.
+
 The paid firearms are Desert Eagle (650), Glock 18 (400), MP5 (1500),
 P90 (2350), M249 (5750), M3 (1700), and XM1014 (3000). Open **B**: 1 pistols,
 2 shotguns, 3 SMGs, 4 rifles, 5 machine guns, 6 primary ammo, 7 pistol ammo,
@@ -123,11 +125,10 @@ units and buildings using swept hulls. This calibrates launch reach; Warcraft
 collision responses and the existing detonation/effect rules remain adaptations. HE has fixed peak damage, linear 3D falloff, cover checks and the
 existing friendly-fire percentage; neutral buildings and destructable gates
 retain native quest immunity. Flash blinds the controlled view according to
-distance, facing and cover. Published 0.12.0 briefly paused nearby hostile mobile units and excluded the controlled actor. Release 0.13.0 stuns every exposed creature, including allies and the controlled actor, for the full UnitStunSeconds by default. Pre-paused map units are not leased, and only pauses acquired by this feature are released. StunAllUnits=false restores the former enemy-only filter; UnitStunSeconds=0 disables creature stuns. Smoke is a visual volume with depth-tested soft puffs,
-near-eye density and fade; it does not block bullets or alter native AI sight.
+distance, facing and cover. Published 0.12.0 briefly paused nearby hostile mobile units and excluded the controlled actor. Release 0.13.0 stuns every exposed creature, including allies and the controlled actor, for the full UnitStunSeconds by default. Pre-paused map units are not leased, and only pauses acquired by this feature are released. StunAllUnits=false restores the former enemy-only filter; UnitStunSeconds=0 disables creature stuns. The [dense smoke preview](ARSENAL-SMOKE-PREVIEW.md) uses depth-tested volume slices with short visibility. Bullets remain physical; on verified 1.26a all teams' native basic-attack targeting obeys smoke occlusion without changing saved sight stats.
 Thrown bodies use the owner's original `w_hegrenade.mdl`, `w_flashbang.mdl` and
 `w_smokegrenade.mdl` with their textures, real perspective and world occlusion.
-Clouds use original soft puffs. Held models/previews and impact/explosion sounds
+Clouds use original procedural volume geometry. Held models/previews and impact/explosion sounds
 also come from the owner's installed CS files. Rerun setup/update to convert the
 three world models into private `assets/world` caches.
 

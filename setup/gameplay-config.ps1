@@ -13,6 +13,44 @@ function Update-GameplayConfig([string]$Template,[string]$Destination) {
     $lines=[Collections.Generic.List[string]]::new()
     $lines.AddRange([string[]]@(Get-Content -LiteralPath $Destination))
     $changed=$false
+    # Upgrade former nuclear stock tuning once, while retaining deliberate v3 and customized values.
+    $nuclearSection=$false;$nuclearVersion=1;$nuclearVersionIndex=-1;$nuclearValues=@{}
+    for($i=0;$i -lt $lines.Count;$i++) {
+        if($lines[$i] -match '^\s*\[([^\]]+)\]\s*$'){$nuclearSection=$Matches[1] -eq 'NuclearBomb';continue}
+        if(!$nuclearSection -or $lines[$i] -notmatch '^\s*([^=;]+?)\s*=\s*(.*?)\s*$'){continue}
+        $key=$Matches[1];$value=$Matches[2].Trim();$nuclearValues[$key]=@($i,$value)
+        if($key -eq 'BehaviorVersion'){$nuclearVersionIndex=$i;if(![int]::TryParse($value,[ref]$nuclearVersion)){$nuclearVersion=1}}
+    }
+    if($nuclearVersion -lt 3) {
+        foreach($upgrade in @(@('Radius',1600,8000),@('VisualRadius',1200,3200),@('ExplosionScale',8,12),@('FlameScale',5,7),@('SmokeScale',6,14),@('SmokeSeconds',8,18),@('ScreenEffectRadius',2400,10000))) {
+            $saved=$nuclearValues[$upgrade[0]];[double]$oldNuclear=0
+            if($saved -and [double]::TryParse($saved[1],[Globalization.NumberStyles]::Float,[Globalization.CultureInfo]::InvariantCulture,[ref]$oldNuclear) -and
+                ($oldNuclear -eq $upgrade[1] -or ($upgrade[0] -eq 'Radius' -and $nuclearVersion -lt 2 -and $oldNuclear -eq 0))) {
+                $lines[$saved[0]]=$upgrade[0]+'='+([double]$upgrade[2]).ToString([Globalization.CultureInfo]::InvariantCulture);$changed=$true
+            }
+        }
+        if($nuclearVersionIndex -ge 0){$lines[$nuclearVersionIndex]='BehaviorVersion=3';$changed=$true}
+    }
+    # The requested enemy-building default upgrades separately from radius/smoke tuning.
+    $destructionVersion=1;$destructionVersionIndex=-1
+    $saved=$nuclearValues['DestructionVersion']
+    if($saved){$destructionVersionIndex=$saved[0];if(![int]::TryParse($saved[1],[ref]$destructionVersion)){$destructionVersion=1}}
+    if($destructionVersion -lt 2) {
+        $saved=$nuclearValues['DestroyBuildings']
+        if($saved -and $saved[1] -in @('false','0')){$lines[$saved[0]]='DestroyBuildings=true';$changed=$true}
+        if($destructionVersionIndex -ge 0){$lines[$destructionVersionIndex]='DestructionVersion=2';$changed=$true}
+    }
+    # Upgrade only the old stock explosion cue; saved city/artillery/off and versioned sapper choices survive.
+    $soundVersion=1;$soundVersionIndex=-1;$saved=$nuclearValues['SoundVersion']
+    if($saved){$soundVersionIndex=$saved[0];if(![int]::TryParse($saved[1],[ref]$soundVersion)){$soundVersion=1}}
+    if($soundVersion -lt 2){
+        $saved=$nuclearValues['ExplosionSound']
+        if($saved -and $saved[1] -eq 'sapper'){$lines[$saved[0]]='ExplosionSound=layered';$changed=$true}
+        if($soundVersionIndex -ge 0){$lines[$soundVersionIndex]='SoundVersion=2';$changed=$true}
+    }
+    # Rename only the former stock grant code, preserving independently customized codes and other settings.
+    $saved=$nuclearValues['Code']
+    if($saved -and $saved[1] -eq 'PUTINMOLODEC'){$lines[$saved[0]]='Code=warneverchanges';$changed=$true}
     # Upgrade the former stock head spray together once; custom values and versioned opt-backs remain intact.
     $bloodSection=$false;$bloodVersion=1;$bloodVersionIndex=-1;$bloodValues=@{}
     for($i=0;$i -lt $lines.Count;$i++) {
@@ -203,7 +241,13 @@ function Update-GameplayConfig([string]$Template,[string]$Destination) {
                     # Adding the new Y default must not overwrite another saved action.
                     if($entry.name -eq 'Shortcuts' -and $Matches[1].Trim() -eq 'SquadOrders' -and $usedShortcuts.Contains('Y')){$line='SquadOrders=NONE'}
                     # U remains opt-in for AI; another saved action using it takes priority during migration.
-                    if($entry.name -eq 'Shortcuts' -and $Matches[1].Trim() -eq 'ArmyAI' -and $usedShortcuts.Contains('U')){$line='ArmyAI=NONE'}
+                    if($entry.name -eq 'Shortcuts' -and $Matches[1].Trim() -eq 'SettingsMenu') {
+                        # A new settings shortcut must yield to existing custom function keys.
+                        $settingsKey='NONE'
+                        foreach($candidate in @('F2','F3','F4','F5')) {if(!$usedShortcuts.Contains($candidate)){$settingsKey=$candidate;break}}
+                        $line='SettingsMenu='+$settingsKey;[void]$usedShortcuts.Add($settingsKey)
+                    }
+                    if($entry.name -eq 'Shortcuts' -and $Matches[1].Trim() -eq 'ArmyAI'  -and $usedShortcuts.Contains('U')){$line='ArmyAI=NONE'}
                     # A migrated/custom refill may already own the new F12 default in a partial old layout.
                     if($entry.name -eq 'Shortcuts' -and $Matches[1].Trim() -eq 'AllWeapons' -and $usedShortcuts.Contains('F12')) {
                         $replacement='NONE'

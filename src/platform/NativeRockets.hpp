@@ -10,11 +10,12 @@
 // Warcraft timer/target adapter owns launched rockets independently of the selected weapon and render context.
 class NativeRockets {
 public:
+    using ImpactSink=std::function<void(const GrenadePoint&)>;
     // The application owns the reward policy; native damage only reports confirmed creature deaths.
     void SetKillSink(KillReward::Sink sink){onKill_=std::move(sink);}
     void Configure(uintptr_t base){obstacles_.Configure(base);}
     void Reset();
-    bool Launch(wc3::Handle actor,const GrenadePoint& eye,const GrenadePoint& direction,const GrenadePoint& motion,const GameplaySettings& settings);
+    bool Launch(wc3::Handle actor,const GrenadePoint& eye,const GrenadePoint& direction,const GrenadePoint& motion,const GameplaySettings& settings,ImpactSink payload={});
     bool Tick(GameAudio& audio,wc3::Handle viewer,bool guide,const GrenadePoint& eye,const GrenadePoint& direction,float guideRange);
     bool Active(wc3::Handle actor) const;
     const std::vector<RocketVisual>& Visuals() const {return visuals_;}
@@ -23,7 +24,7 @@ public:
 private:
     KillReward::Sink onKill_;
     struct Trail {float time;GrenadePoint position;};
-    struct Charge {RocketProjectile flight;wc3::Handle actor=0;int type=0;float born=0,damage=0,friendly=0;std::deque<Trail> trail;};
+    struct Charge {RocketProjectile flight;wc3::Handle actor=0;int type=0;float born=0,damage=0,friendly=0;std::deque<Trail> trail;ImpactSink payload;};
     struct Burst {GrenadePoint position;float born,size;};
     bool Clock();
     float Time() const;

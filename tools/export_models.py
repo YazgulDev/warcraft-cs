@@ -260,6 +260,7 @@ def main():
     parser.add_argument("--cstrike", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--sword-model", type=Path)
+    parser.add_argument("--nuclear-config", type=Path)
     args = parser.parse_args()
     # Prefer the owner's private Grudge sword even when invoking the converter outside setup.
     preferred_sword = Path(__file__).resolve().parents[1] / '.local/models/v_grudge_sword.mdl'
@@ -268,7 +269,7 @@ def main():
     args.output.mkdir(parents=True, exist_ok=True)
     manifest = []
     weapon_sounds = set()
-    for weapon in ("ak47", "m4a1", "usp", "awp", "knife", "c4", "deagle", "glock18", "mp5", "p90", "m249", "m3", "xm1014", "hegrenade", "flashbang", "smokegrenade"):
+    for weapon in ("ak47", "m4a1", "usp", "awp", "knife", "c4", "deagle", "glock18", "mp5", "p90", "m249", "m3", "xm1014", "tmp", "ump45", "famas", "galil", "g3sg1", "hegrenade", "flashbang", "smokegrenade"):
         model = StudioModel(args.cstrike / "models" / f"v_{weapon}.mdl")
         # Both silencer-capable weapons are permanently unsilenced in this mod, including their geometry.
         excluded = ("silencer.bmp",) if weapon in ("m4a1", "usp") else ()
@@ -292,7 +293,7 @@ def main():
     # Keep retail-derived files in the private lab, with their source fingerprints.
     sounds = args.output / "sounds"
     sounds.mkdir(exist_ok=True)
-    required_sounds={"deagle-1.wav", "glock18-2.wav", "mp5-1.wav", "p90-1.wav", "m249-1.wav", "m3-1.wav", "xm1014-1.wav", "ak47-1.wav", "m4a1_unsil-1.wav", "usp_unsil-1.wav", "awp1.wav", "knife_slash1.wav", "knife_hit1.wav", "knife_hit2.wav", "knife_hit3.wav", "knife_hit4.wav", "knife_stab.wav", "knife_hitwall1.wav", "c4_plant.wav", "c4_click.wav",
+    required_sounds={"tmp-1.wav", "ump45-1.wav", "famas-1.wav", "galil-1.wav", "g3sg1-1.wav", "deagle-1.wav", "glock18-2.wav", "mp5-1.wav", "p90-1.wav", "m249-1.wav", "m3-1.wav", "xm1014-1.wav", "ak47-1.wav", "m4a1_unsil-1.wav", "usp_unsil-1.wav", "awp1.wav", "knife_slash1.wav", "knife_hit1.wav", "knife_hit2.wav", "knife_hit3.wav", "knife_hit4.wav", "knife_stab.wav", "knife_hitwall1.wav", "c4_plant.wav", "c4_click.wav",
                           "c4_explode1.wav", "c4_beep1.wav", "c4_beep3.wav", "c4_beep4.wav", "c4_beep5.wav"}
     # Engine-driven shell sounds are needed even when an owned shotgun model has no sound event.
     required_sounds.update({"m3_insertshell.wav", "m3_pump.wav"})
@@ -319,6 +320,10 @@ def main():
     print(json.dumps(export_rpg(args.cstrike, args.output), indent=2))
     from export_halflife_weapons import export as export_halflife
     print(json.dumps(export_halflife(args.cstrike, args.output), indent=2))
+    # Composite audio is generated only from the owner's files and remains optional for CS-only installations.
+    from export_nuclear_audio import export as export_nuclear_audio
+    mix_config = args.nuclear_config or args.output.parent / 'WarcraftCS.ini'
+    print(json.dumps(export_nuclear_audio(args.cstrike, args.output, mix_config), indent=2))
     print(json.dumps(manifest, indent=2))
 
 

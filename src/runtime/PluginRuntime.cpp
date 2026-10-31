@@ -407,7 +407,8 @@ static DWORD WINAPI Initialize(void*) {
     FpsCombatGuard::Install(base, []() { return healthy ? controller.ViewActor() : 0; },
         [](uintptr_t unit) { return healthy && controller.BlocksPassiveUnit(unit); },
         [](uintptr_t attack) { return healthy && controller.BlocksPassiveAttack(attack); }, Hook,
-        []() { return healthy ? controller.EnemyProtectedActor() : 0; });
+        []() { return healthy ? controller.EnemyProtectedActor() : 0; },
+        [](uintptr_t attack,uintptr_t target) {return healthy && controller.BlocksSmokeSight(attack,target);});
     NativeMovementGuard::Install(base,[]() { return healthy ? controller.ViewActor() : 0; },
         []() { return healthy && controller.NativeCastMovement(); },Hook);
     Hook(reinterpret_cast<void*>(base + wc3::Rva(0x3BC4D0)), reinterpret_cast<void*>(PauseHook), reinterpret_cast<void**>(&originalPause));

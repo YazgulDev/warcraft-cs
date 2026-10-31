@@ -424,7 +424,7 @@ $grenades=Join-Path $folder 'custom-grenades.ini'
 @('[Grenades]','Enabled=false','FuseSeconds=2.25','WorldModelScale=1.25','WorldSpinDegrees=180','[HEGrenade]','Price=777','Capacity=4','[Flashbang]','UnitStunSeconds=0','[SmokeGrenade]','DurationSeconds=7') | Set-Content -LiteralPath $grenades -Encoding ascii
 Update-GameplayConfig $template $grenades
 $grenadeText=Get-Content -LiteralPath $grenades -Raw
-foreach($setting in @('Enabled=false','FuseSeconds=2.25','WorldModelScale=1.25','WorldSpinDegrees=180','Price=777','Capacity=4','UnitStunSeconds=0','DurationSeconds=7','ThrowSpeed=1125','AmmoPrice=300','BlindSeconds=3','Opacity=0.85')) {
+foreach($setting in @('Enabled=false','FuseSeconds=2.25','WorldModelScale=1.25','WorldSpinDegrees=180','Price=777','Capacity=4','UnitStunSeconds=0','DurationSeconds=7','ThrowSpeed=1125','AmmoPrice=300','BlindSeconds=3','Opacity=0.99','VisibilityDistance=96','BlocksAI=true')) {
     if(!$grenadeText.Contains($setting)){throw "Grenade migration lost preference/default: $setting"}
 }
 foreach($section in @('Grenades','HEGrenade','Flashbang','SmokeGrenade')) {
@@ -599,3 +599,95 @@ Update-GameplayConfig $template $repairFresh
 $freshRepairText=Get-Content -LiteralPath $repairFresh -Raw
 foreach($key in @('EnergyHeadshots=true','HeadshotBoneWeight=0.35','ShowStatus=true','PlacementAttempts=12','LumberWorkers=2')) {if(!$freshRepairText.Contains($key)){throw ('Missing repair default: '+$key)}}
 Write-Output 'PASS head/contact and campaign economy config defaults and saved custom policies.'
+
+# Newly appended CS slots inherit complete defaults, while an existing smoke choice survives both updates.
+$arsenalSmoke=Join-Path $folder 'arsenal-smoke.ini'
+@('[TMP]','Price=987','Magazine=17','[G3SG1]','FireInterval=0.3','[SmokeGrenade]','Opacity=0.72','VisibilityDistance=52','BlocksAI=false') | Set-Content $arsenalSmoke
+Update-GameplayConfig $template $arsenalSmoke
+$upgraded=Get-Content $arsenalSmoke -Raw
+foreach($required in @('[TMP]','[UMP45]','[FAMAS]','[Galil]','[G3SG1]','Price=987','Magazine=17','FireInterval=0.3','Opacity=0.72','VisibilityDistance=52','BlocksAI=false')) {
+    if(!$upgraded.Contains($required)){throw "Arsenal/smoke migration missing $required"}
+}
+$arsenalSmokeHash=(Get-FileHash $arsenalSmoke).Hash;Update-GameplayConfig $template $arsenalSmoke
+if((Get-FileHash $arsenalSmoke).Hash -ne $arsenalSmokeHash){throw 'Arsenal/smoke migration is not idempotent.'}
+
+Write-Output 'PASS new CS sections and dense-smoke tuning preserve custom values across repeated updates.'
+
+# The settings menu fills missing sensitivity/sky keys and yields F2 to saved custom controls.
+$inGameConfig=Join-Path $folder 'ingame-settings.ini'
+@('[Mouse]','Sensitivity=2.75','ScopeSensitivity=0.6','[Audio]','CSVolumePercent=37','[Sky]','Visible=false','Default=forest','[Shortcuts]','ReloadSettings=F2') | Set-Content $inGameConfig
+Update-GameplayConfig $template $inGameConfig
+$inGameText=Get-Content $inGameConfig -Raw
+foreach($required in @('Sensitivity=2.75','ScopeSensitivity=0.6','CSVolumePercent=37','Visible=false','Default=forest','ReloadSettings=F2','SettingsMenu=F3')) {if(!$inGameText.Contains($required)){throw "Settings-menu migration lost $required"}}
+$inGameHash=(Get-FileHash $inGameConfig).Hash;Update-GameplayConfig $template $inGameConfig
+if((Get-FileHash $inGameConfig).Hash -ne $inGameHash){throw 'Settings-menu migration was not idempotent.'}
+Write-Output 'PASS in-game settings defaults, saved preferences and non-conflicting shortcut migration.'
+# Installer migration must insert new keys and preserve independent custom nuclear/chat choices.
+$nuclearConfig=Join-Path $folder 'nuclear-chat.ini'
+@('[NuclearBomb]','Code=PRIVATE_CODE','RepeatCodes=true','Radius=789','DelaySeconds=7','FlashSeconds=0','ShakeDegrees=0','DestroyBuildings=true','[Chat]','Enabled=false','MessageSeconds=19') | Set-Content $nuclearConfig
+Update-GameplayConfig $template $nuclearConfig
+$nuclearText=Get-Content $nuclearConfig -Raw
+foreach($required in @('Code=PRIVATE_CODE','RepeatCodes=true','Radius=789','DelaySeconds=7','FlashSeconds=0','ShakeDegrees=0','DestroyBuildings=true','KillRewards=true','BehaviorVersion=3','ExplosionScale=12','FlameDelaySeconds=0.8','FlameSeconds=7','SmokeSeconds=18','SmokeEmitters=37','ExplosionSound=layered','SoundVersion=2','DestroyNeutralBuildings=true','DestroyDestructables=true','Enabled=false','MessageSeconds=19')) {if(!$nuclearText.Contains($required)){throw "Nuclear/chat migration lost $required"}}
+$nuclearHash=(Get-FileHash $nuclearConfig).Hash;Update-GameplayConfig $template $nuclearConfig
+if((Get-FileHash $nuclearConfig).Hash -ne $nuclearHash){throw 'Nuclear/chat migration was not idempotent.'}
+Write-Output 'PASS nuclear/chat defaults and custom values across repeated upgrades.'
+
+# Upgrade only the former global stock radius, once; customized local radii remain intact.
+foreach($case in @(@('0','','8000'),@('0.0','1','8000'),@('789','','789'),@('0','2','0'))) {
+    $localNuclear=Join-Path $folder ('nuclear-radius-'+[guid]::NewGuid().ToString('N')+'.ini')
+    @('[NuclearBomb]',('Radius='+$case[0]),$(if($case[1]){'BehaviorVersion='+$case[1]}),'DestroyNeutralBuildings=false','DestroyDestructables=false') | Set-Content $localNuclear
+    Update-GameplayConfig $template $localNuclear
+    $updated=Get-Content $localNuclear -Raw
+    foreach($required in @(('Radius='+$case[2]),'BehaviorVersion=3','DestroyNeutralBuildings=false','DestroyDestructables=false')){if(!$updated.Contains($required)){throw "Local nuclear migration lost $required"}}
+    $once=(Get-FileHash $localNuclear).Hash;Update-GameplayConfig $template $localNuclear
+    if((Get-FileHash $localNuclear).Hash -ne $once){throw 'Local nuclear migration repeats.'}
+}
+Write-Output 'PASS local nuclear radius migration, preserved opt-outs and idempotence.'
+
+# The increased nuclear default applies to stock v2 saves, while v3 opt-backs and custom values survive.
+foreach($case in @(@('2','1600','6','8','8000','14','18'),@('3','1600','6','8','1600','6','8'),@('2','4321','9','12','4321','9','12'))) {
+    $tuningFile=Join-Path $folder ('nuclear-heavy-'+[guid]::NewGuid().ToString('N')+'.ini')
+    @('[NuclearBomb]',('BehaviorVersion='+$case[0]),('Radius='+$case[1]),('SmokeScale='+$case[2]),('SmokeSeconds='+$case[3]),'SmokeEmitters=12','ExplosionSound=off','ExplosionVolumePercent=23') | Set-Content $tuningFile
+    Update-GameplayConfig $template $tuningFile
+    $updated=Get-Content $tuningFile -Raw
+    foreach($required in @(('Radius='+$case[4]),('SmokeScale='+$case[5]),('SmokeSeconds='+$case[6]),'BehaviorVersion=3','SmokeEmitters=12','ExplosionSound=off','ExplosionVolumePercent=23')){if(!$updated.Contains($required)){throw "Heavy nuclear migration lost $required"}}
+    $once=(Get-FileHash $tuningFile).Hash;Update-GameplayConfig $template $tuningFile
+    if((Get-FileHash $tuningFile).Hash -ne $once){throw 'Heavy nuclear migration repeats.'}
+}
+Write-Output 'PASS increased nuclear stock radius/smoke and saved density/sound opt-outs.'
+
+# Enable the former stock building exclusion once; do not reset an explicit new policy opt-out or other tuning.
+foreach($case in @(@('','false','true'),@('1','0','true'),@('2','false','false'),@('2','true','true'))) {
+    $policyFile=Join-Path $folder ('nuclear-enemies-'+[guid]::NewGuid().ToString('N')+'.ini')
+    @('[NuclearBomb]',('DestroyBuildings='+$case[1]),$(if($case[0]){'DestructionVersion='+$case[0]}),'BehaviorVersion=3','Radius=4321','ForceEnemyDeath=false','ExplosionVolumePercent=23') | Set-Content $policyFile
+    Update-GameplayConfig $template $policyFile
+    $updated=Get-Content $policyFile -Raw
+    foreach($required in @(('DestroyBuildings='+$case[2]),'DestructionVersion=2','Radius=4321','ForceEnemyDeath=false','ExplosionVolumePercent=23')){if(!$updated.Contains($required)){throw "Nuclear enemy policy migration lost $required"}}
+    $once=(Get-FileHash $policyFile).Hash;Update-GameplayConfig $template $policyFile
+    if((Get-FileHash $policyFile).Hash -ne $once){throw 'Enemy policy migration repeats.'}
+}
+Write-Output 'PASS nuclear hostile-building policy upgrade and explicit opt-out preservation.'
+
+# Composite audio selection upgrades stock once and retains authored mix preferences across installs.
+foreach($case in @(@('','sapper','layered'),@('1','city','city'),@('','off','off'),@('2','sapper','sapper'))) {
+    $audioFile=Join-Path $folder ('nuclear-audio-'+[guid]::NewGuid().ToString('N')+'.ini')
+    @('[NuclearBomb]',('ExplosionSound='+$case[1]),$(if($case[0]){'SoundVersion='+$case[0]}),'ExplosionVolumePercent=23','[NuclearAudio]','MortarPitch=0.9','RumbleSeconds=4','DebrisVolume=0') | Set-Content $audioFile
+    Update-GameplayConfig $template $audioFile
+    $updated=Get-Content $audioFile -Raw
+    foreach($required in @(('ExplosionSound='+$case[2]),'SoundVersion=2','ExplosionVolumePercent=23','MortarPitch=0.9','RumbleSeconds=4','DebrisVolume=0','C4Volume=0.85')){if(!$updated.Contains($required)){throw "Nuclear mix migration lost $required"}}
+    $once=(Get-FileHash $audioFile).Hash;Update-GameplayConfig $template $audioFile
+    if((Get-FileHash $audioFile).Hash -ne $once){throw 'Nuclear mix migration repeats.'}
+}
+Write-Output 'PASS layered nuclear cue migration, muted/custom selection and saved mix controls.'
+
+# Rename only the old stock code; repeated installs retain custom commands and nuclear tuning.
+foreach($case in @(@('PUTINMOLODEC','warneverchanges'),@('putinmolodec','warneverchanges'),@('warneverchanges','warneverchanges'),@('MY_CODE-9','MY_CODE-9'))) {
+    $codeFile=Join-Path $folder ('nuclear-code-'+[guid]::NewGuid().ToString('N')+'.ini')
+    @('[NuclearBomb]',('Code='+$case[0]),'Radius=4321','RepeatCodes=true') | Set-Content $codeFile
+    Update-GameplayConfig $template $codeFile
+    $updated=Get-Content $codeFile -Raw
+    foreach($required in @(('Code='+$case[1]),'Radius=4321','RepeatCodes=true')){if(!$updated.Contains($required)){throw "Nuclear code migration lost $required"}}
+    $once=(Get-FileHash $codeFile).Hash;Update-GameplayConfig $template $codeFile
+    if((Get-FileHash $codeFile).Hash -ne $once){throw 'Nuclear code migration repeats.'}
+}
+Write-Output 'PASS nuclear grant code rename, saved custom codes and repeated installation.'

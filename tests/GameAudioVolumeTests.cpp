@@ -53,7 +53,7 @@ int main(int count,char** arguments) {
             128,128,128,'L','I','S','T',4,0,0,0,'I','N','F','O'};
         std::ofstream file(sounds/"odd-pin.wav",std::ios::binary);file.write(reinterpret_cast<const char*>(odd),sizeof(odd));
     }
-    for(auto name:{"m3_insertshell.wav","m3_pump.wav"})std::filesystem::copy_file(sounds/"volume-test.wav",sounds/name);
+    for(auto name:{"m3_insertshell.wav","m3_pump.wav","hl_egon_windup2.wav"})std::filesystem::copy_file(sounds/"volume-test.wav",sounds/name);
     // An incompatible COM apartment forces optional audio setup to fail; model timing must still load.
     {
         std::ofstream timeline(root/"assets"/"m3.wca",std::ios::binary);
@@ -76,6 +76,7 @@ int main(int count,char** arguments) {
     // Failed/uninitialized audio remains safe; configured tests query the actual XAudio2 master gain.
     audio.SetVolumePercent(50);RequireVolume(audio,0);
     audio.Configure(root.string());RequireVolume(audio,100);
+    assert(audio.HasClip("odd-pin.wav") && !audio.HasClip("nuclear_blast.wav"));
     audio.Play("odd-pin.wav",0);assert(SoundCount("odd-pin.wav")==1);
     // Motor loops start/stop once, including repeated render updates and the ordinary stop-all boundary.
     auto loopEvents=[&]{return std::count_if(output.begin(),output.end(),[](const std::string& s){return s.find("CS loop=volume-test.wav")==0;});};
@@ -88,14 +89,34 @@ int main(int count,char** arguments) {
     audio.SetLoopPitch("volume-test.wav",100);RequirePitch(audio,4);
     audio.SetLoopPitch("volume-test.wav",std::numeric_limits<float>::quiet_NaN());RequirePitch(audio,1);
     audio.SetLoop("volume-test.wav",false);RequirePitch(audio,1);
+    // A stop log is insufficient: the real device cursor must stop consuming the former infinite buffer.
+    unsigned leaked=0;
+    for(int i=0;i<12;++i){
+        audio.SetLoop("volume-test.wav",true,0);Sleep(30);
+        audio.SetLoop("volume-test.wav",false);Sleep(40);auto stopped=audio.SamplesPlayed("volume-test.wav");
+        Sleep(40);if(audio.SamplesPlayed("volume-test.wav")!=stopped)++leaked;
+    }
+    printf("Audio motor still consuming after release: %u/12\n",leaked);fflush(stdout);assert(!leaked);
+    // A brief Gluon tap cancels its long startup cue, preserves another sound and can start again immediately.
+    audio.Play("hl_egon_windup2.wav",0);audio.Play("m3_pump.wav",0);Sleep(30);
+    assert(audio.SamplesPlayed("hl_egon_windup2.wav")>0);
+    audio.StopClip("hl_egon_windup2.wav");audio.StopClip("missing.wav");Sleep(40);
+    auto canceled=audio.SamplesPlayed("hl_egon_windup2.wav"),other=audio.SamplesPlayed("m3_pump.wav");Sleep(40);
+    assert(audio.SamplesPlayed("hl_egon_windup2.wav")==canceled && audio.SamplesPlayed("m3_pump.wav")>other);
+    audio.Play("hl_egon_windup2.wav",0);Sleep(30);auto restarted=audio.SamplesPlayed("hl_egon_windup2.wav");Sleep(30);
+    assert(audio.SamplesPlayed("hl_egon_windup2.wav")>restarted);audio.Stop();Sleep(40);
+    canceled=audio.SamplesPlayed("hl_egon_windup2.wav");Sleep(40);assert(audio.SamplesPlayed("hl_egon_windup2.wav")==canceled);
+    // One-shots of the motor sample cannot borrow its retained loop voice after release.
+    for(int i=0;i<16;++i)audio.Play("volume-test.wav",0);
+    Sleep(1200);auto finished=audio.SamplesPlayed("volume-test.wav");Sleep(40);assert(audio.SamplesPlayed("volume-test.wav")==finished);
     // Both authored M3 audio and the missing-event XM fallback play exactly one real source voice per insert.
-    size_t before=SoundCount("m3_insertshell.wav");DWORD now=GetTickCount();
+    size_t pumps=SoundCount("m3_pump.wav"),before=SoundCount("m3_insertshell.wav");DWORD now=GetTickCount();
     audio.BeginAnimation(WeaponSlots::M3,"insert",now);audio.Tick(now+1000);
     assert(SoundCount("m3_insertshell.wav")==before+1);
     audio.BeginAnimation(WeaponSlots::XM1014,"insert",now);audio.Tick(now+1000);
     assert(SoundCount("m3_insertshell.wav")==before+2);
     audio.BeginAnimation(WeaponSlots::M3,"after_reload",now);audio.Tick(now+1000);
-    assert(SoundCount("m3_pump.wav")==1);
+    assert(SoundCount("m3_pump.wav")==pumps+1);
     const auto ini=(root/"WarcraftCS.ini").string();
     for (const auto value : {"50","0","12.5","100"}) {
         WritePrivateProfileStringA("Audio","CSVolumePercent",value,ini.c_str());

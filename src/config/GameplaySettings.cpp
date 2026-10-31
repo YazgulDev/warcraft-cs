@@ -24,6 +24,9 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         if (end==value.c_str() || *end || !std::isfinite(parsed)) { wc3::Log("Invalid config %s.%s; using default",section,key);return fallback; }
         return std::clamp(parsed,0.0f,maximum);
     };
+    // Both gains are multipliers: validated unit defaults retain the existing raw/fallback look speeds.
+    result.mouse.sensitivity=std::max(.1f,number("Mouse","Sensitivity",1,5));
+    result.mouse.scopeSensitivity=std::max(.1f,number("Mouse","ScopeSensitivity",1,5));
     // New session controls reload with F8; malformed toggles preserve their documented defaults.
     auto enabled=[&](const char* section,const char* key,bool fallback=true) {
         auto value=text(section,key,fallback ? "true" : "false");
@@ -31,6 +34,54 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         if(!_stricmp(value.c_str(),"false") || value=="0")return false;
         return fallback; // Malformed values retain the documented default, including opt-in native audio.
     };
+    // Code-only nuclear settings are validated in the same F8 snapshot as ordinary weapons.
+    result.chatEnabled=enabled("Chat","Enabled");
+    result.chatMessageSeconds=number("Chat","MessageSeconds",10,60);
+    auto& nuclear=result.nuclear;
+    nuclear.enabled=enabled("NuclearBomb","Enabled");
+    nuclear.repeatCodes=enabled("NuclearBomb","RepeatCodes",false);
+    nuclear.buildings=enabled("NuclearBomb","DestroyBuildings");
+    nuclear.forceEnemyDeath=enabled("NuclearBomb","ForceEnemyDeath");
+    // Pre-v2 clients saved the old false building default. Upgrade only that policy group once.
+    if(number("NuclearBomb","DestructionVersion",1,2)<2)nuclear.buildings=true;
+    nuclear.rewards=enabled("NuclearBomb","KillRewards");
+    nuclear.radius=std::max(100.f,number("NuclearBomb","Radius",8000,20000));
+    nuclear.visualRadius=std::max(64.f,number("NuclearBomb","VisualRadius",3200,8000));
+    nuclear.neutralBuildings=enabled("NuclearBomb","DestroyNeutralBuildings");
+    nuclear.neutralUnits=enabled("NuclearBomb","DestroyNeutralUnits");
+    nuclear.destructables=enabled("NuclearBomb","DestroyDestructables");
+    nuclear.explosionScale=std::max(.25f,number("NuclearBomb","ExplosionScale",12,20));
+    nuclear.flameScale=std::max(.25f,number("NuclearBomb","FlameScale",7,15));
+    nuclear.smokeScale=std::max(.25f,number("NuclearBomb","SmokeScale",14,30));
+    nuclear.flameDelay=number("NuclearBomb","FlameDelaySeconds",.8f,5);
+    nuclear.flameSeconds=std::max(.5f,number("NuclearBomb","FlameSeconds",7,15));
+    nuclear.smokeSeconds=std::max(1.f,number("NuclearBomb","SmokeSeconds",18,45));
+    nuclear.screenRadius=number("NuclearBomb","ScreenEffectRadius",10000,20000);
+    nuclear.smokeEmitters=int(std::max(1.f,number("NuclearBomb","SmokeEmitters",37,49)));
+    nuclear.explosionVolumePercent=number("NuclearBomb","ExplosionVolumePercent",100,100);
+    auto cue=text("NuclearBomb","ExplosionSound","layered");
+    for(const char* allowed:{"layered","sapper","city","artillery","off"})if(!_stricmp(cue.c_str(),allowed))nuclear.explosionSound=allowed;
+    // Replace the former stock cue once; explicit new-version choices and older custom cues remain selectable.
+    if(number("NuclearBomb","SoundVersion",1,2)<2 && nuclear.explosionSound=="sapper")nuclear.explosionSound="layered";
+    // Versioned stock tuning upgrades once; explicit v3/custom values and opt-outs remain authoritative.
+    float nuclearVersion=number("NuclearBomb","BehaviorVersion",1,3);
+    if(nuclearVersion<3){
+        auto upgrade=[&](const char* key,float oldValue,float replacement,float& setting){
+            auto raw=text("NuclearBomb",key,"");char* end=nullptr;float value=std::strtof(raw.c_str(),&end);
+            if(end!=raw.c_str() && !*end && value==oldValue)setting=replacement;
+        };
+        upgrade("Radius",1600,8000,nuclear.radius);
+        if(nuclearVersion<2)upgrade("Radius",0,8000,nuclear.radius);
+        upgrade("VisualRadius",1200,3200,nuclear.visualRadius);upgrade("ExplosionScale",8,12,nuclear.explosionScale);
+        upgrade("FlameScale",5,7,nuclear.flameScale);upgrade("SmokeScale",6,14,nuclear.smokeScale);
+        upgrade("SmokeSeconds",8,18,nuclear.smokeSeconds);upgrade("ScreenEffectRadius",2400,10000,nuclear.screenRadius);
+    }
+    nuclear.flashSeconds=number("NuclearBomb","FlashSeconds",.65f,3);
+    nuclear.shakeDegrees=number("NuclearBomb","ShakeDegrees",.6f,3);
+    auto nuclearCode=text("NuclearBomb","Code","warneverchanges");
+    // F8 also upgrades the former stock code; unrelated player-defined codes remain valid.
+    if(!_stricmp(nuclearCode.c_str(),"PUTINMOLODEC"))nuclearCode="warneverchanges";
+    if(!nuclearCode.empty() && nuclearCode.size()<=64 && nuclearCode.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-" )==std::string::npos)nuclear.code=nuclearCode;
     // Visual-only settings share the real startup/F8 snapshot and bounded migration path.
     result.viewmodel.bob=enabled("Viewmodel","BobEnabled");
     result.viewmodel.bobAmount=number("Viewmodel","BobAmount",1,3);
@@ -64,7 +115,9 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     grenades.flashStunDistanceFalloff=enabled("Flashbang","StunDistanceFalloff",false);
     grenades.smokeRadius=std::max(32.f,number("SmokeGrenade","Radius",300,1000));
     grenades.smokeSeconds=std::max(1.f,number("SmokeGrenade","DurationSeconds",18,60));
-    grenades.smokeOpacity=number("SmokeGrenade","Opacity",.85f,1);
+    grenades.smokeOpacity=number("SmokeGrenade","Opacity",.99f,1);
+    grenades.smokeVisibilityDistance=std::max(16.f,number("SmokeGrenade","VisibilityDistance",96,600));
+    grenades.smokeBlocksAI=enabled("SmokeGrenade","BlocksAI");
     grenades.maxActive=unsigned(std::max(1.f,number("Grenades","MaxActive",32,128)));
     grenades.worldModelScale=std::max(.25f,number("Grenades","WorldModelScale",1,4));
     grenades.worldSpin=number("Grenades","WorldSpinDegrees",360,1440);
@@ -308,6 +361,12 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
             result.shortcuts.Set(action,0);break;
         }
     }
+    if(text("Shortcuts","SettingsMenu","").empty()) {
+        for(int candidate:{VK_F2,VK_F3,VK_F4,VK_F5,0}) {
+            bool used=false;for(size_t i=0;i<size_t(ShortcutAction::SettingsMenu);++i)used|=candidate && result.shortcuts.Key(ShortcutAction(i))==candidate;
+            if(!used){result.shortcuts.Set(ShortcutAction::SettingsMenu,candidate);break;}
+        }
+    }
     if(!layoutValid || !result.shortcuts.Valid()) {result.shortcuts=ShortcutBindings();wc3::Log("Invalid/conflicting Shortcuts; using default keyboard layout");}
     // Rawcodes and order IDs describe existing abilities; they never grant skills or bypass native costs.
     auto spellsEnabled=text("Spells","Enabled","true");
@@ -474,9 +533,10 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     auto unlimitedBombs=text("Loadout","UnlimitedBombPurchases","true");
     if(!_stricmp(unlimitedBombs.c_str(),"false") || unlimitedBombs=="0")result.unlimitedBombPurchases=false;
     else if(_stricmp(unlimitedBombs.c_str(),"true") && unlimitedBombs!="1")wc3::Log("Invalid Loadout.UnlimitedBombPurchases; using true");
-    result.csSky=_stricmp(text("Sky","Enabled","false").c_str(),"false")!=0;
+    result.skyVisible=enabled("Sky","Visible");
+    result.csSky=enabled("Sky","Enabled",false);
     // Default to Warcraft's sky even for older configs missing this key; explicit CS sky still takes precedence.
-    result.nativeSky=_stricmp(text("Sky","WarcraftEnabled","true").c_str(),"true")==0;
+    result.nativeSky=enabled("Sky","WarcraftEnabled");
     // Only filename stems from private CS caches are accepted; INI strings never become arbitrary paths.
     auto sky=[&](const char* key,const char* fallback) {
         auto value=text("Sky",key,fallback);

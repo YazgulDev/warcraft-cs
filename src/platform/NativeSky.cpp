@@ -13,9 +13,9 @@ bool NativeSky::Configure(uintptr_t base) {
 }
 void NativeSky::Reset() {
     // Unloaded map pointers must never be restored into the next map.
-    frame_=0;applied_=false;model_.clear();
+    frame_=0;applied_=hidden_=false;model_.clear();hiddenMapModel_.clear();
 }
-void NativeSky::Update(uintptr_t ui, bool enabled, char tileset) {
+void NativeSky::Update(uintptr_t ui, bool enabled, char tileset,bool hidden) {
     if (!base_ || !ui) return;
     uintptr_t frame=*reinterpret_cast<uintptr_t*>(ui+0x3BC);
     if (!frame) return;
@@ -26,6 +26,20 @@ void NativeSky::Update(uintptr_t ui, bool enabled, char tileset) {
     const char* current=reinterpret_cast<Get>(base_ + wc3::Rva(0x4C4630))(frame+0x348,0);
     // Map scripts may replace our preview during a cinematic; never undo their new sky.
     if (applied_ && (!current || _stricmp(current,model_.c_str()))) applied_=false;
+    // Unlike the old fill-missing-sky preference, visibility also hides a map-authored sky.
+    // Preserve the newest map replacement and restore only while our cleared slot is still empty.
+    if(hidden) {
+        if(!hidden_ || (current && *current)) {
+            hiddenMapModel_=applied_ ? "" : current ? current : "";
+            set(frame,nullptr);applied_=false;hidden_=true;wc3::Log("Native FPS sky hidden");
+        }
+        return;
+    }
+    if(hidden_) {
+        if((!current || !*current) && !hiddenMapModel_.empty())set(frame,hiddenMapModel_.c_str());
+        hidden_=false;hiddenMapModel_.clear();current=reinterpret_cast<Get>(base_+wc3::Rva(0x4C4630))(frame+0x348,0);
+        wc3::Log("Native FPS sky visibility restored");
+    }
     if (!enabled) {
         if (applied_) {set(frame,nullptr);wc3::Log("Native FPS sky restored to map default");}
         applied_=false;return;

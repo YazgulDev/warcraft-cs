@@ -1,6 +1,6 @@
 # Portrait, gore and camera preview
 
-Local work after 0.15.0; published 0.15.0 assets remain unchanged.
+Implementation history for [release 0.16.0](RELEASE-0.16.0.md), developed after 0.15.0. Published 0.15.0 assets remain unchanged.
 
 Direct3D portrait capture now disables inherited scissor before clearing its private color/depth buffer. Previously, a native world-band scissor could exclude the small portrait target: the retained nearer face depth rejected later animation frames. Capture also restores the preceding viewport when native UI resumes with a projection change alone. The hidden HAL regression renders a later, farther-depth face frame under the inherited scissor; it fails on the previous order and passes after the fix.
 

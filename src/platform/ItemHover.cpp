@@ -25,6 +25,8 @@ void ItemHover::Update(wc3::Handle actor,const float* origin,const float* direct
     WeaponTrace::Options trace;trace.includeAllies=true;trace.surfaceOnMiss=true;
     auto blocker=WeaponTrace::Cast(actor,origin,direction,nearest,settings,units,objects,base,trace);
     if(blocker.target || blocker.distance<nearest-.001f){Clear();return;}
+    position_={wc3::Real(wc3::GetItemX(item_)),wc3::Real(wc3::GetItemY(item_)),0};
+    position_[2]=wc3::Ground(position_[0],position_[1])+tuning.radius*.75f;
     int type=wc3::GetItemTypeId(item_);auto name=names_.find(type);
     if(name==names_.end())name=names_.emplace(type,GameText::Label(wc3::ItemName(item_))).first;
     name_=name->second;if(name_.empty())Clear();

@@ -8,7 +8,7 @@ quests and combat rules. Third-person and unarmed first-person views are also av
 [Install and play](INSTALL.md) · [Documentation](docs/README.md) ·
 [Discussions](https://github.com/YazgulDev/warcraft-cs/discussions)
 
-**Release 0.15.0:** optional Direct3D for 1.26a, saved OpenGL/Direct3D selection, native minimap and corrected portrait/inventory presentation in Direct3D, and a steadier camera on slopes. See [downloads and all changes](docs/RELEASE-0.15.0.md). [1.27a/D3D9 support remains experimental](docs/PORT-1.27.md).
+**Release 0.16.0:** animated Direct3D portrait fixes, head removal on fatal headshots, stronger head blood, small body-impact blood and smoother first-person ground-height transitions. See [downloads and all changes](docs/RELEASE-0.16.0.md). [1.27a/D3D9 support remains experimental](docs/PORT-1.27.md).
 
 ## Start here
 

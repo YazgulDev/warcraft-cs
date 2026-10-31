@@ -10,11 +10,12 @@
 | [Requirements](../REQUIREMENTS.md) | Supported host, owned game files and build dependencies |
 | [Controls](CONTROLS.md) | Movement, view modes, buying, spells, inventory and squads |
 | [Settings](CONFIGURATION.md) | INI location, live reload and configuration by topic |
+| [In-game settings](INGAME-SETTINGS.md) | F2 mouse sensitivity, audio, physics, view distance and sky controls |
 | [Compatibility](COMPATIBILITY.md) | Supported versions, map limits and missing features |
 | [Direct3D for 1.26a](DIRECT3D-126A-PREVIEW.md) | Renderer selection, automatic private components and local verification |
 | [Troubleshooting](../TROUBLESHOOTING.md) | Installation, graphics, audio and reporting a problem |
 
-Current release: [0.15.0 — downloads, upgrade and complete changes](RELEASE-0.15.0.md). Earlier local preview notes are retained as implementation history; the release notes describe final behavior.
+Current release: [0.16.0 — downloads, upgrade and complete changes](RELEASE-0.16.0.md). Earlier local preview notes are retained as implementation history; the release notes describe final behavior.
 
 ## Gameplay guides
 
@@ -44,7 +45,9 @@ Current release: [0.15.0 — downloads, upgrade and complete changes](RELEASE-0.
 
 Read the [changelog](../CHANGELOG.md) for the full history and
 [GitHub Releases](https://github.com/YazgulDev/warcraft-cs/releases) for downloads.
-Detailed notes: [0.14.0](RELEASE-0.14.0.md), [0.13.0](RELEASE-0.13.0.md), [0.12.0](RELEASE-0.12.0.md), [0.11.0](RELEASE-0.11.0.md), [0.10.0](RELEASE-0.10.0.md),
+Detailed notes: [0.15.0](RELEASE-0.15.0.md), [0.14.0](RELEASE-0.14.0.md), [0.13.0](RELEASE-0.13.0.md), [0.12.0](RELEASE-0.12.0.md), [0.11.0](RELEASE-0.11.0.md), [0.10.0](RELEASE-0.10.0.md),
 [0.9.1](RELEASE-0.9.1.md), [0.9.0](RELEASE-0.9.0.md), [0.8.0](RELEASE-0.8.0.md),
 [0.7.0](RELEASE-0.7.0.md), [0.6.1](RELEASE-0.6.1.md), [0.6.0](RELEASE-0.6.0.md),
 [0.5.1](RELEASE-0.5.1.md).
+
+- [Nuclear bomb and FPS text input preview](NUCLEAR-CHAT-PREVIEW.md)
