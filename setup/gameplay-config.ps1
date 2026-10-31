@@ -31,6 +31,15 @@ function Update-GameplayConfig([string]$Template,[string]$Destination) {
         }
         if($nuclearVersionIndex -ge 0){$lines[$nuclearVersionIndex]='BehaviorVersion=3';$changed=$true}
     }
+    # The requested enemy-building default upgrades separately from radius/smoke tuning.
+    $destructionVersion=1;$destructionVersionIndex=-1
+    $saved=$nuclearValues['DestructionVersion']
+    if($saved){$destructionVersionIndex=$saved[0];if(![int]::TryParse($saved[1],[ref]$destructionVersion)){$destructionVersion=1}}
+    if($destructionVersion -lt 2) {
+        $saved=$nuclearValues['DestroyBuildings']
+        if($saved -and $saved[1] -in @('false','0')){$lines[$saved[0]]='DestroyBuildings=true';$changed=$true}
+        if($destructionVersionIndex -ge 0){$lines[$destructionVersionIndex]='DestructionVersion=2';$changed=$true}
+    }
     # Upgrade the former stock head spray together once; custom values and versioned opt-backs remain intact.
     $bloodSection=$false;$bloodVersion=1;$bloodVersionIndex=-1;$bloodValues=@{}
     for($i=0;$i -lt $lines.Count;$i++) {

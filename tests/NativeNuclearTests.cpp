@@ -50,18 +50,22 @@ int main(){
     wc3::GetDestructableX=[](wc3::Handle u){return Bits(u==23 ? 16000.f : 50.f);};wc3::GetDestructableY=[](wc3::Handle){return Bits(0);};
     wc3::KillUnit=[](wc3::Handle u){health[u]=0;++forced;};
     wc3::UnitDamageTarget=[](wc3::Handle actor,wc3::Handle target,float* damage,BOOL attack,BOOL ranged,int attackType,int damageType,int)->BOOL{
-        assert(actor==1 && !attack && ranged && attackType==5 && damageType==26);++damages;if(target!=9)health[target]-=*damage;
+        assert(actor==1 && !attack && ranged && attackType==5 && damageType==26);++damages;if(target!=8 && target!=9 && target!=11)health[target]-=*damage;
         if(resetOnDamage)resetOnDamage->Reset();return TRUE;
     };
     GameAudio audio;NativeNuclearBomb bomb;NativeRockets rockets;GameplaySettings settings;auto sink=[](const KillReward& reward){assert(reward.owner==100);++rewardCount;};
     Scene();assert(bomb.Launch(1,{0,0,96},{1,0,0},{},settings,rockets));assert(bomb.Flying() && payload);assert(!bomb.Launch(1,{0,0,96},{1,0,0},{},settings,rockets));clockSeconds=5;bomb.Tick(audio,sink);assert(!damages && effectModels.empty());
-    payload({0,0,0});bomb.Tick(audio,sink);assert(!bomb.Flying() && damages==4 && rewardCount==2 && forced==1 && props==2);
+    payload({0,0,0});bomb.Tick(audio,sink);assert(!bomb.Flying() && damages==6 && rewardCount==3 && forced==3 && props==2);
     assert(sounds==1 && lastSound.find("SapperBlowsUp.wav")!=std::string::npos && lastGain==1);
-    assert(health[2]<0 && health[3]<0 && health[5]<0 && health[9]==0);for(int i:{1,4,6,7,8,10,11,12,23})assert(health[i]==1000);
+    assert(health[2]<0 && health[3]<0 && health[5]<0 && health[9]==0 && health[8]==0 && health[11]==0);for(int i:{1,4,6,7,10,12,23})assert(health[i]==1000);
     assert(effectModels.size()==1 && effectModels[0].find("NeutralBuildingExplosion")!=std::string::npos);assert(bomb.Exposure({30000,0,0})==0 && bomb.Exposure({0,0,0})==1);
     clockSeconds=5.9f;bomb.Tick(audio,sink);assert(effectModels.size()==9 && effectModels[1].find("FlameStrike1")!=std::string::npos);
     clockSeconds=13;bomb.Tick(audio,sink);assert(effectModels.size()==46 && effectModels.back().find("SmokeSmudge0")!=std::string::npos);
     clockSeconds=32;bomb.Tick(audio,sink);assert(!bomb.Active() && destroyed==1);
+    // Deliberate opt-outs retain invulnerable enemies and hostile buildings without affecting allies.
+    bomb.Reset();Scene();settings.nuclear.buildings=false;settings.nuclear.forceEnemyDeath=false;
+    assert(bomb.Launch(1,{0,0,96},{1,0,0},{},settings,rockets));payload({0,0,0});bomb.Tick(audio,sink);
+    assert(health[8]==1000 && health[11]==1000 && health[4]==1000 && forced==1);
     // Disable neutral/terrain policy independently; launch snapshots ignore later F8 changes.
     bomb.Reset();Scene();settings.nuclear.neutralBuildings=settings.nuclear.neutralUnits=settings.nuclear.destructables=false;settings.nuclear.rewards=false;settings.nuclear.flashSeconds=settings.nuclear.shakeDegrees=0;
     assert(bomb.Launch(1,{0,0,96},{1,0,0},{},settings,rockets));settings.nuclear.neutralBuildings=true;payload({0,0,0});bomb.Tick(audio,sink);

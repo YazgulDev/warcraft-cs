@@ -40,7 +40,10 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     auto& nuclear=result.nuclear;
     nuclear.enabled=enabled("NuclearBomb","Enabled");
     nuclear.repeatCodes=enabled("NuclearBomb","RepeatCodes",false);
-    nuclear.buildings=enabled("NuclearBomb","DestroyBuildings",false);
+    nuclear.buildings=enabled("NuclearBomb","DestroyBuildings");
+    nuclear.forceEnemyDeath=enabled("NuclearBomb","ForceEnemyDeath");
+    // Pre-v2 clients saved the old false building default. Upgrade only that policy group once.
+    if(number("NuclearBomb","DestructionVersion",1,2)<2)nuclear.buildings=true;
     nuclear.rewards=enabled("NuclearBomb","KillRewards");
     nuclear.radius=std::max(100.f,number("NuclearBomb","Radius",8000,20000));
     nuclear.visualRadius=std::max(64.f,number("NuclearBomb","VisualRadius",3200,8000));

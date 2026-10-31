@@ -655,3 +655,15 @@ foreach($case in @(@('2','1600','6','8','8000','14','18'),@('3','1600','6','8','
     if((Get-FileHash $tuningFile).Hash -ne $once){throw 'Heavy nuclear migration repeats.'}
 }
 Write-Output 'PASS increased nuclear stock radius/smoke and saved density/sound opt-outs.'
+
+# Enable the former stock building exclusion once; do not reset an explicit new policy opt-out or other tuning.
+foreach($case in @(@('','false','true'),@('1','0','true'),@('2','false','false'),@('2','true','true'))) {
+    $policyFile=Join-Path $folder ('nuclear-enemies-'+[guid]::NewGuid().ToString('N')+'.ini')
+    @('[NuclearBomb]',('DestroyBuildings='+$case[1]),$(if($case[0]){'DestructionVersion='+$case[0]}),'BehaviorVersion=3','Radius=4321','ForceEnemyDeath=false','ExplosionVolumePercent=23') | Set-Content $policyFile
+    Update-GameplayConfig $template $policyFile
+    $updated=Get-Content $policyFile -Raw
+    foreach($required in @(('DestroyBuildings='+$case[2]),'DestructionVersion=2','Radius=4321','ForceEnemyDeath=false','ExplosionVolumePercent=23')){if(!$updated.Contains($required)){throw "Nuclear enemy policy migration lost $required"}}
+    $once=(Get-FileHash $policyFile).Hash;Update-GameplayConfig $template $policyFile
+    if((Get-FileHash $policyFile).Hash -ne $once){throw 'Enemy policy migration repeats.'}
+}
+Write-Output 'PASS nuclear hostile-building policy upgrade and explicit opt-out preservation.'

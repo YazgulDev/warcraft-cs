@@ -258,12 +258,13 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
             wc3::Log("fixture nuclear textOpen=%d selected=%d active=%d remaining=%.2f age=%.2f serial=%u ammo=%d gold=%d speed=%.2f",controller.TextInputOpen(),controller.NuclearSelected(),controller.NuclearBomb().Active(),controller.NuclearBomb().Remaining(),controller.NuclearBomb().Age(),controller.ShotSerial(),controller.Ammo(),wc3::GetPlayerState(wc3::GetLocalPlayer(),1),controller.DisplaySpeed());
         }
         else if(BackgroundGameplay::Enabled() && command=="nuclearimpactscene") {
+            // Include an allied tower and Avul hostile tower/creature to verify the requested death policy.
             party.clear();nuclearScenery.clear();float x=-1000,y=-1000,angle=0,scale=1;
-            const int owners[]={12,12,15,0,1,15,12,15,12};
-            const int types[]={0x6E6F6772,0x75676172,0x6E746176,0x68666F6F,0x68746F77,0x6E736865,0x75637279,0x6E746176,0x6E6F6772};
-            const float dx[]={200,300,-50,300,600,450,3500,3500,600},dy[]={250,450,100,600,600,-350,1800,2200,-200};
+            const int owners[]={12,12,15,0,1,15,12,15,12,0};
+            const int types[]={0x6E6F6772,0x75676172,0x6E746176,0x68666F6F,0x68746F77,0x6E736865,0x75637279,0x6E746176,0x6E6F6772,0x68746F77};
+            const float dx[]={200,300,-50,300,600,450,3500,3500,600,800},dy[]={250,450,100,600,600,-350,1800,2200,-200,900};
             using Add=BOOL (__cdecl*)(wc3::Handle,int);
-            for(int i=0;i<9;++i){float px=x+dx[i],py=y+dy[i];auto target=wc3::CreateUnit(wc3::Player(owners[i]),types[i],&px,&py,&angle);party.push_back(target);if(target)wc3::PauseUnit(target,TRUE);if(i==2 || i==8)reinterpret_cast<Add>(base+0x3C82A0)(target,0x4176756C);}
+            for(int i=0;i<10;++i){float px=x+dx[i],py=y+dy[i];auto target=wc3::CreateUnit(wc3::Player(owners[i]),types[i],&px,&py,&angle);party.push_back(target);if(target)wc3::PauseUnit(target,TRUE);if(i==2 || i==4 || i==8)reinterpret_cast<Add>(base+0x3C82A0)(target,0x4176756C);}
             for(int i=0;i<3;++i){float px=x+(i==2 ? 4000.f : 400+i*200.f),py=y-200;auto prop=wc3::CreateDestructable(i==1 ? 0x4C546261 : 0x4C546C74,&px,&py,&angle,&scale,0);nuclearScenery.push_back(prop);
                 if(i==1)reinterpret_cast<void (__cdecl*)(wc3::Handle,BOOL)>(base+0x3C4770)(prop,TRUE);}
             controller.TestAimPoint(x,y,8);wc3::Log("fixture nuclear impact scene units=%u props=%u",unsigned(party.size()),unsigned(nuclearScenery.size()));
