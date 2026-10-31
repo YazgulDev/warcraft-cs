@@ -13,6 +13,18 @@ function Update-GameplayConfig([string]$Template,[string]$Destination) {
     $lines=[Collections.Generic.List[string]]::new()
     $lines.AddRange([string[]]@(Get-Content -LiteralPath $Destination))
     $changed=$false
+    # Nuclear v2 replaces the former map-wide stock radius with a local RPG impact once.
+    $nuclearSection=$false;$nuclearVersion=1;$nuclearRadius=-1;$nuclearVersionIndex=-1
+    for($i=0;$i -lt $lines.Count;$i++) {
+        if($lines[$i] -match '^\s*\[([^\]]+)\]\s*$'){$nuclearSection=$Matches[1] -eq 'NuclearBomb';continue}
+        if(!$nuclearSection){continue}
+        if($lines[$i] -match '^\s*BehaviorVersion\s*=\s*(.*?)\s*$'){$nuclearVersionIndex=$i;if(![int]::TryParse($Matches[1],[ref]$nuclearVersion)){$nuclearVersion=1}}
+        if($lines[$i] -match '^\s*Radius\s*=\s*0(?:\.0*)?\s*$'){$nuclearRadius=$i}
+    }
+    if($nuclearVersion -lt 2) {
+        if($nuclearRadius -ge 0){$lines[$nuclearRadius]='Radius=1600';$changed=$true}
+        if($nuclearVersionIndex -ge 0){$lines[$nuclearVersionIndex]='BehaviorVersion=2';$changed=$true}
+    }
     # Upgrade the former stock head spray together once; custom values and versioned opt-backs remain intact.
     $bloodSection=$false;$bloodVersion=1;$bloodVersionIndex=-1;$bloodValues=@{}
     for($i=0;$i -lt $lines.Count;$i++) {

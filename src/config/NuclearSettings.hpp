@@ -1,9 +1,14 @@
 #pragma once
 #include <string>
+#include <algorithm>
 
-// A code-only consumable has its own inventory, never free refill, random loot or the buy catalog.
+// The code-only charge uses shared RPG flight and a bounded impact, never purchases/refills/random loot.
 struct NuclearSettings {
     bool enabled=true,repeatCodes=false,buildings=false,rewards=true;
-    float delay=3,radius=0,targetDistance=800,flashSeconds=.65f,shakeDegrees=.6f,effectSeconds=8;
+    bool neutralBuildings=true,neutralUnits=true,destructables=true;
+    float radius=1600,visualRadius=1200,explosionScale=8,flameScale=5,smokeScale=6;
+    float flameDelay=.8f,flameSeconds=7,smokeSeconds=8,flashSeconds=.65f,shakeDegrees=.6f,screenRadius=2400;
     std::string code="PUTINMOLODEC";
+    float SmokeStart() const{return flameDelay+flameSeconds;}
+    float FinishedAt() const{return std::max(8.f,SmokeStart()+smokeSeconds);}
 };

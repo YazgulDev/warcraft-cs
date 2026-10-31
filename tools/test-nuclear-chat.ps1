@@ -11,7 +11,7 @@ Push-Location $build
 try {& $env:COMSPEC /d /c $script;if($LASTEXITCODE){throw 'Nuclear chat regression failed.'}}
 finally {Pop-Location}
 
-$sources=@('tests/NativeNuclearTests.cpp','src/platform/NativeNuclearBomb.cpp') | ForEach-Object {'"'+(Join-Path $root $_)+'"'}
+$sources=@('tests/NativeNuclearTests.cpp','src/platform/NativeNuclearBomb.cpp','src/platform/NativeNuclearDestruction.cpp','src/input/ShortcutBindings.cpp') | ForEach-Object {'"'+(Join-Path $root $_)+'"'}
 @('@echo off',('call "'+$environment+'" >nul'),('cl /nologo /std:c++17 /EHsc /O2 /W4 /DNOMINMAX '+($sources -join ' ')+' /Fe:native-nuclear-tests.exe'),'if errorlevel 1 exit /b 1','native-nuclear-tests.exe') | Set-Content $script -Encoding ascii
 Push-Location $build
 try {& $env:COMSPEC /d /c $script;if($LASTEXITCODE){throw 'Native nuclear regression failed.'}}

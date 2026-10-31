@@ -6,9 +6,9 @@ bool NativeRockets::Clock(){if(timer_)return true;timer_=wc3::CreateTimer();if(!
 float NativeRockets::Time() const {return timer_ ? wc3::Real(wc3::TimerGetElapsed(timer_)) : 0;}
 void NativeRockets::Reset(){++generation_;timer_=0;charges_.clear();bursts_.clear();visuals_.clear();obstacles_.Reset();nextLaser_=0;laserVisible_=false;}
 bool NativeRockets::Active(wc3::Handle actor) const {for(const auto& charge:charges_)if(charge.actor==actor)return true;return false;}
-bool NativeRockets::Launch(wc3::Handle actor,const GrenadePoint& eye,const GrenadePoint& direction,const GrenadePoint& motion,const GameplaySettings& settings) {
-    if(!settings.WeaponEnabled(WeaponSlots::RPG) || charges_.size()>=settings.rpg.maxActive || !wc3::GetUnitTypeId(actor) || !Clock())return false;
-    Charge charge;charge.actor=actor;charge.type=wc3::GetUnitTypeId(actor);charge.born=Time();charge.damage=settings.damage[WeaponSlots::RPG];charge.friendly=settings.friendlyFirePercent;
+bool NativeRockets::Launch(wc3::Handle actor,const GrenadePoint& eye,const GrenadePoint& direction,const GrenadePoint& motion,const GameplaySettings& settings,ImpactSink payload) {
+    if((!payload && !settings.WeaponEnabled(WeaponSlots::RPG)) || charges_.size()>=settings.rpg.maxActive || !wc3::GetUnitTypeId(actor) || !Clock())return false;
+    Charge charge;charge.payload=std::move(payload);charge.actor=actor;charge.type=wc3::GetUnitTypeId(actor);charge.born=Time();charge.damage=settings.damage[WeaponSlots::RPG];charge.friendly=settings.friendlyFirePercent;
     charge.flight.settings=settings.rpg;charge.flight.range=settings.FirearmRange(WeaponSlots::RPG);
     // Rockets hit visible building models even when Warcraft uses a pathing texture instead of a unit collision radius.
     auto boxes=obstacles_.Snapshot(actor,eye[0],eye[1],128);
@@ -53,6 +53,8 @@ bool NativeRockets::Tick(GameAudio& audio,wc3::Handle viewer,bool guide,const Gr
         if(generation_!=generation)return hit;
         auto from=charge.flight.position;from[2]+=4;
         wc3::Log("RPG exploded at=%.1f,%.1f,%.1f age=%.3f travelled=%.1f",from[0],from[1],from[2],charge.flight.age,charge.flight.travelled);
+        // Nuclear payloads share swept flight/visuals, then replace the ordinary RPG blast exactly once.
+        if(charge.payload){charge.payload(from);if(generation_!=generation)return hit;continue;}
         audio.Play("hl_rpg_explode.wav",1);bursts_.push_back({from,now,charge.flight.settings.radius*.3f});
         auto effect=wc3::Effect("Objects\\Spawnmodels\\Other\\NeutralBuildingExplosion\\NeutralBuildingExplosion.mdl",from[0],from[1]);if(effect)wc3::DestroyEffect(effect);
         auto boxes=obstacles_.Snapshot(0,from[0],from[1],charge.flight.settings.radius+256);

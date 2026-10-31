@@ -145,6 +145,12 @@ int main() {
     assert(rockets.Visuals().size()==1);auto pausedFlight=rockets.Visuals()[0].position;
     rockets.Tick(audio,1,false,{0,0,96},{1,0,0},3000);assert(rockets.Visuals()[0].position==pausedFlight);
     rockets.Reset();rpg.rpg.available=false;assert(!rockets.Launch(1,{0,0,96},{1,0,0},{},rpg));
+    // A special payload shares the exact RPG sweep but replaces ordinary sound, damage and effects once.
+    rockets.Reset();Scene();cover={Bounds3{{60,-100,0},{62,100,300}}};unsigned impacts=0;GrenadePoint point{};
+    assert(rockets.Launch(1,{0,0,96},{1,0,0},{},rpg,[&](const GrenadePoint& hit){++impacts;point=hit;}));
+    clockSeconds=.3f;rockets.Tick(audio,1,false,{0,0,96},{1,0,0},3000);
+    assert(impacts==1 && point[0]>0 && point[0]<=60 && damages==0 && sounds==0 && !rockets.Active(1));
+    clockSeconds=1;rockets.Tick(audio,1,false,{0,0,96},{1,0,0},3000);assert(impacts==1);
     // Real HE/RPG adapters credit each lethal victim once, with no reward for their planter or repeated ticks.
     field.Reset();Scene();settings=GameplaySettings{};settings.grenades.fuse=.2f;settings.friendlyFirePercent=0;
     hp[2]=hp[3]=1;rewards=0;

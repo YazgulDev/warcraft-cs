@@ -60,7 +60,7 @@ void ShooterController::Configure(const char* root, uintptr_t gameBase) {
     hitboxes_.Configure(gameBase);
     destructableHitboxes_.Configure(gameBase);
     collision_.Configure(gameBase);
-    grenades_.Configure(gameBase);rockets_.Configure(gameBase);
+    grenades_.Configure(gameBase);rockets_.Configure(gameBase);nuclearBomb_.Configure(gameBase);
     // Projectile adapters report deaths; the application applies the current wallet/drop policy.
     auto rewards=[this](const KillReward& reward){RewardKill(reward);};
     grenades_.SetKillSink(rewards);rockets_.SetKillSink(rewards);
@@ -267,7 +267,7 @@ void ShooterController::Disable(bool restoreCamera) {
     }
     CancelPlant();
     // Losing this view discards unfinished text and holsters an unlaunched secret charge.
-    textEntry_.Reset();nuclearInventory_.Holster();nuclearHolsterRequested_=false;
+    textEntry_.Reset();nuclearInventory_.Holster();nuclearFireTick_=0;nuclearHolsterRequested_=nuclearLaunchRequested_=false;
     settingsMenu_.Reset();
     active_ = false; scopeLevel_ = 0; reloadEnd_ = 0;glockBurst_.Cancel();flashWeapon_=-1;viewmodelMotion_.Reset();cameraHeight_.Reset();
     nativeSky_.Update(ui_,false,mapTileset_);
@@ -283,9 +283,10 @@ void ShooterController::Disable(bool restoreCamera) {
 }
 void ShooterController::ResetMap() {
     // Native map unload owns timer destruction; no charge, draft or victim handle crosses into the next map.
+    nuclearFireTick_=nuclearSelectTick_=0;nuclearExposure_=0;
     nuclearInventory_.Reset();nuclearBomb_.Reset();chatMessage_.clear();chatMessageTick_=0;
     // Losing this view discards unfinished text and holsters an unlaunched secret charge.
-    textEntry_.Reset();nuclearInventory_.Holster();nuclearHolsterRequested_=false;
+    textEntry_.Reset();nuclearInventory_.Holster();nuclearFireTick_=0;nuclearHolsterRequested_=nuclearLaunchRequested_=false;
     settingsMenu_.Reset();
     NativeHeadGore::Reset(); // Corpse palettes and map model definitions must not cross map generations.
     // Currency and local loot belong to the unloaded map, independently of view/loadout changes.
@@ -370,7 +371,7 @@ void ShooterController::SelectView(ControlView next) {
     refillRequested_=allWeaponsRequested_=itemRequested_=buyToggleRequested_=buyAmmoRequested_=false;
     buyKeyRequested_=spellRequested_=-1;spellCancelRequested_=false;
     // Losing this view discards unfinished text and holsters an unlaunched secret charge.
-    textEntry_.Reset();nuclearInventory_.Holster();nuclearHolsterRequested_=false;
+    textEntry_.Reset();nuclearInventory_.Holster();nuclearFireTick_=0;nuclearHolsterRequested_=nuclearLaunchRequested_=false;
     settingsMenu_.Reset();
     view_=next;pitch_=ThirdPerson() ? settings_.thirdPerson.initialPitch : 0;
     squadRequested_=0;squadOrderMode_.ClearInput();if(!SquadReticleOrdersEnabled())squad_.CancelFocus(); // No queued click crosses a view change.
@@ -1088,8 +1089,14 @@ void ShooterController::PlantC4(float dt) {
         plantProgress_ = 0;
     }
 }
-const char* ShooterController::Animation() const { return animation_.c_str(); }
+const char* ShooterController::Animation() const {
+    if(NuclearFiring())return "fire";
+    if(NuclearSelected())return GetTickCount()-nuclearSelectTick_<500 ? "draw1" : "idle";
+    return animation_.c_str();
+}
 float ShooterController::AnimationTime() const {
+    // A nuclear launch plays the owned RPG clip through the ordinary GunMesh timeline.
+    if(NuclearPresentation())return (GetTickCount()-(NuclearFiring() ? nuclearFireTick_ : nuclearSelectTick_))*.001f;
     // A time integral keeps rotation continuous while the Tau motor accelerates and after reaching full charge.
     if(weapon_==WeaponSlots::Tau && energy_.Active() && animation_=="spin")return TauChargeFeedback::SpinSeconds(
         energy_.ChargeElapsed(GetTickCount()*.001),audio_.Duration(weapon_,"spinup"),settings_.halfLife);
@@ -1153,6 +1160,8 @@ void ShooterController::Tick(uintptr_t ui) {
     nuclearBomb_.Tick(audio_,[this,rewardGeneration](const KillReward& reward){if(rewardGeneration==rewardGeneration_)RewardKill(reward);});
     // A mass-death trigger may unload the map synchronously; the rest of this tick owns the old UI.
     if(rewardGeneration!=rewardGeneration_ || ui_!=ui)return;
+    // Flash/shake attenuate locally; a remote detonation never shakes every point of the map.
+    nuclearExposure_=Visible() && unit_ && wc3::GetUnitTypeId(unit_) ? nuclearBomb_.Exposure({wc3::Real(wc3::GetUnitX(unit_)),wc3::Real(wc3::GetUnitY(unit_)),ViewEyeZ()}) : 0;
     if (bombs_.Tick(audio_,[this,rewardGeneration](const KillReward& reward){
         if(rewardGeneration==rewardGeneration_)RewardKill(reward);
     }) && Visible()) hits_.Record();
@@ -1179,7 +1188,7 @@ void ShooterController::Tick(uintptr_t ui) {
 #endif
     if (requireForeground && foregroundPid != GetCurrentProcessId()) {
         // Losing this view discards unfinished text and holsters an unlaunched secret charge.
-    textEntry_.Reset();nuclearInventory_.Holster();nuclearHolsterRequested_=false;
+    textEntry_.Reset();nuclearInventory_.Holster();nuclearFireTick_=0;nuclearHolsterRequested_=nuclearLaunchRequested_=false;
         settingsMenu_.Reset();
         flashWeapon_=-1;viewmodelMotion_.Reset();cameraHeight_.Reset();
         glockBurst_.Cancel(); // Focus loss cancels the rest of a burst instead of resuming it on return.
@@ -1212,7 +1221,7 @@ void ShooterController::Tick(uintptr_t ui) {
     if(active_ && !suspended_)combatVisuals_.Step(dt);
     if(Shopping()) {
         // Losing this view discards unfinished text and holsters an unlaunched secret charge.
-    textEntry_.Reset();nuclearInventory_.Holster();nuclearHolsterRequested_=false;
+    textEntry_.Reset();nuclearInventory_.Holster();nuclearFireTick_=0;nuclearHolsterRequested_=nuclearLaunchRequested_=false;
         settingsMenu_.Reset();
         if(shopCloseRequested_ || wc3::GetOwningPlayer(unit_)!=wc3::GetLocalPlayer() || !ShopAccess::Nearby(unit_,shop_,settings_.shopInteractionRadius))CloseShop();
         return;
@@ -1260,7 +1269,8 @@ void ShooterController::Tick(uintptr_t ui) {
     for(auto line=textEntry_.Take();!line.empty();line=textEntry_.Take()) {
         if(FpsTextEntry::NuclearCode(line,settings_.nuclear.code)) {
             if(!ThirdPerson() && !UnitFirstPerson() && !settings_.warcraftOnly && !nuclearBomb_.Active() && nuclearInventory_.Grant(settings_.nuclear.enabled,settings_.nuclear.repeatCodes)) {
-                Notice("NUCLEAR BOMB READY: LMB LAUNCH / RMB HOLSTER");scopeLevel_=0;
+                Notice("NUCLEAR RPG READY: LMB FIRE / RMB HOLSTER");scopeLevel_=0;
+                nuclearSelectTick_=now;nuclearFireTick_=0;audio_.BeginAnimation(WeaponSlots::RPG,"draw1",now,1);
                 wc3::Log("Nuclear bomb granted or reselected");
             } else Notice("NUCLEAR BOMB UNAVAILABLE (ONE LAUNCH PER MAP BY DEFAULT)");
         } else {
@@ -1272,7 +1282,7 @@ void ShooterController::Tick(uintptr_t ui) {
             wc3::Log("FPS chat submitted success=%d",sent);
         }
     }
-    if(nuclearHolsterRequested_){nuclearHolsterRequested_=false;nuclearInventory_.Holster();suppressFire_=true;}
+    if(nuclearHolsterRequested_){nuclearHolsterRequested_=nuclearLaunchRequested_=false;nuclearInventory_.Holster();nuclearFireTick_=0;suppressFire_=true;}
     bool settingsInput=settingsMenu_.RoutingOpen(),wasSettingsOpen=settingsMenu_.Open();
     if(settingsInput)nuclearInventory_.Holster();
     bool applied=settingsMenu_.Update(settings_,mapTileset_,[&]{return SettingsStore::Skies(root_);},
@@ -1553,13 +1563,17 @@ void ShooterController::Tick(uintptr_t ui) {
         movement_.Stop();weaponWheel_.Reset();cameraWheel_.Reset();UpdateSquad(now);
         AimAndMove(dt);Camera();audio_.Tick(now);return;
     }
-    if(nuclearInventory_.Selected()) {
-        bool launch=Pressed(VK_LBUTTON),cancel=Pressed(VK_RBUTTON);
+    if(nuclearInventory_.Selected() || NuclearFiring()) {
+        bool edge=Pressed(VK_LBUTTON),launch=edge || nuclearLaunchRequested_,cancel=Pressed(VK_RBUTTON);nuclearLaunchRequested_=false;
         if(cancel){nuclearInventory_.Holster();suppressFire_=true;}
         else if(launch && !suppressFire_ && !Casting() && !status_.disarmed && !status_.incapacitated) {
             float origin[3],direction[3];AimRay(origin,direction);
-            std::array<float,3> center={origin[0]+direction[0]*settings_.nuclear.targetDistance,origin[1]+direction[1]*settings_.nuclear.targetDistance,0};center[2]=wc3::Ground(center[0],center[1]);
-            if(nuclearBomb_.Launch(unit_,center,settings_.nuclear)){nuclearInventory_.Launch();Notice("NUCLEAR STRIKE INCOMING");}
+            // The nuclear payload launches from the exact same eye, aim and inherited movement as RPG.
+            if(nuclearInventory_.Selected() && nuclearBomb_.Launch(unit_,{origin[0],origin[1],origin[2]},{direction[0],direction[1],direction[2]},
+                {movement_.VelocityX(),movement_.VelocityY(),movement_.VerticalVelocity()},settings_,rockets_)){
+                nuclearInventory_.Launch();nuclearFireTick_=now;++shotSerial_;audio_.Play("hl_rpg_fire.wav",1);
+                audio_.BeginAnimation(WeaponSlots::RPG,"fire",now,1);Notice("NUCLEAR ROCKET IN FLIGHT");
+            }
             suppressFire_=true;
         }
         // An armed action replaces the gun; no round, native autoattack, scope or delayed melee can leak.

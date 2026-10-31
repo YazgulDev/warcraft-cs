@@ -42,12 +42,23 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     nuclear.repeatCodes=enabled("NuclearBomb","RepeatCodes",false);
     nuclear.buildings=enabled("NuclearBomb","DestroyBuildings",false);
     nuclear.rewards=enabled("NuclearBomb","KillRewards");
-    nuclear.delay=std::max(.5f,number("NuclearBomb","DelaySeconds",3,30));
-    nuclear.radius=number("NuclearBomb","Radius",0,50000);
-    nuclear.targetDistance=std::max(100.f,number("NuclearBomb","TargetDistance",800,5000));
+    nuclear.radius=std::max(100.f,number("NuclearBomb","Radius",1600,5000));
+    nuclear.visualRadius=std::max(64.f,number("NuclearBomb","VisualRadius",1200,4000));
+    nuclear.neutralBuildings=enabled("NuclearBomb","DestroyNeutralBuildings");
+    nuclear.neutralUnits=enabled("NuclearBomb","DestroyNeutralUnits");
+    nuclear.destructables=enabled("NuclearBomb","DestroyDestructables");
+    nuclear.explosionScale=std::max(.25f,number("NuclearBomb","ExplosionScale",8,20));
+    nuclear.flameScale=std::max(.25f,number("NuclearBomb","FlameScale",5,15));
+    nuclear.smokeScale=std::max(.25f,number("NuclearBomb","SmokeScale",6,15));
+    nuclear.flameDelay=number("NuclearBomb","FlameDelaySeconds",.8f,5);
+    nuclear.flameSeconds=std::max(.5f,number("NuclearBomb","FlameSeconds",7,15));
+    nuclear.smokeSeconds=std::max(1.f,number("NuclearBomb","SmokeSeconds",8,30));
+    nuclear.screenRadius=number("NuclearBomb","ScreenEffectRadius",2400,8000);
+    // Only the former unversioned global default upgrades; positive custom radii remain authoritative.
+    auto savedRadius=text("NuclearBomb","Radius","");char* radiusEnd=nullptr;float legacyRadius=std::strtof(savedRadius.c_str(),&radiusEnd);
+    if(text("NuclearBomb","BehaviorVersion","1")=="1" && radiusEnd!=savedRadius.c_str() && !*radiusEnd && legacyRadius==0)nuclear.radius=1600;
     nuclear.flashSeconds=number("NuclearBomb","FlashSeconds",.65f,3);
     nuclear.shakeDegrees=number("NuclearBomb","ShakeDegrees",.6f,3);
-    nuclear.effectSeconds=std::max(3.f,number("NuclearBomb","EffectSeconds",8,20));
     auto nuclearCode=text("NuclearBomb","Code","PUTINMOLODEC");
     if(!nuclearCode.empty() && nuclearCode.size()<=64 && nuclearCode.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-" )==std::string::npos)nuclear.code=nuclearCode;
     // Visual-only settings share the real startup/F8 snapshot and bounded migration path.

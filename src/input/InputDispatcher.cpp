@@ -47,6 +47,8 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM k
             if(weaponGesture)controller_.RequestNuclearHolster();
         }
         if(controller_.NuclearSelected() && (down || up) && key==VK_ESCAPE){if(tap)controller_.RequestNuclearHolster();return 0;}
+        // A short launch click cannot disappear between game ticks; it still obeys modal/held-fire suppression.
+        if(controller_.NuclearSelected() && (message==WM_LBUTTONDOWN || message==WM_LBUTTONUP)){if(message==WM_LBUTTONDOWN)controller_.RequestNuclearLaunch();return 0;}
         if(controller_.NuclearSelected() && (message==WM_RBUTTONDOWN || message==WM_RBUTTONUP)){if(message==WM_RBUTTONDOWN)controller_.RequestNuclearHolster();return 0;}
     }
     // A native shop owns its command card and pointer; E/Escape return to the captured view.

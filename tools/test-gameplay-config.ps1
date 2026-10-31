@@ -627,7 +627,19 @@ $nuclearConfig=Join-Path $folder 'nuclear-chat.ini'
 @('[NuclearBomb]','Code=PRIVATE_CODE','RepeatCodes=true','Radius=789','DelaySeconds=7','FlashSeconds=0','ShakeDegrees=0','DestroyBuildings=true','[Chat]','Enabled=false','MessageSeconds=19') | Set-Content $nuclearConfig
 Update-GameplayConfig $template $nuclearConfig
 $nuclearText=Get-Content $nuclearConfig -Raw
-foreach($required in @('Code=PRIVATE_CODE','RepeatCodes=true','Radius=789','DelaySeconds=7','FlashSeconds=0','ShakeDegrees=0','DestroyBuildings=true','KillRewards=true','EffectSeconds=8','TargetDistance=800','Enabled=false','MessageSeconds=19')) {if(!$nuclearText.Contains($required)){throw "Nuclear/chat migration lost $required"}}
+foreach($required in @('Code=PRIVATE_CODE','RepeatCodes=true','Radius=789','DelaySeconds=7','FlashSeconds=0','ShakeDegrees=0','DestroyBuildings=true','KillRewards=true','BehaviorVersion=2','ExplosionScale=8','FlameDelaySeconds=0.8','FlameSeconds=7','SmokeSeconds=8','DestroyNeutralBuildings=true','DestroyDestructables=true','Enabled=false','MessageSeconds=19')) {if(!$nuclearText.Contains($required)){throw "Nuclear/chat migration lost $required"}}
 $nuclearHash=(Get-FileHash $nuclearConfig).Hash;Update-GameplayConfig $template $nuclearConfig
 if((Get-FileHash $nuclearConfig).Hash -ne $nuclearHash){throw 'Nuclear/chat migration was not idempotent.'}
 Write-Output 'PASS nuclear/chat defaults and custom values across repeated upgrades.'
+
+# Upgrade only the former global stock radius, once; customized local radii remain intact.
+foreach($case in @(@('0','','1600'),@('0.0','1','1600'),@('789','','789'),@('0','2','0'))) {
+    $localNuclear=Join-Path $folder ('nuclear-radius-'+[guid]::NewGuid().ToString('N')+'.ini')
+    @('[NuclearBomb]',('Radius='+$case[0]),$(if($case[1]){'BehaviorVersion='+$case[1]}),'DestroyNeutralBuildings=false','DestroyDestructables=false') | Set-Content $localNuclear
+    Update-GameplayConfig $template $localNuclear
+    $updated=Get-Content $localNuclear -Raw
+    foreach($required in @(('Radius='+$case[2]),'BehaviorVersion=2','DestroyNeutralBuildings=false','DestroyDestructables=false')){if(!$updated.Contains($required)){throw "Local nuclear migration lost $required"}}
+    $once=(Get-FileHash $localNuclear).Hash;Update-GameplayConfig $template $localNuclear
+    if((Get-FileHash $localNuclear).Hash -ne $once){throw 'Local nuclear migration repeats.'}
+}
+Write-Output 'PASS local nuclear radius migration, preserved opt-outs and idempotence.'

@@ -222,6 +222,13 @@ uintptr_t UnitObject(Handle unit) {
     using Resolve=uintptr_t (__fastcall*)(Handle,uintptr_t);
     return unit ? reinterpret_cast<Resolve>(nativeBase + wc3::Rva(0x3BDCB0))(unit,0) : 0;
 }
+void KillDestructable(Handle destructable) {
+    if(ActiveBuild()!=GameBuildKind::Classic126a || !nativeBase || !destructable)return;
+    // Owned KillDestructable registration and its CDestructable life/death virtual dispatch are verified.
+    const unsigned char signature[]={0x8B,0x4C,0x24,0x04,0xE8};
+    if(std::memcmp(reinterpret_cast<void*>(nativeBase+0x3C4750),signature,sizeof(signature)))return;
+    reinterpret_cast<void (__cdecl*)(Handle)>(nativeBase+0x3C4750)(destructable);
+}
 uintptr_t DestructableObject(Handle destructable) {
     // Same host-validated resolver already used by destructable geometry and transform readers.
     using Resolve=uintptr_t (__fastcall*)(Handle,uintptr_t);

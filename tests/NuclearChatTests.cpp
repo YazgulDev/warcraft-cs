@@ -17,9 +17,13 @@ int main(){
     text.Open();text.Character('W');text.Submit();text.Reset();assert(text.Take().empty() && !text.Opened());
     assert(!bomb.Grant(false,false));assert(bomb.Grant(true,false) && bomb.Available() && bomb.Selected());assert(bomb.Grant(true,false));bomb.Holster();assert(!bomb.Selected() && bomb.Available());assert(!bomb.Launch());assert(bomb.Grant(true,false));assert(bomb.Launch() && !bomb.Available());assert(!bomb.Grant(true,false));assert(bomb.Grant(true,true));assert(bomb.Launch());bomb.Reset();assert(bomb.Grant(true,false));
     auto path=(std::filesystem::current_path()/"nuclear-validation.ini").string();
-    {std::ofstream f(path);f<<"[NuclearBomb]\nEnabled=false\nCode=bad code\nRepeatCodes=true\nDestroyBuildings=true\nKillRewards=false\nDelaySeconds=nan\nRadius=-1\nTargetDistance=inf\nFlashSeconds=99\nShakeDegrees=inf\nEffectSeconds=0\n[Chat]\nEnabled=false\nMessageSeconds=-3\n";}
-    auto s=GameplaySettings::Load(path);assert(!s.nuclear.enabled && s.nuclear.code=="PUTINMOLODEC" && s.nuclear.repeatCodes && s.nuclear.buildings && !s.nuclear.rewards);assert(s.nuclear.delay==3 && s.nuclear.targetDistance==800 && s.nuclear.radius==0 && s.nuclear.flashSeconds==3 && s.nuclear.shakeDegrees==.6f && s.nuclear.effectSeconds==3);assert(!s.chatEnabled && s.chatMessageSeconds==0);
-    {std::ofstream f(path);f<<"[NuclearBomb]\nCode=MY_CODE-9\nDelaySeconds=0\nRadius=999999\nTargetDistance=-2\nFlashSeconds=0\nShakeDegrees=0\nEffectSeconds=99\n";}
-    s=GameplaySettings::Load(path);assert(s.nuclear.code=="MY_CODE-9" && s.nuclear.delay==.5f && s.nuclear.radius==50000 && s.nuclear.targetDistance==100 && s.nuclear.flashSeconds==0 && s.nuclear.shakeDegrees==0 && s.nuclear.effectSeconds==20);DeleteFileA(path.c_str());
+    {std::ofstream f(path);f<<"[NuclearBomb]\nEnabled=false\nCode=bad code\nRepeatCodes=true\nDestroyBuildings=true\nKillRewards=false\nRadius=-1\nExplosionScale=inf\nFlameScale=0\nSmokeSeconds=nan\nFlashSeconds=99\nShakeDegrees=inf\nScreenEffectRadius=0\n[Chat]\nEnabled=false\nMessageSeconds=-3\n";}
+    auto s=GameplaySettings::Load(path);assert(!s.nuclear.enabled && s.nuclear.code=="PUTINMOLODEC" && s.nuclear.repeatCodes && s.nuclear.buildings && !s.nuclear.rewards);
+    assert(s.nuclear.radius==100 && s.nuclear.explosionScale==8 && s.nuclear.flameScale==.25f && s.nuclear.smokeSeconds==8 && s.nuclear.flashSeconds==3 && s.nuclear.shakeDegrees==.6f && s.nuclear.screenRadius==0);assert(!s.chatEnabled && s.chatMessageSeconds==0);
+    {std::ofstream f(path);f<<"[NuclearBomb]\nCode=MY_CODE-9\nRadius=999999\nFlashSeconds=0\nShakeDegrees=0\nFlameDelaySeconds=999\nFlameSeconds=999\nSmokeSeconds=999\nDestroyNeutralBuildings=false\nDestroyDestructables=false\n";}
+    s=GameplaySettings::Load(path);assert(s.nuclear.code=="MY_CODE-9" && s.nuclear.radius==5000 && s.nuclear.flameDelay==5 && s.nuclear.flameSeconds==15 && s.nuclear.smokeSeconds==30 && !s.nuclear.neutralBuildings && !s.nuclear.destructables);
+    {std::ofstream f(path);f<<"[NuclearBomb]\nRadius=0\n";}assert(GameplaySettings::Load(path).nuclear.radius==1600);
+    {std::ofstream f(path);f<<"[NuclearBomb]\nBehaviorVersion=2\nRadius=0\n";}assert(GameplaySettings::Load(path).nuclear.radius==100);
+    DeleteFileA(path.c_str());
     puts("PASS modal UTF-8 input, code matching, charge lifetime, real INI validation and visual opt-outs.");
 }

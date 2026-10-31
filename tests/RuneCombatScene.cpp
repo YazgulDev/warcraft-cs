@@ -42,6 +42,7 @@ void Buttons(uintptr_t base) {
 void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const char* root) {
     static std::vector<wc3::Handle> items;
     static std::vector<wc3::Handle> party;
+    static std::vector<wc3::Handle> nuclearScenery;
     static wc3::Handle enemy=0,blocker=0,motionActor=0;static DWORD check=0,observeUntil=0;
     static DWORD motionUntil=0;
     // A disposable per-render audit distinguishes physical placement jumps from cached camera latency.
@@ -256,6 +257,22 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
         else if(BackgroundGameplay::Enabled() && command=="nuclearinspect") {
             wc3::Log("fixture nuclear textOpen=%d selected=%d active=%d remaining=%.2f age=%.2f serial=%u ammo=%d gold=%d speed=%.2f",controller.TextInputOpen(),controller.NuclearSelected(),controller.NuclearBomb().Active(),controller.NuclearBomb().Remaining(),controller.NuclearBomb().Age(),controller.ShotSerial(),controller.Ammo(),wc3::GetPlayerState(wc3::GetLocalPlayer(),1),controller.DisplaySpeed());
         }
+        else if(BackgroundGameplay::Enabled() && command=="nuclearimpactscene") {
+            party.clear();nuclearScenery.clear();float x=-1000,y=-1000,angle=0,scale=1;
+            const int owners[]={12,12,15,0,1,15,12,15,12};
+            const int types[]={0x6E6F6772,0x75676172,0x6E746176,0x68666F6F,0x68746F77,0x6E736865,0x75637279,0x6E746176,0x6E6F6772};
+            const float dx[]={200,300,-50,300,600,450,3500,3500,600},dy[]={250,450,100,600,600,-350,1800,2200,-200};
+            using Add=BOOL (__cdecl*)(wc3::Handle,int);
+            for(int i=0;i<9;++i){float px=x+dx[i],py=y+dy[i];auto target=wc3::CreateUnit(wc3::Player(owners[i]),types[i],&px,&py,&angle);party.push_back(target);if(target)wc3::PauseUnit(target,TRUE);if(i==2 || i==8)reinterpret_cast<Add>(base+0x3C82A0)(target,0x4176756C);}
+            for(int i=0;i<3;++i){float px=x+(i==2 ? 4000.f : 400+i*200.f),py=y-200;auto prop=wc3::CreateDestructable(i==1 ? 0x4C546261 : 0x4C546C74,&px,&py,&angle,&scale,0);nuclearScenery.push_back(prop);
+                if(i==1)reinterpret_cast<void (__cdecl*)(wc3::Handle,BOOL)>(base+0x3C4770)(prop,TRUE);}
+            controller.TestAimPoint(x,y,8);wc3::Log("fixture nuclear impact scene units=%u props=%u",unsigned(party.size()),unsigned(nuclearScenery.size()));
+        }
+        else if(BackgroundGameplay::Enabled() && command=="nuclearaim") {float x=0,y=0,z=0;input>>x>>y>>z;controller.TestAimPoint(x,y,z);}
+        else if(BackgroundGameplay::Enabled() && command=="nuclearclick") {
+            InputDispatcher dispatcher(controller);controller.TestInputRoute(true);
+            dispatcher.Handle(GetActiveWindow(),WM_LBUTTONDOWN,MK_LBUTTON,0,true);dispatcher.Handle(GetActiveWindow(),WM_LBUTTONUP,0,0,true);controller.TestInputRoute(false);
+        }
         else if(BackgroundGameplay::Enabled() && command=="nuclearscene") {
             // A disposable mixed team fixture verifies map-wide air/ground kills and preserved allies/buildings.
             party.clear();float x=wc3::Real(wc3::GetUnitX(unit)),y=wc3::Real(wc3::GetUnitY(unit)),angle=0;
@@ -268,7 +285,8 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
             wc3::PauseUnit(protectedUnit,TRUE);wc3::Log("fixture nuclear scene created=%u",unsigned(party.size()));
         }
         else if(BackgroundGameplay::Enabled() && command=="nuclearsceneinspect") {
-            for(size_t i=0;i<party.size();++i)wc3::Log("fixture nuclear target index=%u type=%08X hp=%.2f",unsigned(i),wc3::GetUnitTypeId(party[i]),wc3::GetUnitTypeId(party[i]) ? wc3::Real(wc3::GetUnitState(party[i],0)) : 0);
+            for(size_t i=0;i<party.size();++i)wc3::Log("fixture nuclear target index=%u type=%08X hp=%.2f x=%.1f y=%.1f",unsigned(i),wc3::GetUnitTypeId(party[i]),wc3::GetUnitTypeId(party[i]) ? wc3::Real(wc3::GetUnitState(party[i],0)) : 0,wc3::Real(wc3::GetUnitX(party[i])),wc3::Real(wc3::GetUnitY(party[i])));
+            for(size_t i=0;i<nuclearScenery.size();++i)wc3::Log("fixture nuclear prop index=%u type=%08X hp=%.2f",unsigned(i),wc3::GetDestructableTypeId(nuclearScenery[i]),wc3::Real(wc3::GetDestructableLife(nuclearScenery[i])));
         }
         else if(BackgroundGameplay::Enabled() && command=="settingssky")controller.TestLogSky();
         else if(BackgroundGameplay::Enabled() && command=="settingsmapsky")controller.TestMapSky("Environment\\Sky\\LordaeronWinterSky\\LordaeronWinterSky.mdl");

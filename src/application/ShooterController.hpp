@@ -152,8 +152,13 @@ public:
     const std::string& ChatMessage() const{return chatMessage_;}
     bool ChatMessageVisible() const{return chatMessageTick_ && GetTickCount()-chatMessageTick_<settings_.chatMessageSeconds*1000;}
     bool NuclearSelected() const{return nuclearInventory_.Selected();}
+    bool NuclearFiring() const{return nuclearFireTick_ && GetTickCount()-nuclearFireTick_<750;}
+    bool NuclearPresentation() const{return NuclearSelected() || NuclearFiring();}
+    int PresentationWeapon() const{return NuclearPresentation() ? WeaponSlots::RPG : weapon_;}
+    float NuclearFlash() const{return nuclearBomb_.Flash()*nuclearExposure_;}
     const NativeNuclearBomb& NuclearBomb() const{return nuclearBomb_;}
     void RequestNuclearHolster(){nuclearHolsterRequested_=true;}
+    void RequestNuclearLaunch(){nuclearLaunchRequested_=true;}
     bool CursorMode() const {return Buying() || InventoryOpen() || SettingsInputOpen() || TextInputOpen();}
     void RequestInventory(InventoryControls::Event e) {itemInventory_.Input(e);weaponMenuCancelRequested_=true;}
     void RequestInventoryClose() {inventoryEscape_=true;itemInventory_.Input({InventoryControls::Kind::Close});}
@@ -181,8 +186,8 @@ public:
     EconomySettings::Currency PaymentCurrency() const {return paymentCurrency_;}
     std::string MoneyText() const {return settings_.warcraftOnly ? std::to_string(gold_)+" GOLD" : CurrencyDisplay::Format(money_,paymentCurrency_);}
     std::string NearbyWeaponName() const {return nearbyWeapon_<0 ? "" : settings_.weapons[nearbyWeapon_].name;}
-    float ViewYaw() const { return yaw_+(ThirdPerson() ? 0 : recoil_.Yaw())+nuclearBomb_.Shake(); }
-    float ViewPitch() const { return pitch_+(ThirdPerson() ? 0 : recoil_.Pitch())+nuclearBomb_.Shake()*.5f; }
+    float ViewYaw() const { return yaw_+(ThirdPerson() ? 0 : recoil_.Yaw())+nuclearBomb_.Shake()*nuclearExposure_; }
+    float ViewPitch() const { return pitch_+(ThirdPerson() ? 0 : recoil_.Pitch())+nuclearBomb_.Shake()*nuclearExposure_*.5f; }
     float ViewFov() const { return scopeLevel_==2 ? 10.0f : Scoped() ? 40.0f : 85.0f; }
     const std::string& SkyName() const {
         const auto& choice=settings_.tilesetSky[static_cast<unsigned char>(mapTileset_)];
@@ -203,7 +208,7 @@ public:
     void SetPaused(bool value) { paused_ = value; }
     int WeaponIndex() const { return weapon_; }
     const char* Animation() const;
-    const char* IdleAnimation() const {return Sequence("idle");}
+    const char* IdleAnimation() const {return NuclearPresentation() ? "idle" : Sequence("idle");}
     const std::vector<RocketVisual>& RocketVisuals() const {return rockets_.Visuals();}
     bool LaserVisible() const {return rockets_.LaserVisible();}
     const GrenadePoint& LaserPoint() const {return rockets_.Laser();}
@@ -445,7 +450,8 @@ private:
     FpsTextEntry textEntry_;
     NuclearInventory nuclearInventory_;
     NativeNuclearBomb nuclearBomb_;
-    bool nuclearHolsterRequested_=false;
+    DWORD nuclearSelectTick_=0,nuclearFireTick_=0;float nuclearExposure_=0;
+    bool nuclearHolsterRequested_=false,nuclearLaunchRequested_=false;
     std::string chatMessage_;DWORD chatMessageTick_=0;
     NativeUnitHud unitHudReader_;
     UnitHudSnapshot unitHud_;

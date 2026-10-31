@@ -138,13 +138,13 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
             GrenadeView::Draw(controller.GrenadeVisuals(),barView,width,height,nearPlane,farPlane);
             GrenadeView::Flash(controller.FlashOpacity(),width,height);
         }
-        drawSettings();drawTextInput();GrenadeView::Flash(controller.NuclearBomb().Flash(),width,height);
+        drawSettings();drawTextInput();GrenadeView::Flash(controller.NuclearFlash(),width,height);
         glMatrixMode(GL_TEXTURE);glPopMatrix();glMatrixMode(oldMode);glPopAttrib();
         if(activeTexture)activeTexture(oldTexture);
         return;
     }
     // Load the held model before world effects so its actual animated attachment can anchor an energy beam.
-    int index=controller.WeaponIndex();float projectionScale=controller.Settings().weaponModelScale[index];
+    int index=controller.PresentationWeapon();float projectionScale=controller.Settings().weaponModelScale[index];
     graphics.Phase("weapon-resource-load");
     float animationSeconds=controller.AnimationTime(); // Attachment and mesh must sample one identical animation phase.
     if(!controller.Settings().warcraftOnly && !attempted_[index]) {
@@ -183,11 +183,11 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     float top = std::tan(45.0f * 0.01745329252f) * projectionScale; float side = top * width / height;
     glFrustum(-side, side, -top, top, 1, 200);
     glMatrixMode(GL_MODELVIEW); glPushMatrix(); glLoadIdentity();
-    bool heldModel=!controller.NuclearSelected() && !controller.ThirdPerson() && loaded_[index] && !controller.Status().contained && !controller.Status().hidden && (index!=WeaponSlots::C4 || controller.Ammo()>0);
+    bool heldModel= !controller.ThirdPerson() && loaded_[index] && !controller.Status().contained && !controller.Status().hidden && (index!=WeaponSlots::C4 || controller.Ammo()>0);
     HudDiagnostics::Weapon(index,controller.ShotSerial(),controller.Animation(),animationSeconds,loaded_[index],heldModel,controller.Scoped(),
         controller.Status().contained,controller.Status().hidden);
     const auto& visuals=controller.Settings().viewmodel;
-    float flash=muzzleFlash_.Sample(controller.ShotSerial(),heldModel && controller.ShowMuzzleFlash(),GetTickCount(),visuals.flashMilliseconds);
+    float flash=muzzleFlash_.Sample(controller.ShotSerial(),heldModel && (!controller.NuclearPresentation() && controller.ShowMuzzleFlash()),GetTickCount(),visuals.flashMilliseconds);
     if (heldModel && (!controller.Scoped() || flash>0)) {
         // Give the weapon its own depth pass: back faces must not paint over the skin.
         glDepthMask(GL_TRUE); glClearDepth(1); glClear(GL_DEPTH_BUFFER_BIT);
@@ -346,12 +346,12 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
     WeaponSelectionView::Draw(controller,width,height,[&](float x,float y,const char* text){Text(x,y,text);},weaponPreview);
     InventoryHudView::Cursor(window,controller.UnitHud(),InventoryHudLayout::Calculate(width,height,controller.Settings().spellIconSizePercent,controller.Settings().showSpellIcons,true),inventoryIcons_,controller.ItemControls());
     if(controller.NuclearSelected()) {
-        NuclearView::Held(width,height);glColor4f(1,.65f,.2f,1);
-        Text(width*.5f-240,height*.70f,"NUCLEAR BOMB: LMB LAUNCH / RMB HOLSTER");
+        glColor4f(1,.65f,.2f,1);
+        Text(width*.5f-240,height*.70f,"NUCLEAR RPG: LMB FIRE / RMB HOLSTER");
     }
-    if(controller.NuclearBomb().Remaining()>=0){char message[80];sprintf_s(message,"NUCLEAR STRIKE IN %.1f",controller.NuclearBomb().Remaining());glColor4f(1,.4f,.15f,1);Text(width*.5f-140,height*.42f,message);}
+    if(controller.NuclearBomb().Flying()){glColor4f(1,.5f,.15f,1);Text(width*.5f-120,height*.42f,"NUCLEAR ROCKET IN FLIGHT");}
     drawSettings();drawTextInput();
-    GrenadeView::Flash(controller.NuclearBomb().Flash(),width,height);
+    GrenadeView::Flash(controller.NuclearFlash(),width,height);
     GrenadeView::Flash(controller.FlashOpacity(),width,height); // Blindness covers hands, scope and HUD together.
     HudDiagnostics::State("completed",sampledHud);
     }
