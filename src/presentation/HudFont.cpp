@@ -1,5 +1,6 @@
 #include "GraphicsApi.hpp"
 #include "HudFont.hpp"
+#include "../input/UnicodeText.hpp"
 #include "HudDiagnostics.hpp"
 #include <cstring>
 #include <algorithm>
@@ -37,12 +38,14 @@ bool HudFont::Ensure(int height) {
     bool valid=previous && previous!=HGDI_ERROR && GetTextMetricsA(dc,&metrics);
     DWORD error=valid ? 0 : GetLastError();int failedGlyph=-1;
     MAT2 transform={};transform.eM11.value=transform.eM22.value=1;
-    std::array<Glyph,95> glyphs{};
-    std::array<std::vector<unsigned char>,95> bitmaps;
+    std::array<Glyph,351> glyphs{};
+    std::array<std::vector<unsigned char>,351> bitmaps;
     int cellWidth=1,cellHeight=1;
     for(unsigned i=0;valid && i<glyphs.size();++i) {
         GLYPHMETRICS shape={};
-        DWORD bytes=GetGlyphOutlineA(dc,i+32,GGO_GRAY8_BITMAP,&shape,0,nullptr,&transform);
+        // ASCII plus U+0400..04FF covers Russian text, including both Yo characters.
+        unsigned codepoint=i<95 ? i+32 : 0x400+i-95;
+        DWORD bytes=GetGlyphOutlineW(dc,codepoint,GGO_GRAY8_BITMAP,&shape,0,nullptr,&transform);
         if(bytes==GDI_ERROR) {valid=false;error=GetLastError();failedGlyph=int(i+32);break;}
         auto& glyph=glyphs[i];
         glyph.width=int(shape.gmBlackBoxX);glyph.height=int(shape.gmBlackBoxY);
@@ -51,14 +54,14 @@ bool HudFont::Ensure(int height) {
         cellWidth=std::max(cellWidth,glyph.width+2);cellHeight=std::max(cellHeight,glyph.height+2);
         if(bytes) {
             bitmaps[i].resize(bytes);
-            valid=GetGlyphOutlineA(dc,i+32,GGO_GRAY8_BITMAP,&shape,bytes,bitmaps[i].data(),&transform)!=GDI_ERROR;
+            valid=GetGlyphOutlineW(dc,codepoint,GGO_GRAY8_BITMAP,&shape,bytes,bitmaps[i].data(),&transform)!=GDI_ERROR;
             if(!valid){error=GetLastError();failedGlyph=int(i+32);}
         }
     }
     if(previous && previous!=HGDI_ERROR)SelectObject(dc,previous);
     DeleteObject(font);DeleteDC(dc);
     if(!valid)return Report(failedGlyph>=0 ? "glyph-outline" : "font-metrics",height,0,0,0,error,failedGlyph);
-    int width=PowerOfTwo(cellWidth*16),atlasHeight=PowerOfTwo(cellHeight*6);
+    int width=PowerOfTwo(cellWidth*16),atlasHeight=PowerOfTwo(cellHeight*22);
     GLint maximum=0;glGetIntegerv(GL_MAX_TEXTURE_SIZE,&maximum);
     if(width>maximum || atlasHeight>maximum)return Report("atlas-too-large",height,width,atlasHeight);
     std::vector<unsigned char> alpha(size_t(width)*atlasHeight,0);
@@ -113,8 +116,9 @@ void HudFont::Draw(float x,float baseline,const char* text) const {
     GLint matrixMode=GL_MODELVIEW;glGetIntegerv(GL_MATRIX_MODE,&matrixMode);
     glMatrixMode(GL_TEXTURE);glPushMatrix();glLoadIdentity();
     glBegin(GL_QUADS);
-    for(auto character=reinterpret_cast<const unsigned char*>(text);*character;++character) {
-        const auto& glyph=glyphs_[*character>=32 && *character<=126 ? *character-32 : '?'-32];
+    for(auto character=text;*character;) {
+        auto c=UnicodeText::Next(character);
+        const auto& glyph=glyphs_[c>=32 && c<=126 ? c-32 : c>=0x400 && c<=0x4FF ? 95+c-0x400 : '?'-32];
         float left=x+glyph.left,top=baseline-glyph.top;
         if(glyph.width && glyph.height) {
             glTexCoord2f(glyph.u0,glyph.v0);glVertex2f(left,top);

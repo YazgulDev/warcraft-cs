@@ -32,6 +32,8 @@ foreach ($name in @('window-input','fog-of-war','diagnostic-log','native-frame-r
 & (Join-Path $PSScriptRoot 'test-rpg.ps1')
 & (Join-Path $PSScriptRoot 'test-halflife.ps1')
 # Buying/sky decoding are independent of Warcraft and use only synthetic/private-free test inputs.
+& (Join-Path $PSScriptRoot 'test-settings-menu.ps1')
+& (Join-Path $PSScriptRoot 'test-nuclear-chat.ps1')
 & (Join-Path $PSScriptRoot 'test-buy-menu.ps1')
 & (Join-Path $PSScriptRoot 'test-dollar-loot.ps1')
 # Posed shot selection and item occlusion use authored meshes and synthetic native scenes.

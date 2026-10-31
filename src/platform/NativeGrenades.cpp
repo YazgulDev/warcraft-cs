@@ -1,5 +1,7 @@
 #include "NativeGrenades.hpp"
 #include "NativeBlast.hpp"
+#include "SpriteTransform.hpp"
+#include "../combat/SmokeVisibility.hpp"
 #include "../combat/GrenadeLaunch.hpp"
 #include <algorithm>
 #include <cmath>
@@ -102,7 +104,7 @@ bool NativeGrenades::Tick(GameAudio& audio,wc3::Handle viewer,const GrenadePoint
         }
         if(charge.detonated && charge.slot==WeaponSlots::Smoke) {
             float opacity=flight.settings.smokeOpacity*std::min(1.f,effectAge)*std::clamp((flight.settings.smokeSeconds-effectAge)/3,0.f,1.f);
-            if(opacity>0)visuals_.push_back({flight.position,charge.slot,flight.settings.smokeRadius,opacity,effectAge,true});
+            if(opacity>0)visuals_.push_back({flight.position,charge.slot,flight.settings.smokeRadius,opacity,effectAge,true,0,0,1,flight.settings.smokeVisibilityDistance,flight.settings.smokeBlocksAI});
         }
     }
     charges_.erase(std::remove_if(charges_.begin(),charges_.end(),[&](const Charge& c){return c.detonated && (c.slot!=WeaponSlots::Smoke || now-c.born>=c.flight.settings.fuse+c.flight.settings.smokeSeconds);}),charges_.end());
@@ -110,4 +112,17 @@ bool NativeGrenades::Tick(GameAudio& audio,wc3::Handle viewer,const GrenadePoint
     float remaining=flashStart_+flashDuration_-now;
     flashOpacity_=remaining>0 && flashDuration_>0 ? std::clamp(remaining/(flashDuration_*.6f),0.f,1.f) : 0;
     return hit;
+}
+
+bool NativeGrenades::BlocksSight(uintptr_t attack,uintptr_t target) const {
+    if(!attack || !target || std::none_of(visuals_.begin(),visuals_.end(),[](const auto& c){return c.smoke && c.blockAI;}))return false;
+    // The verified attack owner is CUnit at +30; CSprite getters avoid guessed unit coordinate offsets.
+    auto read=[](uintptr_t at,uintptr_t& value){SIZE_T got=0;return ReadProcessMemory(GetCurrentProcess(),reinterpret_cast<void*>(at),&value,sizeof(value),&got) && got==sizeof(value);};
+    uintptr_t source=0,sourceSprite=0,targetSprite=0;
+    if(!read(attack+0x30,source) || !source || !read(source+0x28,sourceSprite) || !read(target+0x28,targetSprite))return false;
+    ModelTransform from,to;if(!SpriteTransform::Read(sourceSprite,from) || !SpriteTransform::Read(targetSprite,to))return false;
+    GrenadePoint eye={from.position[0],from.position[1],from.position[2]+64},point={to.position[0],to.position[1],to.position[2]+64};
+    bool blocked=!SmokeVisibility::Visible(visuals_,eye,point,true);
+    if(blocked){static DWORD last=0;DWORD now=GetTickCount();if(now-last>1000){last=now;wc3::Trace("smoke blocked AI sight source=%08X target=%08X transmission=%.4f",source,target,SmokeVisibility::Transmission(visuals_,eye,point,true));}}
+    return blocked;
 }

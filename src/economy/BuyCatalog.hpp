@@ -27,7 +27,12 @@ inline constexpr std::array<Entry,WeaponSlots::Count> Entries={{
     {WeaponSlots::Crowbar,1,Category::HalfLife,"CROWBAR","crowbar","MELEE"},
     {WeaponSlots::Tau,2,Category::HalfLife,"TAU CANNON","gauss","URANIUM"},
     {WeaponSlots::Gluon,3,Category::HalfLife,"GLUON GUN","egon","URANIUM"},
-    {WeaponSlots::RPG,4,Category::HalfLife,"HALF-LIFE RPG","rpg","ROCKET"}
+    {WeaponSlots::RPG,4,Category::HalfLife,"HALF-LIFE RPG","rpg","ROCKET"},
+    {WeaponSlots::TMP,3,Category::SMGs,"SCHMIDT TMP","tmp","9 MM"},
+    {WeaponSlots::UMP45,4,Category::SMGs,"K&M UMP45","ump45",".45 ACP"},
+    {WeaponSlots::FAMAS,4,Category::Rifles,"CLARION / FAMAS","famas","5.56 MM"},
+    {WeaponSlots::Galil,5,Category::Rifles,"IDF DEFENDER / GALIL","galil","5.56 MM"},
+    {WeaponSlots::G3SG1,6,Category::Rifles,"D3/AU-1 / G3SG1","g3sg1","7.62 MM"}
 }};
 inline const Entry* Find(Category category,int key) {
     for (const auto& item : Entries) if (item.category==category && item.key==key) return &item;

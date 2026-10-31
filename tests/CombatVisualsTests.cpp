@@ -21,7 +21,7 @@ int main(){
     effects.Reset();for(unsigned target=1;target<100;++target)effects.BodyHit(target,contact,ray,s);
     assert(effects.BloodDrops().size()==256);effects.Step(.4f);assert(effects.BloodDrops().empty());effects.Reset();
     for(int weapon=0;weapon<WeaponSlots::Count;++weapon)effects.Eject(weapon,eye,ray,velocity,0,s);
-    assert(effects.Shells().size()==11); // Conventional firearms only, one shell per round, no energy/explosive/melee cases.
+    assert(effects.Shells().size()==16); // Conventional firearms only, one shell per round, no energy/explosive/melee cases.
     int red=0;for(const auto& shell:effects.Shells()){red+=shell.shotgun;assert(shell.position[0]==20 && shell.position[1]==-10 && shell.position[2]==84);}
     assert(red==2);
     // Bonus/text opt-out still emits blood at the accepted head contact, never at the feet or caption anchor.

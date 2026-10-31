@@ -30,6 +30,12 @@ inline const std::array<Weapon,WeaponSlots::Count> Weapons={{
     // Energy cells feed the weapon directly: these two guns never use magazine reloads.
     {"CROWBAR","hl_cbar_miss1.wav",0,0,10,.5f,0,150,true},
     {"TAU CANNON","hl_gauss2.wav",100,0,20,.2f,0,30000,false},
-    {"GLUON GUN","hl_egon_run3.wav",100,0,14,.1f,0,30000,true}
+    {"GLUON GUN","hl_egon_run3.wav",100,0,14,.1f,0,30000,true},
+    // Owned CS models supply draw/fire/reload clips; these rounds share the ordinary firearm path.
+    {"TMP","tmp-1.wav",30,120,20,.07f,2.125f,2500,true},
+    {"UMP45","ump45-1.wav",25,100,30,.1f,3.5f,2500,true},
+    {"FAMAS","famas-1.wav",25,90,30,.0825f,3.3f,3000,true},
+    {"GALIL","galil-1.wav",35,90,30,.0875f,2.45f,3000,true},
+    {"G3SG1","g3sg1-1.wav",20,90,80,.25f,4.7f,4000,true}
 }};
 }

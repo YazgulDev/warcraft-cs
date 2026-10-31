@@ -37,6 +37,7 @@ private:
     GunMesh buyPreviews_[WeaponSlots::Count];
     bool previewLoaded_[WeaponSlots::Count]={},previewAttempted_[WeaponSlots::Count]={};
     bool loaded_[WeaponSlots::Count] = {}, attempted_[WeaponSlots::Count] = {};
+    HudFont settingsFont_{"settings-menu"};
     HudFont font_{"hints"},statusFont_{"status"},spellFont_{"spells"},unitFont_{"unit"},inventoryFont_{"inventory"};
     HudDiagnostics hudDiagnostics_;
     ItemNameView itemName_;

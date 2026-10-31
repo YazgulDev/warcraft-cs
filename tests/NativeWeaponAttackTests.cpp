@@ -116,6 +116,8 @@ void Log(const char*,...) {}
 void Trace(const char*,...) {}
 }
 namespace FpsCombatGuard {
+uintptr_t PermitBlindContact(uintptr_t a) {static uintptr_t previous=0;auto result=previous;previous=a;return result;}
+bool BlocksUnseenTarget(uintptr_t,uintptr_t) {return false;}
 bool BlocksIncomingAttack(uintptr_t,uintptr_t) {return incomingProtected;}
 }
 int main() {

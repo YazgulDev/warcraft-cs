@@ -44,3 +44,5 @@ Edit the runtime's `WarcraftCS/WarcraftCS.ini`, then press F8:
 
 Missing/malformed values use defaults; finite numeric values are clamped. Startup/F8 apply these
 preferences, and updates add missing keys without replacing custom values or the Tab default.
+
+Expanded PRIMARY inventories display a moving window of up to eight rows around the highlighted weapon. Category keys and wheel still visit every owned primary, including the new TMP, UMP45, FAMAS, Galil and G3SG1; the footer stays within the screen.

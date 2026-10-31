@@ -2,8 +2,25 @@
 #include "../src/combat/GrenadeThrow.hpp"
 #include "../src/combat/GrenadeLaunch.hpp"
 #include <cassert>
+#include "../src/combat/WeaponSlots.hpp"
+#include "../src/combat/SmokeVisibility.hpp"
 
 int main() {
+    GrenadeVisual cloud={{0,0,0},WeaponSlots::Smoke,300,.99f,2,true};
+    assert(std::abs(SmokeVisibility::Length(cloud,{-500,0,150},{500,0,150})-600)<.001f);
+    assert(std::abs(SmokeVisibility::Length(cloud,{0,0,150},{100,0,150})-100)<.001f);
+    assert(SmokeVisibility::Length(cloud,{-500,300,150},{500,300,150})==0);
+    assert(SmokeVisibility::Length(cloud,{-500,0,600},{500,0,600})==0);
+    assert(!SmokeVisibility::Visible({cloud},{0,0,150},{100,0,150}));
+    assert(SmokeVisibility::Visible({cloud},{0,0,150},{20,0,150}));
+    assert(!SmokeVisibility::Visible({cloud},{500,0,150},{-500,0,150},true));
+    assert(!SmokeVisibility::Visible({cloud},{-500,0,150},{500,0,150},true));
+    float once=SmokeVisibility::Transmission({cloud},{0,0,150},{30,0,150});
+    assert(SmokeVisibility::Transmission({cloud,cloud},{0,0,150},{30,0,150})<once);
+    cloud.blockAI=false;assert(SmokeVisibility::Visible({cloud},{0,0,150},{500,0,150},true));
+    assert(!SmokeVisibility::Visible({cloud},{0,0,150},{500,0,150}));
+    cloud.opacity=0;assert(SmokeVisibility::Visible({cloud},{0,0,150},{500,0,150}));
+
     GrenadeProjectile level;assert(GrenadeLaunch::Prepare(level,{0,0,96},{1,0,0},{}));
     // Stock CS level release: 600 CS units/s at ten degrees, plus a 16-unit forward offset, scaled 1.5.
     assert(std::abs(level.velocity[0]-886.32697f)<.01f && std::abs(level.velocity[2]-156.28336f)<.01f);

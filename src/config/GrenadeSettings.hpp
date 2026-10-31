@@ -9,7 +9,9 @@ struct GrenadeSettings {
     float heRadius=350,flashRadius=1000,flashSeconds=3,flashUnitStunSeconds=2;
     // Flash disorients every exposed creature by default, including allies and the controlled actor.
     bool flashStunAllUnits=true,flashStunDistanceFalloff=false;
-    float smokeRadius=300,smokeSeconds=18,smokeOpacity=.85f;
+    float smokeRadius=300,smokeSeconds=18,smokeOpacity=.99f;
+    float smokeVisibilityDistance=96;
+    bool smokeBlocksAI=true; // Same optical threshold for every team; never pauses or changes unit stats.
     unsigned maxActive=32;
     float worldModelScale=1,worldSpin=360;
 };

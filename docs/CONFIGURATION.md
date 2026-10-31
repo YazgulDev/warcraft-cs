@@ -232,3 +232,9 @@ GraphicsDebug is independent of Logging.Detailed. Detailed=false suppresses opti
 `[Interface] CameraHeightSmoothing=true` softens small support-height transitions while walking in first person. `CameraHeightSeconds=0.08` is the response time in seconds, clamped to .01–.3; smaller values follow ground more closely. Missing, malformed and non-finite values use .08. Startup/F8 apply the settings; F8 clears the old correction. Updates add missing keys and preserve custom values. Set `CameraHeightSmoothing=false` for the previous direct height response.
 
 Only camera/aim height receives the bounded correction. Horizontal position, collision, physical feet, jump acceleration and third-person boom behavior retain their existing rules. Camera, firearm contacts, spell/item aim and hover queries share one eye height. The correction stays inside the standing/crouched collision body, resets on large relocations and view/map/focus transitions, and decays through airborne movement without filtering the jump trajectory. Movement logs distinguish `physicalEye`, requested `eye` and `eyeCorrection`.
+
+The [arsenal/smoke preview](ARSENAL-SMOKE-PREVIEW.md) documents the new TMP, UMP45, FAMAS, Galil and G3SG1 sections and `[SmokeGrenade] VisibilityDistance=96` / `BlocksAI=true`. Existing opacity and weapon tuning are preserved during updates.
+
+The [F2 in-game settings panel](INGAME-SETTINGS.md) edits mouse sensitivity, CS volume, movement physics, view distance and sky. `[Mouse] Sensitivity=1` and `ScopeSensitivity=1` preserve previous aiming; `[Sky] Visible=true` adds explicit controlled-view sky visibility. Apply saves only changed keys; F8 still reloads manual edits.
+
+The [nuclear bomb and chat preview](NUCLEAR-CHAT-PREVIEW.md) documents `[Chat]` and `[NuclearBomb]` keys, ranges and next-launch F8 snapshots.

@@ -14,6 +14,7 @@ show default bindings; `[Shortcuts]` in the INI can change keyboard actions.
 | F9 | Enter unarmed first person; press again to return to RTS |
 | T | Switch between first- and third-person control |
 | F10 | Open the Warcraft pause menu and return control to RTS |
+| F2 | Open main mod settings; mouse/arrows edit, Enter saves, Escape cancels |
 | WASD / mouse | Move / look and aim |
 | Shift / Ctrl / Space | Walk / crouch / jump |
 | Home (Mode=recovery) | Emergency return to nearby visited safe ground after a fall or invalid placement |
@@ -98,3 +99,5 @@ F6 restores normal Warcraft control. Enable your chosen view again after changin
 ## Aiming labels
 
 Direct hits on verified named head geometry deal x2 damage by default and show blood and floating **Headshot** above the target after confirmed damage in 0.13.0. Look at a ground item or rune in F6/F9 to see its localized name below the reticle. Settings and host limitations are in the [release guide](RELEASE-0.13.0.md).
+
+Enter opens controlled-view text input; Enter submits and Escape cancels. In weapon FPS, warneverchanges grants/selects one nuclear bomb; LMB launches, RMB/Escape holsters. See [nuclear bomb and chat](NUCLEAR-CHAT-PREVIEW.md).

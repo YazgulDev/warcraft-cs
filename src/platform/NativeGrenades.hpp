@@ -16,6 +16,8 @@ public:
     bool Throw(wc3::Handle actor,int slot,const GrenadePoint& eye,const GrenadePoint& direction,const GrenadePoint& motion,const GameplaySettings& settings);
     bool Tick(GameAudio& audio,wc3::Handle viewer,const GrenadePoint& eye,const GrenadePoint& direction);
     const std::vector<GrenadeVisual>& Visuals() const {return visuals_;}
+    // Read-only verified native attack source/target positions, with no range/stat leases to leak.
+    bool BlocksSight(uintptr_t attack,uintptr_t target) const;
     float FlashOpacity() const {return flashOpacity_;}
 private:
     KillReward::Sink onKill_;

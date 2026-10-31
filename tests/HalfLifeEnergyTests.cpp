@@ -57,7 +57,7 @@ int main() {
     GameplaySettings game;BuyInventory inventory;int ammo[WeaponSlots::Count]={},reserve[WeaponSlots::Count]={};
     int magazines[WeaponSlots::Count]={},reserves[WeaponSlots::Count]={};
     for(int i=0;i<WeaponSlots::Count;++i)magazines[i]=game.weapons[i].magazine;
-    for(int slot=WeaponSlots::Crowbar;slot<WeaponSlots::Count;++slot) {
+    for(int slot=WeaponSlots::Crowbar;slot<=WeaponSlots::Gluon;++slot) {
         int gold=100000;assert(inventory.Buy(slot,false,game,gold,ammo[slot],reserve[slot],magazines[slot],0)==BuyInventory::Result::Invalid);
         game.halfLife.available[slot-WeaponSlots::Crowbar]=true;
         inventory.Reset(game,ammo,reserve,magazines,reserves);assert(!inventory.owned[slot]);

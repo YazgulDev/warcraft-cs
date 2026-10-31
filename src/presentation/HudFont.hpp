@@ -26,7 +26,7 @@ private:
         int width=0, height=0, left=0, top=0, advance=0;
         float u0=0, v0=0, u1=0, v1=0;
     };
-    std::array<Glyph,95> glyphs_{};
+    std::array<Glyph,351> glyphs_{};
     GLuint texture_=0;
     int height_=0, advance_=12;
 };

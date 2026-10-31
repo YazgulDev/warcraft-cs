@@ -61,7 +61,8 @@ void __fastcall GuardAttackPose(uintptr_t attack,uintptr_t,uintptr_t actor) {
 }
 void __fastcall GuardImpact(uintptr_t attack,uintptr_t,uintptr_t target,int a,int b,int c,int d,int e) {
     // A retained AI target can reach impact without a new order; F9 protection also covers a prior hostile wind-up.
-    if(SuppressAutonomous(attack) || FpsCombatGuard::BlocksIncomingAttack(attack,target)) {
+    if(SuppressAutonomous(attack) || FpsCombatGuard::BlocksIncomingAttack(attack,target) ||
+        (!(contact && contact->attack==attack) && FpsCombatGuard::BlocksUnseenTarget(attack,target))) {
         static DWORD last=0;DWORD now=GetTickCount();
         if(now-last>=1000){last=now;wc3::Trace("FPS blocked autonomous impact component=%08X",attack);}return;
     }
@@ -76,6 +77,9 @@ void __fastcall GuardPrepare(uintptr_t actor,uintptr_t,uintptr_t target,float* a
     if(controlled && !(contact && contact->attack==*reinterpret_cast<uintptr_t*>(actor+0x1E8)))return;
     // An already-started hostile contact must respect a newly enabled F9 policy before native attack callbacks.
     if(FpsCombatGuard::BlocksIncomingAttack(*reinterpret_cast<uintptr_t*>(actor+0x1E8),target))return;
+    // Smoke cancels native targeted windups, while explicit FPS rounds may be fired blindly through it.
+    auto attack=*reinterpret_cast<uintptr_t*>(actor+0x1E8);
+    if(!(contact && contact->attack==attack) && FpsCombatGuard::BlocksUnseenTarget(attack,target))return;
     originalPrepare(actor,target,a,b);
 }
 float* __fastcall ContactRange(uintptr_t attack,uintptr_t,float* result,int index) {
@@ -105,6 +109,7 @@ bool Execute(wc3::Handle attacker,const NativeAttackTarget& victim,uintptr_t obj
     float zero=0;int instantKind=projectile ? kind : kind==1 ? 1 : 4;
     const int weaponSound=*reinterpret_cast<int*>(attack+0xE8);
     contact=&current;
+    auto previousBlind=FpsCombatGuard::PermitBlindContact(attack);
     __try {
         // 1 is melee and 4 is instant ranged. FPS changes only this impact; TPS retains its authored missile kind.
         // Neither path assigns an AI order; preparation and missile allocation remain on the game thread.
@@ -122,6 +127,7 @@ bool Execute(wc3::Handle attacker,const NativeAttackTarget& victim,uintptr_t obj
         }
     } __finally {
         contact=previous;
+        FpsCombatGuard::PermitBlindContact(previousBlind);
         uintptr_t stillOwned=0;
         // Attack callbacks can transform/remove the hero; never restore a freed/replaced attack component.
         if(wc3::UnitObject(attacker)==object) {

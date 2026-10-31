@@ -20,6 +20,7 @@ Handle Effect(const char*,float,float){return effectAvailable ? Handle(++effects
 static float clockTime=0,health=100;
 static bool enemy=true,building=false,present=true;
 int main() {
+    _set_error_mode(_OUT_TO_STDERR); // Keep failing headless regressions in the captured journal.
     GameplaySettings settings;DollarWallet wallet;BuyInventory inventory;
     // Prefer the dollar wallet, switch whole-currency only when permitted, never combine insufficient balances.
     using Currency=EconomySettings::Currency;
@@ -58,7 +59,9 @@ int main() {
     assert(drops.Pickup(0,settings,ammo,reserve) && reserve==90);assert(!drops.Pickup(0,settings,ammo,reserve));
     assert(!drops.Pickup(WeaponSlots::RPG,settings,ammo,reserve));
     auto candidates=WeaponDropRules::Candidates(settings);for(int slot:candidates)assert(WeaponSlots::Firearm(slot) && slot!=WeaponSlots::RPG);
-    settings.rpg.available=true;assert(WeaponDropRules::Candidates(settings).back()==WeaponSlots::RPG);
+    settings.rpg.available=true;candidates=WeaponDropRules::Candidates(settings);
+    assert(std::find(candidates.begin(),candidates.end(),WeaponSlots::RPG)!=candidates.end());
+    for(int slot=WeaponSlots::TMP;slot<=WeaponSlots::G3SG1;++slot)assert(std::find(candidates.begin(),candidates.end(),slot)!=candidates.end());
     // The unified arsenal uses usable energy cells for duplicate drops, with no invisible reserve pool.
     settings.halfLife.available[1]=settings.halfLife.available[2]=true;
     ammo=reserve=0;assert(drops.Pickup(WeaponSlots::Tau,settings,ammo,reserve));

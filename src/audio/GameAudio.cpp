@@ -1,5 +1,6 @@
 #include "GameAudio.hpp"
 #include "../platform/WarcraftApi.hpp"
+#include "../platform/NativeArchive.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -10,6 +11,10 @@
 bool GameAudio::LoadClip(const std::string& path, Clip& clip) {
     std::ifstream file(path, std::ios::binary);
     std::vector<BYTE> bytes((std::istreambuf_iterator<char>(file)), {});
+    return LoadClipBytes(bytes,clip);
+}
+bool GameAudio::LoadClipBytes(const std::vector<BYTE>& bytes,Clip& clip) {
+    // File and owned archive samples share the same bounded PCM decoder and voice lifetime.
     if (bytes.size() < 12 || memcmp(bytes.data(), "RIFF", 4) || memcmp(bytes.data() + 8, "WAVE", 4)) return false;
     WAVEFORMATEX format{};
     // RIFF chunks are padded to even bytes; samples stay owned until every voice finishes.
@@ -101,32 +106,47 @@ float GameAudio::VolumePercent() const {
     if (master_) master_->GetVolume(&gain);
     return gain*100.0f;
 }
+bool GameAudio::HasClip(const char* name) const{return name && clips_.find(name)!=clips_.end();}
 void GameAudio::Play(const char* name, float volume) {
     auto found = clips_.find(name);
     if (found == clips_.end()) { wc3::Log("CS sound missing: %s", name); return; }
     Clip& clip = *found->second;
     // Reuse an idle voice rather than queuing behind an old shot or interrupting footsteps.
     IXAudio2SourceVoice* voice = nullptr; unsigned occupied = 0;
-    for (size_t i=0;i<clip.voices.size()-(clip.looping ? 1 : 0);++i) {
+    for (size_t i=0;i<clip.voices.size()-(clip.loopReserved ? 1 : 0);++i) {
         auto candidate=clip.voices[i];
         XAUDIO2_VOICE_STATE state{}; candidate->GetState(&state, XAUDIO2_VOICE_NOSAMPLESPLAYED);
         if (state.BuffersQueued) ++occupied; else if (!voice) voice = candidate;
     }
     if (!voice) {
-        voice = clip.voices[clip.next++ % (clip.voices.size()-(clip.looping ? 1 : 0))];
-        voice->Stop(); voice->FlushSourceBuffers(); voice->Start();
+        voice = clip.voices[clip.next++ % (clip.voices.size()-(clip.loopReserved ? 1 : 0))];
+        voice->Stop(); voice->FlushSourceBuffers();
     }
     XAUDIO2_BUFFER buffer{}; buffer.AudioBytes = UINT32(clip.data.size()); buffer.pAudioData = clip.data.data();
     buffer.Flags = XAUDIO2_END_OF_STREAM; voice->SetVolume(volume);
     voice->SetFrequencyRatio(1); // A voice released by a loop must not pitch-shift the next ordinary impact/shot.
     HRESULT result = voice->SubmitSourceBuffer(&buffer);
+    voice->Start(); // Canceled cues remain stopped until a new accepted playback explicitly starts them.
     wc3::Log("CS sound=%s volume=%.2f overlapping=%u queued=%08X", name, volume, occupied, result);
+}
+bool GameAudio::PlayArchive(const char* path,float volume){
+    if(!engine_ || !path || !*path)return false;std::string key=std::string("warcraft:")+path;
+    if(clips_.find(key)==clips_.end()){
+        auto bytes=NativeArchive::Read(path);auto clip=std::make_unique<Clip>();
+        if(!LoadClipBytes(bytes,*clip)){
+            for(auto voice:clip->voices)if(voice)voice->DestroyVoice();
+            wc3::Log("CS archive sound rejected path=%s bytes=%zu",path,bytes.size());return false;
+        }
+        clips_.emplace(key,std::move(clip));wc3::Log("CS archive sound loaded path=%s bytes=%zu",path,bytes.size());
+    }
+    Play(key.c_str(),volume);return true;
 }
 void GameAudio::SetLoop(const char* name,bool playing,float volume) {
     auto found=clips_.find(name);if(found==clips_.end())return;auto& clip=*found->second;
     if(clip.looping==playing)return;
     auto voice=clip.voices.back();if(!voice)return;
-    // The motor owns one reserved voice and cannot queue another loop on every rendered frame.
+    // Keep the motor voice reserved after release: ordinary playback must never restart a stopped infinite buffer.
+    clip.loopReserved=true;
     voice->Stop();voice->FlushSourceBuffers();clip.looping=false;
     voice->SetFrequencyRatio(1);
     if(playing) {
@@ -134,12 +154,18 @@ void GameAudio::SetLoop(const char* name,bool playing,float volume) {
         buffer.Flags=XAUDIO2_END_OF_STREAM;buffer.LoopCount=XAUDIO2_LOOP_INFINITE;voice->SetVolume(volume);
         clip.looping=SUCCEEDED(voice->SubmitSourceBuffer(&buffer));
     }
-    voice->Start();wc3::Log("CS loop=%s playing=%d",name,clip.looping);
+    if(clip.looping)voice->Start(); // Stop is asynchronous; restarting here on release could resume an unflushed buffer.
+    wc3::Log("CS loop=%s playing=%d",name,clip.looping);
 }
 float GameAudio::LoopPitch(const char* name) const {
     auto found=clips_.find(name);float ratio=1;
     if(found!=clips_.end() && found->second->voices.back())found->second->voices.back()->GetFrequencyRatio(&ratio);
     return ratio;
+}
+uint64_t GameAudio::SamplesPlayed(const char* name) const {
+    auto found=clips_.find(name);uint64_t total=0;
+    if(found!=clips_.end())for(auto voice:found->second->voices)if(voice){XAUDIO2_VOICE_STATE state{};voice->GetState(&state);total+=state.SamplesPlayed;}
+    return total;
 }
 void GameAudio::SetLoopPitch(const char* name,float ratio) {
     auto found=clips_.find(name);if(found==clips_.end() || !found->second->looping)return;
@@ -168,10 +194,19 @@ void GameAudio::Tick(DWORD now) {
     }
 }
 void GameAudio::CancelAnimation() { current_ = nullptr; event_ = 0; }
+void GameAudio::SilenceClip(Clip& clip) {
+    clip.looping=false;
+    for(auto voice:clip.voices)if(voice){
+        voice->SetVolume(0);voice->Stop();voice->FlushSourceBuffers();
+    }
+}
+void GameAudio::StopClip(const char* name) {
+    auto found=clips_.find(name);if(found==clips_.end())return;
+    // Mute and leave voices stopped until the next Play, including a startup cue interrupted before it ends.
+    SilenceClip(*found->second);wc3::Log("CS sound canceled=%s",name);
+}
 void GameAudio::Stop() {
     // Only our voices stop on mode exit; ambient sounds and Warcraft music keep playing.
     CancelAnimation();
-    for (auto& pair : clips_) {pair.second->looping=false;for (auto voice : pair.second->voices) {
-        voice->Stop(); voice->FlushSourceBuffers(); voice->Start();
-    }}
+    for (auto& pair : clips_)SilenceClip(*pair.second);
 }

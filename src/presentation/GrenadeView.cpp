@@ -1,6 +1,7 @@
 #include "GraphicsApi.hpp"
 #include "GrenadeView.hpp"
 #include "../combat/WeaponSlots.hpp"
+#include "../combat/SmokeVisibility.hpp"
 #include <windows.h>
 #include <gl/GL.h>
 #include <cmath>
@@ -36,21 +37,33 @@ void End(GLint mode) {glPopMatrix();glMatrixMode(GL_PROJECTION);glPopMatrix();gl
 void GrenadeView::Draw(const std::vector<GrenadeVisual>& items,const WorldLabelView& view,int width,int height,float nearPlane,float farPlane) {
     if(items.empty() || !view.active || width<=0 || height<=0)return;
     GLint mode;glGetIntegerv(GL_MATRIX_MODE,&mode);Begin(width,height);glEnable(GL_DEPTH_TEST);glDepthFunc(GL_LEQUAL);glDepthRange(0,1);
-    float inside=0;
+    float yaw=view.yaw*.01745329252f,pitch=view.pitch*.01745329252f;
+    GrenadePoint forward={std::cos(yaw)*std::cos(pitch),std::sin(yaw)*std::cos(pitch),std::sin(pitch)};
     for(const auto& item:items) {
-        if(!item.smoke)continue; // Textured 3D flight bodies belong to GrenadeWorldView, not the cloud billboard pass.
-        // Original soft billboards use real world depth; smoke never writes a wall into the depth buffer.
-        auto center=item.position;center[2]+=item.radius*.5f;
-        for(int i=0;i<25;++i) {
-            float angle=i*2.3999632f+item.age*.06f,r=item.radius*std::sqrt(float(i)/25)*.7f;
-            GrenadePoint puff={center[0]+std::cos(angle)*r,center[1]+std::sin(angle)*r,center[2]+std::sin(i*1.7f+item.age*.1f)*item.radius*.3f};
-            Placement at;if(Project(puff,item.radius*.6f,view,width,height,nearPlane,farPlane,at))Disc(at,.46f,.47f,.48f,item.opacity*.45f,true);
+        if(!item.smoke || item.opacity<=0 || item.radius<=0)continue;
+        auto center=SmokeVisibility::Center(item);
+        // Camera-facing slices integrate fog only in front of world depth. Nearby geometry stays readable,
+        // while even a short path through the cloud extinguishes distant silhouettes in both renderers.
+        int slices=std::clamp(int(std::ceil(2*item.radius/16)),8,128);
+        float step=2*item.radius/slices;
+        float alpha=1-std::exp(-SmokeVisibility::Density(item)*step);
+        for(int i=0;i<slices;++i) {
+            float offset=-item.radius+(i+.5f)*step;
+            GrenadePoint point=center;for(int axis=0;axis<3;++axis)point[axis]+=forward[axis]*offset;
+            float radius=std::sqrt(std::max(0.f,item.radius*item.radius-offset*offset));
+            Placement at;if(Project(point,radius,view,width,height,nearPlane,farPlane,at))Disc(at,.46f,.47f,.48f,alpha,false);
         }
-        float distance=0;for(int i=0;i<3;++i)distance+=(center[i]-view.eye[i])*(center[i]-view.eye[i]);
-        inside=std::max(inside,item.opacity*std::clamp(1-std::sqrt(distance)/item.radius,0.f,1.f));
+        // Account for the eye-to-first-slice gap when the near plane is inside smoke, rather than
+        // adding a distance-independent full-screen blanket that would also hide one's own feet.
+        GrenadePoint eye={view.eye[0],view.eye[1],view.eye[2]},to=eye;
+        for(int axis=0;axis<3;++axis)to[axis]+=forward[axis]*(nearPlane+step*.5f);
+        float length=SmokeVisibility::Length(item,eye,to);
+        float eyeDistance=0;for(int axis=0;axis<3;++axis)eyeDistance+=(eye[axis]-center[axis])*(eye[axis]-center[axis]);
+        if(length>0 && eyeDistance<item.radius*item.radius) {
+            glDisable(GL_DEPTH_TEST);glColor4f(.46f,.47f,.48f,1-std::exp(-SmokeVisibility::Density(item)*length));
+            glBegin(GL_QUADS);glVertex2f(0,0);glVertex2f(float(width),0);glVertex2f(float(width),float(height));glVertex2f(0,float(height));glEnd();glEnable(GL_DEPTH_TEST);
+        }
     }
-    // Inside the volume, near-plane clipping must not create a clear hole around the player's eye.
-    if(inside>0){glDisable(GL_DEPTH_TEST);glColor4f(.46f,.47f,.48f,inside);glBegin(GL_QUADS);glVertex2f(0,0);glVertex2f(float(width),0);glVertex2f(float(width),float(height));glVertex2f(0,float(height));glEnd();}
     End(mode);
 }
 void GrenadeView::Flash(float opacity,int width,int height) {

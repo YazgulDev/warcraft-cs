@@ -1,9 +1,16 @@
 #pragma once
 #include "../presentation/CameraHeightMotion.hpp"
+#ifdef WCS_GAMEPLAY_TEST
+#include "../platform/GameBuild.hpp"
+#endif
 #include "../combat/ShotgunReload.hpp"
+#include "../input/FpsTextEntry.hpp"
+#include "../combat/NuclearInventory.hpp"
+#include "../platform/NativeNuclearBomb.hpp"
 #include "../combat/HalfLifeEnergy.hpp"
 #include "../presentation/EnergyBeam.hpp"
 #include "../audio/CrowbarContact.hpp"
+#include "../combat/SmokeVisibility.hpp"
 #include "../combat/BurstFire.hpp"
 #include "../presentation/ViewmodelMotion.hpp"
 #include "../combat/GrenadeThrow.hpp"
@@ -38,6 +45,7 @@
 #include "../input/WeaponSelection.hpp"
 #include "../input/CameraWheel.hpp"
 #include "../config/GameplaySettings.hpp"
+#include "../config/SettingsMenu.hpp"
 #include "../inventory/AmmoRecovery.hpp"
 #include "../inventory/ItemPickup.hpp"
 #include "../inventory/WeaponDropRules.hpp"
@@ -69,7 +77,7 @@ public:
     void ResetMouse() { mouseLook_.Reset(); weaponWheel_.Reset();cameraWheel_.Reset();squadOrderMode_.ClearInput();armyToggleRequested_=false;weaponMenuCancelRequested_=true; }
     // Zoom is presentation-only: it must not cancel channeling or switch a carried CS weapon in TPS.
     void RequestMouseWheel(int delta) {
-        if(!Visible() || Buying() || InventoryOpen() || UnitFirstPerson())return;
+        if(!Visible() || SettingsInputOpen() || Buying() || InventoryOpen() || UnitFirstPerson())return;
         if(ThirdPerson())cameraWheel_.Add(delta);
         else {RequestSpellCancel();weaponWheel_.Add(delta);}
     }
@@ -133,7 +141,25 @@ public:
     const InventoryControls& ItemControls() const {return itemInventory_.State();}
     bool InventoryOpen() const {return itemInventory_.State().Open();}
     bool InventoryInputOpen() const {return itemInventory_.State().RoutingOpen();}
-    bool CursorMode() const {return Buying() || InventoryOpen();}
+    bool SettingsInputOpen() const {return settingsMenu_.RoutingOpen();}
+    const SettingsMenu& SettingsPanel() const {return settingsMenu_;}
+    void RequestSettingsMenu(SettingsMenu::Event e) {settingsMenu_.Queue(e);}
+    int RequestSettingsClick(int x,int y,int width,int height);
+    void RequestSettingsSlider(int row,int x,int width,int height);
+    FpsTextEntry& TextEntry(){return textEntry_;}
+    const FpsTextEntry& TextEntry() const{return textEntry_;}
+    bool TextInputOpen() const{return textEntry_.Opened();}
+    const std::string& ChatMessage() const{return chatMessage_;}
+    bool ChatMessageVisible() const{return chatMessageTick_ && GetTickCount()-chatMessageTick_<settings_.chatMessageSeconds*1000;}
+    bool NuclearSelected() const{return nuclearInventory_.Selected();}
+    bool NuclearFiring() const{return nuclearFireTick_ && GetTickCount()-nuclearFireTick_<750;}
+    bool NuclearPresentation() const{return NuclearSelected() || NuclearFiring();}
+    int PresentationWeapon() const{return NuclearPresentation() ? WeaponSlots::RPG : weapon_;}
+    float NuclearFlash() const{return nuclearBomb_.Flash()*nuclearExposure_;}
+    const NativeNuclearBomb& NuclearBomb() const{return nuclearBomb_;}
+    void RequestNuclearHolster(){nuclearHolsterRequested_=true;}
+    void RequestNuclearLaunch(){nuclearLaunchRequested_=true;}
+    bool CursorMode() const {return Buying() || InventoryOpen() || SettingsInputOpen() || TextInputOpen();}
     void RequestInventory(InventoryControls::Event e) {itemInventory_.Input(e);weaponMenuCancelRequested_=true;}
     void RequestInventoryClose() {inventoryEscape_=true;itemInventory_.Input({InventoryControls::Kind::Close});}
     void InventoryProjection(float verticalFov) {inventoryVerticalFov_=verticalFov;}
@@ -151,7 +177,7 @@ public:
     // Window events queue confirmation/cancel; only the game thread changes the equipped weapon.
     void RequestWeaponConfirm() {weaponMenuConfirmRequested_=true;}
     void RequestWeaponCancel() {weaponMenuCancelRequested_=true;}
-    bool SelectingWeapon() const {return Visible() && !ThirdPerson() && !UnitFirstPerson() && !Buying() && !InventoryInputOpen() && weaponSelection_.Open();}
+    bool SelectingWeapon() const {return Visible() && !SettingsInputOpen() && !ThirdPerson() && !UnitFirstPerson() && !Buying() && !InventoryInputOpen() && weaponSelection_.Open();}
     const WeaponSelection& WeaponChoice() const {return weaponSelection_;}
     WeaponSelection::Available AvailableWeapons() const;
     int Gold() const { return gold_; }
@@ -160,8 +186,8 @@ public:
     EconomySettings::Currency PaymentCurrency() const {return paymentCurrency_;}
     std::string MoneyText() const {return settings_.warcraftOnly ? std::to_string(gold_)+" GOLD" : CurrencyDisplay::Format(money_,paymentCurrency_);}
     std::string NearbyWeaponName() const {return nearbyWeapon_<0 ? "" : settings_.weapons[nearbyWeapon_].name;}
-    float ViewYaw() const { return yaw_+(ThirdPerson() ? 0 : recoil_.Yaw()); }
-    float ViewPitch() const { return pitch_+(ThirdPerson() ? 0 : recoil_.Pitch()); }
+    float ViewYaw() const { return yaw_+(ThirdPerson() ? 0 : recoil_.Yaw())+nuclearBomb_.Shake()*nuclearExposure_; }
+    float ViewPitch() const { return pitch_+(ThirdPerson() ? 0 : recoil_.Pitch())+nuclearBomb_.Shake()*nuclearExposure_*.5f; }
     float ViewFov() const { return scopeLevel_==2 ? 10.0f : Scoped() ? 40.0f : 85.0f; }
     const std::string& SkyName() const {
         const auto& choice=settings_.tilesetSky[static_cast<unsigned char>(mapTileset_)];
@@ -182,13 +208,16 @@ public:
     void SetPaused(bool value) { paused_ = value; }
     int WeaponIndex() const { return weapon_; }
     const char* Animation() const;
-    const char* IdleAnimation() const {return Sequence("idle");}
+    const char* IdleAnimation() const {return NuclearPresentation() ? "idle" : Sequence("idle");}
     const std::vector<RocketVisual>& RocketVisuals() const {return rockets_.Visuals();}
     bool LaserVisible() const {return rockets_.LaserVisible();}
     const GrenadePoint& LaserPoint() const {return rockets_.Laser();}
     float AnimationTime() const;
     const ViewmodelPose& WeaponPose() const {return viewmodelMotion_.Pose();}
     unsigned ShotSerial() const {return shotSerial_;}
+    bool HoveredItemVisible(const float* eye) const {return VisibleThroughSmoke(eye,itemHover_.Position().data());}
+    bool BlocksSmokeSight(uintptr_t attack,uintptr_t target) const {return grenades_.BlocksSight(attack,target);}
+    bool VisibleThroughSmoke(const float* from,const float* to) const {return SmokeVisibility::Visible(grenades_.Visuals(),{from[0],from[1],from[2]},{to[0],to[1],to[2]});}
     const std::vector<GrenadeVisual>& GrenadeVisuals() const {return grenades_.Visuals();}
     float FlashOpacity() const {return grenades_.FlashOpacity();}
     bool ShowMuzzleFlash() const {
@@ -236,6 +265,29 @@ public:
     void TestLogTarget() const {wc3::Log("fixture target hp=%.1f actorMana=%.1f",fixtureTarget_ ? wc3::Real(wc3::GetUnitState(fixtureTarget_,0)) : -1,wc3::Real(wc3::GetUnitState(unit_,2)));}
     // Match the real movement key-down path, including deliberate channel interruption.
     void TestWalk(int key,DWORD duration,bool walking=false) {RequestSpellCancel();testWalkKey_=key;testWalking_=walking;testWalkUntil_=GetTickCount()+std::min(duration,DWORD(2000));}
+    void TestMapSky(const char* model) {
+        auto frame=ui_ ? *reinterpret_cast<uintptr_t*>(ui_+0x3BC) : 0;
+        if(frame)reinterpret_cast<void (__thiscall*)(uintptr_t,const char*)>(gameBase_+wc3::Rva(0x390590))(frame,model);
+    }
+    void TestLogSky() const {
+        auto frame=ui_ ? *reinterpret_cast<uintptr_t*>(ui_+0x3BC) : 0;
+        const char* model=frame ? reinterpret_cast<const char* (__fastcall*)(uintptr_t,uintptr_t)>(gameBase_+wc3::Rva(0x4C4630))(frame+0x348,0) : nullptr;
+        wc3::Log("fixture settings nativeSky=%s sprite=%08X",model && *model ? model : "none",frame ? *reinterpret_cast<uintptr_t*>(frame+0x354) : 0);
+    }
+    bool TestInputRoute() const {return testInputRoute_;}
+    void TestInputRoute(bool value) {testInputRoute_=value;}
+    void TestEquip(int slot) {SwitchWeapon(slot);}
+    void TestReload() {Reload();}
+    void TestSecondary() {keys_[VK_RBUTTON]=false;testSecondaryUntil_=GetTickCount()+100;}
+    void TestSmoke(float x,float y,float z) {
+        grenades_.Throw(unit_,WeaponSlots::Smoke,{x,y,z},{1,0,0},{},settings_);
+    }
+    void TestArsenalState() const {
+        wc3::Log("fixture arsenal slot=%d owned=%d ammo=%d reserve=%d serial=%u scoped=%d reload=%d animation=%s actorHP=%.2f",weapon_,inventory_.owned[weapon_],ammo_[weapon_],reserve_[weapon_],shotSerial_,scopeLevel_,reloadEnd_!=0,Animation(),wc3::Real(wc3::GetUnitState(unit_,0)));
+        // Read actual device cursors after release; a loop-stop log alone cannot prove that audio stopped.
+        wc3::Log("fixture energy audio active=%d run=%llu windup=%llu off=%llu",energy_.Active(),
+            audio_.SamplesPlayed("hl_egon_run3.wav"),audio_.SamplesPlayed("hl_egon_windup2.wav"),audio_.SamplesPlayed("hl_egon_off1.wav"));
+    }
     // Disposable scenes exercise the real weapon contact path without desktop mouse input.
     void TestStrike(int slot) {
         if(slot<0 || slot>=WeaponSlots::Count || slot==WeaponSlots::C4)return;
@@ -272,7 +324,8 @@ public:
     const Weapon& WeaponData(int slot) const {return settings_.weapons[slot];}
 private:
 #ifdef WCS_GAMEPLAY_TEST
-    int testWalkKey_=0;bool testWalking_=false;DWORD testWalkUntil_=0,testAttackUntil_=0;
+    bool testInputRoute_=false;
+    int testWalkKey_=0;bool testWalking_=false;DWORD testWalkUntil_=0,testAttackUntil_=0,testSecondaryUntil_=0;
 #endif
     bool Pressed(int key);
     bool Down(int key) const;
@@ -321,6 +374,7 @@ private:
     wc3::Handle shop_=0;
     bool shopCloseRequested_=false;
     void ReloadSettings();
+    void ApplyMenuSettings();
     void ToggleHealthBars();
     void ResetLoadout();
     void Buy(int slot,bool ammunition);
@@ -395,6 +449,13 @@ private:
     CameraWheel cameraWheel_;
     float thirdPersonDistance_=500;
     GameplaySettings settings_;
+    SettingsMenu settingsMenu_;
+    FpsTextEntry textEntry_;
+    NuclearInventory nuclearInventory_;
+    NativeNuclearBomb nuclearBomb_;
+    DWORD nuclearSelectTick_=0,nuclearFireTick_=0;float nuclearExposure_=0;
+    bool nuclearHolsterRequested_=false,nuclearLaunchRequested_=false;
+    std::string chatMessage_;DWORD chatMessageTick_=0;
     NativeUnitHud unitHudReader_;
     UnitHudSnapshot unitHud_;
     DWORD unitHudTick_=0;

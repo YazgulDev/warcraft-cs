@@ -32,7 +32,7 @@ int main() {
     assert(menu.Confirm(available)==WeaponSlots::P90 && !menu.Open());
     // Expected visible rows, including every category boundary; reversing retraces each individual step.
     const int ordered[]={0,1,WeaponSlots::AWP,WeaponSlots::MP5,WeaponSlots::P90,WeaponSlots::M249,
-        WeaponSlots::M3,WeaponSlots::XM1014,WeaponSlots::Pistol,WeaponSlots::Deagle,WeaponSlots::Glock,
+        WeaponSlots::M3,WeaponSlots::XM1014,WeaponSlots::TMP,WeaponSlots::UMP45,WeaponSlots::FAMAS,WeaponSlots::Galil,WeaponSlots::G3SG1,WeaponSlots::Pistol,WeaponSlots::Deagle,WeaponSlots::Glock,
         WeaponSlots::Knife,WeaponSlots::Sword,WeaponSlots::HE,WeaponSlots::Flashbang,WeaponSlots::Smoke,WeaponSlots::C4,
         WeaponSlots::Crowbar,WeaponSlots::Tau,WeaponSlots::Gluon,WeaponSlots::RPG};
     for(int i=0;i<WeaponSlots::Count;++i) {
