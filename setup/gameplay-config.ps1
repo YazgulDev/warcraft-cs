@@ -48,6 +48,9 @@ function Update-GameplayConfig([string]$Template,[string]$Destination) {
         if($saved -and $saved[1] -eq 'sapper'){$lines[$saved[0]]='ExplosionSound=layered';$changed=$true}
         if($soundVersionIndex -ge 0){$lines[$soundVersionIndex]='SoundVersion=2';$changed=$true}
     }
+    # Rename only the former stock grant code, preserving independently customized codes and other settings.
+    $saved=$nuclearValues['Code']
+    if($saved -and $saved[1] -eq 'PUTINMOLODEC'){$lines[$saved[0]]='Code=warneverchanges';$changed=$true}
     # Upgrade the former stock head spray together once; custom values and versioned opt-backs remain intact.
     $bloodSection=$false;$bloodVersion=1;$bloodVersionIndex=-1;$bloodValues=@{}
     for($i=0;$i -lt $lines.Count;$i++) {

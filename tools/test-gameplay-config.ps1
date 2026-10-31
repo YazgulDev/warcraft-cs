@@ -679,3 +679,15 @@ foreach($case in @(@('','sapper','layered'),@('1','city','city'),@('','off','off
     if((Get-FileHash $audioFile).Hash -ne $once){throw 'Nuclear mix migration repeats.'}
 }
 Write-Output 'PASS layered nuclear cue migration, muted/custom selection and saved mix controls.'
+
+# Rename only the old stock code; repeated installs retain custom commands and nuclear tuning.
+foreach($case in @(@('PUTINMOLODEC','warneverchanges'),@('putinmolodec','warneverchanges'),@('warneverchanges','warneverchanges'),@('MY_CODE-9','MY_CODE-9'))) {
+    $codeFile=Join-Path $folder ('nuclear-code-'+[guid]::NewGuid().ToString('N')+'.ini')
+    @('[NuclearBomb]',('Code='+$case[0]),'Radius=4321','RepeatCodes=true') | Set-Content $codeFile
+    Update-GameplayConfig $template $codeFile
+    $updated=Get-Content $codeFile -Raw
+    foreach($required in @(('Code='+$case[1]),'Radius=4321','RepeatCodes=true')){if(!$updated.Contains($required)){throw "Nuclear code migration lost $required"}}
+    $once=(Get-FileHash $codeFile).Hash;Update-GameplayConfig $template $codeFile
+    if((Get-FileHash $codeFile).Hash -ne $once){throw 'Nuclear code migration repeats.'}
+}
+Write-Output 'PASS nuclear grant code rename, saved custom codes and repeated installation.'

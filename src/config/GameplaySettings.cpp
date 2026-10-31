@@ -78,7 +78,9 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     }
     nuclear.flashSeconds=number("NuclearBomb","FlashSeconds",.65f,3);
     nuclear.shakeDegrees=number("NuclearBomb","ShakeDegrees",.6f,3);
-    auto nuclearCode=text("NuclearBomb","Code","PUTINMOLODEC");
+    auto nuclearCode=text("NuclearBomb","Code","warneverchanges");
+    // F8 also upgrades the former stock code; unrelated player-defined codes remain valid.
+    if(!_stricmp(nuclearCode.c_str(),"PUTINMOLODEC"))nuclearCode="warneverchanges";
     if(!nuclearCode.empty() && nuclearCode.size()<=64 && nuclearCode.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-" )==std::string::npos)nuclear.code=nuclearCode;
     // Visual-only settings share the real startup/F8 snapshot and bounded migration path.
     result.viewmodel.bob=enabled("Viewmodel","BobEnabled");

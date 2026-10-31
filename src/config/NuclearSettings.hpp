@@ -13,7 +13,8 @@ struct NuclearSettings {
     // A bounded plume count controls density independently of size and time; sound stays on the CS master bus.
     int smokeEmitters=37;float explosionVolumePercent=100;
     std::string explosionSound="layered";
-    std::string code="PUTINMOLODEC";
+    // Keep the renamed grant code consistent for fresh configs and invalid-key fallback.
+    std::string code="warneverchanges";
     float SmokeStart() const{return flameDelay+flameSeconds;}
     float FinishedAt() const{return std::max(8.f,SmokeStart()+smokeSeconds);}
 };
