@@ -14,13 +14,23 @@ foreach($required in @('Enabled=false','MinimumDepth=144','SpeedPercent=42','Flo
 }
 $waterHash=(Get-FileHash $waterFile).Hash;Update-GameplayConfig $template $waterFile
 if((Get-FileHash $waterFile).Hash -ne $waterHash){throw 'Swimming preferences changed during repeated update.'}
+# Portal tuning, starting-kit opt-outs and per-field energy opt-backs survive a real repeated install.
+$portalFile=Join-Path $folder 'portal-heavy.ini'
+@('[Portals]','Enabled=false','Radius=99','HeightTolerance=77','CooldownSeconds=2.25','[Loadout]','Crowbar=false','[Combat]','ExplosiveWeaponDeaths=false','[TauCannon]','Damage=20','DamageVersion=3','ChargedDamage=200','ChargedDamageVersion=2','[AWP]','Damage=777','HeroMultiplier=1.7') | Set-Content -LiteralPath $portalFile -Encoding ascii
+Update-GameplayConfig $template $portalFile
+$portalText=Get-Content -LiteralPath $portalFile -Raw
+foreach($required in @('Enabled=false','Radius=99','HeightTolerance=77','CooldownSeconds=2.25','Crowbar=false','ExplosiveWeaponDeaths=false','Damage=20','ChargedDamage=200','ChargedDamageVersion=2','Damage=777','HeroMultiplier=1.7')) {
+    if(!$portalText.Contains($required)){throw "Portal/heavy update lost $required"}
+}
+$portalHash=(Get-FileHash $portalFile).Hash;Update-GameplayConfig $template $portalFile
+if((Get-FileHash $portalFile).Hash -ne $portalHash){throw 'Portal/heavy preferences changed during repeated update.'}
 # Previous energy stock values upgrade once; later edits back to those values must survive reinstallation.
 foreach($custom in @($false,$true)) {
     $energyConfig=Join-Path $folder ('energy-'+$custom+'.ini')
     @('[TauCannon]',$(if($custom){'Damage=123'}else{'Damage=20'}),'ChargedDamage=200','[GluonGun]','Damage=14','[HalfLife]','BeamWidth=8','[Combat]','EnableAttackEffects=true') | Set-Content $energyConfig
     Update-GameplayConfig $template $energyConfig
     $energyText=Get-Content $energyConfig -Raw
-    foreach($expected in @($(if($custom){'Damage=123'}else{'Damage=100'}),'ChargedDamage=1000','Damage=70','BeamWidth=8','NativeAttackSound=false','OwnedSprites=true','DamageVersion=2')) {
+    foreach($expected in @($(if($custom){'Damage=123'}else{'Damage=200'}),'ChargedDamage=2000','Damage=70','BeamWidth=8','NativeAttackSound=false','OwnedSprites=true','DamageVersion=2')) {
         if(!$energyText.Contains($expected)){throw "Energy migration missing $expected"}
     }
     $energyHash=(Get-FileHash $energyConfig).Hash;Update-GameplayConfig $template $energyConfig
@@ -558,12 +568,12 @@ foreach($bloodCase in @(@('1','16','48'),@('2','16','16'),@('1','7','7'))) {
 }
 
 # Only former unversioned stock HE upgrades. Later returns to 100 and custom damage/flash opt-outs survive.
-foreach($case in @(@('100','','600'),@('100','1','600'),@('300','2','600'),@('300','3','300'),@('100','2','100'),@('0','','0'),@('777','','777'))) {
+foreach($case in @(@('100','','1200'),@('100','1','1200'),@('300','2','1200'),@('300','3','300'),@('100','2','100'),@('0','','0'),@('777','','777'),@('600','4','600'))) {
     $heConfig=Join-Path $folder ('he-damage-'+[guid]::NewGuid().ToString('N')+'.ini')
     @('[HEGrenade]',('Damage='+$case[0]),$(if($case[1]){'DamageVersion='+$case[1]}),'[Flashbang]','StunAllUnits=false','StunDistanceFalloff=true','UnitStunSeconds=4','[Movement]','Mode=classic') | Set-Content -LiteralPath $heConfig -Encoding ascii
     Update-GameplayConfig $template $heConfig
     $heText=Get-Content $heConfig -Raw
-    foreach($expected in @(('Damage='+$case[2]),'DamageVersion=3','StunAllUnits=false','StunDistanceFalloff=true','UnitStunSeconds=4','Mode=classic')) {
+    foreach($expected in @(('Damage='+$case[2]),'DamageVersion=4','StunAllUnits=false','StunDistanceFalloff=true','UnitStunSeconds=4','Mode=classic')) {
         if(!$heText.Contains($expected)){throw ('HE/flash migration lost '+$expected)}
     }
     $heHash=(Get-FileHash $heConfig).Hash;Update-GameplayConfig $template $heConfig
@@ -574,7 +584,13 @@ foreach($case in @(@('100','','600'),@('100','1','600'),@('300','2','600'),@('30
 foreach($spec in @(
     @('RPG','Damage','DamageVersion',2,'100','1800'),
     @('RPG','Radius','BlastVersion',4,'600','1000'),
-    @('HEGrenade','Damage','DamageVersion',3,'300','600'),
+    @('HEGrenade','Damage','DamageVersion',4,'600','1200'),
+    @('AWP','Damage','DamageVersion',2,'115','230'),
+    @('AWP','HeroMultiplier','MultiplierVersion',2,'3','6'),
+    @('G3SG1','Damage','DamageVersion',2,'80','160'),
+    @('G3SG1','HeroMultiplier','MultiplierVersion',2,'2.2','4.4'),
+    @('TauCannon','Damage','DamageVersion',3,'100','200'),
+    @('TauCannon','ChargedDamage','ChargedDamageVersion',2,'1000','2000'),
     @('M3','HeroMultiplier','MultiplierVersion',2,'3','6'),
     @('XM1014','HeroMultiplier','MultiplierVersion',2,'2.4','4.8'))) {
     foreach($saved in @($spec[4],'0','777')) {

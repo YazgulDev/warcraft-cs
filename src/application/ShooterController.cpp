@@ -1,6 +1,7 @@
 #include "../platform/GameBuild.hpp"
 #include "ShooterController.hpp"
 #include "../platform/NativeHeadGore.hpp"
+#include "../platform/NativeExplosiveDeath.hpp"
 #include "../presentation/TauChargeFeedback.hpp"
 #include "../platform/DiagnosticLog.hpp"
 #include "../combat/CombatDamage.hpp"
@@ -55,6 +56,7 @@ void ShooterController::Configure(const char* root, uintptr_t gameBase) {
     root_ = root;
     NativeChat::Configure(gameBase); // Verify the real host chat handler before any custom text can be submitted.
     gameBase_ = gameBase;
+    portals_.Configure(gameBase);NativeExplosiveDeath::Configure(gameBase);
     // Loot randomness is local to the mod and never advances Warcraft's scripted random stream.
     lootRandom_.seed(GetTickCount()^GetCurrentProcessId());
     hitboxes_.Configure(gameBase);
@@ -290,6 +292,7 @@ void ShooterController::ResetMap() {
     textEntry_.Reset();nuclearInventory_.Holster();nuclearFireTick_=0;nuclearHolsterRequested_=nuclearLaunchRequested_=false;
     settingsMenu_.Reset();
     NativeHeadGore::Reset(); // Corpse palettes and map model definitions must not cross map generations.
+    portals_.Reset();NativeExplosiveDeath::Reset(); // No destination latch or scoped corpse flag crosses maps.
     // Currency and local loot belong to the unloaded map, independently of view/loadout changes.
     ++rewardGeneration_;dollars_.Reset();droppedWeapons_.Reset();nearbyWeapon_=-1;money_=0;
     flashWeapon_=-1;viewmodelMotion_.Reset();cameraHeight_.Reset(); // No viewmodel offset or unpresented flash crosses a map boundary.
@@ -400,11 +403,22 @@ SpellAim ShooterController::InventoryAim(int x,int y,int width,int height) {
     }
     return SpellAim::Pick(unit_,origin,direction,settings_.spells.aimDistance,hitboxes_,destructableHitboxes_);
 }
+void ShooterController::RebaseAfterTeleport() {
+    // Native placement owns XY; no velocity, old floor, ground-eye correction or recovery checkpoint follows it.
+    movement_.Reset(wc3::Ground(wc3::Real(wc3::GetUnitX(unit_)),wc3::Real(wc3::GetUnitY(unit_))));
+    collision_.ResetRecovery();positionRecoveryRequested_=false;cameraHeight_.Reset();viewmodelMotion_.Reset();stepDistance_=0;
+}
 void ShooterController::AimAndMove(float dt) {
     // Consume once, even when cargo/status blocks control, so a failed Home tap cannot replay later.
     bool recover=positionRecoveryRequested_;positionRecoveryRequested_=false;
     // A contained unit belongs to native cargo: changing XY/stance would fake an escape without releasing it.
     if (status_.contained || status_.hidden) { mouseLook_.Reset();movement_.Stop();viewmodelMotion_.Reset();cameraHeight_.Reset(); stepDistance_ = 0; return; }
+    auto actor=unit_;auto object=wc3::UnitObject(actor);unsigned generation=rewardGeneration_;
+    auto valid=[&]{return generation==rewardGeneration_ && unit_==actor && wc3::UnitObject(actor)==object;};
+    if(settings_.portals.enabled && portals_.Observe(unit_,movement_.HullRadius()*2)) {
+        // Map-script/engine teleports do not retain a remote floor or the old FPS camera correction.
+        RebaseAfterTeleport();
+    }
     if(recover && !status_.immobilized && !status_.incapacitated && !Casting() && !CursorMode())collision_.RequestRecovery();
     // Mouse capture occurs only in the foreground and only after the player enables FPS.
     float dx=0,dy=0;
@@ -436,6 +450,7 @@ void ShooterController::AimAndMove(float dt) {
     speed *= speedScale;
     // Third-person movement uses the hero's effective native speed, including Warcraft slows and haste.
     if(ThirdPerson() || UnitFirstPerson())speed=status_.nativeSpeed/MovementPhysics::worldScale;
+    float manualDistance=movement_.HullRadius()*2;
     {
         float oldX = wc3::Real(wc3::GetUnitX(unit_)), oldY = wc3::Real(wc3::GetUnitY(unit_));
         bool wasSwimming=movement_.Swimming();
@@ -443,6 +458,7 @@ void ShooterController::AimAndMove(float dt) {
         collision_.PrepareWaterExit(unit_,movement_,input); // Space near a bank can leave buoyancy through the existing collision sweep.
         bool wasGrounded = movement_.Grounded();
         movement_.Step(input, dt, speed);
+        manualDistance+=movement_.Speed()*std::clamp(dt,0.f,.05f);
         if (status_.speedScale < 0.99f) movement_.LimitSpeed(speed * MovementPhysics::worldScale);
         bool tookOff = wasGrounded && !movement_.Grounded() && !movement_.Swimming();
         collision_.Move(unit_, movement_, dt);
@@ -472,6 +488,21 @@ void ShooterController::AimAndMove(float dt) {
             }
         } else stepDistance_ = 0;
     }
+    if(!valid())return;
+    if(settings_.portals.enabled && portals_.Observe(actor,manualDistance)) {
+        // A native region trigger may teleport during a movement setter as well as between ticks.
+        // Budget the actual motor step so fast ordinary movement cannot be mistaken for a teleport.
+        RebaseAfterTeleport();
+    }
+    if(portals_.Travel(actor,movement_.FeetZ()+wc3::Real(wc3::GetUnitFlyHeight(actor)),settings_.portals,
+        !status_.immobilized && !status_.incapacitated && !CursorMode() && !Casting(),valid)) {
+        // Native placement owns the destination. Camera and physics must discard the pre-portal floor/momentum.
+        RebaseAfterTeleport();
+        heroAttack_.Cancel();glockBurst_.Cancel();meleeContact_=0;CancelPlant();CancelEnergy();stepDistance_=0;
+        Notice("TELEPORTED");
+    }
+    if(!valid())return; // A region/death callback can replace the actor or unload the map during native placement.
+    portals_.Commit(unit_);
     // Smooth only ground-height presentation after collision; weapon rays consume the same eye.
     cameraHeight_.Step(wc3::Real(wc3::GetUnitX(unit_)),wc3::Real(wc3::GetUnitY(unit_)),movement_.FeetZ(),
         movement_.Grounded(),dt,movement_.StepHeight(),settings_.cameraHeight);
@@ -1001,7 +1032,8 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
         // Snapshot creature eligibility before native death/map triggers can remove the target.
         bool hostileBody=!destructable && !contact.head && !wc3::IsUnitType(target,2) && wc3::IsUnitEnemy(target,wc3::GetOwningPlayer(unit_));
         auto headCorpse=NativeHeadGore::Prepare(target,{x+vx*nearest,y+vy*nearest,z+vz*nearest},
-            settings_.hitDetection.headshotBoneWeight,hostileHead && damage>0 && settings_.combatVisuals.headshotDecapitation,contact.headRoot);
+            settings_.hitDetection.headshotBoneWeight,hostileHead && damage>0 && settings_.combatVisuals.headshotDecapitation &&
+            !(settings_.explosiveWeaponDeaths && WeaponSlots::Energy(weapon_) && NativeExplosiveDeath::Available()),contact.headRoot);
         if (settings_.heroDamage) wc3::Log("hero damage attack=%.1f multiplier=%.2f base=%.1f",attack,settings_.heroMultiplier[weapon_],baseDamage);
         // Confirmed weapon hits dispatch one native attack, including the map's attack effects, without pursuit.
         // C4/destructables and explicit finishing retain their own policies; zero friendly damage causes no events.
@@ -1009,11 +1041,14 @@ void ShooterController::Strike(float yawOffset,float pitchOffset,float damageSca
         KillReward::Sink rewards=[this](const KillReward& reward){RewardKill(reward);};
         auto reward=destructable ? KillReward{} : KillReward::Capture(unit_,target,rewards);
         unsigned generation=rewardGeneration_;
+        // One synchronous native damage transaction owns the exploded flag; survivors release it before return.
+        NativeExplosiveDeath::Lease corpse(unit_,target,damage>0 && !destructable && settings_.explosiveWeaponDeaths && WeaponSlots::Energy(weapon_));
         bool effects=damage>0 && !destructable && !lethal && settings_.enableAttackEffects &&
             NativeWeaponAttack::Apply(unit_,target,damage,std::hypot(wc3::Real(wc3::GetUnitX(target))-x,wc3::Real(wc3::GetUnitY(target))-y),settings_.nativeAttackSound);
         if(generation!=rewardGeneration_)return;
         if(damage>0 && !effects)wc3::UnitDamageTarget(unit_,target,&damage,FALSE,TRUE,
             destructable || lethal ? 0 : NativeWeaponAttack::AttackType(unit_),lethal ? 26 : 4,0);
+        corpse.Release(); // Release a surviving victim before rewards, blood or other presentation callbacks.
         if(generation!=rewardGeneration_)return;
         if (lethal && wc3::Real(wc3::GetUnitState(target, 0)) > 0.405f) wc3::KillUnit(target);
         if(generation!=rewardGeneration_)return; // A native death trigger may have unloaded the map.
@@ -1636,7 +1671,10 @@ void ShooterController::Tick(uintptr_t ui) {
     if (meleeContact_ && now >= meleeContact_) { meleeContact_ = 0; Strike(); }
     bool firePressed = Pressed(VK_LBUTTON);
     // CS chooses recoil after the current movement command, so the first moving/ducked shot uses that stance.
+    auto movementGeneration=rewardGeneration_;auto movementActor=unit_;auto movementObject=wc3::UnitObject(unit_);
     AimAndMove(dt);
+    // Portal region callbacks may replace the actor/map; queued attacks must not consume stale status.
+    if(!active_ || movementGeneration!=rewardGeneration_ || unit_!=movementActor || wc3::UnitObject(unit_)!=movementObject)return;
     // Planting requires a held button; other weapons preserve their existing click/automatic behavior.
     if(ThirdPerson()) {
         // Restore locomotion's temporary rate before playing a native attack. Held LMB respects IAS-scaled recovery.

@@ -31,6 +31,10 @@ On dry ground, hold Space to repeat jumps. For air strafing, build speed with W,
 then alternate A with a left mouse turn and D with a right turn.
 See [movement](MOVEMENT.md) and [third-person control](THIRD-PERSON.md).
 
+The local [portal development build](PORTALS-HEAVY-WEAPONS.md) teleports through active waygates
+when you approach them. Leave the arrival gate before using it again. Native scripted in-map
+teleports retain their own triggers; the controlled camera/floor follow the new position.
+
 Select `[Movement] Mode=recovery` and press F8 to enable the latest recovery movement.
 Release 0.13.0 defaults to `Mode=classic`, restoring movement before the 24 October collision redesign and leaving Home inactive. Optional `Mode=recovery` enables platform protection and Home recovery. Published 0.12.0 used recovery by default.
 Recovery uses `[Shortcuts] RecoverPosition=HOME` (`NONE` disables it).

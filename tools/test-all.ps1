@@ -9,6 +9,8 @@ foreach ($name in @('window-input','fog-of-war','diagnostic-log','native-frame-r
 }
 & (Join-Path $PSScriptRoot 'test-tree-and-wheel.ps1')
 & (Join-Path $PSScriptRoot 'test-third-person.ps1')
+# Native portal registrations and scoped explosive-death state are checked without game files.
+& (Join-Path $PSScriptRoot 'test-portals-deaths.ps1')
 & (Join-Path $PSScriptRoot 'test-native-hover-view.ps1')
 # Attack scope/lifecycle regressions use synthetic native entry points, with no game files.
 & (Join-Path $PSScriptRoot 'test-native-weapon-attack.ps1')

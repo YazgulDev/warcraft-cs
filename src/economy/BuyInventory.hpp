@@ -12,7 +12,8 @@ public:
         for (int i=0;i<WeaponSlots::Count;++i) {
             // C4 enters the starting kit only through an explicit bomb count or the all-weapons option.
             owned[i]=settings.startAllWeapons || i==WeaponSlots::Knife || i==WeaponSlots::Sword || i==WeaponSlots::Pistol ||
-                (i==WeaponSlots::C4 && settings.startBombs>0);
+                (i==WeaponSlots::C4 && settings.startBombs>0) || (i==WeaponSlots::Crowbar && settings.startCrowbar);
+            // The optional starting Crowbar cannot bypass resource seals or the native-only profile.
             if(!settings.WeaponEnabled(i))owned[i]=false;
             ammo[i]=owned[i] ? (i==WeaponSlots::C4 ? settings.startBombs : magazines[i]) : 0;
             reserve[i]=owned[i] ? reserves[i] : 0;

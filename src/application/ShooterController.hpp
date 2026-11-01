@@ -16,6 +16,7 @@
 #include "../combat/GrenadeThrow.hpp"
 #include "../platform/NativeGrenades.hpp"
 #include "../platform/NativeRockets.hpp"
+#include "../platform/NativePortals.hpp"
 #include "../combat/Weapon.hpp"
 #include "../combat/WeaponSlots.hpp"
 #include "../platform/WarcraftApi.hpp"
@@ -299,6 +300,14 @@ public:
         wc3::Log("fixture energy audio active=%d run=%llu windup=%llu off=%llu",energy_.Active(),
             audio_.SamplesPlayed("hl_egon_run3.wav"),audio_.SamplesPlayed("hl_egon_windup2.wav"),audio_.SamplesPlayed("hl_egon_off1.wav"));
     }
+    void TestHeavyState() const {
+        if(!unit_)return;
+        // Copied native observations prove actual camera synchronization and starting ownership.
+        wc3::Log("fixture heavy actor x=%.3f y=%.3f feet=%.3f eye=%.3f cameraX=%.3f cameraY=%.3f cameraZ=%.3f crowbar=%d available=%d",
+            wc3::Real(wc3::GetUnitX(unit_)),wc3::Real(wc3::GetUnitY(unit_)),movement_.FeetZ(),ViewEyeZ(),
+            wc3::Real(wc3::GetCameraEyePositionX()),wc3::Real(wc3::GetCameraEyePositionY()),wc3::Real(wc3::GetCameraEyePositionZ()),
+            inventory_.owned[WeaponSlots::Crowbar],settings_.WeaponEnabled(WeaponSlots::Crowbar));
+    }
     // Disposable scenes exercise the real weapon contact path without desktop mouse input.
     void TestStrike(int slot) {
         if(slot<0 || slot>=WeaponSlots::Count || slot==WeaponSlots::C4)return;
@@ -373,6 +382,7 @@ private:
     GrenadeThrow grenadeThrow_;
     NativeGrenades grenades_;
     NativeRockets rockets_;
+    NativePortals portals_;
     bool rpgLaser_=true;
     float grenadePullSeconds_=1;
     void CancelPlant();
@@ -388,6 +398,7 @@ private:
     void ApplyMenuSettings();
     void ToggleHealthBars();
     void ResetLoadout();
+    void RebaseAfterTeleport();
     void Buy(int slot,bool ammunition);
     void UpdateBuyMenu();
     void UpdateWeaponSelection(DWORD now);

@@ -24,7 +24,7 @@ public:
 private:
     KillReward::Sink onKill_;
     struct Trail {float time;GrenadePoint position;};
-    struct Charge {RocketProjectile flight;wc3::Handle actor=0;int type=0;float born=0,damage=0,friendly=0;std::deque<Trail> trail;ImpactSink payload;};
+    struct Charge {RocketProjectile flight;wc3::Handle actor=0;int type=0;float born=0,damage=0,friendly=0;bool explosiveDeaths=false;std::deque<Trail> trail;ImpactSink payload;};
     struct Burst {GrenadePoint position;float born,size;};
     bool Clock();
     float Time() const;

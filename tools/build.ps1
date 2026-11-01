@@ -22,6 +22,8 @@ $sources = @('platform/WarcraftApi.cpp', 'input/MouseLook.cpp', 'movement/Moveme
 $sources += @('platform/GameBuild.cpp','platform/D3DHooks.cpp','presentation/D3DGraphics.cpp','presentation/D3DTextures.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 $sources += '"'+(Join-Path $modRoot 'src/platform/D3DNativeUi.cpp')+'"' # Native D3D UI filtering and animated portrait capture.
 $sources += '"'+(Join-Path $modRoot 'src/platform/D3DMinimap.cpp')+'"' # Private native UI canvas and GPU minimap crop.
+# Public registry discovery owns new waygate/death capabilities without guessing per-patch addresses.
+$sources += @('platform/NativeRegistry.cpp','platform/NativePortals.cpp','platform/NativeExplosiveDeath.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 # Captured native faults keep module offsets/registers without installing a process-wide exception handler.
 $sources += '"'+(Join-Path $modRoot 'src/platform/NativeFaultDiagnostics.cpp')+'"'
 # Native spell fixtures are opt-in and are excluded from the installed normal build.
@@ -122,6 +124,7 @@ if ($TestGameplay) {
     $sources += '"' + (Join-Path $modRoot 'tests/RuneCombatScene.cpp') + '"'
     $sources += '"' + (Join-Path $modRoot 'tests/MilitiaMorphScene.cpp') + '"' # Bell/morph regression is never in Player builds.
     $sources += '"' + (Join-Path $modRoot 'tests/SwimmingScene.cpp') + '"' # Native water observations stay opt-in.
+    $sources += '"' + (Join-Path $modRoot 'tests/PortalsHeavyScene.cpp') + '"' # Owned fixture/input observations never enter ordinary Player modules.
     $testDefine += ' /DWCS_GAMEPLAY_TEST'
 }
 if ($TestTreeAndWheel) {

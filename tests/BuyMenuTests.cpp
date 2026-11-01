@@ -15,6 +15,12 @@ int main() {
       assert(BuyMenuLayout::Key(int(layout.detailX+10),int(layout.paymentY+2),w,h,paymentMenu.Current())==BuyMenu::PayGold);}}
 
     GameplaySettings settings;BuyInventory inventory;
+    // The default melee kit grants only a sealed, enabled Crowbar; native-only/missing assets cannot bypass ownership.
+    {GameplaySettings kit;int ammo[WeaponSlots::Count]={},reserve[WeaponSlots::Count]={},magazines[WeaponSlots::Count]={},reserves[WeaponSlots::Count]={};
+     BuyInventory owned;owned.Reset(kit,ammo,reserve,magazines,reserves);assert(!owned.owned[WeaponSlots::Crowbar]);
+     kit.halfLife.available[0]=true;owned.Reset(kit,ammo,reserve,magazines,reserves);assert(owned.owned[WeaponSlots::Crowbar]);
+     kit.startCrowbar=false;owned.Reset(kit,ammo,reserve,magazines,reserves);assert(!owned.owned[WeaponSlots::Crowbar]);
+     kit.startCrowbar=true;kit.warcraftOnly=true;owned.Reset(kit,ammo,reserve,magazines,reserves);assert(!owned.owned[WeaponSlots::Crowbar]);}
     // Opening/navigating B does not mutate ammunition; buying reserve during a shell reload spends rounds once.
     {BuyMenu menu;BuyInventory carried;carried.owned[WeaponSlots::M3]=true;
      ShotgunReload reload;reload.Configure(3,8,4.5f,.5f,.4f,.8f);

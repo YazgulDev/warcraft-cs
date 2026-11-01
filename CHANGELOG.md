@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Add active in-map waygate interaction in controlled views, real map destinations, pause-aware cooldown and leave-gate re-entry protection. Detect native/scripted relocations and rebase physical floor, camera and recovery without classifying budgeted fast movement as teleportation. New editable Portals settings reload with F8; no campaign exits are synthesized.
+- Double stock AWP/G3SG1 fixed damage and native attack multipliers (230/6 and 160/4.4), HE damage to 1200 and Tau primary/charged damage to 200/2000. Versioned stock-only loader/installer upgrades preserve custom tuning, zero damage and explicit opt-backs, including independent Tau charge markers.
+- Add an owned-resource Crowbar to the starting kit by default through Loadout.Crowbar, applied on startup/map load without grants on F8 or view changes. Missing resource seals and the Only Warcraft profile remain excluded.
+- Add configurable native exploded deaths for hostile creature Gluon/Tau/RPG contacts while preserving armor, immunity, normal native death events and allied/structure policy. Lease and restore surviving-unit flags, retain map-owned flags, reject stale map/object restoration, and snapshot RPG death policy at launch. Use exact public native registrations and structurally verified flag layout; unsupported adapters retain normal death.
+- Add source-only native registry/portal/death regressions and authored offline fixtures, update gameplay guides and keep diagnostic backends/mailboxes excluded from ordinary Player modules.
+
 ## 0.18.0 - 2026-11-02
 
 - Publish [downloads, upgrade instructions and complete Release Notes](docs/RELEASE-0.18.0.md), both launchers, source-only public ZIPs, compact launcher summaries and updated movement/settings guides.

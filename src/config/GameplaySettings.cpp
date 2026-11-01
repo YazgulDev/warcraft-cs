@@ -537,6 +537,7 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.buyRadius=number("Buy","Radius",600,3000);
     result.shopTypes=text("Buy","ShopTypes","");
     result.startAllWeapons=!_stricmp(text("Loadout","Mode","melee").c_str(),"all");
+    result.startCrowbar=enabled("Loadout","Crowbar"); // Next map/startup kit only; F8 cannot mint inventory.
     result.maxBombs=int(number("Loadout","MaxBombs",100,1000));
     // Missing/invalid starting counts retain the bomb-free default; explicit counts remain configurable.
     result.startBombs=std::min(result.maxBombs,int(number("Loadout","BombCount",0,1000)));
@@ -593,7 +594,7 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     hl.tauPitchStart=std::max(.25f,number("TauCannon","ChargePitchStart",1,4));
     hl.tauPitchEnd=std::max(hl.tauPitchStart,number("TauCannon","ChargePitchEnd",2.5f,4));
     hl.tauDrainSeconds=std::max(.05f,number("TauCannon","ChargeDrainSeconds",.3f,2));
-    hl.tauChargedDamage=number("TauCannon","ChargedDamage",1000,1000000);
+    hl.tauChargedDamage=number("TauCannon","ChargedDamage",2000,1000000);
     hl.tauPrimaryCost=int(std::max(1.f,number("TauCannon","PrimaryCost",2,100)));
     hl.crowbarContactSeconds=number("Crowbar","ContactSeconds",.1f,1);
     hl.crowbarSurfaceSounds=enabled("Crowbar","SurfaceSounds");
@@ -603,6 +604,12 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     hl.beamEffects=enabled("HalfLife","BeamEffects");hl.ownedSprites=enabled("HalfLife","OwnedSprites");
     hl.impactSize=number("HalfLife","ImpactSize",18,100);
     result.nativeAttackSound=enabled("Combat","NativeAttackSound",false);
+    result.explosiveWeaponDeaths=enabled("Combat","ExplosiveWeaponDeaths");
+    // Portal proximity and re-entry are independently bounded in the same startup/F8 snapshot.
+    result.portals.enabled=enabled("Portals","Enabled");
+    result.portals.radius=std::max(32.f,number("Portals","Radius",160,512));
+    result.portals.heightTolerance=std::max(16.f,number("Portals","HeightTolerance",160,512));
+    result.portals.cooldownSeconds=std::max(.25f,number("Portals","CooldownSeconds",1,10));
     const auto& sections=WeaponSlots::Sections;
     for (int slot=0;slot<WeaponSlots::Count;++slot) {
         auto& weapon=result.weapons[slot];
@@ -642,6 +649,19 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     // Expand the previous stock blast once; existing linear 3D falloff still reaches zero at the edge.
     upgradeStock("RPG","BlastVersion",4,600,1000,rpg.radius);
     upgradeStock("HEGrenade","DamageVersion",3,300,600,result.damage[WeaponSlots::HE]);
+    // Raise prior stock once in both damage modes, leaving custom values and explicit opt-backs alone.
+    upgradeStock("HEGrenade","DamageVersion",4,600,1200,result.damage[WeaponSlots::HE]);
+    upgradeStock("AWP","DamageVersion",2,115,230,result.damage[WeaponSlots::AWP]);
+    upgradeStock("AWP","MultiplierVersion",2,3,6,result.heroMultiplier[WeaponSlots::AWP]);
+    upgradeStock("G3SG1","DamageVersion",2,80,160,result.damage[WeaponSlots::G3SG1]);
+    upgradeStock("G3SG1","MultiplierVersion",2,2.2f,4.4f,result.heroMultiplier[WeaponSlots::G3SG1]);
+    if(GetPrivateProfileIntA("HalfLife","DamageVersion",1,filename.c_str())<2) {
+        // Old unversioned Half-Life stock follows the same chain as the installer before this upgrade.
+        if(GetPrivateProfileIntA("TauCannon","DamageVersion",1,filename.c_str())<3 && result.damage[WeaponSlots::Tau]==20)result.damage[WeaponSlots::Tau]=100;
+        if(GetPrivateProfileIntA("TauCannon","ChargedDamageVersion",1,filename.c_str())<2 && hl.tauChargedDamage==200)hl.tauChargedDamage=1000;
+    }
+    upgradeStock("TauCannon","DamageVersion",3,100,200,result.damage[WeaponSlots::Tau]);
+    upgradeStock("TauCannon","ChargedDamageVersion",2,1000,2000,hl.tauChargedDamage);
     upgradeStock("M3","MultiplierVersion",2,3,6,result.heroMultiplier[WeaponSlots::M3]);
     upgradeStock("XM1014","MultiplierVersion",2,2.4f,4.8f,result.heroMultiplier[WeaponSlots::XM1014]);
     result.knifeSecondaryDamage=number("Knife","SecondaryDamage",65,1000000);

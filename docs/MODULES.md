@@ -25,6 +25,15 @@ adapters. The WGL captures retain their own context resources. See `PORT-1.27.md
 queried texture state and the GL error queue, and records labelled font lifecycle
 events. The existing platform `DiagnosticLog` still owns serialization and rotation.
 
+`NativeRegistry` resolves exact public JASS name/signature records in the accepted mapped module,
+excluding duplicate zero stubs and ambiguous bindings. `NativePortals` owns waygate queries,
+pause-aware re-entry state and native-position observation; the controller rebases movement/camera
+and stops queued attacks if region callbacks replace the actor/map. `ExplodedFlagLayout` verifies
+the public setter's matching flag operations on the resolved unit. `NativeExplosiveDeath` leases
+that flag for one hostile-creature damage transaction; `NativeBlast`/energy contacts preserve
+native damage and death callbacks, and `NativeRockets` snapshots the policy at launch. Synthetic
+backend injection and `PortalsHeavyScene`/the authored JASS fixture are excluded from ordinary Player builds.
+
 `GraphicsDiagnostics` is a scoped presentation observer for every-pass GL error checkpoints and
 supported driver debug messages, with bounded duplicate suppression and exact callback-state
 restoration. D3D adapters report failed HRESULT operations through the same observer. It consumes

@@ -88,14 +88,20 @@ function Update-GameplayConfig([string]$Template,[string]$Destination) {
     $energySection='';$energyVersion='1';$energyVersionIndex=-1;$energyValues=@{}
     for($i=0;$i -lt $lines.Count;$i++) {
         if($lines[$i] -match '^\s*\[([^\]]+)\]\s*$'){$energySection=$Matches[1];continue}
-        if($lines[$i] -match '^\s*(Damage|ChargedDamage|DamageVersion)\s*=\s*(.*?)\s*$') {
+        if($lines[$i] -match '^\s*(Damage|ChargedDamage|DamageVersion|ChargedDamageVersion)\s*=\s*(.*?)\s*$') {
             $key=$Matches[1];$value=$Matches[2].Trim()
             if($energySection -eq 'HalfLife' -and $key -eq 'DamageVersion'){$energyVersion=$value;$energyVersionIndex=$i}
             if($energySection -in @('TauCannon','GluonGun')){$energyValues[$energySection+'.'+$key]=@($i,$value)}
         }
     }
     if($energyVersion -in @('','1')) {
+        [int]$tauDamageMarker=0;[int]$tauChargeMarker=0
+        if($energyValues['TauCannon.DamageVersion']){[void][int]::TryParse($energyValues['TauCannon.DamageVersion'][1],[ref]$tauDamageMarker)}
+        if($energyValues['TauCannon.ChargedDamageVersion']){[void][int]::TryParse($energyValues['TauCannon.ChargedDamageVersion'][1],[ref]$tauChargeMarker)}
         foreach($upgrade in @(@('TauCannon.Damage',20,100),@('TauCannon.ChargedDamage',200,1000),@('GluonGun.Damage',14,70))) {
+            # A current per-field opt-back also wins when the older shared HalfLife section is absent.
+            if($upgrade[0] -eq 'TauCannon.Damage' -and $tauDamageMarker -ge 3){continue}
+            if($upgrade[0] -eq 'TauCannon.ChargedDamage' -and $tauChargeMarker -ge 2){continue}
             $saved=$energyValues[$upgrade[0]];[double]$oldValue=0
             if($saved -and [double]::TryParse($saved[1],[Globalization.NumberStyles]::Float,[Globalization.CultureInfo]::InvariantCulture,[ref]$oldValue) -and $oldValue -eq $upgrade[1]) {
                 $lines[$saved[0]]=($upgrade[0] -split '\.')[1]+'='+$upgrade[2];$changed=$true
@@ -127,6 +133,14 @@ function Update-GameplayConfig([string]$Template,[string]$Destination) {
         # The wider stock blast preserves custom radii and explicit version-4 opt-backs.
         @('RPG','Radius','BlastVersion',4,600,1000),
         @('HEGrenade','Damage','DamageVersion',3,300,600),
+        # Heavy stock upgrades are independent: custom values and current-version opt-backs survive.
+        @('HEGrenade','Damage','DamageVersion',4,600,1200),
+        @('AWP','Damage','DamageVersion',2,115,230),
+        @('AWP','HeroMultiplier','MultiplierVersion',2,3,6),
+        @('G3SG1','Damage','DamageVersion',2,80,160),
+        @('G3SG1','HeroMultiplier','MultiplierVersion',2,2.2,4.4),
+        @('TauCannon','Damage','DamageVersion',3,100,200),
+        @('TauCannon','ChargedDamage','ChargedDamageVersion',2,1000,2000),
         @('M3','HeroMultiplier','MultiplierVersion',2,3,6),
         @('XM1014','HeroMultiplier','MultiplierVersion',2,2.4,4.8))) {
         $balanceSection='';$valueIndex=-1;$versionIndex=-1;$savedVersion=1

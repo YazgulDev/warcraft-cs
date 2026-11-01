@@ -34,6 +34,7 @@ prepares the private 1.26a graphics components automatically.
 | --- | --- |
 | Air strafing, jumping and collision | [Movement](MOVEMENT.md) |
 | Deep water, buoyancy and canal exits | [Swimming](SWIMMING.md) |
+| Portal travel, starting Crowbar and explosive deaths | [Portals and heavy weapons](PORTALS-HEAVY-WEAPONS.md) |
 | Owned weapon groups and wheel preview | [Weapon selection](WEAPON-SELECTION.md) |
 | Firearms, prices, ammo, grenades and army AI | [Arsenal and shops](ARSENAL-SHOPS-AI.md) |
 | Rockets and laser guidance | [Half-Life RPG](HALF-LIFE-RPG.md) |

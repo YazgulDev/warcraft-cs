@@ -12,8 +12,9 @@ $200 / $5000 / $6000 / $4000 with the default dollar economy. RPG moves out of E
 never spend money. All carried Half-Life weapons appear in group **6 HALF-LIFE**, in
 this order, and in sequential wheel selection. Click to confirm. Turn Tab item numbers
 off to use 1–6 for weapons. Custom bindings and the optional legacy direct-slot mode
-remain available. Crowbar is purchased rather than added to the starting knife/sword
-kit. F12 grants every available weapon; F11 refills owned ones. Existing IDs stay stable.
+remain available. The local [portal/heavy-weapon development build](PORTALS-HEAVY-WEAPONS.md)
+adds an installed Crowbar to the initial kit by default; `[Loadout] Crowbar=false` keeps the
+purchase-only kit. F8 grants no inventory. F12 grants every available weapon; F11 refills owned ones. Existing IDs stay stable.
 
 ## Attacks
 
@@ -86,7 +87,7 @@ ammo. Existing CS/RPG controls and settings are preserved.
 | Crowbar / Range | 150 | world units 32–1000 |
 | Crowbar / FireInterval, ContactSeconds | 0.5, 0.1 | seconds 0.1–5 / 0–1; authored clip can extend recovery |
 | Crowbar / SurfaceSounds | true | true/false; false uses simple flesh/hard impacts |
-| TauCannon / Damage, ChargedDamage | 100, 1000 | fixed damage 0–1000000 |
+| TauCannon / Damage, ChargedDamage | 200, 2000 in the local heavy-weapon build | fixed damage 0–1000000 |
 | TauCannon / ChargeSeconds | 4 | seconds 0.1–10 to full power |
 | TauCannon / SpinStartRate, SpinEndRate | 1, 3 | animation playback multipliers 0.25–8; End is at least Start |
 | TauCannon / ChargePitchStart, ChargePitchEnd | 1, 2.5 | source frequency/pitch ratios 0.25–4; End is at least Start |
@@ -125,7 +126,8 @@ hide the weapon. Reinstall to generate the caches; F8 reloads the visual/audio/d
 settings and cancels any current channel. Graphics-context replacement rebuilds textures.
 
 `[HalfLife] DamageVersion=2` migrates previous stock Tau 20/200 and Gluon 14 once to
-100/1000 and 70. Other custom values, including zero, remain unchanged. Later tuning
+100/1000 and 70. The local heavy-weapon build then upgrades Tau stock to 200/2000 using its
+independent DamageVersion=3 and ChargedDamageVersion=2 markers. Other custom values, including zero, remain unchanged. Later tuning
 back to an old value is preserved. F8 alone does not rewrite an existing INI.
 
 The native audio opt-out covers both weapon contact sounds and the ordinary unit's

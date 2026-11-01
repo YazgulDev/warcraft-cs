@@ -15,6 +15,7 @@
 #include "WeaponDropSettings.hpp"
 
 #include "HalfLifeSettings.hpp"
+#include "PortalSettings.hpp"
 #include "HealthBarSettings.hpp"
 #include "SpellSettings.hpp"
 #include "ArmyAISettings.hpp"
@@ -43,6 +44,7 @@ struct GameplaySettings {
     WeaponDropSettings weaponDrops;
 
     HalfLifeSettings halfLife;
+    PortalSettings portals;
     bool weaponSelectionMenu=true; // F6 category preview; false restores immediate legacy shortcuts/wheel.
     float weaponSelectionTimeout=5;
     HealthBarSettings healthBars;
@@ -83,6 +85,7 @@ struct GameplaySettings {
     // Weapon contacts use the controlled unit's native attack effects; F8 may opt out.
     bool enableAttackEffects=true;
     bool nativeAttackSound=false; // FPS contacts keep passives while replacing the hero's weapon sound.
+    bool explosiveWeaponDeaths=true; // Enemy Gluon/Tau/RPG deaths use the native exploded-death path.
     // Nonphysical invulnerable effect units cannot shield enemies; F8 can restore legacy ray selection.
     bool ignorePassableInvulnerableObjects=true;
     bool waterBlocksAttacks=false; // FPS and TPS share solid-surface traces; F8 can restore liquid occlusion.
@@ -126,6 +129,7 @@ struct GameplaySettings {
     int squadMaxUnits=24;
     // Currency wallets and loadout are per-map; reloading settings cannot mint another starting kit.
     bool startAllWeapons=false;
+    bool startCrowbar=true; // Optional Crowbar requires owned Half-Life resources and the armed profile.
     // Default starts without C4; a positive configured count opts into starting bombs.
     int startBombs=0,maxBombs=100;
     // Paid C4 purchases may exceed the free-refill/rune amount; players can restore a purchase cap.
@@ -148,8 +152,9 @@ struct GameplaySettings {
     std::string defaultSky="Des";
     std::array<std::string,256> tilesetSky{};
     // Explosives use fixed peaks (HE 600, RPG 1800); shotgun multipliers scale the unit's native attack.
-    std::array<float, WeaponSlots::Count> damage = {36,33,34,115,40,2500,120,54,25,26,21,32,104,80,600,0,0,1800,10,100,70,20,30,30,30,80};
-    std::array<float, WeaponSlots::Count> heroMultiplier = {1,1,1,3,1,1,3,1.6f,.75f,.8f,.65f,1,6,4.8f,0,0,0,0,1,0,0,.65f,.9f,1,1,2.2f};
+    // Stock increases cover both fixed damage and the default native-attack multiplier mode.
+    std::array<float, WeaponSlots::Count> damage = {36,33,34,230,40,2500,120,54,25,26,21,32,104,80,1200,0,0,1800,10,200,70,20,30,30,30,160};
+    std::array<float, WeaponSlots::Count> heroMultiplier = {1,1,1,6,1,1,3,1.6f,.75f,.8f,.65f,1,6,4.8f,0,0,0,0,1,0,0,.65f,.9f,1,1,4.4f};
     float knifeSecondaryDamage = 65, swordSecondaryDamage = 240;
     static GameplaySettings Load(const std::string& filename);
     // Q and the INI/F8 loader share one persisted direct-allied-contact preference.

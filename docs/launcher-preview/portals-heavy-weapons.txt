@@ -1,0 +1,7 @@
+- Added active waygate interaction with map-authored destinations and synchronized movement/camera.
+- Added re-entry protection and correction after native scripted teleports.
+- Changed AWP and G3SG1 fixed damage and native attack multipliers to twice their previous stock values.
+- Changed HE damage to 1200 and Tau Cannon damage to 200 primary and 2000 charged.
+- Added the owned-resource Crowbar to the starting kit by default.
+- Added native exploded enemy deaths for Gluon Gun, Tau Cannon and ordinary RPG.
+- Preserved native death events, surviving-unit flags, custom settings and in-flight rocket policies.

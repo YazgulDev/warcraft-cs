@@ -1,5 +1,25 @@
 # Validation
 
+## Portals and heavy weapons (unreleased, 2026-11-02)
+
+Synthetic mapped-PE tests verify exact JASS signatures, real versus null registrations,
+ambiguity/bounds rejection and the exploded setter's paired flag operations. Callback fixtures
+cover active/inactive/height/bounds portal policy, leave-gate latch, map invalidation, native
+position changes versus budgeted movement, hostile creature eligibility, preserved map-owned
+flags, survivor restoration and replacement/reset safety. Real config/installer tests cover
+new defaults, legacy balance chains, finite bounds, custom values and current-marker opt-backs.
+Inventory tests cover sealed starting Crowbar, opt-out, missing resources and native-only mode.
+
+An authored offline 1.26a map tests paired native waygates and initialized hostile Footman,
+Crypt Fiend and Naga Myrmidon targets. OpenGL and Direct3D both verify real destination/camera
+coordinates, no immediate reverse crossing, startup Crowbar, surviving Gluon flag restoration,
+Gluon/Tau/RPG exploded deaths and four normal map death events. Disabling the feature leaves
+an ordinary typed corpse; native exploded deaths immediately remove their typed units.
+OpenGL recording was inspected and shows native flying body fragments. Direct3D additionally
+crosses a map-script region portal in hull mode to terrain 512 with physical feet 512 and
+camera eye 608; no Direct3D capture is claimed. Owned lab files, private optional caches and
+saves are restored by hash. Real 1.27a behavior and every custom portal/creature remain unverified.
+
 ## Release 0.18.0 (2026-11-02)
 
 See [the release verification and limits](RELEASE-0.18.0.md#source-setup-and-verification). Full native-independent regressions pass. Owned 1.26a OpenGL/Direct3D scenes verify swimming, canal exits, ordinary movement and militia morph stability; OpenGL water frames were inspected. Source audits and final launcher/package checks bind the native payload to the reviewed sources. Real 1.27a swimming is unavailable and RX580 issue #10 remains unresolved.
