@@ -264,7 +264,8 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.scaleFireRateFromAttackSpeed=!_stricmp(fireRate.c_str(),"true") || fireRate=="1";
     result.movement.autoJump = boolean("AutoJump", true);
     result.movement.jumpBoostPercent = number("Movement", "JumpBoostPercent", 15, 100);
-    result.movement.maxBunnySpeed = std::max(250.0f, number("Movement", "MaxBunnySpeed", 1000, 2000));
+    // The larger speed ceiling is independent of air acceleration and the per-takeoff bonus.
+    result.movement.maxBunnySpeed = std::max(250.0f, number("Movement", "MaxBunnySpeed", 3000, 3000));
     result.movement.airAcceleration = number("Movement", "AirAcceleration", 30, 100);
     // Upgrade only former stock once. Current per-field markers permit explicit legacy/zero opt-backs.
     auto movementStock=[&](const char* key,const char* marker,float old,float next,float& value) {
@@ -273,6 +274,7 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     };
     movementStock("JumpBoostPercent","JumpBoostVersion",0,15,result.movement.jumpBoostPercent);
     movementStock("AirAcceleration","AirAccelerationVersion",10,30,result.movement.airAcceleration);
+    movementStock("MaxBunnySpeed","MaxBunnySpeedVersion",1000,3000,result.movement.maxBunnySpeed);
     result.movement.jumpSpeed = std::max(1.0f, number("Movement", "JumpSpeed", 268.328f, 800));
     result.movement.gravity = std::max(100.0f, number("Movement", "Gravity", 800, 3000));
     result.movement.stepHeight = number("Movement", "StepHeight", 27, 64);

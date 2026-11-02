@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Raise the default and maximum editable Bunnyhop speed cap to 3000 GoldSrc units/s (4500 Warcraft units/s), retaining air acceleration 30 and takeoff bonus 15 percent. Migrate former stock 1000 once through MaxBunnySpeedVersion=2, preserving custom caps and deliberate legacy opt-backs; startup/F8 apply the change.
 - Add a Warcraft sky preset selector to the existing F2 row when Warcraft type is selected: Auto/map, summer, autumn, winter, Felwood and Dalaran. Keep private CS and native choices independent, preserve authored/scripted map skies across preview/visibility/type/RTS transitions, validate fixed identifiers and preserve settings on update.
 - Increase default Bunnyhop moving-takeoff bonus from 0 to 15 percent and air acceleration from 10 to 30 without changing vertical jump/collision rules or the speed cap. Independent version-2 stock migrations preserve custom values and deliberate legacy/zero opt-backs; F8 applies tuning live.
 - Add horizontal Field of view to F2 settings and Rendering.FieldOfView (85 degrees by default, 60–120). Save/apply immediately in FPS/F9/third person or reload manual edits with F8; preserve scope zoom, custom INI values and unrelated movement/loadout/session state. Share the configured angle between native camera and overlay/sky projection, and fit nine menu rows above hints/buttons.

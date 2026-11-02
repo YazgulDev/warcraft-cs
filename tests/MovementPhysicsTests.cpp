@@ -119,6 +119,13 @@ int main() {
     MovementSettings accelerated;accelerated.jumpBoostPercent=0;fast.Configure(accelerated);fast.Reset(0);old.Reset(0);
     fast.Step(launchInput,1.f/144,250);old.Step(launchInput,1.f/144,250);
     Require(fast.Speed()>old.Speed()*1.5f && fast.Speed()<=45.01f,"new air acceleration reaches the same wish cap faster");
+    // The new default must be reachable yet bounded at common frame rates, without changing acceleration tuning.
+    for(int fps:{30,60,144}) {
+        MovementPhysics capped;capped.Reset(0);
+        for(int frame=0;frame<fps;++frame)capped.Step(forward,1.f/fps,250);
+        for(int frame=0;frame<fps*30;++frame){capped.Step(hop,1.f/fps,250);capped.ResolveFloor(0);Require(capped.Speed()<=4500.01f,"3000-CS-unit cap must hold during repeated takeoffs");}
+        Require(capped.Speed()>4499,"default held jumps must be able to reach the new cap");
+    }
     // Custom arcade boosts remain editable and survive live tuning changes.
     MovementSettings arcade; arcade.jumpBoostPercent = 8; hopping.Configure(arcade);
     for (int frame = 0; frame < 180; ++frame) { hopping.Step(hop, 1.f/60, 250); hopping.ResolveFloor(0); }

@@ -78,7 +78,7 @@ simulation step applies the new speed cap. Jump speed applies to the next takeof
 | BunnyHop | true | true/false; preserves excess takeoff momentum and enables the optional boost and air speed cap. false clips excess speed to the current weapon's running speed at each takeoff |
 | AutoJump | true | true/false; false requires a new Space press per jump |
 | JumpBoostPercent | 15 (local development) | 0–100 percent per moving takeoff; arcade bonus, separate from air strafe acceleration |
-| MaxBunnySpeed | 1000 | 250–2000 GoldSrc units/s |
+| MaxBunnySpeed | 3000 (local development) | 250–3000 GoldSrc units/s; horizontal cap, independent of air acceleration |
 | AirAcceleration | 30 (local development) | 0–100 wish-direction acceleration multiplier |
 | JumpSpeed | 268.328 | 1–800 GoldSrc units/s upwards |
 | Gravity | 800 | 100–3000 GoldSrc units/s² downwards |
@@ -99,8 +99,10 @@ build upgrades former stock 0/10 once through independent `JumpBoostVersion=2` a
 For strafe-only behavior, set `JumpBoostPercent=0`, `JumpBoostVersion=2` and press **F8**.
 For the former air response also set `AirAcceleration=10`, `AirAccelerationVersion=2`.
 Set `AirAcceleration=0` to disable air strafe gain. Jump height, gravity, collision and the cap remain unchanged.
-The default cap is 1500 Warcraft units/s, four times the knife's running speed of 375. The supported maximum
-is 2000 GoldSrc units/s (3000 Warcraft units/s); swept collision still checks eight-unit segments.
+The local development default and supported maximum cap are 3000 GoldSrc units/s (4500 Warcraft units/s).
+Air acceleration stays 30 and the moving-takeoff bonus stays 15 percent. Stock 1000 upgrades once through
+`MaxBunnySpeedVersion=2`; keep this marker at 2 for an explicit 1000 or another custom cap. Missing/invalid
+values use 3000, finite values clamp to 250–3000, and startup/F8 apply it. Swept collision still checks eight-unit segments.
 
 This is a Warcraft adaptation, not an exact GoldSrc engine port. It omits Half-Life's punitive 1.7×
 takeoff limiter in favor of the editable cap. Like discrete GoldSrc air acceleration, gain depends on

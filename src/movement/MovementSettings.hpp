@@ -21,7 +21,7 @@ struct MovementSettings {
     bool autoJump = true;
     // Faster default takeoff/air gain; configurable zero boost retains pure classic strafing.
     float jumpBoostPercent = 15;
-    float maxBunnySpeed = 1000;
+    float maxBunnySpeed = 3000; // GoldSrc units/s; horizontal world-speed cap is scaled once by physics.
     float airAcceleration = 30;
     float jumpSpeed = 268.328f;
     float gravity = 800;

@@ -61,8 +61,16 @@ int main() {
         auto m=GameplaySettings::Load(fovPath).movement;assert(m.jumpBoostPercent==std::get<2>(c) && m.airAcceleration==std::get<3>(c));
     }
     DeleteFileA(fovPath.c_str());
-    // Appended CS guns remain available without optional Half-Life assets and own complete nonzero tuning.
+    // The larger speed ceiling preserves independent acceleration and explicit per-field opt-backs.
+    for(auto c:{std::tuple<const char*,int,float>{"",1,3000},{"1000",1,3000},{"1000",2,1000},{"2000",1,2000},{"-1",1,250},{"99999",2,3000},{"nan",1,3000},{"inf",1,3000},{"bad",1,3000}}) {
+        // Parse exactly the startup/F8 snapshot, including the independent stock-cap migration marker.
+        {std::ofstream f(fovPath);f<<"[Movement]\nMaxBunnySpeed="<<std::get<0>(c)<<"\nMaxBunnySpeedVersion="<<std::get<1>(c)<<"\n";}
+        auto m=GameplaySettings::Load(fovPath).movement;
+        assert(m.maxBunnySpeed==std::get<2>(c) && m.airAcceleration==30 && m.jumpBoostPercent==15);
+    }
+    DeleteFileA(fovPath.c_str());
     for(int slot=WeaponSlots::TMP;slot<=WeaponSlots::G3SG1;++slot) {
+        // CS guns remain available without optional Half-Life assets and own complete nonzero tuning.
         assert(settings.WeaponEnabled(slot) && WeaponSlots::Firearm(slot) && !WeaponSlots::HalfLife(slot));
         assert(settings.weapons[slot].magazine>0 && settings.maxReserve[slot]>0 && settings.weaponMoveSpeed[slot]>=50);
         assert(settings.heroMultiplier[slot]>0 && settings.damage[slot]>0 && settings.weaponPrice[slot]>0 && settings.ammoPack[slot]>0);
@@ -425,7 +433,7 @@ int main() {
     { std::ofstream file(path); file << "[Movement]\nBunnyHop=broken\nAutoJump=\nJumpBoostPercent=inf\nMaxBunnySpeed=nan\nJumpSpeed=broken\nGravity=nan\nStepHeight=200\n"; }
     settings=GameplaySettings::Load(path);DeleteFileA(path.c_str());
     assert(settings.movement.bunnyHop && settings.movement.autoJump);
-    assert(settings.movement.jumpBoostPercent==15 && settings.movement.maxBunnySpeed==1000);
+    assert(settings.movement.jumpBoostPercent==15 && settings.movement.maxBunnySpeed==3000);
     assert(settings.movement.jumpSpeed==268.328f && settings.movement.gravity==800 && settings.movement.stepHeight==64);
     WritePrivateProfileStringA("Movement","JumpBoostPercent","15",path.c_str());
     assert(GameplaySettings::Load(path).movement.jumpBoostPercent==15);

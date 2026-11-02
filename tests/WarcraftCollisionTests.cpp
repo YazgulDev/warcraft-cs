@@ -196,10 +196,10 @@ int main(){
     Require(unitX>1000 && peak>450,"landing on a gentle uphill slope preserves accelerating hop momentum");
     // At the fastest supported setting, one frame travels farther than a thin wall's full width.
     // Actual swept collision must stop the player instead of sampling only the destination.
-    HullSettings fast; fast.maxBunnySpeed = 2000; fast.jumpBoostPercent = 100;
+    HullSettings fast; fast.maxBunnySpeed = 3000; fast.jumpBoostPercent = 100;
     jumper.Configure(fast); jumper.Reset(100);
     for(int frame=0;frame<360;++frame){jumper.Step(jumping,1.f/60,250);jumper.ResolveFloor(100);}
-    Require(jumper.Speed()>2900,"high-speed collision trial must approach the supported maximum");
+    Require(jumper.Speed()>4400,"high-speed collision trial must approach the supported maximum");
     slope=false;wall=true;unitX=unitY=0;
     collision.Move(1,jumper,.05f);
     Require(unitX<36,"swept collision must reject a thin wall at maximum bunnyhop speed");

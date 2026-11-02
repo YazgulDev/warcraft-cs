@@ -1,5 +1,15 @@
 # Validation
 
+## Bunnyhop speed cap 3000 (unreleased, 2026-11-02)
+
+Portable physics reaches the new 3000 GoldSrc-unit/s default (4500 Warcraft units/s)
+at 30/60/144 Hz and checks the cap at every takeoff. The maximum-speed thin-wall
+fixture now approaches 4500 world units/s before its sweep; collision, ground/water,
+roots, slows, jump-height and reload regressions pass. Config/installer cases cover
+stock 1000 migration, explicit version-2 legacy caps, custom values, finite bounds
+and repeated-update preservation. Air acceleration remains 30 and boost remains 15%.
+This tuning change uses the existing camera/movement/native paths; it adds no hooks.
+
 ## Warcraft sky choices and faster Bunnyhop (unreleased, 2026-11-02)
 
 Portable menu tests cover separate native/CS drafts, native choices without CS caches,

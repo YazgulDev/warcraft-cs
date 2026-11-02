@@ -288,7 +288,7 @@ $customMovement=Join-Path $folder 'custom-movement.ini'
 @('[Movement]','Mode=classic','JumpBoostPercent=15','AutoJump=false','UseNativeUnitCollision=false','MaxWalkSlope=51','HullRadius=17','ObjectMeshCollision=false','RecoverInvalidPosition=false','RecoveryDistance=777','[Shortcuts]','RecoverPosition=NONE','[Damage]','FriendlyFirePercent=0') | Set-Content -LiteralPath $customMovement -Encoding ascii
 Update-GameplayConfig $template $customMovement
 $movementText=Get-Content -LiteralPath $customMovement -Raw
-foreach ($required in @('Mode=classic','JumpBoostPercent=15','AutoJump=false','UseNativeUnitCollision=false','FriendlyFirePercent=0','MaxBunnySpeed=1000','Gravity=800','BunnyHop=true','MaxWalkSlope=51','HullRadius=17','ObjectMeshCollision=false','RecoverInvalidPosition=false','RecoveryDistance=777','RecoverPosition=NONE')) {
+foreach ($required in @('Mode=classic','JumpBoostPercent=15','AutoJump=false','UseNativeUnitCollision=false','FriendlyFirePercent=0','MaxBunnySpeed=3000','Gravity=800','BunnyHop=true','MaxWalkSlope=51','HullRadius=17','ObjectMeshCollision=false','RecoverInvalidPosition=false','RecoveryDistance=777','RecoverPosition=NONE')) {
     if (!$movementText.Contains($required)) { throw "Movement migration replaced or omitted: $required" }
 }
 if ([regex]::Matches($movementText,'(?m)^\[Movement\]').Count -ne 1) { throw 'Movement section was duplicated.' }
@@ -733,3 +733,15 @@ foreach($case in @(@(0,10,1,15,30),@(0,10,2,0,10),@(7,21,1,7,21))) {
     if((Get-FileHash $hopFile).Hash -ne $hopHash){throw 'Movement/sky merge repeats.'}
 }
 Write-Output 'PASS faster stock movement, independent explicit opt-backs and native sky preservation.'
+
+# A former stock speed cap upgrades once while custom and current-version legacy caps remain deliberate.
+foreach($case in @(@(1000,1,3000),@(1000,2,1000),@(2000,1,2000),@(777,2,777))) {
+    $capFile=Join-Path $folder ('speed-cap-'+[Guid]::NewGuid().ToString('N')+'.ini')
+    @('[Movement]',('MaxBunnySpeed='+$case[0]),('MaxBunnySpeedVersion='+$case[1]),'AirAcceleration=30','AirAccelerationVersion=2','JumpBoostPercent=15','JumpBoostVersion=2') | Set-Content $capFile
+    Update-GameplayConfig $template $capFile
+    $capText=Get-Content $capFile -Raw
+    foreach($value in @(('MaxBunnySpeed='+$case[2]),'AirAcceleration=30','JumpBoostPercent=15')){if(!$capText.Contains($value)){throw "Lost speed/acceleration choice: $value"}}
+    $capHash=(Get-FileHash $capFile).Hash;Update-GameplayConfig $template $capFile
+    if((Get-FileHash $capFile).Hash -ne $capHash){throw 'Speed-cap migration repeats.'}
+}
+Write-Output 'PASS 3000 stock speed cap, custom caps, explicit legacy opt-back and unchanged acceleration.'

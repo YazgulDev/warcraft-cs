@@ -131,6 +131,7 @@ function Update-GameplayConfig([string]$Template,[string]$Destination) {
         # Faster stock bunnyhop is versioned independently so custom/explicit zero tuning survives updates.
         @('Movement','JumpBoostPercent','JumpBoostVersion',2,0,15),
         @('Movement','AirAcceleration','AirAccelerationVersion',2,10,30),
+        @('Movement','MaxBunnySpeed','MaxBunnySpeedVersion',2,1000,3000),
         @('RPG','Damage','DamageVersion',2,100,1800),
         @('RPG','Radius','BlastVersion',3,525,600),
         # The wider stock blast preserves custom radii and explicit version-4 opt-backs.
