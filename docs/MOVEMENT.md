@@ -18,6 +18,13 @@ moving-takeoff bonus and air acceleration 30 (previously 0% / 10). Release Space
 Shift/Ctrl suppress the extra takeoff boost. Warcraft roots/stuns still stop horizontal movement and
 block takeoff; release Space after recovery. Existing slows still cap movement speed.
 
+The local development build fixes a classic-mode crest landing that could erase horizontal
+momentum. The existing classic floor resolver now runs before the first swept step and after
+each step, so an accepted descending landing is available to the next collision check.
+Previously it could stay airborne until the frame ended and hit an otherwise clear ramp.
+The motor still integrates once per frame; ascending jumps, genuine drops, native pathing,
+solid/terrain clearances and obstacle impacts retain their rules. Default mode stays classic.
+
 Jump over low solids when the feet clear their transformed model bounds. Land on their top or continue
 past them. Taller walls, buildings and trees retain collision. Walking or jumping off a ledge keeps the
 current height initially, then gravity accelerates the fall until landing. No fall damage is added.

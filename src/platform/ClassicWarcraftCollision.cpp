@@ -129,6 +129,9 @@ void ClassicWarcraftCollision::Move(wc3::Handle unit, MovementPhysics& movement,
         movement.ResolveClassicFloor(Floor(x,y,movement,obstacles));MovementWater::Update(unit,movement);return;
     }
     int steps = std::max(1, int(std::ceil(std::hypot(dx, dy) / 8)));
+    // The vertical integrator may have just reached the floor at the current XY. Settle that
+    // existing classic contact before testing the first horizontal step, not after clipping it.
+    movement.ResolveClassicFloor(Floor(x,y,movement,obstacles));
     // Eight-unit swept steps retain thin-wall collision at maximum bunnyhop speed.
     for (int step = 0; step < steps; ++step) {
         float nx = x + dx / steps, ny = y + dy / steps;
@@ -139,9 +142,10 @@ void ClassicWarcraftCollision::Move(wc3::Handle unit, MovementPhysics& movement,
             if (Clear(nx, y, x, y, movement, obstacles)) x = nx; else { movement.BlockX(); dx = 0; }
             if (Clear(x, ny, x, y, movement, obstacles)) y = ny; else { movement.BlockY(); dy = 0; }
         }
-        // Follow support after each accepted ground substep. Fast uphill sweeps cannot reuse an outdated frame-start floor.
-        // Airborne feet remain controlled by the vertical integrator.
-        if(movement.Grounded())movement.ResolveClassicFloor(Floor(x,y,movement,obstacles));
+        // Resolve descending landings as well as ground support at each swept substep. Delaying an
+        // accepted ramp landing until frame end leaves stale airborne feet and falsely clips the next step.
+        // Classic's existing resolver still rejects ascending landings and starts genuine ledge falls.
+        movement.ResolveClassicFloor(Floor(x,y,movement,obstacles));
     }
     float floor = Floor(x, y, movement, obstacles);
     if (std::hypot(x - originalX, y - originalY) > 0.001f) {

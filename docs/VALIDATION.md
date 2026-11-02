@@ -1,5 +1,24 @@
 # Validation
 
+## Classic crest momentum (unreleased, 2026-11-03)
+
+The production classic adapter is exercised across 144 continuous-hill cases: 30/60/144 Hz,
+gradients 0.3/0.5, native radii 16/24/32/48 and six takeoff phases. The new regression
+fails against the previous adapter and passes with floor contact resolved before/after
+each swept step. Existing classic/hull/recovery tests cover walls, steep cliffs, decks,
+narrow passages, world boundaries, water and maximum-speed sweeps; movement/status/jump
+and camera-height suites pass. The collision rejection tests and motor settings are unchanged.
+
+An authored owned 1.26a native hill reproduces the old OpenGL drop from 330.625 CS units/s
+to zero with uphill-terrain rejection at reachable 171.2 versus terrain 200.0. The repaired
+module crosses all six takeoff phases in OpenGL and Direct3D without a frame-to-frame
+speed drop in the crest interval; the observed camera height equals the requested height.
+Comparison uses identical 1000-cap tuning for the older diagnostic module's compatibility;
+the delivered configuration retains the current 3000 cap. OpenGL before/after recordings
+were inspected; no D3D capture or real 1.27a verification is claimed. All lab files/saves
+are restored by hash. Genuine solid/terrain impacts remain blocking, and every custom map
+or steeper ascending contact is not claimed to be covered by this landing regression.
+
 ## Bunnyhop speed cap 3000 (unreleased, 2026-11-02)
 
 Portable physics reaches the new 3000 GoldSrc-unit/s default (4500 Warcraft units/s)
