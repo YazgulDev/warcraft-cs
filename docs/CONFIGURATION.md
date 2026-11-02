@@ -161,6 +161,11 @@ automated. Existing native autocast settings may still act independently.
 native limiter. `DrawDistance=5000` accepts 3000–20000 world units. Actual performance
 depends on hardware and map load; farther rendering does not reveal fog-hidden units.
 
+The local development build adds `[Rendering] FieldOfView=85`: horizontal world-camera
+degrees, clamped to 60–120. Edit **F2 → Field of view → Apply & Save** or reload a manual
+INI edit with F8. FPS, F9 and third person share the preference; existing scope zoom stays
+independent. Missing/invalid/non-finite values use 85. Updates preserve custom angles.
+
 `[Sky] WarcraftEnabled=true` supplies the native sky on maps without one.
 `Enabled=false` keeps Warcraft skies; true uses privately converted CS skyboxes.
 `Default=Des` and tileset mappings such as `W=snow` choose cache stems. Missing
@@ -237,7 +242,7 @@ Only camera/aim height receives the bounded correction. Horizontal position, col
 
 The [arsenal/smoke preview](ARSENAL-SMOKE-PREVIEW.md) documents the new TMP, UMP45, FAMAS, Galil and G3SG1 sections and `[SmokeGrenade] VisibilityDistance=96` / `BlocksAI=true`. Existing opacity and weapon tuning are preserved during updates.
 
-The [F2 in-game settings panel](INGAME-SETTINGS.md) edits mouse sensitivity, CS volume, movement physics, view distance and sky. `[Mouse] Sensitivity=1` and `ScopeSensitivity=1` preserve previous aiming; `[Sky] Visible=true` adds explicit controlled-view sky visibility. Apply saves only changed keys; F8 still reloads manual edits.
+The [F2 in-game settings panel](INGAME-SETTINGS.md) edits mouse sensitivity, CS volume, movement physics, view distance and sky; the local development build also exposes field of view. `[Mouse] Sensitivity=1` and `ScopeSensitivity=1` preserve previous aiming; `[Sky] Visible=true` adds explicit controlled-view sky visibility. Apply saves only changed keys; F8 still reloads manual edits.
 
 The [nuclear bomb and chat preview](NUCLEAR-CHAT-PREVIEW.md) documents `[Chat]` and `[NuclearBomb]` keys, ranges and next-launch F8 snapshots.
 

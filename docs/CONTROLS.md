@@ -20,6 +20,9 @@ show default bindings; `[Shortcuts]` in the INI can change keyboard actions.
 | Home (Mode=recovery) | Emergency return to nearby visited safe ground after a fall or invalid placement |
 | Mouse wheel in third person | Change camera distance |
 
+In the local development build, **F2 → Field of view → Apply & Save** changes the horizontal
+angle in FPS, F9 and third person (60–120°, default 85°). Scope zoom remains unchanged.
+
 With **Only Warcraft modes** installed, T switches between F7 and F9 instead.
 F9 keeps movement and ambience but hides the HUD and blocks player attacks, spells
 and inventory actions. Enemy basic attacks are blocked by default in this view;

@@ -1,5 +1,22 @@
 # Validation
 
+## Editable field of view (unreleased, 2026-11-02)
+
+Real loader tests cover default/empty/malformed/non-finite angles, 60–120 bounds and
+independent scope policy. Menu tests exercise draft/cancel/reset, one-key atomic save,
+loader consumption and nine-row pointer/hint geometry. Installer tests preserve a custom
+106-degree angle, insert missing 85-degree defaults and retain idempotence. Rendered WGL
+panels at 800x600/1024x768 were inspected; beam-anchor regressions include 60/106/120.
+
+Owned offline 1.26a OpenGL and Direct3D runs compare the configured/shared angle with
+the actual native camera: 60, 85, 106 and 120 degrees. Production F2/Enter/Escape paths
+verify drafts do not apply early, save/cancel behavior, F8 reload, applying while scoped,
+scope cycling, TPS and clean F9. Native getters report radians, converted to degrees in
+the fixture. The pre-existing second-zoom request of 10 degrees reads as 20 in this host;
+both the old 85-degree and new 120-degree base preferences retain that same behavior.
+OpenGL menu/world frames and a recording were inspected; no D3D capture is claimed.
+All touched lab files and saves were restored by hash. Real 1.27a remains unverified.
+
 ## Portals and heavy weapons (unreleased, 2026-11-02)
 
 Synthetic mapped-PE tests verify exact JASS signatures, real versus null registrations,

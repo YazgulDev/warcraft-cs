@@ -9,7 +9,8 @@
 int main() {
     // An authored held-model muzzle must project to the identical screen point under native FOV,
     // arbitrary camera heading/pitch, custom model framing and the decorative movement pose.
-    for(float fov:{25.f,50.f,85.f})for(float yaw:{0.f,90.f,270.f})for(float pitch:{-50.f,0.f,50.f})for(float scale:{.25f,1.f,2.f})for(float heldAspect:{1.33f,2.05f})for(float nearPlane:{8.f,100.f}) {
+    // Include the editable world-FOV extremes so held muzzle alignment survives narrow/wide views.
+    for(float fov:{25.f,50.f,60.f,85.f,106.f,120.f})for(float yaw:{0.f,90.f,270.f})for(float pitch:{-50.f,0.f,50.f})for(float scale:{.25f,1.f,2.f})for(float heldAspect:{1.33f,2.05f})for(float nearPlane:{8.f,100.f}) {
         WorldLabelView view;view.eye[0]=120;view.eye[1]=-500;view.eye[2]=96;view.verticalFov=fov;view.yaw=yaw;view.pitch=pitch;view.aspect=2.05f;
         ViewmodelPose pose={1.2f,-.5f,.2f,10};std::array<float,3> anchor={-5.27f,-8.88f,-20.08f};
         auto point=ViewmodelAnchor::World(anchor,pose,scale,view,heldAspect,nearPlane);float delta[3];for(int i=0;i<3;++i)delta[i]=point[i]-view.eye[i];

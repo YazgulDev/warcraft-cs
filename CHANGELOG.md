@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add horizontal Field of view to F2 settings and Rendering.FieldOfView (85 degrees by default, 60–120). Save/apply immediately in FPS/F9/third person or reload manual edits with F8; preserve scope zoom, custom INI values and unrelated movement/loadout/session state. Share the configured angle between native camera and overlay/sky projection, and fit nine menu rows above hints/buttons.
 - Add active in-map waygate interaction in controlled views, real map destinations, pause-aware cooldown and leave-gate re-entry protection. Detect native/scripted relocations and rebase physical floor, camera and recovery without classifying budgeted fast movement as teleportation. New editable Portals settings reload with F8; no campaign exits are synthesized.
 - Double stock AWP/G3SG1 fixed damage and native attack multipliers (230/6 and 160/4.4), HE damage to 1200 and Tau primary/charged damage to 200/2000. Versioned stock-only loader/installer upgrades preserve custom tuning, zero damage and explicit opt-backs, including independent Tau charge markers.
 - Add an owned-resource Crowbar to the starting kit by default through Loadout.Crowbar, applied on startup/map load without grants on F8 or view changes. Missing resource seals and the Only Warcraft profile remain excluded.

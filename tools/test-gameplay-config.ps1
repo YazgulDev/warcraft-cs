@@ -122,11 +122,15 @@ $hudHash=(Get-FileHash -LiteralPath $hudConfig).Hash;Update-GameplayConfig $temp
 if((Get-FileHash -LiteralPath $hudConfig).Hash -ne $hudHash){throw 'Unit HUD migration is not idempotent.'}
 # Fresh defaults use 5000, while explicit saved distances and hover opt-outs survive repeated upgrades.
 $distance=Join-Path $folder 'distance-hover.ini'
-@('[Rendering]','DrawDistance=7000','[UnitView]','HideHoverCircles=false') | Set-Content -LiteralPath $distance -Encoding ascii
+@('[Rendering]','DrawDistance=7000','FieldOfView=106','[UnitView]','HideHoverCircles=false') | Set-Content -LiteralPath $distance -Encoding ascii
 Update-GameplayConfig $template $distance
 $distanceText=Get-Content -LiteralPath $distance -Raw
 if(!$distanceText.Contains('DrawDistance=7000') -or !$distanceText.Contains('HideHoverCircles=false')){throw 'Saved visibility preferences overwritten.'}
 if(!(Get-Content -LiteralPath $template -Raw).Contains('DrawDistance=5000')){throw 'Fresh distance default is not 5000.'}
+# FOV is additive and idempotent: preserve the user's saved angle while fresh/missing keys receive 85.
+if(!$distanceText.Contains('FieldOfView=106') -or !(Get-Content -LiteralPath $template -Raw).Contains('FieldOfView=85')){throw 'Saved/fresh FOV preference lost.'}
+$fovHash=(Get-FileHash -LiteralPath $distance).Hash;Update-GameplayConfig $template $distance
+if((Get-FileHash -LiteralPath $distance).Hash -ne $fovHash){throw 'FOV config merge is not idempotent.'}
 . (Join-Path $root 'setup/installation-profile.ps1')
 # Only an explicit setup choice replaces the profile; ordinary F8/default migrations preserve it.
 $profile=Join-Path $folder 'profile.ini'
@@ -180,7 +184,7 @@ $config=Join-Path $folder 'legacy.ini'
 # Updates append missing keys inside existing sections while retaining all custom values.
 Update-GameplayConfig $template $config
 $text=Get-Content -LiteralPath $config -Raw
-foreach ($required in @('AmmoPercent=37','Price=0','Damage=81','FriendlyFirePercent=25','AWPOneShot=false','BombCount=0','Access=anywhere','AmmoPrice=80','CSVolumePercent=100','Detailed=true','IntervalMs=1000','MaxFileMB=8','ArchiveCount=3','JumpBoostPercent=0','AutoJump=true','MaxFPS=144','DrawDistance=5000','HideHoverCircles=true')) {
+foreach ($required in @('AmmoPercent=37','Price=0','Damage=81','FriendlyFirePercent=25','AWPOneShot=false','BombCount=0','Access=anywhere','AmmoPrice=80','CSVolumePercent=100','Detailed=true','IntervalMs=1000','MaxFileMB=8','ArchiveCount=3','JumpBoostPercent=0','AutoJump=true','MaxFPS=144','DrawDistance=5000','FieldOfView=85','HideHoverCircles=true')) {
     if (!$text.Contains($required)) { throw "Missing/patched preference: $required" }
 }
 if ([regex]::Matches($text,'(?m)^\[AK47\]').Count -ne 1) { throw 'Duplicate section can hide new INI keys.' }

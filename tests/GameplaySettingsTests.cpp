@@ -38,6 +38,16 @@ int main() {
     assert(menuConfig.mouse.Gain(0)==.28f && menuConfig.mouse.Gain(1)==.035f && !menuConfig.skyVisible);
     assert(menuConfig.shortcuts.Key(ShortcutAction::ReloadSettings)==VK_F2 && menuConfig.shortcuts.Key(ShortcutAction::SettingsMenu)==VK_F3);
     DeleteFileA(mousePath.c_str());
+    // Startup/F8 share finite horizontal-FOV bounds while scope optics remain independent.
+    const auto fovPath=(std::filesystem::current_path()/"fov-validation.ini").string();
+    const std::pair<const char*,float> fovCases[]={{"",85},{"nan",85},{"inf",85},{"bad",85},{"-1",60},{"0",60},{"999",120},{"106.5",106.5f}};
+    assert(settings.render.fieldOfView==85);
+    for(auto test:fovCases) {
+        {std::ofstream f(fovPath);f<<"[Rendering]\nFieldOfView="<<test.first<<"\n";}
+        auto render=GameplaySettings::Load(fovPath).render;
+        assert(render.fieldOfView==test.second && render.Fov()==test.second && render.Fov(1)==40 && render.Fov(2)==10);
+    }
+    DeleteFileA(fovPath.c_str());
     // Appended CS guns remain available without optional Half-Life assets and own complete nonzero tuning.
     for(int slot=WeaponSlots::TMP;slot<=WeaponSlots::G3SG1;++slot) {
         assert(settings.WeaponEnabled(slot) && WeaponSlots::Firearm(slot) && !WeaponSlots::HalfLife(slot));

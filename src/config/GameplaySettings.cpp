@@ -241,6 +241,8 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.render.maxFPS=maxFPS==0 ? 0 : int(std::max(30.f,maxFPS));
     // Missing or malformed distances use the same default as a fresh settings snapshot.
     result.render.drawDistance=std::max(3000.f,number("Rendering","DrawDistance",result.render.drawDistance,20000));
+    // The same validated horizontal FOV drives native cameras and overlay projection after startup/F8.
+    result.render.fieldOfView=std::max(RenderSettings::MinimumFov,number("Rendering","FieldOfView",RenderSettings::DefaultFov,RenderSettings::MaximumFov));
     result.runeAmmoPercent=number("Runes","AmmoPercent",result.runeAmmoPercent,100);
     // Missing settings enable the requested hopping; malformed switches preserve documented defaults.
     auto boolean = [&](const char* key, bool fallback) {

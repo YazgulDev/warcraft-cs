@@ -12,7 +12,8 @@ bool Allowed(const ConfigChange& c) {
     if(c.value.empty() || c.value.find_first_of("\r\n")!=std::string::npos)return false;
     if(c.section=="Mouse")return c.key=="Sensitivity" || c.key=="ScopeSensitivity";
     if(c.section=="Audio")return c.key=="CSVolumePercent";
-    if(c.section=="Rendering")return c.key=="DrawDistance";
+    // Permit only the rendering preferences exposed by the in-game draft, not arbitrary INI writes.
+    if(c.section=="Rendering")return c.key=="DrawDistance" || c.key=="FieldOfView";
     if(c.section=="Movement")return c.key=="Mode" && (c.value=="classic" || c.value=="recovery" || c.value=="hull");
     if(c.section!="Sky")return false;
     if(c.key=="Visible" || c.key=="Enabled" || c.key=="WarcraftEnabled")return c.value=="true" || c.value=="false";

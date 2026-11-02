@@ -553,10 +553,10 @@ void ShooterController::Camera() {
     if(ThirdPerson()) {
         auto pose=thirdCamera_.Position(unit_,ViewEyeZ()+wc3::Real(wc3::GetUnitFlyHeight(unit_)),
             yaw_,pitch_,CameraSettings(),hitboxes_,destructableHitboxes_);
-        camera_.Update(pose.eye[0],pose.eye[1],pose.eye[2],yaw_,pitch_,85,settings_.render.drawDistance);
+        camera_.Update(pose.eye[0],pose.eye[1],pose.eye[2],yaw_,pitch_,ViewFov(),settings_.render.drawDistance);
     } else camera_.Update(wc3::Real(wc3::GetUnitX(unit_)), wc3::Real(wc3::GetUnitY(unit_)),
             ViewEyeZ() + wc3::Real(wc3::GetUnitFlyHeight(unit_)), yaw_ + recoil_.Yaw(), std::clamp(pitch_ + recoil_.Pitch(), -65.0f, 65.0f),
-            scopeLevel_ == 2 ? 10.0f : Scoped() ? 40.0f : 85.0f, settings_.render.drawDistance);
+            ViewFov(), settings_.render.drawDistance);
     ownCameraRequest_ = false;
     if(ThirdPerson() || Buying() || InventoryInputOpen() || !settings_.itemHover.enabled)itemHover_.Clear();
     else {
@@ -687,13 +687,14 @@ void ShooterController::ApplyMenuSettings() {
     // weapon inventory, zoom, live reload clocks and unrelated INI edits keep their existing ownership.
     auto next=GameplaySettings::Load(root_+"\\WarcraftCS.ini");
     settings_.mouse=next.mouse;settings_.csVolumePercent=next.csVolumePercent;settings_.render.drawDistance=next.render.drawDistance;
+    settings_.render.fieldOfView=next.render.fieldOfView; // Apply the saved FOV without resetting zoom, movement or the loadout.
     settings_.movement.classicCollision=next.movement.classicCollision;settings_.movement.platformRecovery=next.movement.platformRecovery;
     settings_.skyVisible=next.skyVisible;settings_.csSky=next.csSky;settings_.nativeSky=next.nativeSky;
     settings_.defaultSky=next.defaultSky;settings_.tilesetSky=std::move(next.tilesetSky);
     audio_.SetVolumePercent(settings_.csVolumePercent);movement_.Configure(settings_.movement);
-    wc3::Log("In-game settings applied sensitivity=%.3f scope=%.3f volume=%.1f draw=%.0f classic=%d recovery=%d sky=%d cs=%d preset=%s",
+    wc3::Log("In-game settings applied sensitivity=%.3f scope=%.3f volume=%.1f draw=%.0f fov=%.1f classic=%d recovery=%d sky=%d cs=%d preset=%s",
         settings_.mouse.sensitivity,settings_.mouse.scopeSensitivity,settings_.csVolumePercent,settings_.render.drawDistance,
-        settings_.movement.classicCollision,settings_.movement.platformRecovery,settings_.skyVisible,settings_.csSky,SkyName().c_str());
+        settings_.render.fieldOfView,settings_.movement.classicCollision,settings_.movement.platformRecovery,settings_.skyVisible,settings_.csSky,SkyName().c_str());
 }
 void ShooterController::ReloadSettings() {
     cameraHeight_.Reset(); // F8 discards the previous ground response.
@@ -759,6 +760,7 @@ void ShooterController::ReloadSettings() {
     showSpeed_=settings_.showSpeed;
     showMinimap_=settings_.showMinimap;
     wc3::Log("Mouse configured sensitivity=%.3f scopeSensitivity=%.3f",settings_.mouse.sensitivity,settings_.mouse.scopeSensitivity);
+    wc3::Log("Camera configured horizontalFov=%.1f",settings_.render.fieldOfView);
     wc3::Log("Minimap configured visible=%d sizePercent=%.1f",showMinimap_,settings_.minimapSizePercent);
     fogOfWarDisabled_=settings_.disableFogOfWar;
     wc3::Log("Fog of war configured disabled=%d",fogOfWarDisabled_);
@@ -1638,7 +1640,7 @@ void ShooterController::Tick(uintptr_t ui) {
     if (!ThirdPerson() && !suppressFire_ && WeaponSlots::Scoped(weapon_) && secondaryPressed) {
         // CS-style right-click cycle: normal view, first zoom, second zoom, normal view.
         scopeLevel_ = (scopeLevel_ + 1) % 3;
-        wc3::Log("scope weapon=%s level=%d fov=%.0f",settings_.weapons[weapon_].name, scopeLevel_, scopeLevel_ == 2 ? 10.0f : Scoped() ? 40.0f : 85.0f);
+        wc3::Log("scope weapon=%s level=%d fov=%.0f",settings_.weapons[weapon_].name, scopeLevel_, ViewFov());
     }
     // Refresh input/fire timing after menu and weapon selection work.
     now=GetTickCount();

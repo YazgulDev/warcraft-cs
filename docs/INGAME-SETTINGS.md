@@ -4,7 +4,7 @@
 
 Available in [release 0.17.0](RELEASE-0.17.0.md), alongside the expanded CS arsenal and dense smoke.
 
-Press **F2** during first-person control, third-person control or clean F9 unit view. The panel deliberately covers the requested main settings: mouse sensitivity, CS audio, movement physics, view distance and sky. Native Warcraft shops and RTS keep their own controls. `[Shortcuts] SettingsMenu=F2` can be remapped; old custom layouts using F2 receive a free F3/F4/F5 binding, or NONE if all are occupied. F6 remains the recovery shortcut and F10 retains the Warcraft menu.
+Press **F2** during first-person control, third-person control or clean F9 unit view. The panel covers mouse sensitivity, CS audio, movement physics, view distance and sky. The local development build also adds horizontal field of view. Native Warcraft shops and RTS keep their own controls. `[Shortcuts] SettingsMenu=F2` can be remapped; old custom layouts using F2 receive a free F3/F4/F5 binding, or NONE if all are occupied. F6 remains the recovery shortcut and F10 retains the Warcraft menu.
 
 Use the mouse to click +/- or click/drag a numeric slider. Up/down selects a row; left/right or the wheel adjusts it. **Apply & Save / Enter** writes changed keys and applies the validated menu domains immediately. **Cancel / Escape / F2** discards the draft and returns to the current controlled view. **Reset These** drafts the listed defaults while retaining the chosen CS preset; it does not reset the rest of the INI. Reset does not take effect until Apply & Save.
 
@@ -15,11 +15,14 @@ Use the mouse to click +/- or click/drag a numeric slider. Up/down selects a row
 | CS volume | `[Audio] CSVolumePercent` | 100%; 0–100. Active CS voices update immediately; Warcraft audio stays unchanged. |
 | Movement physics | `[Movement] Mode` | classic; classic / recovery / hull. Existing velocity/position are not reset by applying the mode. |
 | View distance | `[Rendering] DrawDistance` | 5000 Warcraft units; 3000–20000. Native map visibility and atmospheric fog can still hide distant objects. |
+| Field of view (local development build) | `[Rendering] FieldOfView` | 85 horizontal degrees; 60–120 in 1-degree menu steps. Applies to FPS, F9 and third person; existing scope zoom remains independent. |
 | Sky visible | `[Sky] Visible` | true. Controls both map-authored sky visibility and CS sky drawing in controlled views. |
 | Sky type | `[Sky] Enabled`, `WarcraftEnabled` | Warcraft by default. A type change selects Warcraft or CS, with the corresponding two existing keys. |
 | CS sky preset | `[Sky] <terrain letter>` or `Default` | Current saved terrain preset. Only complete installed private WCS1 sky caches appear as choices. Unknown terrains use Default. |
 
 Main sensitivity preserves the former 0.14 degrees/count at 1x, and preserves the former scoped 0.035/0.009 degrees/count when both multipliers are 1x. Raw mouse counts and cursor fallback share the same validated gain. These preferences load on startup; **F8** still reloads manual INI edits outside the panel. Blank/malformed/non-finite numeric values use documented defaults; finite values are clamped. Installer updates add missing keys without resetting custom sensitivity, sky/audio preferences or existing shortcuts.
+
+For a wider view, raise **Field of view** and choose **Apply & Save**; a larger angle shows more of the world and makes distant objects look smaller. This is the horizontal world-camera angle, independent of per-weapon held-model scale. Cancel leaves the current angle intact. Reset These drafts 85 degrees. Applying while scoped saves the ordinary angle without changing the active scope zoom; leaving the scope uses the new angle. The native camera and overlay/sky projection consume the same value. Manual `[Rendering] FieldOfView` edits apply on F8, and updates preserve a saved custom angle.
 
 Sky presets apply to the current terrain's existing key, rather than changing a fallback that the map's override would ignore. Changing a CS preset takes visible effect with CS sky type selected. Missing/custom unavailable names remain identifiable until a valid installed preset is selected. Native-only installs retain native sky controls without needing CS resources. Native Warcraft sky fallback behavior still uses WarcraftEnabled; disabling Visible additionally hides an authored map sky. Leaving FPS/TPS/F9 restores the latest authored map sky, including map-script replacements. The native sky lease is verified on 1.26a; 1.27a engine internals remain experimental and unverified.
 

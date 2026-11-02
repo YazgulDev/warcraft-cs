@@ -189,7 +189,8 @@ public:
     std::string NearbyWeaponName() const {return nearbyWeapon_<0 ? "" : settings_.weapons[nearbyWeapon_].name;}
     float ViewYaw() const { return yaw_+(ThirdPerson() ? 0 : recoil_.Yaw())+nuclearBomb_.Shake()*nuclearExposure_; }
     float ViewPitch() const { return pitch_+(ThirdPerson() ? 0 : recoil_.Pitch())+nuclearBomb_.Shake()*nuclearExposure_*.5f; }
-    float ViewFov() const { return scopeLevel_==2 ? 10.0f : Scoped() ? 40.0f : 85.0f; }
+    // Camera, sky and aiming overlays share one FOV; third person never inherits an armed scope.
+    float ViewFov() const {return settings_.render.Fov(ThirdPerson() ? 0 : scopeLevel_);}
     const std::string& SkyName() const {
         const auto& choice=settings_.tilesetSky[static_cast<unsigned char>(mapTileset_)];
         return choice.empty() ? settings_.defaultSky : choice;

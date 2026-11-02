@@ -308,6 +308,8 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
             // Values expose the actual applied snapshot, not merely the pending draft displayed by the menu.
             auto& s=controller.Settings();wc3::Log("fixture settings open=%d dirty=%d sensitivity=%.3f scope=%.3f volume=%.1f draw=%.0f classic=%d recovery=%d sky=%d csSky=%d preset=%s visible=%d ammo=%d serial=%u",
                 controller.SettingsPanel().Open(),controller.SettingsPanel().Dirty(),s.mouse.sensitivity,s.mouse.scopeSensitivity,s.csVolumePercent,s.render.drawDistance,s.movement.classicCollision,s.movement.platformRecovery,s.skyVisible,s.csSky,controller.SkyName().c_str(),controller.Visible(),controller.Ammo(),controller.ShotSerial());
+            // The native getter returns radians while the setter/config use degrees; compare like units.
+            wc3::Log("fixture camera fov configured=%.1f view=%.1f native=%.1f third=%d",s.render.fieldOfView,controller.ViewFov(),wc3::Real(wc3::GetCameraField(3))/.01745329252f,controller.ThirdPerson());
         }
         else if(BackgroundGameplay::Enabled() && command=="equip") {int slot=-1;input>>slot;controller.TestEquip(slot);}
         else if(BackgroundGameplay::Enabled() && command=="reload")controller.TestReload();
