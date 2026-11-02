@@ -1,4 +1,5 @@
 #include "GameplaySettings.hpp"
+#include "WarcraftSkyPresets.hpp"
 #include "../platform/OptionalWeaponAssets.hpp"
 #include "../platform/WarcraftApi.hpp"
 #include <algorithm>
@@ -262,9 +263,16 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     auto fireRate=text("Combat","ScaleFireRateFromAttackSpeed","false");
     result.scaleFireRateFromAttackSpeed=!_stricmp(fireRate.c_str(),"true") || fireRate=="1";
     result.movement.autoJump = boolean("AutoJump", true);
-    result.movement.jumpBoostPercent = number("Movement", "JumpBoostPercent", 0, 100);
+    result.movement.jumpBoostPercent = number("Movement", "JumpBoostPercent", 15, 100);
     result.movement.maxBunnySpeed = std::max(250.0f, number("Movement", "MaxBunnySpeed", 1000, 2000));
-    result.movement.airAcceleration = number("Movement", "AirAcceleration", 10, 100);
+    result.movement.airAcceleration = number("Movement", "AirAcceleration", 30, 100);
+    // Upgrade only former stock once. Current per-field markers permit explicit legacy/zero opt-backs.
+    auto movementStock=[&](const char* key,const char* marker,float old,float next,float& value) {
+        auto raw=text("Movement",key,"");char* end=nullptr;float saved=std::strtof(raw.c_str(),&end);
+        if(GetPrivateProfileIntA("Movement",marker,1,filename.c_str())<2 && end!=raw.c_str() && !*end && saved==old)value=next;
+    };
+    movementStock("JumpBoostPercent","JumpBoostVersion",0,15,result.movement.jumpBoostPercent);
+    movementStock("AirAcceleration","AirAccelerationVersion",10,30,result.movement.airAcceleration);
     result.movement.jumpSpeed = std::max(1.0f, number("Movement", "JumpSpeed", 268.328f, 800));
     result.movement.gravity = std::max(100.0f, number("Movement", "Gravity", 800, 3000));
     result.movement.stepHeight = number("Movement", "StepHeight", 27, 64);
@@ -551,6 +559,9 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.csSky=enabled("Sky","Enabled",false);
     // Default to Warcraft's sky even for older configs missing this key; explicit CS sky still takes precedence.
     result.nativeSky=enabled("Sky","WarcraftEnabled");
+    auto nativePreset=text("Sky","WarcraftPreset","auto");
+    for(auto& c:nativePreset)c=char(std::tolower(static_cast<unsigned char>(c)));
+    result.warcraftSkyPreset=WarcraftSkyPresets::All[WarcraftSkyPresets::Index(nativePreset.c_str())].id;
     // Only filename stems from private CS caches are accepted; INI strings never become arbitrary paths.
     auto sky=[&](const char* key,const char* fallback) {
         auto value=text("Sky",key,fallback);

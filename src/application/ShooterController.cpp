@@ -690,6 +690,7 @@ void ShooterController::ApplyMenuSettings() {
     settings_.render.fieldOfView=next.render.fieldOfView; // Apply the saved FOV without resetting zoom, movement or the loadout.
     settings_.movement.classicCollision=next.movement.classicCollision;settings_.movement.platformRecovery=next.movement.platformRecovery;
     settings_.skyVisible=next.skyVisible;settings_.csSky=next.csSky;settings_.nativeSky=next.nativeSky;
+    settings_.warcraftSkyPreset=next.warcraftSkyPreset; // Apply the native choice through the same temporary sky lease.
     settings_.defaultSky=next.defaultSky;settings_.tilesetSky=std::move(next.tilesetSky);
     audio_.SetVolumePercent(settings_.csVolumePercent);movement_.Configure(settings_.movement);
     wc3::Log("In-game settings applied sensitivity=%.3f scope=%.3f volume=%.1f draw=%.0f fov=%.1f classic=%d recovery=%d sky=%d cs=%d preset=%s",
@@ -1303,7 +1304,7 @@ void ShooterController::Tick(uintptr_t ui) {
         }
     }
     // Menus/cinematics return ownership to the map; live FPS may temporarily fill a missing native sky.
-    nativeSky_.Update(ui_,Visible() && settings_.nativeSky && !settings_.csSky,mapTileset_,Visible() && !settings_.skyVisible);
+    nativeSky_.Update(ui_,Visible() && settings_.nativeSky && !settings_.csSky,mapTileset_,Visible() && !settings_.skyVisible,settings_.warcraftSkyPreset.c_str());
     nativeFog_.Update(Visible() && fogOfWarDisabled_);
     // A queued display tap cannot take effect after FPS is suspended or left.
     if (!active_ || suspended_) { textEntry_.Reset();nuclearInventory_.Holster();settingsMenu_.Reset();CancelEnergy();CloseWeaponSelection();itemInventory_.ClearInput();squadOrderMode_.ClearInput();mouseLook_.Reset();weaponWheel_.Reset();cameraWheel_.Reset();itemRequested_=false;squadRequested_=0;speedToggleRequested_=fogToggleRequested_=minimapToggleRequested_=healthBarToggleRequested_=allyTargetToggleRequested_=false;spellRequested_=-1;spellCancelRequested_=false;return; }

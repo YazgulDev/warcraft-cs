@@ -25,6 +25,7 @@ static float JumpPeak(int fps) {
 static float StrafeSpeed(int fps, bool enabled = true, float acceleration = 10) {
     MovementPhysics movement; movement.Reset(0);
     MovementSettings settings; settings.bunnyHop = enabled; settings.airAcceleration = acceleration;
+    settings.jumpBoostPercent=0; // This oracle isolates classic air-strafe gain from the new takeoff bonus.
     movement.Configure(settings);
     MoveInput run; run.forward = 1;
     for (int frame = 0; frame < fps; ++frame) movement.Step(run, 1.0f / fps, 250);
@@ -91,6 +92,7 @@ int main() {
     Require(slowed.Speed() <= 187.51f, "jump/strafe must not bypass the slow's speed limit");
     // Straight hops retain the run-up; acceleration requires changing the airborne wish direction.
     MovementPhysics hopping; hopping.Reset(0);
+    MovementSettings classic;classic.jumpBoostPercent=0;classic.airAcceleration=10;hopping.Configure(classic);
     for (int frame = 0; frame < 60; ++frame) hopping.Step(forward, 1.f/60, 250);
     MoveInput hop = forward; hop.jump = true;
     for (int frame = 0; frame < 360; ++frame) { hopping.Step(hop, 1.f/60, 250); hopping.ResolveFloor(0); }
@@ -106,9 +108,18 @@ int main() {
     Require(StrafeSpeed(60, false) < 450, "disabling bunnyhop must remove accumulated excess speed on each takeoff");
     // A fresh forward jump must use the air-direction cap from its first frame, not ground acceleration.
     MovementPhysics launch; launch.Reset(0); MoveInput launchInput = forward; launchInput.jump = true;
+    launch.Configure(classic);
     launch.Step(launchInput, 1.f/30, 250);
     Require(launch.Speed() <= 45.01f, "takeoff must not grant a ground acceleration impulse");
-    // Existing custom arcade boosts remain opt-in and survive live tuning changes.
+    // Faster defaults increase takeoff speed and 144-Hz air acceleration without changing the vertical arc.
+    MovementPhysics fast,old;fast.Reset(0);old.Reset(0);old.Configure(classic);
+    for(int frame=0;frame<144;++frame){fast.Step(forward,1.f/144,250);old.Step(forward,1.f/144,250);}
+    fast.Step(hop,1.f/144,250);old.Step(hop,1.f/144,250);
+    Require(fast.Speed()>old.Speed()*1.14f && std::abs(fast.FeetZ()-old.FeetZ())<.001f,"stock takeoff gains 15 percent while jump height stays intact");
+    MovementSettings accelerated;accelerated.jumpBoostPercent=0;fast.Configure(accelerated);fast.Reset(0);old.Reset(0);
+    fast.Step(launchInput,1.f/144,250);old.Step(launchInput,1.f/144,250);
+    Require(fast.Speed()>old.Speed()*1.5f && fast.Speed()<=45.01f,"new air acceleration reaches the same wish cap faster");
+    // Custom arcade boosts remain editable and survive live tuning changes.
     MovementSettings arcade; arcade.jumpBoostPercent = 8; hopping.Configure(arcade);
     for (int frame = 0; frame < 180; ++frame) { hopping.Step(hop, 1.f/60, 250); hopping.ResolveFloor(0); }
     Require(hopping.Speed() > 450, "explicit takeoff boost must retain its configurable behavior");

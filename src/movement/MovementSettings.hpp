@@ -19,10 +19,10 @@ struct MovementSettings {
     float unitMoveSpeedReference=300;
     bool bunnyHop = true;
     bool autoJump = true;
-    // Classic strafing supplies the default gain; a separate arcade takeoff boost remains optional.
-    float jumpBoostPercent = 0;
+    // Faster default takeoff/air gain; configurable zero boost retains pure classic strafing.
+    float jumpBoostPercent = 15;
     float maxBunnySpeed = 1000;
-    float airAcceleration = 10;
+    float airAcceleration = 30;
     float jumpSpeed = 268.328f;
     float gravity = 800;
     float stepHeight = 27;

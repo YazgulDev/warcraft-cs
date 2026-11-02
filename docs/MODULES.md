@@ -530,6 +530,13 @@ restoration across replacement contexts.
 
 `ArmyPlan::Detect` prioritizes builders over captured foreign halls. The existing game-thread `ArmyAI` coordinates bounded native construction, worker-centered startup, race-compatible mines and undead lumber ghouls. `ArmyAIStatus` contains the copied domain result; presentation's `ArmyAIStatusText` maps it to HUD text. The controller reports transitions without taking over native orders. No new engine offsets, free units, resource setters or public runtime entry points are introduced.
 
+### Native sky presets
+
+`config/WarcraftSkyPresets.hpp` bounds native selection to verified stock model identifiers.
+The settings draft retains separate CS/native choices behind one type-dependent row. NativeSky
+uses the portable `SkyModelLease` to restore the latest map-authored model across preset,
+hide/show, CS and RTS transitions; map unloads discard the lease without stale restoration.
+
 ### Ground camera height
 
 `presentation/CameraHeightMotion.hpp` owns a bounded presentation correction, driven once after collision resolves the frame's physical feet. It integrates the linear ground segment with an exponential response, keeping slope response consistent across frame rates. Airborne vertical changes are not input to this filter. `ShooterController::ViewEyeZ` bounds the corrected eye inside the current collision body and supplies the same origin to the camera, direct weapon traces and spell/item targeting. Ground physics, actor feet and the third-person boom retain physical values. Lifecycle/F8 resets discard old correction; `CameraHeightSettings` validates the editable startup/live preferences. The portable camera-height suite covers steps, frame rates, bounds, jump isolation, relocation and opt-out; a disposable native per-render observer verifies actual camera submissions.

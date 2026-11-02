@@ -48,6 +48,19 @@ int main() {
         assert(render.fieldOfView==test.second && render.Fov()==test.second && render.Fov(1)==40 && render.Fov(2)==10);
     }
     DeleteFileA(fovPath.c_str());
+    // Native skies accept only the verified catalog; movement migrations distinguish stock and explicit opt-backs.
+    for(auto name:{"auto","summer","fall","winter","felwood","dalaran"}) {
+        {std::ofstream f(fovPath);f<<"[Sky]\nWarcraftPreset="<<name<<"\n";}
+        assert(GameplaySettings::Load(fovPath).warcraftSkyPreset==name);
+    }
+    {std::ofstream f(fovPath);f<<"[Sky]\nWarcraftPreset=../bad.mdl\n";}assert(GameplaySettings::Load(fovPath).warcraftSkyPreset=="auto");
+    {std::ofstream f(fovPath);f<<"[Sky]\nWarcraftPreset=WINTER\n";}assert(GameplaySettings::Load(fovPath).warcraftSkyPreset=="winter");
+    for(auto c:{std::tuple<const char*,int,float,float>{"0",1,15,0},{"0",2,0,0},{"-1",1,0,0},{"7",1,7,7},{"nan",1,15,30},{"10",1,10,30},{"10",2,10,10}}) {
+        auto raw=std::get<0>(c);int version=std::get<1>(c);
+        {std::ofstream f(fovPath);f<<"[Movement]\nJumpBoostPercent="<<raw<<"\nAirAcceleration="<<raw<<"\nJumpBoostVersion="<<version<<"\nAirAccelerationVersion="<<version<<"\n";}
+        auto m=GameplaySettings::Load(fovPath).movement;assert(m.jumpBoostPercent==std::get<2>(c) && m.airAcceleration==std::get<3>(c));
+    }
+    DeleteFileA(fovPath.c_str());
     // Appended CS guns remain available without optional Half-Life assets and own complete nonzero tuning.
     for(int slot=WeaponSlots::TMP;slot<=WeaponSlots::G3SG1;++slot) {
         assert(settings.WeaponEnabled(slot) && WeaponSlots::Firearm(slot) && !WeaponSlots::HalfLife(slot));
@@ -407,19 +420,20 @@ int main() {
     settings=GameplaySettings::Load(path);DeleteFileA(path.c_str());
     assert(!settings.movement.bunnyHop && !settings.movement.autoJump);
     assert(settings.movement.jumpBoostPercent==100 && settings.movement.maxBunnySpeed==250);
-    assert(settings.movement.airAcceleration==10 && settings.movement.jumpSpeed==1);
+    assert(settings.movement.airAcceleration==30 && settings.movement.jumpSpeed==1);
     assert(settings.movement.gravity==3000 && settings.movement.stepHeight==0);
     { std::ofstream file(path); file << "[Movement]\nBunnyHop=broken\nAutoJump=\nJumpBoostPercent=inf\nMaxBunnySpeed=nan\nJumpSpeed=broken\nGravity=nan\nStepHeight=200\n"; }
     settings=GameplaySettings::Load(path);DeleteFileA(path.c_str());
     assert(settings.movement.bunnyHop && settings.movement.autoJump);
-    assert(settings.movement.jumpBoostPercent==0 && settings.movement.maxBunnySpeed==1000);
+    assert(settings.movement.jumpBoostPercent==15 && settings.movement.maxBunnySpeed==1000);
     assert(settings.movement.jumpSpeed==268.328f && settings.movement.gravity==800 && settings.movement.stepHeight==64);
     WritePrivateProfileStringA("Movement","JumpBoostPercent","15",path.c_str());
     assert(GameplaySettings::Load(path).movement.jumpBoostPercent==15);
     WritePrivateProfileStringA("Movement","JumpBoostPercent","0",path.c_str());
+    WritePrivateProfileStringA("Movement","JumpBoostVersion","2",path.c_str()); // Explicit zero opts out of the new stock boost.
     assert(GameplaySettings::Load(path).movement.jumpBoostPercent==0);
     // Consume the actual parsed snapshot in physics, then replace it as F8 does while airborne.
-    { std::ofstream file(path); file << "[Movement]\nMaxBunnySpeed=400\nJumpBoostPercent=0\nAirAcceleration=10\n"; }
+    { std::ofstream file(path); file << "[Movement]\nMaxBunnySpeed=400\nJumpBoostPercent=0\nJumpBoostVersion=2\nAirAcceleration=10\nAirAccelerationVersion=2\n"; }
     MovementPhysics movement; movement.Configure(GameplaySettings::Load(path).movement); movement.Reset(0);
     MoveInput run; run.forward=1;
     for(int frame=0;frame<60;++frame) movement.Step(run,1.f/60,250);

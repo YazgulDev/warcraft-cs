@@ -184,7 +184,7 @@ $config=Join-Path $folder 'legacy.ini'
 # Updates append missing keys inside existing sections while retaining all custom values.
 Update-GameplayConfig $template $config
 $text=Get-Content -LiteralPath $config -Raw
-foreach ($required in @('AmmoPercent=37','Price=0','Damage=81','FriendlyFirePercent=25','AWPOneShot=false','BombCount=0','Access=anywhere','AmmoPrice=80','CSVolumePercent=100','Detailed=true','IntervalMs=1000','MaxFileMB=8','ArchiveCount=3','JumpBoostPercent=0','AutoJump=true','MaxFPS=144','DrawDistance=5000','FieldOfView=85','HideHoverCircles=true')) {
+foreach ($required in @('AmmoPercent=37','Price=0','Damage=81','FriendlyFirePercent=25','AWPOneShot=false','BombCount=0','Access=anywhere','AmmoPrice=80','CSVolumePercent=100','Detailed=true','IntervalMs=1000','MaxFileMB=8','ArchiveCount=3','JumpBoostPercent=15','AirAcceleration=30','WarcraftPreset=auto','AutoJump=true','MaxFPS=144','DrawDistance=5000','FieldOfView=85','HideHoverCircles=true')) {
     if (!$text.Contains($required)) { throw "Missing/patched preference: $required" }
 }
 if ([regex]::Matches($text,'(?m)^\[AK47\]').Count -ne 1) { throw 'Duplicate section can hide new INI keys.' }
@@ -721,3 +721,15 @@ foreach($case in @(@('PUTINMOLODEC','warneverchanges'),@('putinmolodec','warneve
     if((Get-FileHash $codeFile).Hash -ne $once){throw 'Nuclear code migration repeats.'}
 }
 Write-Output 'PASS nuclear grant code rename, saved custom codes and repeated installation.'
+
+# Stock bunnyhop upgrades once; explicit opt-backs and independent custom values survive repeated installs.
+foreach($case in @(@(0,10,1,15,30),@(0,10,2,0,10),@(7,21,1,7,21))) {
+    $hopFile=Join-Path $folder ('hop-'+[Guid]::NewGuid().ToString('N')+'.ini')
+    @('[Movement]',('JumpBoostPercent='+$case[0]),('AirAcceleration='+$case[1]),('JumpBoostVersion='+$case[2]),('AirAccelerationVersion='+$case[2]),'[Sky]','WarcraftPreset=dalaran') | Set-Content $hopFile
+    Update-GameplayConfig $template $hopFile
+    $hopText=Get-Content $hopFile -Raw
+    foreach($value in @(('JumpBoostPercent='+$case[3]),('AirAcceleration='+$case[4]),'WarcraftPreset=dalaran')){if(!$hopText.Contains($value)){throw "Lost movement/sky choice: $value"}}
+    $hopHash=(Get-FileHash $hopFile).Hash;Update-GameplayConfig $template $hopFile
+    if((Get-FileHash $hopFile).Hash -ne $hopHash){throw 'Movement/sky merge repeats.'}
+}
+Write-Output 'PASS faster stock movement, independent explicit opt-backs and native sky preservation.'

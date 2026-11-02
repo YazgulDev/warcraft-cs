@@ -1,6 +1,7 @@
 #include "GameBuild.hpp"
 #include "NativeSky.hpp"
 #include "WarcraftApi.hpp"
+#include "../config/WarcraftSkyPresets.hpp"
 #include <cstring>
 
 bool NativeSky::Configure(uintptr_t base) {
@@ -13,43 +14,19 @@ bool NativeSky::Configure(uintptr_t base) {
 }
 void NativeSky::Reset() {
     // Unloaded map pointers must never be restored into the next map.
-    frame_=0;applied_=hidden_=false;model_.clear();hiddenMapModel_.clear();
+    frame_=0;lease_.Reset();
 }
-void NativeSky::Update(uintptr_t ui, bool enabled, char tileset,bool hidden) {
-    if (!base_ || !ui) return;
-    uintptr_t frame=*reinterpret_cast<uintptr_t*>(ui+0x3BC);
-    if (!frame) return;
-    if (frame_!=frame) {Reset();frame_=frame;}
+void NativeSky::Update(uintptr_t ui,bool enabled,char tileset,bool hidden,const char* preset) {
+    if(!base_ || !ui)return;
+    uintptr_t frame=*reinterpret_cast<uintptr_t*>(ui+0x3BC);if(!frame)return;
+    if(frame_!=frame){Reset();frame_=frame;}
     using Set=void (__thiscall*)(uintptr_t,const char*);
     using Get=const char* (__fastcall*)(uintptr_t,uintptr_t);
-    auto set=reinterpret_cast<Set>(base_ + wc3::Rva(0x390590));
-    const char* current=reinterpret_cast<Get>(base_ + wc3::Rva(0x4C4630))(frame+0x348,0);
-    // Map scripts may replace our preview during a cinematic; never undo their new sky.
-    if (applied_ && (!current || _stricmp(current,model_.c_str()))) applied_=false;
-    // Unlike the old fill-missing-sky preference, visibility also hides a map-authored sky.
-    // Preserve the newest map replacement and restore only while our cleared slot is still empty.
-    if(hidden) {
-        if(!hidden_ || (current && *current)) {
-            hiddenMapModel_=applied_ ? "" : current ? current : "";
-            set(frame,nullptr);applied_=false;hidden_=true;wc3::Log("Native FPS sky hidden");
-        }
-        return;
-    }
-    if(hidden_) {
-        if((!current || !*current) && !hiddenMapModel_.empty())set(frame,hiddenMapModel_.c_str());
-        hidden_=false;hiddenMapModel_.clear();current=reinterpret_cast<Get>(base_+wc3::Rva(0x4C4630))(frame+0x348,0);
-        wc3::Log("Native FPS sky visibility restored");
-    }
-    if (!enabled) {
-        if (applied_) {set(frame,nullptr);wc3::Log("Native FPS sky restored to map default");}
-        applied_=false;return;
-    }
-    // Existing map skies stay intact. Only the otherwise empty RTS sky gains a native FPS backdrop.
-    if (!applied_ && (!current || !*current) && !*reinterpret_cast<uintptr_t*>(frame+0x354)) {
-        model_=strchr("WNIC",tileset) && tileset ?
-            "Environment\\Sky\\LordaeronWinterSky\\LordaeronWinterSky.mdl" :
-            "Environment\\Sky\\LordaeronSummerSky\\LordaeronSummerSky.mdl";
-        set(frame,model_.c_str());applied_=true;
-        wc3::Log("Native FPS sky enabled: %s",model_.c_str());
-    }
+    const char* current=reinterpret_cast<Get>(base_+wc3::Rva(0x4C4630))(frame+0x348,0);
+    auto selected=WarcraftSkyPresets::All[WarcraftSkyPresets::Index(preset)].model;
+    auto fallback=WarcraftSkyPresets::All[strchr("WNIC",tileset) && tileset ? 3 : 1].model;
+    // A pure lease retains authored/script replacements across preset, visibility, CS and RTS transitions.
+    auto change=lease_.Update(current ? current : "",*reinterpret_cast<uintptr_t*>(frame+0x354)!=0,enabled,hidden,selected,fallback);
+    if(change){reinterpret_cast<Set>(base_+wc3::Rva(0x390590))(frame,change->empty() ? nullptr : change->c_str());
+        wc3::Log("Native FPS sky model=%s",change->empty() ? "none" : change->c_str());}
 }

@@ -1,4 +1,5 @@
 #include "SettingsMenu.hpp"
+#include "WarcraftSkyPresets.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -20,6 +21,7 @@ void SettingsMenu::Begin(const GameplaySettings& s,char tileset,const SkyList& l
     open_=true;selected_=0;error_.clear();tileset_=tileset;skies_=list();csAvailable_=!s.warcraftOnly && !skies_.empty();
     const auto& sky=s.tilesetSky[static_cast<unsigned char>(tileset)];std::string current=sky.empty() ? s.defaultSky : sky;savedSky_=current;
     auto found=std::find(skies_.begin(),skies_.end(),current);
+    warcraftPreset_=initialWarcraftPreset_=WarcraftSkyPresets::Index(s.warcraftSkyPreset.c_str());
     values_={s.mouse.sensitivity,s.mouse.scopeSensitivity,s.csVolumePercent,s.movement.classicCollision ? 0.f : s.movement.platformRecovery ? 1.f : 2.f,
         s.render.drawDistance,s.render.fieldOfView,s.skyVisible ? 1.f : 0.f,s.csSky ? 1.f : 0.f,found==skies_.end() ? -1.f : float(found-skies_.begin())};initial_=values_;
 }
@@ -27,6 +29,11 @@ void SettingsMenu::Adjust(int row,float steps) {
     if(row<0 || row>=Rows || !std::isfinite(steps))return;
     // Optional CS skies never turn a native-only client into an empty resource-dependent view.
     if(row==SkyMode && !csAvailable_){values_[row]=0;return;}
+    if(row==SkyPreset && values_[SkyMode]==0) {
+        // The same visible row edits stock Warcraft choices without requiring private CS caches.
+        int next=warcraftPreset_+int(std::fmod(steps,float(WarcraftSkyPresets::Count)));
+        warcraftPreset_=(next%WarcraftSkyPresets::Count+WarcraftSkyPresets::Count)%WarcraftSkyPresets::Count;error_.clear();return;
+    }
     if(row==SkyPreset && !csAvailable_)return;
     float maximum=row==SkyPreset ? float(skies_.size()-1) : high[row];
     float next=values_[row]+steps*step[row];
@@ -46,7 +53,7 @@ bool SettingsMenu::Update(const GameplaySettings& s,char tileset,const SkyList& 
             else error_="Could not save INI. Changes were not applied; try again.";
             continue;
         }
-        if(e.kind==Kind::Defaults){values_={1,1,100,0,5000,RenderSettings::DefaultFov,1,0,initial_[SkyPreset]};error_.clear();continue;}
+        if(e.kind==Kind::Defaults){values_={1,1,100,0,5000,RenderSettings::DefaultFov,1,0,initial_[SkyPreset]};warcraftPreset_=0;error_.clear();continue;}
         if(e.kind==Kind::Navigate){selected_=(selected_+(e.value>0 ? 1 : Rows-1))%Rows;continue;}
         if(e.kind==Kind::Select){selected_=(e.row%Rows+Rows)%Rows;continue;}
         int row=e.row<0 ? selected_ : e.row;
@@ -70,7 +77,10 @@ std::vector<ConfigChange> SettingsMenu::Changes() const {
     if(changed(ViewDistance))add("Rendering","DrawDistance",Number(values_[ViewDistance]));
     if(changed(FieldOfView))add("Rendering","FieldOfView",Number(values_[FieldOfView]));
     if(changed(SkyVisible))add("Sky","Visible",values_[SkyVisible]>0 ? "true" : "false");
-    if(changed(SkyMode)) {add("Sky","Enabled",values_[SkyMode]>0 ? "true" : "false");add("Sky","WarcraftEnabled",values_[SkyMode]>0 ? "false" : "true");}
+    bool nativeChanged=warcraftPreset_!=initialWarcraftPreset_;
+    if(changed(SkyMode))add("Sky","Enabled",values_[SkyMode]>0 ? "true" : "false");
+    if(changed(SkyMode) || (nativeChanged && values_[SkyMode]==0))add("Sky","WarcraftEnabled",values_[SkyMode]>0 ? "false" : "true");
+    if(nativeChanged)add("Sky","WarcraftPreset",WarcraftSkyPresets::All[warcraftPreset_].id);
     if(changed(SkyPreset) && values_[SkyPreset]>=0) {
         // Known terrains own their existing per-tileset override; unknown maps use the saved fallback.
         std::string key=tileset_ && std::strchr("ALFWBYXVQJNDCIGOZ",tileset_) ? std::string(1,tileset_) : "Default";
@@ -83,12 +93,15 @@ std::string SettingsMenu::Value(int row) const {
     if(row==Physics)return modes[int(values_[row])];
     if(row==SkyVisible)return values_[row]>0 ? "ON" : "OFF";
     if(row==SkyMode)return values_[row]>0 ? "Counter-Strike" : "Warcraft";
+    if(row==SkyPreset && values_[SkyMode]==0)return WarcraftSkyPresets::All[warcraftPreset_].label;
     if(row==SkyPreset)return !csAvailable_ ? "No CS skies installed" : values_[row]<0 ? savedSky_+" (missing)" : skies_[size_t(values_[row])];
     return Number(values_[row])+(row==Volume ? "%" : row==ViewDistance ? " units" : row==FieldOfView ? " deg" : "x");
 }
-const char* SettingsMenu::Label(int row) {
+const char* SettingsMenu::Label(int row) const {
+    if(row==SkyPreset && values_[SkyMode]==0)return "Warcraft sky preset";
     const char* labels[]={"Mouse sensitivity","Scoped sensitivity","CS volume","Movement physics","View distance","Field of view","Sky visible","Sky type","CS sky preset"};return labels[row];
 }
-const char* SettingsMenu::Hint(int row) {
+const char* SettingsMenu::Hint(int row) const {
+    if(row==SkyPreset && values_[SkyMode]==0)return "Stock Warcraft skies. Auto keeps the map sky; RTS restores it.";
     const char* hints[]={"Mouse multiplier: 1x preserves your previous aiming speed.","Extra multiplier while scoped. Main sensitivity also applies.","Shots, steps and reloads. Warcraft audio stays unchanged.","classic: original | recovery: rescue | hull: detailed collision","World camera distance. Map fog still limits visibility.","Horizontal angle: 60-120 degrees. Scope zoom stays unchanged.","Hide/show sky in controlled views; RTS restores the map sky.","Warcraft map sky or a privately converted Counter-Strike sky.","CS sky for this terrain. Changes appear with CS sky type."};return hints[row];
 }

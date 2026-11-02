@@ -2,6 +2,7 @@
 #include "../src/platform/SettingsStore.hpp"
 #include "../src/presentation/SettingsMenuLayout.hpp"
 #include "../src/input/LookAngles.hpp"
+#include "../src/platform/SkyModelLease.hpp"
 #include <cassert>
 #include <filesystem>
 #include <fstream>
@@ -20,10 +21,10 @@ int main() {
     menu.Queue({K::Toggle});update();assert(!menu.Dirty() && menu.Value(R::Sensitivity)=="1x");
     menu.Queue({K::Adjust,R::Sensitivity,1000});menu.Queue({K::Adjust,R::Volume,-1000});menu.Queue({K::Adjust,R::Physics,1});
     menu.Queue({K::Slide,R::ViewDistance,1});menu.Queue({K::Adjust,R::SkyPreset,1});menu.Queue({K::Apply});
-    assert(update() && !menu.Open() && writes==1 && written.size()==5);
+    assert(update() && !menu.Open() && writes==1 && written.size()==6);
     assert(written[0].section=="Mouse" && written[0].value=="5");
     assert(written[1].section=="Audio" && written[1].value=="0");
-    assert(written[2].key=="Mode" && written[2].value=="recovery");assert(written.back().section=="Sky" && written.back().key=="A");
+    assert(written[2].key=="Mode" && written[2].value=="recovery");assert(written.back().section=="Sky" && written.back().key=="WarcraftPreset" && written.back().value=="summer");
     menu.Queue({K::Toggle});update();menu.Queue({K::Adjust,R::SkyVisible,-1});menu.Queue({K::Apply});
     assert(!menu.Update(s,'A',skies,[](const auto&){return false;}) && menu.Open() && !menu.Error().empty());
     menu.Queue({K::Apply});assert(update() && !menu.Open());
@@ -33,8 +34,23 @@ int main() {
     for(int i=0;i<1000;++i)menu.Queue({K::Toggle});menu.Reset();assert(!menu.RoutingOpen());
     // No-CS clients retain native controls and cannot select an empty CS sky source.
     menu.Queue({K::Toggle});menu.Update(s,0,[]{return std::vector<std::string>{};},save);
-    menu.Queue({K::Adjust,R::SkyMode,1});menu.Queue({K::Adjust,R::SkyPreset,1});menu.Update(s,0,skies,save);
+    menu.Queue({K::Adjust,R::SkyMode,1});menu.Update(s,0,skies,save);
     assert(menu.Value(R::SkyMode)=="Warcraft" && !menu.Dirty());menu.Reset();
+    // Native sky choices work without CS assets; each type keeps an independent cancellable selection.
+    menu.Queue({K::Toggle});menu.Update(s,0,[]{return std::vector<std::string>{};},save);
+    menu.Queue({K::Adjust,R::SkyPreset,3});update();assert(menu.Value(R::SkyPreset)=="Lordaeron winter" && menu.Dirty());
+    menu.Queue({K::Apply});assert(update() && written.back().key=="WarcraftPreset" && written.back().value=="winter");
+    menu.Queue({K::Toggle});update();menu.Queue({K::Adjust,R::SkyPreset,2});menu.Queue({K::Adjust,R::SkyMode,1});update();
+    assert(menu.Value(R::SkyPreset)=="Des");menu.Queue({K::Adjust,R::SkyPreset,1});menu.Queue({K::Adjust,R::SkyMode,1});update();
+    assert(menu.Value(R::SkyPreset)=="Lordaeron autumn");menu.Queue({K::Cancel});update();
+    // A model lease restores authored sky after preview/hide/CS/RTS and captures later map-script changes.
+    SkyModelLease lease;std::string current="map-A";
+    auto model=[&](bool enabled,bool hidden,const char* selected=""){auto next=lease.Update(current,!current.empty(),enabled,hidden,selected,"fallback");if(next)current=*next;};
+    model(true,false);assert(current=="map-A");model(true,false,"summer");assert(current=="summer");
+    model(true,false,"winter");model(true,true,"winter");assert(current.empty());model(true,false,"winter");assert(current=="winter");
+    model(false,false);assert(current=="map-A");model(true,false,"summer");current="map-B";model(true,false,"winter");model(false,false);assert(current=="map-B");
+    current.clear();model(true,false);assert(current=="fallback");model(false,false);assert(current.empty());
+    current="map-C";model(false,true);assert(current.empty());model(true,false);assert(current=="map-C");
     // A FOV draft is bounded, cancellable and resettable before its single allowed INI write.
     menu.Queue({K::Toggle});update();assert(menu.Value(R::FieldOfView)=="85 deg");
     menu.Queue({K::Slide,R::FieldOfView,1});update();assert(menu.Value(R::FieldOfView)=="120 deg" && s.render.fieldOfView==85);
@@ -73,6 +89,7 @@ int main() {
     std::ifstream file(path);std::string content((std::istreambuf_iterator<char>(file)),{});file.close();assert(content.find("; keep comment")!=std::string::npos);
     assert(!SettingsStore::Save(path,{{"Other","Unsafe","value"}}));
     assert(!SettingsStore::Save(path,{{"Sky","A","../bad"}}));
+    assert(!SettingsStore::Save(path,{{"Sky","WarcraftPreset","../bad"}}));
     assert(SetFileAttributesA(path.c_str(),FILE_ATTRIBUTE_READONLY));assert(!SettingsStore::Save(path,{{"Mouse","Sensitivity","4"}}));
     assert(GameplaySettings::Load(path).mouse.sensitivity==.75f);SetFileAttributesA(path.c_str(),FILE_ATTRIBUTE_NORMAL);
     auto assets=folder/"assets/skies";std::filesystem::create_directories(assets);

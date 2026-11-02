@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add a Warcraft sky preset selector to the existing F2 row when Warcraft type is selected: Auto/map, summer, autumn, winter, Felwood and Dalaran. Keep private CS and native choices independent, preserve authored/scripted map skies across preview/visibility/type/RTS transitions, validate fixed identifiers and preserve settings on update.
+- Increase default Bunnyhop moving-takeoff bonus from 0 to 15 percent and air acceleration from 10 to 30 without changing vertical jump/collision rules or the speed cap. Independent version-2 stock migrations preserve custom values and deliberate legacy/zero opt-backs; F8 applies tuning live.
 - Add horizontal Field of view to F2 settings and Rendering.FieldOfView (85 degrees by default, 60–120). Save/apply immediately in FPS/F9/third person or reload manual edits with F8; preserve scope zoom, custom INI values and unrelated movement/loadout/session state. Share the configured angle between native camera and overlay/sky projection, and fit nine menu rows above hints/buttons.
 - Add active in-map waygate interaction in controlled views, real map destinations, pause-aware cooldown and leave-gate re-entry protection. Detect native/scripted relocations and rebase physical floor, camera and recovery without classifying budgeted fast movement as teleportation. New editable Portals settings reload with F8; no campaign exits are synthesized.
 - Double stock AWP/G3SG1 fixed damage and native attack multipliers (230/6 and 160/4.4), HE damage to 1200 and Tau primary/charged damage to 200/2000. Versioned stock-only loader/installer upgrades preserve custom tuning, zero damage and explicit opt-backs, including independent Tau charge markers.

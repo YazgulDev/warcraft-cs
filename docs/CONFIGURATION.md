@@ -167,6 +167,11 @@ INI edit with F8. FPS, F9 and third person share the preference; existing scope 
 independent. Missing/invalid/non-finite values use 85. Updates preserve custom angles.
 
 `[Sky] WarcraftEnabled=true` supplies the native sky on maps without one.
+The local development build adds `WarcraftPreset=auto`: auto / summer / fall / winter /
+felwood / dalaran. With Warcraft type selected, the F2 preset row chooses these stock models.
+Auto preserves authored map skies; other choices override only controlled views. F2 Apply
+and F8 take effect immediately. Leaving FPS, selecting CS or hiding/revealing the sky restores
+the appropriate leased map/selected model, including later map-script sky replacements.
 `Enabled=false` keeps Warcraft skies; true uses privately converted CS skyboxes.
 `Default=Des` and tileset mappings such as `W=snow` choose cache stems. Missing
 caches retain the native sky. F8 applies changes; map/RTS transitions restore the

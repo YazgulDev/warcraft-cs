@@ -12,8 +12,9 @@ press for every takeoff. Keeping W pressed or turning against the strafe directi
 
 Takeoffs skip ground friction and use air acceleration on their first frame. Air acceleration limits only
 velocity along the input direction, retaining perpendicular momentum; changing that direction with the
-mouse accumulates speed above the weapon's running speed. Straight jumps preserve existing speed without
-creating an automatic bonus. Release Space or stop jumping to let ground friction brake.
+mouse accumulates speed above the weapon's running speed. With zero takeoff boost, straight jumps
+preserve existing speed without creating a bonus. The local development build defaults to a 15%
+moving-takeoff bonus and air acceleration 30 (previously 0% / 10). Release Space or stop jumping to let ground friction brake.
 Shift/Ctrl suppress the extra takeoff boost. Warcraft roots/stuns still stop horizontal movement and
 block takeoff; release Space after recovery. Existing slows still cap movement speed.
 
@@ -72,13 +73,13 @@ simulation step applies the new speed cap. Jump speed applies to the next takeof
 
 | `[Movement]` key | Default | Range and units |
 | --- | --- | --- |
-| Mode | recovery | classic/hull/recovery, case-insensitive. classic restores 24 October pre-rework movement (2babf58); hull retains the intermediate 25 October round-hull build; recovery retains the latest platform/Home behavior. F8 switches without resetting motion |
+| Mode | classic | classic/hull/recovery, case-insensitive. classic restores 24 October pre-rework movement (2babf58); hull retains the intermediate 25 October round-hull build; recovery retains the latest platform/Home behavior. F8 switches without resetting motion |
 | UseNativeUnitCollision | true | true/false; live Warcraft actor/creature footprints. Ignore Locust/pathing-disabled helpers; buildings/trees retain solid model volumes. false restores visual creature boxes and the 24-unit actor footprint |
 | BunnyHop | true | true/false; preserves excess takeoff momentum and enables the optional boost and air speed cap. false clips excess speed to the current weapon's running speed at each takeoff |
 | AutoJump | true | true/false; false requires a new Space press per jump |
-| JumpBoostPercent | 0 | 0–100 percent per moving takeoff; optional arcade bonus, separate from air strafe acceleration |
+| JumpBoostPercent | 15 (local development) | 0–100 percent per moving takeoff; arcade bonus, separate from air strafe acceleration |
 | MaxBunnySpeed | 1000 | 250–2000 GoldSrc units/s |
-| AirAcceleration | 10 | 0–100 wish-direction acceleration multiplier |
+| AirAcceleration | 30 (local development) | 0–100 wish-direction acceleration multiplier |
 | JumpSpeed | 268.328 | 1–800 GoldSrc units/s upwards |
 | Gravity | 800 | 100–3000 GoldSrc units/s² downwards |
 | StepHeight | 27 | 0–64 Warcraft units; automatic rise/drop limit, larger drops fall |
@@ -92,8 +93,12 @@ One GoldSrc unit corresponds to 1.5 Warcraft units. The default jump rises about
 Finite out-of-range numbers are clamped; missing/empty/malformed/non-finite values use the defaults.
 Boolean values accept true/false case-insensitively; invalid values use their default.
 
-Older test configs with `JumpBoostPercent=8` keep that value during an update. Set it to **0** and press
-**F8** for the strafe-only behavior described above. Set `AirAcceleration=0` to disable air strafe gain.
+Older test configs with `JumpBoostPercent=8` keep that value during an update. The local development
+build upgrades former stock 0/10 once through independent `JumpBoostVersion=2` and
+`AirAccelerationVersion=2` markers. Keep those markers at 2 when choosing a deliberate old value.
+For strafe-only behavior, set `JumpBoostPercent=0`, `JumpBoostVersion=2` and press **F8**.
+For the former air response also set `AirAcceleration=10`, `AirAccelerationVersion=2`.
+Set `AirAcceleration=0` to disable air strafe gain. Jump height, gravity, collision and the cap remain unchanged.
 The default cap is 1500 Warcraft units/s, four times the knife's running speed of 375. The supported maximum
 is 2000 GoldSrc units/s (3000 Warcraft units/s); swept collision still checks eight-unit segments.
 

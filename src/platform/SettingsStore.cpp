@@ -1,4 +1,5 @@
 #include "SettingsStore.hpp"
+#include "../config/WarcraftSkyPresets.hpp"
 #include "WarcraftApi.hpp"
 #include <windows.h>
 #include <algorithm>
@@ -16,6 +17,7 @@ bool Allowed(const ConfigChange& c) {
     if(c.section=="Rendering")return c.key=="DrawDistance" || c.key=="FieldOfView";
     if(c.section=="Movement")return c.key=="Mode" && (c.value=="classic" || c.value=="recovery" || c.value=="hull");
     if(c.section!="Sky")return false;
+    if(c.key=="WarcraftPreset")return WarcraftSkyPresets::Valid(c.value.c_str());
     if(c.key=="Visible" || c.key=="Enabled" || c.key=="WarcraftEnabled")return c.value=="true" || c.value=="false";
     return (c.key=="Default" || (c.key.size()==1 && std::strchr("ALFWBYXVQJNDCIGOZ",c.key[0]))) && Stem(c.value);
 }

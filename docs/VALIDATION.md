@@ -1,5 +1,24 @@
 # Validation
 
+## Warcraft sky choices and faster Bunnyhop (unreleased, 2026-11-02)
+
+Portable menu tests cover separate native/CS drafts, native choices without CS caches,
+type-dependent labels, cancellation and atomic identifier-only writes. The pure sky lease
+tests cover authored/empty skies, preset changes, hide/show, external script replacements
+and restoration. Real loader and installer tests cover six native identifiers, malformed
+paths, case normalization, stock 0/10 upgrades, separate versioned zero/legacy opt-backs,
+custom values and repeated-update preservation. Movement tests compare faster takeoff/air
+gain against the old profile while retaining height, cap, frame-rate, root/slow and water
+rules; classic/hull/recovery collision regressions pass.
+
+Owned offline 1.26a OpenGL and Direct3D both load all five stock sky models through F2,
+with nonzero native sprites. Real hide/show, CS/native switching and RTS exit restore the
+latest authored winter sky after a map-script replacement during the Dalaran override.
+OpenGL panel/world frames and a recording were captured; panel and model frames were
+inspected. The native movement oracle confirms faster default held-jump acceleration
+within the existing cap. All touched lab files and saves are restored by hash. No retail
+models are packaged; no real 1.27a verification or D3D capture is claimed.
+
 ## Editable field of view (unreleased, 2026-11-02)
 
 Real loader tests cover default/empty/malformed/non-finite angles, 60–120 bounds and

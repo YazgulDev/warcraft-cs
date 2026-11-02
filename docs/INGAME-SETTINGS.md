@@ -18,9 +18,16 @@ Use the mouse to click +/- or click/drag a numeric slider. Up/down selects a row
 | Field of view (local development build) | `[Rendering] FieldOfView` | 85 horizontal degrees; 60–120 in 1-degree menu steps. Applies to FPS, F9 and third person; existing scope zoom remains independent. |
 | Sky visible | `[Sky] Visible` | true. Controls both map-authored sky visibility and CS sky drawing in controlled views. |
 | Sky type | `[Sky] Enabled`, `WarcraftEnabled` | Warcraft by default. A type change selects Warcraft or CS, with the corresponding two existing keys. |
-| CS sky preset | `[Sky] <terrain letter>` or `Default` | Current saved terrain preset. Only complete installed private WCS1 sky caches appear as choices. Unknown terrains use Default. |
+| Warcraft sky preset (local development build) | `[Sky] WarcraftPreset` | Shown with Warcraft type: auto / summer / fall / winter / felwood / dalaran. Auto preserves map skies and fills missing skies by terrain; other choices temporarily override the native sky. |
+| CS sky preset | `[Sky] <terrain letter>` or `Default` | Same row with CS type: current saved terrain preset. Only complete installed private WCS1 sky caches appear as choices. Unknown terrains use Default. |
 
 Main sensitivity preserves the former 0.14 degrees/count at 1x, and preserves the former scoped 0.035/0.009 degrees/count when both multipliers are 1x. Raw mouse counts and cursor fallback share the same validated gain. These preferences load on startup; **F8** still reloads manual INI edits outside the panel. Blank/malformed/non-finite numeric values use documented defaults; finite values are clamped. Installer updates add missing keys without resetting custom sensitivity, sky/audio preferences or existing shortcuts.
+
+With **Sky type = Warcraft**, the last row becomes **Warcraft sky preset**. Stock choices do
+not need CS resources or extra conversion. Native and CS selections survive draft type switches
+independently; Cancel discards both. Reset These drafts Auto for Warcraft. Selecting an explicit
+native preset enables the native sky preference. Map/RTS restoration retains the latest authored
+sky, including script changes made during the preview. No game models are shipped with the mod.
 
 For a wider view, raise **Field of view** and choose **Apply & Save**; a larger angle shows more of the world and makes distant objects look smaller. This is the horizontal world-camera angle, independent of per-weapon held-model scale. Cancel leaves the current angle intact. Reset These drafts 85 degrees. Applying while scoped saves the ordinary angle without changing the active scope zoom; leaving the scope uses the new angle. The native camera and overlay/sky projection consume the same value. Manual `[Rendering] FieldOfView` edits apply on F8, and updates preserve a saved custom angle.
 

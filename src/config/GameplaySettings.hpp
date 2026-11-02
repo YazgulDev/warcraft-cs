@@ -149,6 +149,7 @@ struct GameplaySettings {
     bool csSky=false;
     // Every FPS map gets Warcraft's own backdrop unless the player explicitly disables it.
     bool nativeSky=true;
+    std::string warcraftSkyPreset="auto"; // Stock model override in controlled views; Auto preserves authored map skies.
     std::string defaultSky="Des";
     std::array<std::string,256> tilesetSky{};
     // Explosives use fixed peaks (HE 600, RPG 1800); shotgun multipliers scale the unit's native attack.

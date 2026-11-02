@@ -21,10 +21,10 @@ public:
     // Successful saves return true so the application can reuse the existing validated F8 apply path.
     bool Update(const GameplaySettings& settings,char tileset,const SkyList& list,const Save& save);
     int Selected() const {return selected_;}
-    bool Dirty() const {return values_!=initial_;}
+    bool Dirty() const {return values_!=initial_ || warcraftPreset_!=initialWarcraftPreset_;}
     const std::string& Error() const {return error_;}
-    static const char* Label(int row);
-    static const char* Hint(int row);
+    const char* Label(int row) const;
+    const char* Hint(int row) const;
     static bool Numeric(int row){return row==Sensitivity || row==ScopeSensitivity || row==Volume || row==ViewDistance || row==FieldOfView;}
     float Fraction(int row) const;
     std::string Value(int row) const;
@@ -37,6 +37,7 @@ private:
     std::vector<std::string> skies_;
     bool csAvailable_=true;
     std::string savedSky_;
+    int warcraftPreset_=0,initialWarcraftPreset_=0; // Native and private CS choices survive draft type switches independently.
     std::vector<Event> events_;
     std::string error_;
 };
