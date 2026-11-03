@@ -530,6 +530,14 @@ restoration across replacement contexts.
 
 `ArmyPlan::Detect` prioritizes builders over captured foreign halls. The existing game-thread `ArmyAI` coordinates bounded native construction, worker-centered startup, race-compatible mines and undead lumber ghouls. `ArmyAIStatus` contains the copied domain result; presentation's `ArmyAIStatusText` maps it to HUD text. The controller reports transitions without taking over native orders. No new engine offsets, free units, resource setters or public runtime entry points are introduced.
 
+### Classic ramp contacts
+
+`platform/WalkableTerrainContact.hpp` classifies only local native-walkable ramp contacts
+for the classic strategy, using bounded two-sided slopes and the incoming contact plane.
+`ClassicWarcraftCollision` verifies body/deck clearance and owns tentative-contact rollback;
+`MovementPhysics::ResolveClassicRamp` validates the bounded contact/relative velocity and
+preserves horizontal momentum. The existing hull/recovery strategies remain independent.
+
 ### Native sky presets
 
 `config/WarcraftSkyPresets.hpp` bounds native selection to verified stock model identifiers.

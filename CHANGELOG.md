@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fix the distinct rising/high-ramp classic contact that could still zero speed after the lower-crest landing repair. Classify the incoming native-walkable terrain plane, bound floor correction by StepHeight/MaxWalkSlope, preserve XY momentum, check model/deck headroom and roll back a rejected candidate. Add ClassicRampContacts=true with startup/F8 opt-out; blocked cliffs, terrace tops, water and other movement strategies retain their policies.
 - Fix false classic-mode Bunnyhop speed loss when landing near a smooth hill crest: resolve the existing floor contact before and after each swept movement substep instead of clipping against stale airborne feet. Retain the same clearances, native pathing/placement checks, jump integration, speed tuning and separate hull/recovery strategies. Add crest regressions and an authored isolated native fixture.
 - Raise the default and maximum editable Bunnyhop speed cap to 3000 GoldSrc units/s (4500 Warcraft units/s), retaining air acceleration 30 and takeoff bonus 15 percent. Migrate former stock 1000 once through MaxBunnySpeedVersion=2, preserving custom caps and deliberate legacy opt-backs; startup/F8 apply the change.
 - Add a Warcraft sky preset selector to the existing F2 row when Warcraft type is selected: Auto/map, summer, autumn, winter, Felwood and Dalaran. Keep private CS and native choices independent, preserve authored/scripted map skies across preview/visibility/type/RTS transitions, validate fixed identifiers and preserve settings on update.

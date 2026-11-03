@@ -184,7 +184,7 @@ $config=Join-Path $folder 'legacy.ini'
 # Updates append missing keys inside existing sections while retaining all custom values.
 Update-GameplayConfig $template $config
 $text=Get-Content -LiteralPath $config -Raw
-foreach ($required in @('AmmoPercent=37','Price=0','Damage=81','FriendlyFirePercent=25','AWPOneShot=false','BombCount=0','Access=anywhere','AmmoPrice=80','CSVolumePercent=100','Detailed=true','IntervalMs=1000','MaxFileMB=8','ArchiveCount=3','JumpBoostPercent=15','AirAcceleration=30','WarcraftPreset=auto','AutoJump=true','MaxFPS=144','DrawDistance=5000','FieldOfView=85','HideHoverCircles=true')) {
+foreach ($required in @('AmmoPercent=37','Price=0','Damage=81','FriendlyFirePercent=25','AWPOneShot=false','BombCount=0','Access=anywhere','AmmoPrice=80','CSVolumePercent=100','Detailed=true','IntervalMs=1000','MaxFileMB=8','ArchiveCount=3','JumpBoostPercent=15','AirAcceleration=30','WarcraftPreset=auto','AutoJump=true','ClassicRampContacts=true','MaxFPS=144','DrawDistance=5000','FieldOfView=85','HideHoverCircles=true')) {
     if (!$text.Contains($required)) { throw "Missing/patched preference: $required" }
 }
 if ([regex]::Matches($text,'(?m)^\[AK47\]').Count -ne 1) { throw 'Duplicate section can hide new INI keys.' }
@@ -285,10 +285,10 @@ foreach($key in @('Mode=classic','ObjectMeshCollision=true','RecoverInvalidPosit
 # Movement upgrades retain personal jump tuning and add missing siblings exactly once.
 # Collision geometry defaults join old configs without changing explicit radius/slope preferences.
 $customMovement=Join-Path $folder 'custom-movement.ini'
-@('[Movement]','Mode=classic','JumpBoostPercent=15','AutoJump=false','UseNativeUnitCollision=false','MaxWalkSlope=51','HullRadius=17','ObjectMeshCollision=false','RecoverInvalidPosition=false','RecoveryDistance=777','[Shortcuts]','RecoverPosition=NONE','[Damage]','FriendlyFirePercent=0') | Set-Content -LiteralPath $customMovement -Encoding ascii
+@('[Movement]','Mode=classic','ClassicRampContacts=false','JumpBoostPercent=15','AutoJump=false','UseNativeUnitCollision=false','MaxWalkSlope=51','HullRadius=17','ObjectMeshCollision=false','RecoverInvalidPosition=false','RecoveryDistance=777','[Shortcuts]','RecoverPosition=NONE','[Damage]','FriendlyFirePercent=0') | Set-Content -LiteralPath $customMovement -Encoding ascii
 Update-GameplayConfig $template $customMovement
 $movementText=Get-Content -LiteralPath $customMovement -Raw
-foreach ($required in @('Mode=classic','JumpBoostPercent=15','AutoJump=false','UseNativeUnitCollision=false','FriendlyFirePercent=0','MaxBunnySpeed=3000','Gravity=800','BunnyHop=true','MaxWalkSlope=51','HullRadius=17','ObjectMeshCollision=false','RecoverInvalidPosition=false','RecoveryDistance=777','RecoverPosition=NONE')) {
+foreach ($required in @('Mode=classic','ClassicRampContacts=false','JumpBoostPercent=15','AutoJump=false','UseNativeUnitCollision=false','FriendlyFirePercent=0','MaxBunnySpeed=3000','Gravity=800','BunnyHop=true','MaxWalkSlope=51','HullRadius=17','ObjectMeshCollision=false','RecoverInvalidPosition=false','RecoveryDistance=777','RecoverPosition=NONE')) {
     if (!$movementText.Contains($required)) { throw "Movement migration replaced or omitted: $required" }
 }
 if ([regex]::Matches($movementText,'(?m)^\[Movement\]').Count -ne 1) { throw 'Movement section was duplicated.' }

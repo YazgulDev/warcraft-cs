@@ -1,5 +1,30 @@
 # Validation
 
+## High/rising classic ramp contact (unreleased, 2026-11-03)
+
+The follow-up reporter module hash matches the delivered lower-crest fix. Its log shows
+another uphill rejection during rising movement, with height gap 30.5 rather than a
+descending-only landing. The additional adapter classifies both sides of local terrain,
+uses the incoming plane at a crest, checks native pathing/cliff levels, bounds correction
+by StepHeight/MaxWalkSlope and verifies model/deck headroom. Rejected XY candidates restore
+their prior physics state. The compatibility flag is validated and preserved by setup.
+
+Tracked collision cases now include 234 low/high/diagonal hill trials, slopes through 0.9,
+30/60/144 Hz, native radii through 48, opt-out and forbidden terrain tests. Domain tests
+cover bounded rising contact, unchanged XY momentum, departing jumps and mode isolation;
+existing wall/cliff/bridge/pathing/water/cap regressions pass. A private broader 640-case
+scan also has no horizontal losses on its clear ramps.
+
+On an owned 1.26a native hill of height 384 and gradient 0.9, the prior repair loses
+330.625 CS units/s to zero in all six takeoff phases. The new module passes all six in
+OpenGL and Direct3D with no crest-window speed drop and no observed camera-height mismatch.
+Comparison uses identical 1000-cap fixture tuning; the Player default remains 3000.
+An additional live Direct3D F8 comparison disables/enables ClassicRampContacts in the same
+process: disabled reproduces the 330.625-to-zero drop; enabled preserves crest momentum.
+OpenGL before/after recording frames were inspected. The experiment does not promise passage through true cliffs, blocked cells or steeper
+surfaces. All touched lab files/saves are restored by hash. Real 1.27a is unverified;
+D3D is native assertions only. OpenGL recordings remain private.
+
 ## Classic crest momentum (unreleased, 2026-11-03)
 
 The production classic adapter is exercised across 144 continuous-hill cases: 30/60/144 Hz,

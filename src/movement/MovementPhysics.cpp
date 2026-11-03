@@ -143,6 +143,16 @@ void MovementPhysics::ResolveClassicFloor(float floor) {
     if(grounded_ && feetZ_-floor>settings_.stepHeight){grounded_=false;vz_=0;return;}
     if(grounded_ || (vz_<=0 && feetZ_<=floor)){feetZ_=floor;vz_=0;grounded_=true;}
 }
+bool MovementPhysics::ResolveClassicRamp(const MovementSurface& surface) {
+    // Rising in world Z can still move INTO an uphill plane. Only a real, bounded foot contact
+    // becomes ground; no velocity is minted and a departing jump cannot stick back to the ramp.
+    if(!settings_.classicCollision || !settings_.classicRampContacts || grounded_ || swimming_ ||
+        !surface.walkable || !surface.ramp || !std::isfinite(surface.height) ||
+        surface.height<feetZ_-.01f || surface.height>std::max(feetZ_,previousFeetZ_)+settings_.stepHeight+.01f)return false;
+    float into=vx_*surface.normal[0]+vy_*surface.normal[1]+vz_*surface.normal[2];
+    if(!std::isfinite(into) || into>=-.001f)return false;
+    feetZ_=surface.height;vz_=0;grounded_=true;return true;
+}
 void MovementPhysics::ResolveSurface(const MovementSurface& surface) {
     float floor=surface.height;
     if(!std::isfinite(floor))return;

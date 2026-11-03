@@ -263,6 +263,7 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     auto fireRate=text("Combat","ScaleFireRateFromAttackSpeed","false");
     result.scaleFireRateFromAttackSpeed=!_stricmp(fireRate.c_str(),"true") || fireRate=="1";
     result.movement.autoJump = boolean("AutoJump", true);
+    result.movement.classicRampContacts=boolean("ClassicRampContacts",true); // Startup/F8 retain a deliberate classic-contact opt-out.
     result.movement.jumpBoostPercent = number("Movement", "JumpBoostPercent", 15, 100);
     // The larger speed ceiling is independent of air acceleration and the per-takeoff bonus.
     result.movement.maxBunnySpeed = std::max(250.0f, number("Movement", "MaxBunnySpeed", 3000, 3000));

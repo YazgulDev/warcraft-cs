@@ -49,6 +49,10 @@ int main() {
     }
     DeleteFileA(fovPath.c_str());
     // Native skies accept only the verified catalog; movement migrations distinguish stock and explicit opt-backs.
+    for(auto c:{std::pair<const char*,bool>{"false",false},{"true",true},{"bad",true}}) {
+        {std::ofstream f(fovPath);f<<"[Movement]\nClassicRampContacts="<<c.first<<"\n";}
+        assert(GameplaySettings::Load(fovPath).movement.classicRampContacts==c.second);
+    }
     for(auto name:{"auto","summer","fall","winter","felwood","dalaran"}) {
         {std::ofstream f(fovPath);f<<"[Sky]\nWarcraftPreset="<<name<<"\n";}
         assert(GameplaySettings::Load(fovPath).warcraftSkyPreset==name);

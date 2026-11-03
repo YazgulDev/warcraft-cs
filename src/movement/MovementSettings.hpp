@@ -6,6 +6,7 @@ struct MovementSettings {
     SwimmingSettings swimming;
     // Classic is the requested default; recovery and hull remain selectable without resetting motion.
     bool classicCollision=true;
+    bool classicRampContacts=true; // Airborne contact with a verified walkable ramp becomes floor contact, not an axis stop.
     bool platformRecovery=false;
     // Live creature footprints replace oversized visual extents; solid buildings/trees keep model geometry.
     bool useNativeUnitCollision=true;

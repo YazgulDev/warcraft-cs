@@ -3,6 +3,7 @@
 #include "../src/platform/UnitCollisionProfile.hpp"
 #include "MovementStrafeInput.hpp"
 #include "CollisionMeshFixture.hpp"
+#include "../src/platform/WalkableTerrainContact.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -31,6 +32,7 @@ bool nativeCliffRim=false;
 float slopeGradient=.3f;
 bool narrowPassage=false;
 bool crest=false; // A continuous low hill has no native cliff, solid prop or blocked pathing cell.
+float crestHeight=128,crestYaw=0;
 bool actorColliding=true;
 int meshScene=0;
 bool deckPatch=false;
@@ -39,7 +41,7 @@ wc3::Bits Bits(float value) { wc3::Bits bits;std::memcpy(&bits,&value,4);return 
 wc3::Bits __cdecl X(wc3::Handle) {return Bits(unitX);}
 wc3::Bits __cdecl Y(wc3::Handle) {return Bits(unitY);}
 BOOL __cdecl Blocked(float* x,float* y,int kind) {
-    if(crest)return FALSE;
+    if(crest)return nativeBlocked;
     // Different masks deliberately disagree: owned common.j uses 6 for floatability, while 4 is harvest pathing.
     if(swimScene)return kind==1 ? (canalBank || *x<500) : kind==6 ? swimNativeBlocked : TRUE;
     if(deckPatch)return FALSE;
@@ -100,7 +102,7 @@ Bits (__cdecl* GetRectMaxX)(Handle)=Maximum;
 Bits (__cdecl* GetRectMaxY)(Handle)=Maximum;
 void (__cdecl* RemoveRect)(Handle)=Remove;
 float Real(Bits bits){float f;std::memcpy(&f,&bits,4);return f;}
-float TerrainGround(float x,float y){if(crest)return 100+std::max(0.f,128-std::abs(x)*slopeGradient);if(swimScene)return canalBank ? (x>=80 ? canalBank : 100.f) : 100+std::clamp((x-100)*.5f,0.f,200.f);if(cliffFace)return 100+std::clamp((FaceDistance(x,y)-32)/128,0.f,1.f)*faceRise;return landingLedge ? (x*std::cos(ledgeYaw)+y*std::sin(ledgeYaw)>=32 ? 140.f : 100.f) : slope ? 100.f+x*slopeGradient : drop && x>=32 ? 0.f : cliff && x>=32 ? 180.f : 100.f;}
+float TerrainGround(float x,float y){if(crest)return 100+std::max(0.f,crestHeight-std::abs(x*std::cos(crestYaw)+y*std::sin(crestYaw))*slopeGradient);if(swimScene)return canalBank ? (x>=80 ? canalBank : 100.f) : 100+std::clamp((x-100)*.5f,0.f,200.f);if(cliffFace)return 100+std::clamp((FaceDistance(x,y)-32)/128,0.f,1.f)*faceRise;return landingLedge ? (x*std::cos(ledgeYaw)+y*std::sin(ledgeYaw)>=32 ? 140.f : 100.f) : slope ? 100.f+x*slopeGradient : drop && x>=32 ? 0.f : cliff && x>=32 ? 180.f : 100.f;}
 float Ground(float x,float y){return swimScene && x<500 ? std::max(300.f,TerrainGround(x,y)) : TerrainGround(x,y)+(water ? 22.f : 0.f);}
 bool WaterSurface(float x,float y,float& height){if(swimScene && x<(canalBank ? 80 : 500)){height=300;return true;}if(water){height=Ground(x,y);return true;}return false;}
 bool WalkableSurface(float x,float y,float& height){
@@ -162,7 +164,33 @@ int main(){
         }
         Require(unitX>600,"classic held jumps must cross the complete hill and crest");
     }
-    crest=false;bridgeAlive=true;actorRadius=0;slopeGradient=.3f;
+    // High hills and rising contacts need an actual walkable incoming plane, including diagonal crests.
+    crestHeight=384;
+    auto highCrest=[&](int fps,float grade,float radius,int phase,float angle,bool enabled=true) {
+        slopeGradient=grade;crestYaw=angle;actorRadius=radius;
+        float start=-crestHeight/grade-444,dx=std::cos(angle),dy=std::sin(angle);
+        unitX=start*dx;unitY=start*dy;MovementPhysics jumper;MovementSettings settings;settings.classicRampContacts=enabled;
+        jumper.Configure(settings);jumper.Reset(wc3::TerrainGround(unitX,unitY));WarcraftCollision sweep;MoveInput in;in.forward=1;in.yaw=angle*57.2957795f;
+        bool lost=false;
+        for(int frame=0;frame<fps*15 && unitX*dx+unitY*dy<crestHeight/grade+100;++frame) {
+            in.jump=frame>=int((20+phase)*fps/60.f);jumper.Step(in,1.f/fps,250);float before=jumper.Speed();
+            sweep.Move(1,jumper,1.f/fps);lost|=jumper.Speed()<before-.01f;
+        }
+        return lost;
+    };
+    for(int fps:{30,60,144})for(float grade:{.5f,.7f,.9f})for(float radius:{16.f,32.f,48.f})for(int phase:{3,9,15})
+        Require(!highCrest(fps,grade,radius,phase,0),"walkable high ramps must not consume horizontal hop velocity");
+    for(float angle:{.78539816f,1.57079633f,2.35619449f})for(int phase:{3,9,15})
+        Require(!highCrest(60,.9f,32,phase,angle),"diagonal high crest contact must keep the full horizontal vector");
+    Require(highCrest(60,.9f,48,9,0,false),"classic ramp-contact opt-out must retain the prior clipped behavior");
+    // Closed pathing, steep faces and flat terrace tops never become ramp assistance.
+    crestYaw=0;slopeGradient=1.2f;nativeBlocked=false;
+    Require(!WalkableTerrainContact::Sample(-100,0,46,500,0).walkable,"over-limit terrain cannot become a ramp contact");
+    slopeGradient=.5f;nativeBlocked=true;
+    Require(!WalkableTerrainContact::Sample(-100,0,46,500,0).walkable,"unknown native blockers retain authority");
+    nativeBlocked=false;crest=false;landingLedge=true;
+    Require(!WalkableTerrainContact::Sample(32,0,46,500,0).walkable && !WalkableTerrainContact::Sample(64,0,46,500,0).ramp,"a vertical step and its flat top cannot supply an airborne ramp landing");
+    landingLedge=false;bridgeAlive=true;actorRadius=0;slopeGradient=.3f;crestHeight=128;crestYaw=0;
     Require(Walk(true)>300,"living deck crosses blocked terrain beneath the bridge");
     Require(Walk(false)<32,"destroyed bridge supplies no walkable geometry");
     Require(Walk(true,true)<32,"entire player footprint must fit on the deck");

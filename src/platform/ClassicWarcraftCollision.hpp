@@ -13,6 +13,7 @@ private:
     bool Clear(float x, float y, float oldX, float oldY, const MovementPhysics& movement,
         const std::vector<Bounds3>& obstacles) const;
     float Floor(float x, float y, const MovementPhysics& movement, const std::vector<Bounds3>& obstacles) const;
+    bool RampContact(float x,float y,MovementPhysics& movement,const std::vector<Bounds3>& obstacles) const;
     void Blocked(const char* reason, float x, float y, float oldX, float oldY, float bottom, float terrain) const;
     MovementObstacles obstacles_;
     uintptr_t base_=0;

@@ -31,6 +31,7 @@ public:
     float WaterExitReach() const {return settings_.swimming.exitReach;}
     void ResolveFloor(float floor);
     void ResolveClassicFloor(float floor);
+    bool ResolveClassicRamp(const MovementSurface& surface);
     void ResolveSurface(const MovementSurface& surface);
     void ClipHead(float ceiling);
     void SlideHorizontal(float nx,float ny);
@@ -50,6 +51,7 @@ public:
     bool ObjectMeshCollision() const { return settings_.objectMeshCollision; }
     bool PlatformRecovery() const {return settings_.platformRecovery;}
     bool ClassicCollision() const {return settings_.classicCollision;}
+    bool ClassicRampContacts() const {return settings_.classicRampContacts;}
     bool RecoverInvalidPosition() const {return settings_.recoverInvalidPosition;}
     float RecoveryDistance() const {return settings_.recoveryDistance;}
     // Emergency placement discards fall velocity without changing stance, tuning or held-jump state.

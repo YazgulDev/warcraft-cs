@@ -22,8 +22,18 @@ The local development build fixes a classic-mode crest landing that could erase 
 momentum. The existing classic floor resolver now runs before the first swept step and after
 each step, so an accepted descending landing is available to the next collision check.
 Previously it could stay airborne until the frame ended and hit an otherwise clear ramp.
-The motor still integrates once per frame; ascending jumps, genuine drops, native pathing,
+The motor still integrates once per frame; free-air jumps, genuine drops, native pathing,
 solid/terrain clearances and obstacle impacts retain their rules. Default mode stays classic.
+
+The next development fix also handles **rising** contact with a higher walkable ramp. A
+body can rise in world Z while still moving into the uphill plane. With
+`ClassicRampContacts=true`, a verified local foot contact becomes ground within the existing
+StepHeight budget, preserving horizontal velocity. Both sides of the native terrain sample
+must fit MaxWalkSlope and retain walkable pathing/cliff levels; flat terrace tops and blocked
+cliffs do not receive this assistance. Model/deck headroom is checked before correction,
+and a rejected XY candidate restores its previous height/ground state. No jump impulse is
+added by the contact. Set false and press F8 for the earlier classic contact behavior.
+The option is ignored by hull/recovery; installation preserves a saved opt-out.
 
 Jump over low solids when the feet clear their transformed model bounds. Land on their top or continue
 past them. Taller walls, buildings and trees retain collision. Walking or jumping off a ledge keeps the
@@ -84,13 +94,14 @@ simulation step applies the new speed cap. Jump speed applies to the next takeof
 | UseNativeUnitCollision | true | true/false; live Warcraft actor/creature footprints. Ignore Locust/pathing-disabled helpers; buildings/trees retain solid model volumes. false restores visual creature boxes and the 24-unit actor footprint |
 | BunnyHop | true | true/false; preserves excess takeoff momentum and enables the optional boost and air speed cap. false clips excess speed to the current weapon's running speed at each takeoff |
 | AutoJump | true | true/false; false requires a new Space press per jump |
+| ClassicRampContacts | true (local development) | Classic only; bounded airborne foot contact on verified walkable native ramps, including rising contact. Startup/F8 |
 | JumpBoostPercent | 15 (local development) | 0–100 percent per moving takeoff; arcade bonus, separate from air strafe acceleration |
 | MaxBunnySpeed | 3000 (local development) | 250–3000 GoldSrc units/s; horizontal cap, independent of air acceleration |
 | AirAcceleration | 30 (local development) | 0–100 wish-direction acceleration multiplier |
 | JumpSpeed | 268.328 | 1–800 GoldSrc units/s upwards |
 | Gravity | 800 | 100–3000 GoldSrc units/s² downwards |
 | StepHeight | 27 | 0–64 Warcraft units; automatic rise/drop limit, larger drops fall |
-| MaxWalkSlope | 46 | Hull/recovery only; 15–75 degrees; maximum local walkable slope. Blocked native cliff faces remain non-walkable |
+| MaxWalkSlope | 46 | 15–75 degrees; hull/recovery terrain support and classic airborne ramp assistance. Blocked native cliff faces remain non-walkable |
 | HullRadius | 24 | Hull/recovery only; 8–64 Warcraft units; maximum player collision radius, preserving smaller native footprints |
 | ObjectMeshCollision | true | Hull/recovery only; true/false; use supported stationary prop surfaces for fit, support and head clearance. false restores conservative whole-model volumes |
 | RecoverInvalidPosition | true | true/false; repair proven below-terrain states and lost deck support for an established rider; ordinary falls and underpasses stay unchanged |

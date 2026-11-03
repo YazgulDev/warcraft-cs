@@ -4,6 +4,7 @@
 #include "MovementWorldBounds.hpp"
 #include "UnitCollisionProfile.hpp"
 #include "MovementWater.hpp"
+#include "WalkableTerrainContact.hpp"
 #include <algorithm>
 #include <cmath>
 
@@ -110,6 +111,29 @@ bool ClassicWarcraftCollision::Clear(float x, float y, float oldX, float oldY, c
     }
     return true;
 }
+bool ClassicWarcraftCollision::RampContact(float x,float y,MovementPhysics& movement,const std::vector<Bounds3>& obstacles) const {
+    if(!movement.ClassicRampContacts() || movement.Grounded() || movement.Swimming() || movement.Wet())return false;
+    MovementSurface best;best.walkable=false;
+    float reach=std::max(movement.FeetZ(),movement.PreviousFeetZ())+movement.StepHeight();
+    for(int point=0;point<9;++point) {
+        float angle=(point-1)*.78539816339f,px=x+(point ? std::cos(angle)*radius_ : 0),py=y+(point ? std::sin(angle)*radius_ : 0);
+        float height=wc3::TerrainGround(px,py);
+        if(height<movement.FeetZ()-.01f || height>reach+.01f)continue;
+        auto surface=WalkableTerrainContact::Sample(px,py,movement.MaxWalkSlope(),movement.VelocityX(),movement.VelocityY());
+        float into=movement.VelocityX()*surface.normal[0]+movement.VelocityY()*surface.normal[1]+movement.VerticalVelocity()*surface.normal[2];
+        if(surface.walkable && into<-.001f && (!best.walkable || surface.height>best.height))best=surface;
+    }
+    if(!best.walkable)return false;
+    // A terrain correction cannot lift the body through a model or the underside of a native deck.
+    float top=best.height+movement.BodyHeight();
+    for(const auto& box:obstacles)if(Overlaps(box,x,y,radius_) && box.maximum[2]>best.height+.01f && box.minimum[2]<top-.01f)return false;
+    for(int point=0;point<9;++point) {
+        float angle=(point-1)*.78539816339f,deck=0;
+        float px=x+(point ? std::cos(angle)*radius_ : 0),py=y+(point ? std::sin(angle)*radius_ : 0);
+        if(wc3::WalkableSurface(px,py,deck) && deck>movement.FeetZ()+.01f && deck<top-.01f)return false;
+    }
+    return movement.ResolveClassicRamp(best);
+}
 void ClassicWarcraftCollision::Move(wc3::Handle unit, MovementPhysics& movement, float dt) {
     MovementWater::Update(unit,movement);
     dt = std::clamp(dt, 0.f, .05f);
@@ -132,15 +156,22 @@ void ClassicWarcraftCollision::Move(wc3::Handle unit, MovementPhysics& movement,
     // The vertical integrator may have just reached the floor at the current XY. Settle that
     // existing classic contact before testing the first horizontal step, not after clipping it.
     movement.ResolveClassicFloor(Floor(x,y,movement,obstacles));
+    auto settle=[&](float targetX,float targetY,float fromX,float fromY) {
+        // A rejected candidate must not leave its height/ground state behind at the old XY.
+        auto before=movement;bool landed=RampContact(targetX,targetY,movement,obstacles);
+        if(Clear(targetX,targetY,fromX,fromY,movement,obstacles))return true;
+        if(landed)movement=before;return false;
+    };
+    {auto before=movement;if(RampContact(x,y,movement,obstacles) && !Clear(x,y,x,y,movement,obstacles))movement=before;}
     // Eight-unit swept steps retain thin-wall collision at maximum bunnyhop speed.
     for (int step = 0; step < steps; ++step) {
         float nx = x + dx / steps, ny = y + dy / steps;
         if (nx < minX || nx > maxX) { Blocked("world-boundary",nx,ny,x,y,movement.FeetZ(),0);nx = x; movement.BlockX(); dx = 0; }
         if (ny < minY || ny > maxY) { Blocked("world-boundary",nx,ny,x,y,movement.FeetZ(),0);ny = y; movement.BlockY(); dy = 0; }
-        if (Clear(nx, ny, x, y, movement, obstacles)) { x = nx; y = ny; }
+        if (settle(nx, ny, x, y)) { x = nx; y = ny; }
         else {
-            if (Clear(nx, y, x, y, movement, obstacles)) x = nx; else { movement.BlockX(); dx = 0; }
-            if (Clear(x, ny, x, y, movement, obstacles)) y = ny; else { movement.BlockY(); dy = 0; }
+            if (settle(nx, y, x, y)) x = nx; else { movement.BlockX(); dx = 0; }
+            if (settle(x, ny, x, y)) y = ny; else { movement.BlockY(); dy = 0; }
         }
         // Resolve descending landings as well as ground support at each swept substep. Delaying an
         // accepted ramp landing until frame end leaves stale airborne feet and falsely clips the next step.

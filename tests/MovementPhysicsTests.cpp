@@ -119,6 +119,21 @@ int main() {
     MovementSettings accelerated;accelerated.jumpBoostPercent=0;fast.Configure(accelerated);fast.Reset(0);old.Reset(0);
     fast.Step(launchInput,1.f/144,250);old.Step(launchInput,1.f/144,250);
     Require(fast.Speed()>old.Speed()*1.5f && fast.Speed()<=45.01f,"new air acceleration reaches the same wish cap faster");
+    // A fast rising body can collide with an uphill plane. Contact preserves XY speed but is
+    // bounded, cannot stick to a departing jump and obeys the classic-only compatibility switch.
+    MovementPhysics ramp;ramp.Reset(100);
+    for(int frame=0;frame<60;++frame)ramp.Step(forward,1.f/60,1000);
+    ramp.Step(hop,1.f/60,1000);auto rising=ramp;float retained=ramp.Speed();
+    MovementSurface contact;contact.height=ramp.FeetZ()+5;contact.ramp=true;contact.normal[0]=-.4472136f;contact.normal[2]=.8944272f;
+    Require(ramp.ResolveClassicRamp(contact) && ramp.Grounded() && std::abs(ramp.Speed()-retained)<.001f,"rising walkable ramp contact preserves horizontal momentum");
+    auto tooHigh=contact;tooHigh.height=rising.FeetZ()+rising.StepHeight()+1;ramp=rising;
+    Require(!ramp.ResolveClassicRamp(tooHigh),"ramp correction cannot exceed the existing step budget");
+    auto away=contact;away.normal[0]*=-1;
+    Require(!ramp.ResolveClassicRamp(away),"a jump moving away from the ramp stays airborne");
+    MovementSettings noRamp;noRamp.classicRampContacts=false;ramp.Configure(noRamp);
+    Require(!ramp.ResolveClassicRamp(contact),"classic ramp-contact opt-out is live configurable");
+    noRamp.classicRampContacts=true;noRamp.classicCollision=false;ramp.Configure(noRamp);
+    Require(!ramp.ResolveClassicRamp(contact),"hull and recovery keep their own floor policy");
     // The new default must be reachable yet bounded at common frame rates, without changing acceleration tuning.
     for(int fps:{30,60,144}) {
         MovementPhysics capped;capped.Reset(0);
