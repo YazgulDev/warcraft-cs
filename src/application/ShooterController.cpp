@@ -462,6 +462,8 @@ void ShooterController::AimAndMove(float dt) {
         if (status_.speedScale < 0.99f) movement_.LimitSpeed(speed * MovementPhysics::worldScale);
         bool tookOff = wasGrounded && !movement_.Grounded() && !movement_.Swimming();
         collision_.Move(unit_, movement_, dt);
+        // Confirmed takeoff/surf projection runs inside collision; retain spell slow limits afterward too.
+        if (status_.speedScale < 0.99f) movement_.LimitSpeed(speed * MovementPhysics::worldScale);
         if(wasSwimming!=movement_.Swimming())wc3::Log("movement swimming=%d water=%.1f feet=%.1f eye=%.1f",movement_.Swimming(),movement_.WaterLevel(),movement_.FeetZ(),movement_.EyeZ());
         // Transition records expose retained takeoff/landing momentum without per-frame disk writes.
         if (tookOff || ((!wasGrounded || tookOff) && movement_.Grounded()))

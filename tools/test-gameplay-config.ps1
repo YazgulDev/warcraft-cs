@@ -745,3 +745,13 @@ foreach($case in @(@(1000,1,3000),@(1000,2,1000),@(2000,1,2000),@(777,2,777))) {
     if((Get-FileHash $capFile).Hash -ne $capHash){throw 'Speed-cap migration repeats.'}
 }
 Write-Output 'PASS 3000 stock speed cap, custom caps, explicit legacy opt-back and unchanged acceleration.'
+
+# New surf controls fill missing keys and retain saved opt-outs/angles on repeated installs.
+$surfFile=Join-Path $folder 'surf.ini'
+@('[Movement]','Mode=classic','[Surfing]','Enabled=false','MaximumAngle=70','ContactDistance=4') | Set-Content $surfFile
+Update-GameplayConfig $template $surfFile
+$surfText=Get-Content $surfFile -Raw
+foreach($value in @('Mode=classic','[Surfing]','Enabled=false','MaximumAngle=70','ContactDistance=4')){if(!$surfText.Contains($value)){throw "Lost surf choice: $value"}}
+$surfHash=(Get-FileHash $surfFile).Hash;Update-GameplayConfig $template $surfFile
+if((Get-FileHash $surfFile).Hash -ne $surfHash){throw 'Surf configuration merge repeats.'}
+Write-Output 'PASS surf defaults insertion, custom tuning, opt-out and idempotence.'

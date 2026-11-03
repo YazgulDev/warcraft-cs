@@ -538,6 +538,19 @@ for the classic strategy, using bounded two-sided slopes and the incoming contac
 `MovementPhysics::ResolveClassicRamp` validates the bounded contact/relative velocity and
 preserves horizontal momentum. The existing hull/recovery strategies remain independent.
 
+### Terrain surf contacts and confirmed takeoffs
+
+`movement/SurfSettings.hpp` owns portable surfing preferences. `MovementPhysics::ResolveSurf`
+projects velocity onto a verified steep plane without adding energy or marking it grounded.
+`platform/TerrainSurfContact.hpp` samples continuous native-walkable terrain and rejects
+cliff transitions, terrace discontinuities and blocked cells. Both collision strategies
+apply its contact tentatively, preserve model/deck clearance and roll it back on rejection.
+Existing static-model collision geometry is not repurposed as terrain support.
+
+`MovementPhysics::FinishMove` consumes the optional pending takeoff bonus once, after the
+selected collision strategy commits support/native placement. A same-frame uphill
+recontact, surf or clipped ascent cannot multiply that bonus on subsequent render frames.
+
 ### Native sky presets
 
 `config/WarcraftSkyPresets.hpp` bounds native selection to verified stock model identifiers.

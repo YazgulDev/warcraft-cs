@@ -15,6 +15,18 @@ int main() {
     // Headless regressions report assertion details to the captured journal instead of a desktop dialog.
     _set_error_mode(_OUT_TO_STDERR);
     GameplaySettings settings;
+    // Startup and F8 share finite surf bounds and retain an explicit disabled preference.
+    const auto surfPath=(std::filesystem::current_path()/"surf-validation.ini").string();
+    assert(settings.movement.surf.enabled && settings.movement.surf.maximumAngle==80 && settings.movement.surf.contactDistance==8);
+    {std::ofstream f(surfPath);f<<"[Surfing]\nEnabled=false\nMaximumAngle=70\nContactDistance=4\n";}
+    auto surf=GameplaySettings::Load(surfPath).movement.surf;
+    assert(!surf.enabled && surf.maximumAngle==70 && surf.contactDistance==4);
+    {std::ofstream f(surfPath);f<<"[Surfing]\nEnabled=bad\nMaximumAngle=nan\nContactDistance=inf\n";}
+    surf=GameplaySettings::Load(surfPath).movement.surf;
+    assert(surf.enabled && surf.maximumAngle==80 && surf.contactDistance==8);
+    {std::ofstream f(surfPath);f<<"[Surfing]\nMaximumAngle=999\nContactDistance=-1\n";}
+    surf=GameplaySettings::Load(surfPath).movement.surf;
+    assert(surf.maximumAngle==85 && surf.contactDistance==0);DeleteFileA(surfPath.c_str());
     // The real startup/F8 parser validates water tuning without rewriting custom preferences.
     const auto waterPath=(std::filesystem::current_path()/"swimming-validation.ini").string();
     assert(settings.movement.swimming.enabled && settings.movement.swimming.minimumDepth==96);

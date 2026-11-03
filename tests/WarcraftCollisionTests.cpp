@@ -32,6 +32,7 @@ bool nativeCliffRim=false;
 float slopeGradient=.3f;
 bool narrowPassage=false;
 bool crest=false; // A continuous low hill has no native cliff, solid prop or blocked pathing cell.
+bool surfScene=false,surfWall=false;
 float crestHeight=128,crestYaw=0;
 bool actorColliding=true;
 int meshScene=0;
@@ -41,6 +42,7 @@ wc3::Bits Bits(float value) { wc3::Bits bits;std::memcpy(&bits,&value,4);return 
 wc3::Bits __cdecl X(wc3::Handle) {return Bits(unitX);}
 wc3::Bits __cdecl Y(wc3::Handle) {return Bits(unitY);}
 BOOL __cdecl Blocked(float* x,float* y,int kind) {
+    if(surfScene)return nativeBlocked;
     if(crest)return nativeBlocked;
     // Different masks deliberately disagree: owned common.j uses 6 for floatability, while 4 is harvest pathing.
     if(swimScene)return kind==1 ? (canalBank || *x<500) : kind==6 ? swimNativeBlocked : TRUE;
@@ -102,7 +104,7 @@ Bits (__cdecl* GetRectMaxX)(Handle)=Maximum;
 Bits (__cdecl* GetRectMaxY)(Handle)=Maximum;
 void (__cdecl* RemoveRect)(Handle)=Remove;
 float Real(Bits bits){float f;std::memcpy(&f,&bits,4);return f;}
-float TerrainGround(float x,float y){if(crest)return 100+std::max(0.f,crestHeight-std::abs(x*std::cos(crestYaw)+y*std::sin(crestYaw))*slopeGradient);if(swimScene)return canalBank ? (x>=80 ? canalBank : 100.f) : 100+std::clamp((x-100)*.5f,0.f,200.f);if(cliffFace)return 100+std::clamp((FaceDistance(x,y)-32)/128,0.f,1.f)*faceRise;return landingLedge ? (x*std::cos(ledgeYaw)+y*std::sin(ledgeYaw)>=32 ? 140.f : 100.f) : slope ? 100.f+x*slopeGradient : drop && x>=32 ? 0.f : cliff && x>=32 ? 180.f : 100.f;}
+float TerrainGround(float x,float y){if(surfScene)return 2500-x*1.7320508f;if(crest)return 100+std::max(0.f,crestHeight-std::abs(x*std::cos(crestYaw)+y*std::sin(crestYaw))*slopeGradient);if(swimScene)return canalBank ? (x>=80 ? canalBank : 100.f) : 100+std::clamp((x-100)*.5f,0.f,200.f);if(cliffFace)return 100+std::clamp((FaceDistance(x,y)-32)/128,0.f,1.f)*faceRise;return landingLedge ? (x*std::cos(ledgeYaw)+y*std::sin(ledgeYaw)>=32 ? 140.f : 100.f) : slope ? 100.f+x*slopeGradient : drop && x>=32 ? 0.f : cliff && x>=32 ? 180.f : 100.f;}
 float Ground(float x,float y){return swimScene && x<500 ? std::max(300.f,TerrainGround(x,y)) : TerrainGround(x,y)+(water ? 22.f : 0.f);}
 bool WaterSurface(float x,float y,float& height){if(swimScene && x<(canalBank ? 80 : 500)){height=300;return true;}if(water){height=Ground(x,y);return true;}return false;}
 bool WalkableSurface(float x,float y,float& height){
@@ -115,6 +117,7 @@ bool DiagnosticLog::Due(DWORD&,bool) { return false; }
 // The synthetic world replaces only native discovery; actual swept collision/physics runs unchanged.
 std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,bool,bool detailed,bool retainPlatforms) {
     details_.clear();
+    if(surfScene)return surfWall ? std::vector<Bounds3>{{{200,-4096,-8000},{224,4096,8000}}} : std::vector<Bounds3>{};
     if(swimScene)return swimWall ? std::vector<Bounds3>{{{80,-200,100},{100,200,500}}} : std::vector<Bounds3>{};
     if(meshScene) {
         auto mesh=std::make_shared<CylinderMesh>();
@@ -588,6 +591,36 @@ int main(){
         for(int frame=0;frame<60;++frame){jumper.Step(outside,1.f/60,250);collision.Move(1,jumper,1.f/60);}
         Require(unitX<3972,"retreat from the map edge remains usable");
     }
+    // Real swept terrain surfing stays airborne in all modes; Space never adds a takeoff.
+    slope=false;crest=false;surfScene=true;bridgeAlive=false;actorRadius=16;nativeBlocked=false;
+    for(int mode=0;mode<3;++mode)for(int fps:{30,60,144})for(bool held:{false,true}) {
+        MovementSettings tuning;tuning.classicCollision=mode==0;tuning.platformRecovery=mode==2;
+        MovementPhysics slider;slider.Configure(tuning);slider.Reset(2500+16*1.7320508f);
+        unitX=unitY=0;WarcraftCollision ramp;MoveInput glide;glide.right=1;
+        // Acquire contact before Space so the fixture models arrival on a ramp, not a ground jump.
+        slider.BeginFall();ramp.Move(1,slider,1.f/fps);
+        int contacts=0;float surfPeak=0;
+        for(int frame=0;frame<fps*2;++frame) {
+            glide.jump=held;slider.Step(glide,1.f/fps,250);ramp.Move(1,slider,1.f/fps);
+            contacts+=slider.Surfing();surfPeak=std::max(surfPeak,slider.Speed());
+            Require(!slider.Grounded(),"surf ramp cannot mint a grounded takeoff");
+            Require(slider.FeetZ()+.05f>=wc3::TerrainGround(unitX-16,unitY),"surf foot remains above the uphill footprint");
+        }
+        Require(unitX>300 && unitY<-50 && contacts>fps*1.9f,"gravity drives downhill while A/D steers a sustained surf contact");
+        Require(surfPeak<1300,"held Space cannot create an exponential surf boost");
+        std::printf("Surf mode=%d fps=%d Space=%d x=%.1f y=%.1f speed=%.1f contacts=%d\n",mode,fps,held,unitX,unitY,slider.Speed(),contacts);
+    }
+    for(int mode=0;mode<3;++mode) {
+        MovementSettings tuning;tuning.classicCollision=mode==0;tuning.platformRecovery=mode==2;
+        for(bool blocked:{false,true}) {
+            nativeBlocked=blocked;surfWall=!blocked;
+            MovementPhysics slider;slider.Configure(tuning);slider.Reset(2500+16*1.7320508f);slider.BeginFall();
+            unitX=unitY=0;WarcraftCollision ramp;
+            for(int frame=0;frame<180;++frame){slider.Step({},1.f/60,250);ramp.Move(1,slider,1.f/60);}
+            Require(unitX<184.01f,"surf cannot bypass a wall or unknown native blocker");
+        }
+    }
+    surfScene=surfWall=nativeBlocked=false;actorRadius=0;
     std::puts("Warcraft classic/hull/recovery collision regressions passed.");
     // A real floating path may reject native walking; both solvers still sweep solid walls and banks.
     slope=false;swimScene=true;bridgeAlive=false;

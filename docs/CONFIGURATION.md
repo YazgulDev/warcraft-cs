@@ -252,3 +252,24 @@ The [F2 in-game settings panel](INGAME-SETTINGS.md) edits mouse sensitivity, CS 
 The [nuclear bomb and chat preview](NUCLEAR-CHAT-PREVIEW.md) documents `[Chat]` and `[NuclearBomb]` keys, ranges and next-launch F8 snapshots.
 
 [Release 0.17.0](RELEASE-0.17.0.md) collects all new weapon, smoke, mouse, sky, chat and nuclear defaults/ranges. Nuclear gameplay settings apply to future launches on F8; `[NuclearAudio]` layer edits require Install/asset reconversion. Existing custom codes survive; the former stock nuclear code upgrades to `warneverchanges`.
+
+
+## Terrain surfing (development preview)
+
+`[Surfing] Enabled=true` enables airborne sliding on continuous, native-walkable terrain slopes
+steeper than `[Movement] MaxWalkSlope` (46 degrees by default). Gravity accelerates along the
+contact plane; A/D and mouse turning use the existing air-strafe controls. Space does not
+create a ground jump or takeoff bonus on the steep face. Flat support restores ordinary
+walking/bunnyhop. The shared `MaxBunnySpeed=3000` cap remains in GoldSrc units/s.
+
+`MaximumAngle=80` accepts 50–85 degrees; `ContactDistance=8` accepts 0–32 Warcraft world units.
+The latter is a small contact tolerance, not a distant snap. Missing/malformed/non-finite
+values use the defaults. Startup/F8 apply the same settings; updates add missing keys and
+preserve explicit disabled/custom choices. `Enabled=false` opts out without switching the
+saved classic/hull/recovery strategy. This preview supports terrain heightfields, not
+arbitrary sloping model meshes. Blocked native cells, cliff transitions, sharp terrace lips,
+solid walls, bridge decks and body headroom retain their collision rules.
+
+The optional 15% Bunnyhop bonus is confirmed only after collision accepts a real airborne
+takeoff. A proposed jump that lands on the uphill ramp in the same frame earns no bonus;
+repeated ramp contacts therefore cannot multiply speed at the rendering frame rate.

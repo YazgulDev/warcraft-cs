@@ -264,6 +264,10 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.scaleFireRateFromAttackSpeed=!_stricmp(fireRate.c_str(),"true") || fireRate=="1";
     result.movement.autoJump = boolean("AutoJump", true);
     result.movement.classicRampContacts=boolean("ClassicRampContacts",true); // Startup/F8 retain a deliberate classic-contact opt-out.
+    // Surfing is an airborne terrain contact; it shares the validated walk angle and speed ceiling.
+    result.movement.surf.enabled=enabled("Surfing","Enabled");
+    result.movement.surf.maximumAngle=std::max(50.f,number("Surfing","MaximumAngle",80,85));
+    result.movement.surf.contactDistance=number("Surfing","ContactDistance",8,32);
     result.movement.jumpBoostPercent = number("Movement", "JumpBoostPercent", 15, 100);
     // The larger speed ceiling is independent of air acceleration and the per-takeoff bonus.
     result.movement.maxBunnySpeed = std::max(250.0f, number("Movement", "MaxBunnySpeed", 3000, 3000));

@@ -5,6 +5,7 @@
 #include "UnitCollisionProfile.hpp"
 #include "MovementWater.hpp"
 #include "WalkableTerrainContact.hpp"
+#include "TerrainSurfContact.hpp"
 #include <algorithm>
 #include <cmath>
 
@@ -135,6 +136,8 @@ bool ClassicWarcraftCollision::RampContact(float x,float y,MovementPhysics& move
     return movement.ResolveClassicRamp(best);
 }
 void ClassicWarcraftCollision::Move(wc3::Handle unit, MovementPhysics& movement, float dt) {
+    // Award a queued takeoff bonus only after all support and native placement checks.
+    struct CommitJump {MovementPhysics& motion;~CommitJump(){motion.FinishMove();}} commit{movement};
     MovementWater::Update(unit,movement);
     dt = std::clamp(dt, 0.f, .05f);
     float x = wc3::Real(wc3::GetUnitX(unit)), y = wc3::Real(wc3::GetUnitY(unit));
@@ -148,21 +151,28 @@ void ClassicWarcraftCollision::Move(wc3::Handle unit, MovementPhysics& movement,
     float minX=bounds.minX,maxX=bounds.maxX,minY=bounds.minY,maxY=bounds.maxY;
     float dx = movement.VelocityX() * dt, dy = movement.VelocityY() * dt;
     auto obstacles = obstacles_.Snapshot(unit, x, y, 600 + std::hypot(dx, dy),movement.NativeUnitCollision());
+    auto support=[&]() {
+        float floor=Floor(x,y,movement,obstacles);
+        if(!TerrainSurfContact::OwnsFloor(x,y,radius_,floor,movement))movement.ResolveClassicFloor(floor);
+    };
     if (std::hypot(dx,dy)<.001f) {
         // Standing still needs floor resolution, but no collision rejection or blocked-movement telemetry.
-        movement.ResolveClassicFloor(Floor(x,y,movement,obstacles));MovementWater::Update(unit,movement);return;
+        support();TerrainSurfContact::Resolve(x,y,radius_,movement,obstacles);MovementWater::Update(unit,movement);return;
     }
-    int steps = std::max(1, int(std::ceil(std::hypot(dx, dy) / 8)));
     // The vertical integrator may have just reached the floor at the current XY. Settle that
     // existing classic contact before testing the first horizontal step, not after clipping it.
-    movement.ResolveClassicFloor(Floor(x,y,movement,obstacles));
+    support();
     auto settle=[&](float targetX,float targetY,float fromX,float fromY) {
         // A rejected candidate must not leave its height/ground state behind at the old XY.
-        auto before=movement;bool landed=RampContact(targetX,targetY,movement,obstacles);
+        auto before=movement;
+        bool landed=TerrainSurfContact::Resolve(targetX,targetY,radius_,movement,obstacles) || RampContact(targetX,targetY,movement,obstacles);
         if(Clear(targetX,targetY,fromX,fromY,movement,obstacles))return true;
         if(landed)movement=before;return false;
     };
-    {auto before=movement;if(RampContact(x,y,movement,obstacles) && !Clear(x,y,x,y,movement,obstacles))movement=before;}
+    settle(x,y,x,y);
+    dx=movement.VelocityX()*dt;dy=movement.VelocityY()*dt;
+    // Surf may convert falling velocity into XY; bound sweeps by total incoming motion.
+    int steps=std::max(1,int(std::ceil(std::hypot(std::hypot(dx,dy),movement.VerticalVelocity()*dt)/8)));
     // Eight-unit swept steps retain thin-wall collision at maximum bunnyhop speed.
     for (int step = 0; step < steps; ++step) {
         float nx = x + dx / steps, ny = y + dy / steps;
@@ -176,7 +186,8 @@ void ClassicWarcraftCollision::Move(wc3::Handle unit, MovementPhysics& movement,
         // Resolve descending landings as well as ground support at each swept substep. Delaying an
         // accepted ramp landing until frame end leaves stale airborne feet and falsely clips the next step.
         // Classic's existing resolver still rejects ascending landings and starts genuine ledge falls.
-        movement.ResolveClassicFloor(Floor(x,y,movement,obstacles));
+        support();
+        dx=movement.VelocityX()*dt;dy=movement.VelocityY()*dt;
     }
     float floor = Floor(x, y, movement, obstacles);
     if (std::hypot(x - originalX, y - originalY) > 0.001f) {
@@ -207,6 +218,6 @@ void ClassicWarcraftCollision::Move(wc3::Handle unit, MovementPhysics& movement,
     }
     x = wc3::Real(wc3::GetUnitX(unit)); y = wc3::Real(wc3::GetUnitY(unit));
     bounds.Constrain(unit,movement,x,y);
-    movement.ResolveClassicFloor(Floor(x, y, movement, obstacles));
+    support();
     MovementWater::Update(unit,movement);
 }

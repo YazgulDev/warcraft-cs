@@ -1,5 +1,40 @@
 # Validation
 
+## Confirmed Bunnyhop takeoffs and terrain surfing (unreleased, 2026-11-04)
+
+The delivered rising-ramp module was reproduced in an owned 1.26a private map: six
+OpenGL takeoff phases each reached the fixture's 1000-CS-unit cap through 16–19
+same-frame takeoff/landing bonuses. Those contacts are not proof of free-flight jumps.
+`FinishMove` now awards the optional bonus only after accepted airborne departure.
+The corrected module passes all six phases in both OpenGL and Direct3D: no crest-window
+speed loss, peak 380.219 CS units/s rather than the false 1000 cap, and no camera-eye
+mismatch. Repeated ramp recontacts still occur physically but cannot multiply bonuses.
+The fixture cap is deliberately 1000; the Player default remains 3000.
+
+Portable checks cover no-energy contact projection, real versus rejected takeoffs,
+held Space, A/D steering, disabled/vertical faces, finite startup/F8 parsing and repeated
+settings-preserving updates. On a 60-degree terrain plane, classic/hull/recovery at
+30/60/144 Hz all reach 1040.2 world units/s after two seconds; held Space gives the same
+result. Swept wall/native-blocker assertions pass along with prior cliff, lip, bridge,
+narrow-passage, recovery, water and camera-height regressions.
+
+The native surf map uses an owned MPQ with an authored offline actor and a continuous
+60-degree descent (heights 100–1700, within the native terrain-height format). In both
+OpenGL and Direct3D the actor acquires airborne surf contact, accelerates downhill and
+lands on flat ground. A/D produces lateral travel; Space cannot award ground bonuses
+on the face, while real jumps resume after the flat landing. The OpenGL trial records
+36–37 surf frames and about 636–641 CS units/s before normal ground braking. Direct3D
+records 37 contacts and about 641 CS units/s; held-Space trials subsequently perform
+real flat-ground hops (about 737–739 CS units/s). Actual camera getters match the
+resolved eye. OpenGL recordings were inspected; D3D evidence is native measurements.
+No native/controller faults were observed. All touched lab modules, maps, settings,
+bridge files and saves were restored by hash after each run.
+
+This covers terrain heightfields, not arbitrary static-model surf meshes or every
+campaign geometry. True cliffs, blocked cells, sharp terrace lips and solid volumes
+remain collision boundaries. Native evidence is 1.26a only; real 1.27a remains unverified.
+
+
 ## High/rising classic ramp contact (unreleased, 2026-11-03)
 
 The follow-up reporter module hash matches the delivered lower-crest fix. Its log shows

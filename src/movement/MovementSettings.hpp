@@ -1,9 +1,11 @@
 #pragma once
 #include "SwimmingSettings.hpp"
+#include "SurfSettings.hpp"
 
 // GoldSrc units are converted only by physics; collision uses Warcraft world units.
 struct MovementSettings {
     SwimmingSettings swimming;
+    SurfSettings surf;
     // Classic is the requested default; recovery and hull remain selectable without resetting motion.
     bool classicCollision=true;
     bool classicRampContacts=true; // Airborne contact with a verified walkable ramp becomes floor contact, not an axis stop.

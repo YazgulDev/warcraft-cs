@@ -32,6 +32,12 @@ public:
     void ResolveFloor(float floor);
     void ResolveClassicFloor(float floor);
     bool ResolveClassicRamp(const MovementSurface& surface);
+    bool ResolveSurf(const MovementSurface& surface);
+    void FinishMove(); // Confirm an actual takeoff only after collision has accepted the frame.
+    bool Surfing() const {return surfing_;}
+    bool SurfEnabled() const {return settings_.surf.enabled;}
+    float SurfMaximumAngle() const {return settings_.surf.maximumAngle;}
+    float SurfContactDistance() const {return settings_.surf.contactDistance;}
     void ResolveSurface(const MovementSurface& surface);
     void ClipHead(float ceiling);
     void SlideHorizontal(float nx,float ny);
@@ -71,4 +77,6 @@ private:
     float previousDuck_ = 0;
     MovementSettings settings_;
     bool grounded_ = true, jumpHeld_ = false, jumpSuppressed_ = false;
+    bool surfing_=false;
+    float pendingJumpBoost_=0;
 };

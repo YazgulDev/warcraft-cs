@@ -235,6 +235,7 @@ public:
 #if defined(WCS_STATUS_TEST) || defined(WCS_GAMEPLAY_TEST) || defined(WCS_TREE_WHEEL_TEST)
     // Expose the active unit only to the separate, opt-in native spell test build.
     wc3::Handle TestUnit() const { return Visible() ? unit_ : 0; }
+    bool TestSurfing() const {return movement_.Surfing();} // Opt-in native terrain oracle, excluded from Player builds.
 #endif
 #ifdef WCS_GAMEPLAY_TEST
     void TestWaterState() const {

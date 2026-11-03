@@ -90,6 +90,9 @@ int main() {
     Require(std::abs(slowed.Speed() - 187.5f) < 0.01f, "slow must persist while running");
     slowed.Step(jump, 1.0f / 60, 125); slowed.LimitSpeed(187.5f);
     Require(slowed.Speed() <= 187.51f, "jump/strafe must not bypass the slow's speed limit");
+    // The controller reapplies status caps after collision confirms a queued takeoff bonus.
+    slowed.FinishMove();slowed.LimitSpeed(187.5f);
+    Require(slowed.Speed()<=187.51f,"confirmed takeoff must retain the post-collision spell speed cap");
     // Straight hops retain the run-up; acceleration requires changing the airborne wish direction.
     MovementPhysics hopping; hopping.Reset(0);
     MovementSettings classic;classic.jumpBoostPercent=0;classic.airAcceleration=10;hopping.Configure(classic);
@@ -115,6 +118,7 @@ int main() {
     MovementPhysics fast,old;fast.Reset(0);old.Reset(0);old.Configure(classic);
     for(int frame=0;frame<144;++frame){fast.Step(forward,1.f/144,250);old.Step(forward,1.f/144,250);}
     fast.Step(hop,1.f/144,250);old.Step(hop,1.f/144,250);
+    fast.FinishMove();old.FinishMove();
     Require(fast.Speed()>old.Speed()*1.14f && std::abs(fast.FeetZ()-old.FeetZ())<.001f,"stock takeoff gains 15 percent while jump height stays intact");
     MovementSettings accelerated;accelerated.jumpBoostPercent=0;fast.Configure(accelerated);fast.Reset(0);old.Reset(0);
     fast.Step(launchInput,1.f/144,250);old.Step(launchInput,1.f/144,250);
@@ -134,6 +138,42 @@ int main() {
     Require(!ramp.ResolveClassicRamp(contact),"classic ramp-contact opt-out is live configurable");
     noRamp.classicRampContacts=true;noRamp.classicCollision=false;ramp.Configure(noRamp);
     Require(!ramp.ResolveClassicRamp(contact),"hull and recovery keep their own floor policy");
+    // A steep uphill run can propose a jump and land on the same ramp every frame. Those
+    // contacts must not multiply 15% each render frame, unlike a confirmed free-flight jump.
+    for(int fps:{30,60,144}) {
+        MovementPhysics repeated;repeated.Reset(100);
+        for(int i=0;i<fps;++i)repeated.Step(forward,1.f/fps,1000);
+        float initial=repeated.Speed();
+        for(int i=0;i<fps*2;++i) {
+            repeated.Step(hop,1.f/fps,1000);
+            auto face=contact;face.height=repeated.FeetZ()+5;
+            Require(repeated.ResolveClassicRamp(face),"regression fixture must recontact each frame");
+            repeated.FinishMove();
+        }
+        Require(std::abs(repeated.Speed()-initial)<.01f,"same-frame recontacts cannot mint bunnyhop bonuses");
+    }
+    // Surf removes velocity into a 60-degree face, keeps air controls and adds no contact energy.
+    for(int fps:{30,60,144}) {
+        MovementPhysics surf;surf.Reset(100);
+        MovementSurface face;face.height=100;face.normal[0]=.8660254f;face.normal[2]=.5f;
+        surf.BeginFall();float initial=0;
+        for(int i=0;i<fps;++i) {
+            surf.Step({},1.f/fps,250);face.height=surf.FeetZ();
+            float energy=surf.Speed()*surf.Speed()+surf.VerticalVelocity()*surf.VerticalVelocity();
+            Require(surf.ResolveSurf(face) && !surf.Grounded(),"steep plane remains an airborne surf contact");
+            surf.FinishMove();
+            Require(surf.Speed()*surf.Speed()+surf.VerticalVelocity()*surf.VerticalVelocity()<=energy+.5f,"surf projection cannot add kinetic energy");
+            if(i==0)initial=surf.Speed();
+        }
+        Require(surf.Speed()>initial+400,"gravity accelerates downhill along the surf plane");
+        auto oldSpeed=surf.Speed();MoveInput steer;steer.right=1;steer.jump=true;
+        surf.Step(steer,1.f/fps,250);face.height=surf.FeetZ();surf.ResolveSurf(face);surf.FinishMove();
+        Require(surf.VelocityY()<0 && surf.Speed()<oldSpeed*1.1f,"A/D steers in air without a Space bonus");
+        auto disabled=MovementSettings{};disabled.surf.enabled=false;surf.Configure(disabled);
+        Require(!surf.ResolveSurf(face),"surf opt-out applies live");
+        disabled.surf.enabled=true;surf.Configure(disabled);face.normal[0]=1;face.normal[2]=0;
+        Require(!surf.ResolveSurf(face),"vertical walls are not surf floors");
+    }
     // The new default must be reachable yet bounded at common frame rates, without changing acceleration tuning.
     for(int fps:{30,60,144}) {
         MovementPhysics capped;capped.Reset(0);

@@ -48,9 +48,9 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
     // A disposable per-render audit distinguishes physical placement jumps from cached camera latency.
     if(BackgroundGameplay::Enabled() && controller.Visible() && GetTickCount()<motionUntil) {
         LARGE_INTEGER clock;QueryPerformanceCounter(&clock);auto actor=controller.TestUnit();
-        wc3::Log("fixture motion clock=%lld x=%.5f y=%.5f feet=%.5f speed=%.5f eyeX=%.5f eyeY=%.5f eyeZ=%.5f wantedZ=%.5f",
+        wc3::Log("fixture motion clock=%lld x=%.5f y=%.5f feet=%.5f speed=%.5f eyeX=%.5f eyeY=%.5f eyeZ=%.5f wantedZ=%.5f surf=%d",
             clock.QuadPart,wc3::Real(wc3::GetUnitX(actor)),wc3::Real(wc3::GetUnitY(actor)),controller.ActorFeet(),controller.DisplaySpeed(),
-            wc3::Real(wc3::GetCameraEyePositionX()),wc3::Real(wc3::GetCameraEyePositionY()),wc3::Real(wc3::GetCameraEyePositionZ()),controller.ViewEyeZ());
+            wc3::Real(wc3::GetCameraEyePositionX()),wc3::Real(wc3::GetCameraEyePositionY()),wc3::Real(wc3::GetCameraEyePositionZ()),controller.ViewEyeZ(),controller.TestSurfing());
     }
     if ((!controller.Visible() && !BackgroundGameplay::Enabled()) || GetTickCount()-check<250) return;
     check=GetTickCount();auto unit=controller.TestUnit();
