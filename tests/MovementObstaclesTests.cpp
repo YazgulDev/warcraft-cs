@@ -15,6 +15,7 @@ int unitLoads=0,treeLoads=0;
 UnitCollisionProfile collision;
 bool staticFixture=false;
 bool nativeDeck=false;
+bool steepFixture=false;
 int meshLoads=0;float spriteX=0;
 std::array<unsigned char,0x30> objectMemory={};
 std::array<uintptr_t,0x48/4> spriteTable={};uintptr_t spriteMemory=0;
@@ -67,7 +68,10 @@ bool ModelBounds::Load(std::string,Bounds3& bounds,TreeTrunkMesh* tree) {
     return true;
 }
 bool ModelBounds::LoadCollision(std::string,CylinderMesh& mesh) {
-    assert(staticFixture);++meshLoads;AddMeshBox(mesh,{{-40,-40,0},{40,40,20}});return true;
+    assert(staticFixture);++meshLoads;AddMeshBox(mesh,{{-40,-40,0},{40,40,20}});
+    // Discovery must retain an actual steep face even when native walkable decks are delegated.
+    if(steepFixture)mesh.triangles.push_back({{{-40,-40,0},{40,-40,0},{40,40,128}}});
+    return true;
 }
 bool SpriteTransform::Read(uintptr_t sprite,ModelTransform& transform) {
     assert(staticFixture && sprite==reinterpret_cast<uintptr_t>(&spriteMemory));transform.position[0]=spriteX;return true;
@@ -103,5 +107,12 @@ int main() {
     bounds=obstacles.Snapshot(99,0,0,600,true,true,false);
     assert(bounds.empty()); // Classic restores the native-only bridge policy despite enabled mesh detail.
     bounds=obstacles.Snapshot(99,0,0,600,true);assert(bounds.empty()); // Combat keeps native bridge/deck policy.
+    bounds=obstacles.Snapshot(99,0,0,600,true,true,false,{.17f,.70f});
+    assert(bounds.empty()); // An ordinary flat box cannot opt into precise surf collision.
+    steepFixture=true;obstacles.Reset();
+    bounds=obstacles.Snapshot(99,0,0,600,true,true,false,{.17f,.70f});
+    assert(bounds.size()==1 && obstacles.Geometry(0));
+    bounds=obstacles.Snapshot(99,0,0,600,true,true,false,{});
+    assert(bounds.empty()); // Disabled model contacts retain the native-only bridge policy.
     puts("PASS movement obstacle cache: tree-only decoding, shared unit/destructable paths and map reset.");
 }

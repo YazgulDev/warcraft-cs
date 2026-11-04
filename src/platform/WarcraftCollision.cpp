@@ -4,6 +4,7 @@
 #include "UnitCollisionProfile.hpp"
 #include "MovementWater.hpp"
 #include "TerrainSurfContact.hpp"
+#include "ModelSurfContact.hpp"
 #include "../geometry/CylinderHull.hpp"
 #include <algorithm>
 #include <cmath>
@@ -333,15 +334,21 @@ void WarcraftCollision::Move(wc3::Handle unit, MovementPhysics& movement, float 
     float minX=bounds.minX,maxX=bounds.maxX,minY=bounds.minY,maxY=bounds.maxY;
     float dx = movement.VelocityX() * dt, dy = movement.VelocityY() * dt;
     float search=movement.PlatformRecovery() ? std::max(600.f,movement.RecoveryDistance()+radius_) : 600.f;
-    auto obstacles = obstacles_.Snapshot(unit,x,y,search+std::hypot(dx,dy),movement.NativeUnitCollision(),movement.ObjectMeshCollision(),movement.PlatformRecovery());
+    // Hull mode normally delegates native walkable decks; eligible steep meshes still
+    // need their normals even when platform recovery is disabled.
+    auto obstacles = obstacles_.Snapshot(unit,x,y,search+std::hypot(dx,dy),movement.NativeUnitCollision(),movement.ObjectMeshCollision(),movement.PlatformRecovery(),ModelSurfContact::Range(movement));
+    ModelSurfContact::Meshes surfMeshes;
+    for(size_t index=0;index<obstacles.size();++index)surfMeshes.push_back(obstacles_.Geometry(index));
     Ceiling(x,y,movement,obstacles);
     auto support=[&]() {
         auto floor=Floor(x,y,movement,obstacles);
-        if(!TerrainSurfContact::OwnsFloor(x,y,radius_,floor.height,movement))movement.ResolveSurface(floor);
+        if(!ModelSurfContact::OwnsFloor(x,y,radius_,floor.height,movement,surfMeshes) &&
+            !TerrainSurfContact::OwnsFloor(x,y,radius_,floor.height,movement))movement.ResolveSurface(floor);
     };
     auto settle=[&](float tx,float ty,float fx,float fy,float* normal=nullptr) {
         // Surf correction belongs to this candidate only; a wall rejection rolls it back too.
-        auto before=movement;bool contact=TerrainSurfContact::Resolve(tx,ty,radius_,movement,obstacles);
+        auto before=movement;bool contact=ModelSurfContact::Resolve(tx,ty,radius_,movement,surfMeshes) ||
+            TerrainSurfContact::Resolve(tx,ty,radius_,movement,obstacles);
         if(Clear(tx,ty,fx,fy,movement,obstacles,normal))return true;
         if(contact)movement=before;return false;
     };

@@ -254,7 +254,7 @@ The [nuclear bomb and chat preview](NUCLEAR-CHAT-PREVIEW.md) documents `[Chat]` 
 [Release 0.17.0](RELEASE-0.17.0.md) collects all new weapon, smoke, mouse, sky, chat and nuclear defaults/ranges. Nuclear gameplay settings apply to future launches on F8; `[NuclearAudio]` layer edits require Install/asset reconversion. Existing custom codes survive; the former stock nuclear code upgrades to `warneverchanges`.
 
 
-## Terrain surfing (development preview)
+## Terrain and model surfing (development preview)
 
 `[Surfing] Enabled=true` enables airborne sliding on continuous, native-walkable terrain slopes
 steeper than `[Movement] MaxWalkSlope` (46 degrees by default). Gravity accelerates along the
@@ -266,9 +266,17 @@ walking/bunnyhop. The shared `MaxBunnySpeed=3000` cap remains in GoldSrc units/s
 The latter is a small contact tolerance, not a distant snap. Missing/malformed/non-finite
 values use the defaults. Startup/F8 apply the same settings; updates add missing keys and
 preserve explicit disabled/custom choices. `Enabled=false` opts out without switching the
-saved classic/hull/recovery strategy. This preview supports terrain heightfields, not
-arbitrary sloping model meshes. Blocked native cells, cliff transitions, sharp terrace lips,
-solid walls, bridge decks and body headroom retain their collision rules.
+saved classic/hull/recovery strategy. `ModelContacts=true` additionally resolves steep faces
+from decoded stationary destructable meshes when `[Movement] ObjectMeshCollision=true`.
+It uses transformed triangle normals and foot contacts, including rotated imported ramps;
+model bounds alone never grant a surf plane. `ModelContacts=false` keeps terrain surfing
+only. Startup/F8 applies this toggle and updates preserve an explicit opt-out.
+Classic retains its historical collision for other objects and native decks. Blocked
+native cells, cliff transitions, sharp terrace lips, solid walls and body headroom still
+restrict movement; surf contact does not permit passing through a ramp's underside.
+
+The original [Surf Skyline time trial](SURF-SKYLINE.md) includes imported solid ramps,
+two checkpoints, gaps, a timer and session records. Its models require this newer build.
 
 The optional 15% Bunnyhop bonus is confirmed only after collision accepts a real airborne
 takeoff. A proposed jump that lands on the uphill ramp in the same frame earns no bonus;

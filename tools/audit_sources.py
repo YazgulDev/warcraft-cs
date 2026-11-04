@@ -16,7 +16,7 @@ ROOT_FILES = {'README.md','INSTALL.md','TROUBLESHOOTING.md','NOTICE','LICENSE-MI
               # This authored native-regression script is source; arbitrary extracted JASS remains excluded.
               'tests/fixtures/MilitiaAlarm.j','tests/fixtures/Swimming.j','tests/fixtures/PortalsHeavy.j','tests/fixtures/CrestMomentum.j',
               # Authored downloadable map logic; extracted map scripts remain excluded.
-              'tools/maps/SurfPractice.j'}
+              'tools/maps/SurfPractice.j','tools/maps/SurfSkyline.j'}
 ROOTS = {'src','tests','tools','setup','config','skills','licenses','docs','launcher'}
 EXTENSIONS = {'.cpp','.hpp','.inc','.py','.ps1','.ini','.md','.yaml','.txt','.cs'}
 RULES = {

@@ -6,6 +6,7 @@
 #include "../src/platform/WeaponTargetFilter.hpp"
 #include "../src/platform/UnitCollisionProfile.hpp"
 #include "../src/platform/SpriteTransform.hpp"
+#include "../src/platform/NativeRegistry.hpp"
 #include <fstream>
 #include <sstream>
 #include <vector>
@@ -253,6 +254,17 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
             std::string typedLine;std::getline(input,typedLine);if(!typedLine.empty() && typedLine[0]==' ')typedLine.erase(0,1);
             InputDispatcher dispatcher(controller);controller.TestInputRoute(true);
             for(unsigned char c:typedLine)dispatcher.Handle(GetActiveWindow(),WM_CHAR,c,0,true);controller.TestInputRoute(false);
+        }
+        else if(BackgroundGameplay::Enabled() && command=="courseinspect") {
+            // Read the authored map's copied state through the public native, never its JASS globals.
+            using Value=int (__cdecl*)(wc3::Handle);
+            auto value=reinterpret_cast<Value>(NativeRegistry::Resolve(base,"GetUnitUserData","(Hunit;)I"));
+            using UI=uintptr_t (__fastcall*)(int,int);
+            auto ui=reinterpret_cast<UI>(base+0x300710)(0,0);int menu=0,modal=0;
+            Read(ui+0x258,menu);Read(ui+0x260,modal);
+            wc3::Log("fixture course ready visible=%d menu=%d modal=%d picked=%08X",controller.Visible(),menu,modal,wc3::PickOwnedUnit());
+            wc3::Log("fixture course available=%d state=%d x=%.3f y=%.3f feet=%.3f",value!=nullptr,value ? value(unit) : -1,
+                wc3::Real(wc3::GetUnitX(unit)),wc3::Real(wc3::GetUnitY(unit)),controller.ActorFeet());
         }
         else if(BackgroundGameplay::Enabled() && command=="nuclearinspect") {
             wc3::Log("fixture nuclear textOpen=%d selected=%d active=%d remaining=%.2f age=%.2f serial=%u ammo=%d gold=%d speed=%.2f",controller.TextInputOpen(),controller.NuclearSelected(),controller.NuclearBomb().Active(),controller.NuclearBomb().Remaining(),controller.NuclearBomb().Age(),controller.ShotSerial(),controller.Ammo(),wc3::GetPlayerState(wc3::GetLocalPlayer(),1),controller.DisplaySpeed());

@@ -36,6 +36,7 @@ public:
     void FinishMove(); // Confirm an actual takeoff only after collision has accepted the frame.
     bool Surfing() const {return surfing_;}
     bool SurfEnabled() const {return settings_.surf.enabled;}
+    bool SurfModelContacts() const {return settings_.surf.enabled && settings_.surf.modelContacts && settings_.objectMeshCollision;}
     float SurfMaximumAngle() const {return settings_.surf.maximumAngle;}
     float SurfContactDistance() const {return settings_.surf.contactDistance;}
     void ResolveSurface(const MovementSurface& surface);

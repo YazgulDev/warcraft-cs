@@ -115,10 +115,21 @@ bool WalkableSurface(float x,float y,float& height){
 }
 bool DiagnosticLog::Due(DWORD&,bool) { return false; }
 // The synthetic world replaces only native discovery; actual swept collision/physics runs unchanged.
-std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,bool,bool detailed,bool retainPlatforms) {
+std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,bool,bool detailed,bool retainPlatforms,MeshSurfaceRange) {
     details_.clear();
     if(surfScene)return surfWall ? std::vector<Bounds3>{{{200,-4096,-8000},{224,4096,8000}}} : std::vector<Bounds3>{};
     if(swimScene)return swimWall ? std::vector<Bounds3>{{{80,-200,100},{100,200,500}}} : std::vector<Bounds3>{};
+    if(meshScene==5) {
+        auto mesh=std::make_shared<CylinderMesh>();
+        auto z=[](float x,float y){return 1000-.15f*x+1.6f*y;};
+        Triangle3 a={{{-2000,-512,z(-2000,-512)},{2000,-512,z(2000,-512)},{2000,512,z(2000,512)}}};
+        Triangle3 b={{{-2000,-512,z(-2000,-512)},{2000,512,z(2000,512)},{-2000,512,z(-2000,512)}}};
+        mesh->triangles={a,b};
+        // The underside is a distinct solid face, not a walkable top seen through from below.
+        for(auto t:{a,b}){for(auto& p:t.vertices)p[2]-=32;std::swap(t.vertices[1],t.vertices[2]);mesh->triangles.push_back(t);}
+        details_.push_back(detailed ? mesh : nullptr);
+        return {{{-2000,-512,-151},{2000,512,2120}}};
+    }
     if(meshScene) {
         auto mesh=std::make_shared<CylinderMesh>();
         if(meshScene==4)AddMeshBox(*mesh,{{-500,-500,180},{500,500,200}});
@@ -621,6 +632,34 @@ int main(){
         }
     }
     surfScene=surfWall=nativeBlocked=false;actorRadius=0;
+    // Imported sloping model faces stay airborne across strategies and frame rates; their
+    // empty surrounding volume must not replace contact with the actual triangles.
+    slope=false;meshScene=5;bridgeAlive=false;actorRadius=16;
+    for(int mode=0;mode<3;++mode)for(int fps:{30,60,144}) {
+        MovementSettings setting;setting.classicCollision=mode==0;setting.platformRecovery=mode==2;
+        MovementPhysics rider;rider.Configure(setting);unitX=unitY=0;rider.Reset(1000+16*std::hypot(.15f,1.6f));rider.BeginFall();
+        WarcraftCollision ramp;ramp.Move(1,rider,1.f/fps);int contacts=0;MoveInput along;along.forward=1;
+        for(int frame=0;frame<fps;++frame) {
+            rider.Step(along,1.f/fps,250);ramp.Move(1,rider,1.f/fps);contacts+=rider.Surfing();
+            Require(!rider.Grounded(),"model surf contact never becomes a ground takeoff");
+        }
+        std::printf("Model surf mode=%d fps=%d x=%.1f y=%.1f speed=%.1f contacts=%d\n",mode,fps,unitX,unitY,rider.Speed(),contacts);
+        Require(contacts>fps*.9f && unitX>30 && unitY<-100,"precise model plane must support a sustained gravity-driven surf");
+    }
+    // A jump from below cannot land on an unreachable imported surface or pass its underside.
+    jumper.Configure(MovementSettings{});collision.Reset();unitX=unitY=0;jumper.Reset(800);vertical={};vertical.jump=true;
+    float belowPeak=800;
+    for(int frame=0;frame<120;++frame){jumper.Step(vertical,1.f/60,250);collision.Move(1,jumper,1.f/60);vertical.jump=false;belowPeak=std::max(belowPeak,jumper.FeetZ());}
+    Require(belowPeak<840,"classic model surf adds real underside head clearance");
+    // Both explicit model opt-outs must stop model surf ownership without disabling terrain rules.
+    for(bool disableGeometry:{false,true}) {
+        MovementSettings setting;
+        if(disableGeometry)setting.objectMeshCollision=false;else setting.surf.modelContacts=false;
+        MovementPhysics optedOut;optedOut.Configure(setting);unitX=unitY=0;optedOut.Reset(1026);optedOut.BeginFall();
+        WarcraftCollision legacy;legacy.Move(1,optedOut,1.f/60);
+        Require(!optedOut.Surfing(),"model contact opt-outs must not create a steep model surf");
+    }
+    meshScene=0;actorRadius=0;
     std::puts("Warcraft classic/hull/recovery collision regressions passed.");
     // A real floating path may reject native walking; both solvers still sweep solid walls and banks.
     slope=false;swimScene=true;bridgeAlive=false;

@@ -6,6 +6,7 @@
 #include "MovementWater.hpp"
 #include "WalkableTerrainContact.hpp"
 #include "TerrainSurfContact.hpp"
+#include "ModelSurfContact.hpp"
 #include <algorithm>
 #include <cmath>
 
@@ -62,15 +63,28 @@ float ClassicWarcraftCollision::Floor(float x, float y, const MovementPhysics& m
         if(std::isfinite(terrain) && terrain<=reachable+.01f)floor=std::max(floor,terrain);
     }
     // A low solid prop supports the entire foot too; support ends only after its trailing edge clears.
-    for (const auto& box : obstacles)
-        if (Overlaps(box, x, y, radius_) && box.maximum[2] <= reachable + .01f)
-            floor = std::max(floor, box.maximum[2]);
+    for (size_t index=0;index<obstacles.size();++index) {
+        const auto& box=obstacles[index];if(!Overlaps(box,x,y,radius_))continue;
+        if(index<surfMeshes_.size() && surfMeshes_[index]) {
+            float height=0;
+            if(surfMeshes_[index]->Floor(x,y,radius_,reachable,.0001f,height,nullptr,false))floor=std::max(floor,height);
+        } else if(box.maximum[2]<=reachable+.01f)floor=std::max(floor,box.maximum[2]);
+    }
     return floor;
 }
 bool ClassicWarcraftCollision::Clear(float x, float y, float oldX, float oldY, const MovementPhysics& movement,
     const std::vector<Bounds3>& obstacles) const {
     float bottom = ReachableHeight(movement), top = movement.EyeZ() + 12;
-    for (const auto& box : obstacles) {
+    for (size_t index=0;index<obstacles.size();++index) {
+        const auto& box=obstacles[index];
+        if(index<surfMeshes_.size() && surfMeshes_[index]) {
+            float normal[2]={};const auto* mesh=surfMeshes_[index];
+            if(!mesh->Contact(x,y,radius_,bottom,top,normal))continue;
+            // Outward retreat from an existing overlap is legal; entering any solid face is not.
+            if(mesh->Contact(oldX,oldY,radius_,movement.FeetZ(),movement.FeetZ()+movement.BodyHeight()) &&
+                (x-oldX)*normal[0]+(y-oldY)*normal[1]>.001f)continue;
+            Blocked("surf-solid-mesh",x,y,oldX,oldY,bottom,box.maximum[2]);return false;
+        }
         // Height-aware solid volumes prevent flying through buildings/trees, while low props can be cleared.
         if (Overlaps(box, x, y, radius_) && box.maximum[2] > bottom + .01f && box.minimum[2] < top) {
             // Recover from existing overlap only while approaching an exit; never deepen it or enter a new solid.
@@ -99,11 +113,15 @@ bool ClassicWarcraftCollision::Clear(float x, float y, float oldX, float oldY, c
         if (wc3::WalkableSurface(px, py, deck) && deck <= bottom + .01f) continue;
         if(MovementWater::Passable(px,py,movement))continue;
         bool knownObject = false;
-        for (const auto& box : obstacles) if (Overlaps(box, px, py, radius_) &&
+        for(size_t index=0;index<obstacles.size();++index) {
+            const auto& box=obstacles[index];
+            if(index<surfMeshes_.size() && surfMeshes_[index] && ModelSurfContact::PathCell(box,px,py)){knownObject=true;continue;}
+            if (Overlaps(box, px, py, radius_) &&
             (box.maximum[2] <= bottom + .01f ||
             // Native footprints can exceed the mesh: allow the trailing foot samples to clear a nearby
             // known solid while retreating. The solid-volume check above still rejects entering its mesh.
             (Overlaps(box,oldX,oldY,radius_*2) && ExitDistance(box,x,y,radius_)<ExitDistance(box,oldX,oldY,radius_)-.001f))) knownObject = true;
+        }
         if (knownObject) continue;
         // Native cliff cells block walkers even above an edge. Recognize their cliff-level discontinuity,
         // keeping flat unknown blockers closed rather than disabling pathing for every jump.
@@ -150,14 +168,32 @@ void ClassicWarcraftCollision::Move(wc3::Handle unit, MovementPhysics& movement,
     originalX=x;originalY=y;
     float minX=bounds.minX,maxX=bounds.maxX,minY=bounds.minY,maxY=bounds.maxY;
     float dx = movement.VelocityX() * dt, dy = movement.VelocityY() * dt;
-    auto obstacles = obstacles_.Snapshot(unit, x, y, 600 + std::hypot(dx, dy),movement.NativeUnitCollision());
+    auto range=ModelSurfContact::Range(movement);
+    auto obstacles = obstacles_.Snapshot(unit, x, y, 600 + std::hypot(dx, dy),movement.NativeUnitCollision(),movement.SurfModelContacts(),false,range);
+    surfMeshes_.clear();
+    for(size_t index=0;index<obstacles.size();++index) {
+        const auto* mesh=obstacles_.Geometry(index);
+        surfMeshes_.push_back(mesh && mesh->HasSurface(range) ? mesh : nullptr);
+    }
+    // Imported surf ramps have real undersides too; scope head clipping to these eligible meshes.
+    auto ceiling=[&](float px,float py) {
+        for(const auto* mesh:surfMeshes_)if(mesh) {
+            float height=0;if(mesh->Ceiling(px,py,radius_,movement.PreviousFeetZ(),height))movement.ClipHead(height-.01f);
+        }
+    };
+    ceiling(x,y);
     auto support=[&]() {
         float floor=Floor(x,y,movement,obstacles);
-        if(!TerrainSurfContact::OwnsFloor(x,y,radius_,floor,movement))movement.ResolveClassicFloor(floor);
+        if(!ModelSurfContact::OwnsFloor(x,y,radius_,floor,movement,surfMeshes_) &&
+            !TerrainSurfContact::OwnsFloor(x,y,radius_,floor,movement))movement.ResolveClassicFloor(floor);
     };
     if (std::hypot(dx,dy)<.001f) {
         // Standing still needs floor resolution, but no collision rejection or blocked-movement telemetry.
-        support();TerrainSurfContact::Resolve(x,y,radius_,movement,obstacles);MovementWater::Update(unit,movement);return;
+        support();
+        auto before=movement;
+        bool contact=ModelSurfContact::Resolve(x,y,radius_,movement,surfMeshes_) || TerrainSurfContact::Resolve(x,y,radius_,movement,obstacles);
+        if(contact && !Clear(x,y,x,y,movement,obstacles))movement=before;
+        MovementWater::Update(unit,movement);return;
     }
     // The vertical integrator may have just reached the floor at the current XY. Settle that
     // existing classic contact before testing the first horizontal step, not after clipping it.
@@ -165,9 +201,11 @@ void ClassicWarcraftCollision::Move(wc3::Handle unit, MovementPhysics& movement,
     auto settle=[&](float targetX,float targetY,float fromX,float fromY) {
         // A rejected candidate must not leave its height/ground state behind at the old XY.
         auto before=movement;
-        bool landed=TerrainSurfContact::Resolve(targetX,targetY,radius_,movement,obstacles) || RampContact(targetX,targetY,movement,obstacles);
+        ceiling(targetX,targetY);
+        if(!ModelSurfContact::Resolve(targetX,targetY,radius_,movement,surfMeshes_) &&
+            !TerrainSurfContact::Resolve(targetX,targetY,radius_,movement,obstacles))RampContact(targetX,targetY,movement,obstacles);
         if(Clear(targetX,targetY,fromX,fromY,movement,obstacles))return true;
-        if(landed)movement=before;return false;
+        movement=before;return false;
     };
     settle(x,y,x,y);
     dx=movement.VelocityX()*dt;dy=movement.VelocityY()*dt;

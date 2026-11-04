@@ -42,7 +42,7 @@ bool Read(uintptr_t sprite,ModelTransform& transform){transform.position[0]=spri
 void GameAudio::Play(const char*,float){++sounds;}
 void GameAudio::SetLoop(const char*,bool,float){}
 // Combat must retain coarse cover snapshots when movement opts into static mesh detail.
-std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,bool nativeCollision,bool detailed,bool){assert(!detailed);collisionFilters.push_back(nativeCollision);return cover;}
+std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,bool nativeCollision,bool detailed,bool,MeshSurfaceRange){assert(!detailed);collisionFilters.push_back(nativeCollision);return cover;}
 int main() {
     _set_error_mode(_OUT_TO_STDERR);
     wc3::CreateTimer=[]()->wc3::Handle{return 1;};wc3::TimerStart=[](wc3::Handle,float*,BOOL,wc3::Handle){};

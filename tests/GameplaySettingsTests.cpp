@@ -17,10 +17,10 @@ int main() {
     GameplaySettings settings;
     // Startup and F8 share finite surf bounds and retain an explicit disabled preference.
     const auto surfPath=(std::filesystem::current_path()/"surf-validation.ini").string();
-    assert(settings.movement.surf.enabled && settings.movement.surf.maximumAngle==80 && settings.movement.surf.contactDistance==8);
-    {std::ofstream f(surfPath);f<<"[Surfing]\nEnabled=false\nMaximumAngle=70\nContactDistance=4\n";}
+    assert(settings.movement.surf.enabled && settings.movement.surf.modelContacts && settings.movement.surf.maximumAngle==80 && settings.movement.surf.contactDistance==8);
+    {std::ofstream f(surfPath);f<<"[Surfing]\nEnabled=false\nModelContacts=false\nMaximumAngle=70\nContactDistance=4\n";}
     auto surf=GameplaySettings::Load(surfPath).movement.surf;
-    assert(!surf.enabled && surf.maximumAngle==70 && surf.contactDistance==4);
+    assert(!surf.enabled && !surf.modelContacts && surf.maximumAngle==70 && surf.contactDistance==4);
     {std::ofstream f(surfPath);f<<"[Surfing]\nEnabled=bad\nMaximumAngle=nan\nContactDistance=inf\n";}
     surf=GameplaySettings::Load(surfPath).movement.surf;
     assert(surf.enabled && surf.maximumAngle==80 && surf.contactDistance==8);
