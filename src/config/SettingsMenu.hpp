@@ -8,8 +8,8 @@
 // A small draft and bounded input mailbox keep UI editing separate from the live gameplay snapshot.
 class SettingsMenu {
 public:
-    static constexpr int Rows=8;
-    enum Row {Sensitivity,ScopeSensitivity,Volume,Physics,ViewDistance,SkyVisible,SkyMode,SkyPreset};
+    static constexpr int Rows=9;
+    enum Row {Sensitivity,ScopeSensitivity,Volume,Physics,ViewDistance,FieldOfView,SkyVisible,SkyMode,SkyPreset};
     enum class Kind {Toggle,Cancel,Apply,Defaults,Select,Navigate,Adjust,Slide};
     struct Event {Kind kind;int row=-1;float value=0;};
     using SkyList=std::function<std::vector<std::string>()>;
@@ -21,11 +21,11 @@ public:
     // Successful saves return true so the application can reuse the existing validated F8 apply path.
     bool Update(const GameplaySettings& settings,char tileset,const SkyList& list,const Save& save);
     int Selected() const {return selected_;}
-    bool Dirty() const {return values_!=initial_;}
+    bool Dirty() const {return values_!=initial_ || warcraftPreset_!=initialWarcraftPreset_;}
     const std::string& Error() const {return error_;}
-    static const char* Label(int row);
-    static const char* Hint(int row);
-    static bool Numeric(int row){return row==Sensitivity || row==ScopeSensitivity || row==Volume || row==ViewDistance;}
+    const char* Label(int row) const;
+    const char* Hint(int row) const;
+    static bool Numeric(int row){return row==Sensitivity || row==ScopeSensitivity || row==Volume || row==ViewDistance || row==FieldOfView;}
     float Fraction(int row) const;
     std::string Value(int row) const;
 private:
@@ -37,6 +37,7 @@ private:
     std::vector<std::string> skies_;
     bool csAvailable_=true;
     std::string savedSky_;
+    int warcraftPreset_=0,initialWarcraftPreset_=0; // Native and private CS choices survive draft type switches independently.
     std::vector<Event> events_;
     std::string error_;
 };

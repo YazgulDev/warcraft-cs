@@ -1,0 +1,9 @@
+- Added active in-map portals with synchronized camera and floor recovery.
+- Changed AWP, G3SG1, HE and Tau stock damage and added native enemy exploded deaths for Gluon, Tau and RPG on Warcraft 1.26a.
+- Added owned-resource Crowbar to the starting kit by default.
+- Added horizontal field of view to F2 settings, from 60 to 120 degrees with an 85-degree default.
+- Added Warcraft sky preset selection for summer, autumn, winter, Felwood, Dalaran and automatic map skies.
+- Added independent Warcraft and CS sky choices with authored map restoration across view and visibility changes.
+- Changed default Bunnyhop takeoff boost to 15 percent and air acceleration to 30 with a default maximum speed of 3000 GoldSrc units per second.
+- Preserved saved custom tuning and versioned legacy movement choices during updates.
+- Fixed false Bunnyhop speed loss at smooth hill crests in classic movement while retaining existing collision and jump rules.

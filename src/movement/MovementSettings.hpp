@@ -1,11 +1,14 @@
 #pragma once
 #include "SwimmingSettings.hpp"
+#include "SurfSettings.hpp"
 
 // GoldSrc units are converted only by physics; collision uses Warcraft world units.
 struct MovementSettings {
     SwimmingSettings swimming;
+    SurfSettings surf;
     // Classic is the requested default; recovery and hull remain selectable without resetting motion.
     bool classicCollision=true;
+    bool classicRampContacts=true; // Airborne contact with a verified walkable ramp becomes floor contact, not an axis stop.
     bool platformRecovery=false;
     // Live creature footprints replace oversized visual extents; solid buildings/trees keep model geometry.
     bool useNativeUnitCollision=true;
@@ -19,10 +22,10 @@ struct MovementSettings {
     float unitMoveSpeedReference=300;
     bool bunnyHop = true;
     bool autoJump = true;
-    // Classic strafing supplies the default gain; a separate arcade takeoff boost remains optional.
-    float jumpBoostPercent = 0;
-    float maxBunnySpeed = 1000;
-    float airAcceleration = 10;
+    // Faster default takeoff/air gain; configurable zero boost retains pure classic strafing.
+    float jumpBoostPercent = 15;
+    float maxBunnySpeed = 3000; // GoldSrc units/s; horizontal world-speed cap is scaled once by physics.
+    float airAcceleration = 30;
     float jumpSpeed = 268.328f;
     float gravity = 800;
     float stepHeight = 27;

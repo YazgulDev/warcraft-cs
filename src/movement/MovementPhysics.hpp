@@ -31,6 +31,14 @@ public:
     float WaterExitReach() const {return settings_.swimming.exitReach;}
     void ResolveFloor(float floor);
     void ResolveClassicFloor(float floor);
+    bool ResolveClassicRamp(const MovementSurface& surface);
+    bool ResolveSurf(const MovementSurface& surface);
+    void FinishMove(); // Confirm an actual takeoff only after collision has accepted the frame.
+    bool Surfing() const {return surfing_;}
+    bool SurfEnabled() const {return settings_.surf.enabled;}
+    bool SurfModelContacts() const {return settings_.surf.enabled && settings_.surf.modelContacts && settings_.objectMeshCollision;}
+    float SurfMaximumAngle() const {return settings_.surf.maximumAngle;}
+    float SurfContactDistance() const {return settings_.surf.contactDistance;}
     void ResolveSurface(const MovementSurface& surface);
     void ClipHead(float ceiling);
     void SlideHorizontal(float nx,float ny);
@@ -50,6 +58,7 @@ public:
     bool ObjectMeshCollision() const { return settings_.objectMeshCollision; }
     bool PlatformRecovery() const {return settings_.platformRecovery;}
     bool ClassicCollision() const {return settings_.classicCollision;}
+    bool ClassicRampContacts() const {return settings_.classicRampContacts;}
     bool RecoverInvalidPosition() const {return settings_.recoverInvalidPosition;}
     float RecoveryDistance() const {return settings_.recoveryDistance;}
     // Emergency placement discards fall velocity without changing stance, tuning or held-jump state.
@@ -69,4 +78,6 @@ private:
     float previousDuck_ = 0;
     MovementSettings settings_;
     bool grounded_ = true, jumpHeld_ = false, jumpSuppressed_ = false;
+    bool surfing_=false;
+    float pendingJumpBoost_=0;
 };

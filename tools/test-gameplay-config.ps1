@@ -14,13 +14,23 @@ foreach($required in @('Enabled=false','MinimumDepth=144','SpeedPercent=42','Flo
 }
 $waterHash=(Get-FileHash $waterFile).Hash;Update-GameplayConfig $template $waterFile
 if((Get-FileHash $waterFile).Hash -ne $waterHash){throw 'Swimming preferences changed during repeated update.'}
+# Portal tuning, starting-kit opt-outs and per-field energy opt-backs survive a real repeated install.
+$portalFile=Join-Path $folder 'portal-heavy.ini'
+@('[Portals]','Enabled=false','Radius=99','HeightTolerance=77','CooldownSeconds=2.25','[Loadout]','Crowbar=false','[Combat]','ExplosiveWeaponDeaths=false','[TauCannon]','Damage=20','DamageVersion=3','ChargedDamage=200','ChargedDamageVersion=2','[AWP]','Damage=777','HeroMultiplier=1.7') | Set-Content -LiteralPath $portalFile -Encoding ascii
+Update-GameplayConfig $template $portalFile
+$portalText=Get-Content -LiteralPath $portalFile -Raw
+foreach($required in @('Enabled=false','Radius=99','HeightTolerance=77','CooldownSeconds=2.25','Crowbar=false','ExplosiveWeaponDeaths=false','Damage=20','ChargedDamage=200','ChargedDamageVersion=2','Damage=777','HeroMultiplier=1.7')) {
+    if(!$portalText.Contains($required)){throw "Portal/heavy update lost $required"}
+}
+$portalHash=(Get-FileHash $portalFile).Hash;Update-GameplayConfig $template $portalFile
+if((Get-FileHash $portalFile).Hash -ne $portalHash){throw 'Portal/heavy preferences changed during repeated update.'}
 # Previous energy stock values upgrade once; later edits back to those values must survive reinstallation.
 foreach($custom in @($false,$true)) {
     $energyConfig=Join-Path $folder ('energy-'+$custom+'.ini')
     @('[TauCannon]',$(if($custom){'Damage=123'}else{'Damage=20'}),'ChargedDamage=200','[GluonGun]','Damage=14','[HalfLife]','BeamWidth=8','[Combat]','EnableAttackEffects=true') | Set-Content $energyConfig
     Update-GameplayConfig $template $energyConfig
     $energyText=Get-Content $energyConfig -Raw
-    foreach($expected in @($(if($custom){'Damage=123'}else{'Damage=100'}),'ChargedDamage=1000','Damage=70','BeamWidth=8','NativeAttackSound=false','OwnedSprites=true','DamageVersion=2')) {
+    foreach($expected in @($(if($custom){'Damage=123'}else{'Damage=200'}),'ChargedDamage=2000','Damage=70','BeamWidth=8','NativeAttackSound=false','OwnedSprites=true','DamageVersion=2')) {
         if(!$energyText.Contains($expected)){throw "Energy migration missing $expected"}
     }
     $energyHash=(Get-FileHash $energyConfig).Hash;Update-GameplayConfig $template $energyConfig
@@ -112,11 +122,15 @@ $hudHash=(Get-FileHash -LiteralPath $hudConfig).Hash;Update-GameplayConfig $temp
 if((Get-FileHash -LiteralPath $hudConfig).Hash -ne $hudHash){throw 'Unit HUD migration is not idempotent.'}
 # Fresh defaults use 5000, while explicit saved distances and hover opt-outs survive repeated upgrades.
 $distance=Join-Path $folder 'distance-hover.ini'
-@('[Rendering]','DrawDistance=7000','[UnitView]','HideHoverCircles=false') | Set-Content -LiteralPath $distance -Encoding ascii
+@('[Rendering]','DrawDistance=7000','FieldOfView=106','[UnitView]','HideHoverCircles=false') | Set-Content -LiteralPath $distance -Encoding ascii
 Update-GameplayConfig $template $distance
 $distanceText=Get-Content -LiteralPath $distance -Raw
 if(!$distanceText.Contains('DrawDistance=7000') -or !$distanceText.Contains('HideHoverCircles=false')){throw 'Saved visibility preferences overwritten.'}
 if(!(Get-Content -LiteralPath $template -Raw).Contains('DrawDistance=5000')){throw 'Fresh distance default is not 5000.'}
+# FOV is additive and idempotent: preserve the user's saved angle while fresh/missing keys receive 85.
+if(!$distanceText.Contains('FieldOfView=106') -or !(Get-Content -LiteralPath $template -Raw).Contains('FieldOfView=85')){throw 'Saved/fresh FOV preference lost.'}
+$fovHash=(Get-FileHash -LiteralPath $distance).Hash;Update-GameplayConfig $template $distance
+if((Get-FileHash -LiteralPath $distance).Hash -ne $fovHash){throw 'FOV config merge is not idempotent.'}
 . (Join-Path $root 'setup/installation-profile.ps1')
 # Only an explicit setup choice replaces the profile; ordinary F8/default migrations preserve it.
 $profile=Join-Path $folder 'profile.ini'
@@ -170,7 +184,7 @@ $config=Join-Path $folder 'legacy.ini'
 # Updates append missing keys inside existing sections while retaining all custom values.
 Update-GameplayConfig $template $config
 $text=Get-Content -LiteralPath $config -Raw
-foreach ($required in @('AmmoPercent=37','Price=0','Damage=81','FriendlyFirePercent=25','AWPOneShot=false','BombCount=0','Access=anywhere','AmmoPrice=80','CSVolumePercent=100','Detailed=true','IntervalMs=1000','MaxFileMB=8','ArchiveCount=3','JumpBoostPercent=0','AutoJump=true','MaxFPS=144','DrawDistance=5000','HideHoverCircles=true')) {
+foreach ($required in @('AmmoPercent=37','Price=0','Damage=81','FriendlyFirePercent=25','AWPOneShot=false','BombCount=0','Access=anywhere','AmmoPrice=80','CSVolumePercent=100','Detailed=true','IntervalMs=1000','MaxFileMB=8','ArchiveCount=3','JumpBoostPercent=15','AirAcceleration=30','WarcraftPreset=auto','AutoJump=true','ClassicRampContacts=true','MaxFPS=144','DrawDistance=5000','FieldOfView=85','HideHoverCircles=true')) {
     if (!$text.Contains($required)) { throw "Missing/patched preference: $required" }
 }
 if ([regex]::Matches($text,'(?m)^\[AK47\]').Count -ne 1) { throw 'Duplicate section can hide new INI keys.' }
@@ -271,10 +285,10 @@ foreach($key in @('Mode=classic','ObjectMeshCollision=true','RecoverInvalidPosit
 # Movement upgrades retain personal jump tuning and add missing siblings exactly once.
 # Collision geometry defaults join old configs without changing explicit radius/slope preferences.
 $customMovement=Join-Path $folder 'custom-movement.ini'
-@('[Movement]','Mode=classic','JumpBoostPercent=15','AutoJump=false','UseNativeUnitCollision=false','MaxWalkSlope=51','HullRadius=17','ObjectMeshCollision=false','RecoverInvalidPosition=false','RecoveryDistance=777','[Shortcuts]','RecoverPosition=NONE','[Damage]','FriendlyFirePercent=0') | Set-Content -LiteralPath $customMovement -Encoding ascii
+@('[Movement]','Mode=classic','ClassicRampContacts=false','JumpBoostPercent=15','AutoJump=false','UseNativeUnitCollision=false','MaxWalkSlope=51','HullRadius=17','ObjectMeshCollision=false','RecoverInvalidPosition=false','RecoveryDistance=777','[Shortcuts]','RecoverPosition=NONE','[Damage]','FriendlyFirePercent=0') | Set-Content -LiteralPath $customMovement -Encoding ascii
 Update-GameplayConfig $template $customMovement
 $movementText=Get-Content -LiteralPath $customMovement -Raw
-foreach ($required in @('Mode=classic','JumpBoostPercent=15','AutoJump=false','UseNativeUnitCollision=false','FriendlyFirePercent=0','MaxBunnySpeed=1000','Gravity=800','BunnyHop=true','MaxWalkSlope=51','HullRadius=17','ObjectMeshCollision=false','RecoverInvalidPosition=false','RecoveryDistance=777','RecoverPosition=NONE')) {
+foreach ($required in @('Mode=classic','ClassicRampContacts=false','JumpBoostPercent=15','AutoJump=false','UseNativeUnitCollision=false','FriendlyFirePercent=0','MaxBunnySpeed=3000','Gravity=800','BunnyHop=true','MaxWalkSlope=51','HullRadius=17','ObjectMeshCollision=false','RecoverInvalidPosition=false','RecoveryDistance=777','RecoverPosition=NONE')) {
     if (!$movementText.Contains($required)) { throw "Movement migration replaced or omitted: $required" }
 }
 if ([regex]::Matches($movementText,'(?m)^\[Movement\]').Count -ne 1) { throw 'Movement section was duplicated.' }
@@ -558,12 +572,12 @@ foreach($bloodCase in @(@('1','16','48'),@('2','16','16'),@('1','7','7'))) {
 }
 
 # Only former unversioned stock HE upgrades. Later returns to 100 and custom damage/flash opt-outs survive.
-foreach($case in @(@('100','','600'),@('100','1','600'),@('300','2','600'),@('300','3','300'),@('100','2','100'),@('0','','0'),@('777','','777'))) {
+foreach($case in @(@('100','','1200'),@('100','1','1200'),@('300','2','1200'),@('300','3','300'),@('100','2','100'),@('0','','0'),@('777','','777'),@('600','4','600'))) {
     $heConfig=Join-Path $folder ('he-damage-'+[guid]::NewGuid().ToString('N')+'.ini')
     @('[HEGrenade]',('Damage='+$case[0]),$(if($case[1]){'DamageVersion='+$case[1]}),'[Flashbang]','StunAllUnits=false','StunDistanceFalloff=true','UnitStunSeconds=4','[Movement]','Mode=classic') | Set-Content -LiteralPath $heConfig -Encoding ascii
     Update-GameplayConfig $template $heConfig
     $heText=Get-Content $heConfig -Raw
-    foreach($expected in @(('Damage='+$case[2]),'DamageVersion=3','StunAllUnits=false','StunDistanceFalloff=true','UnitStunSeconds=4','Mode=classic')) {
+    foreach($expected in @(('Damage='+$case[2]),'DamageVersion=4','StunAllUnits=false','StunDistanceFalloff=true','UnitStunSeconds=4','Mode=classic')) {
         if(!$heText.Contains($expected)){throw ('HE/flash migration lost '+$expected)}
     }
     $heHash=(Get-FileHash $heConfig).Hash;Update-GameplayConfig $template $heConfig
@@ -574,7 +588,13 @@ foreach($case in @(@('100','','600'),@('100','1','600'),@('300','2','600'),@('30
 foreach($spec in @(
     @('RPG','Damage','DamageVersion',2,'100','1800'),
     @('RPG','Radius','BlastVersion',4,'600','1000'),
-    @('HEGrenade','Damage','DamageVersion',3,'300','600'),
+    @('HEGrenade','Damage','DamageVersion',4,'600','1200'),
+    @('AWP','Damage','DamageVersion',2,'115','230'),
+    @('AWP','HeroMultiplier','MultiplierVersion',2,'3','6'),
+    @('G3SG1','Damage','DamageVersion',2,'80','160'),
+    @('G3SG1','HeroMultiplier','MultiplierVersion',2,'2.2','4.4'),
+    @('TauCannon','Damage','DamageVersion',3,'100','200'),
+    @('TauCannon','ChargedDamage','ChargedDamageVersion',2,'1000','2000'),
     @('M3','HeroMultiplier','MultiplierVersion',2,'3','6'),
     @('XM1014','HeroMultiplier','MultiplierVersion',2,'2.4','4.8'))) {
     foreach($saved in @($spec[4],'0','777')) {
@@ -701,3 +721,37 @@ foreach($case in @(@('PUTINMOLODEC','warneverchanges'),@('putinmolodec','warneve
     if((Get-FileHash $codeFile).Hash -ne $once){throw 'Nuclear code migration repeats.'}
 }
 Write-Output 'PASS nuclear grant code rename, saved custom codes and repeated installation.'
+
+# Stock bunnyhop upgrades once; explicit opt-backs and independent custom values survive repeated installs.
+foreach($case in @(@(0,10,1,15,30),@(0,10,2,0,10),@(7,21,1,7,21))) {
+    $hopFile=Join-Path $folder ('hop-'+[Guid]::NewGuid().ToString('N')+'.ini')
+    @('[Movement]',('JumpBoostPercent='+$case[0]),('AirAcceleration='+$case[1]),('JumpBoostVersion='+$case[2]),('AirAccelerationVersion='+$case[2]),'[Sky]','WarcraftPreset=dalaran') | Set-Content $hopFile
+    Update-GameplayConfig $template $hopFile
+    $hopText=Get-Content $hopFile -Raw
+    foreach($value in @(('JumpBoostPercent='+$case[3]),('AirAcceleration='+$case[4]),'WarcraftPreset=dalaran')){if(!$hopText.Contains($value)){throw "Lost movement/sky choice: $value"}}
+    $hopHash=(Get-FileHash $hopFile).Hash;Update-GameplayConfig $template $hopFile
+    if((Get-FileHash $hopFile).Hash -ne $hopHash){throw 'Movement/sky merge repeats.'}
+}
+Write-Output 'PASS faster stock movement, independent explicit opt-backs and native sky preservation.'
+
+# A former stock speed cap upgrades once while custom and current-version legacy caps remain deliberate.
+foreach($case in @(@(1000,1,3000),@(1000,2,1000),@(2000,1,2000),@(777,2,777))) {
+    $capFile=Join-Path $folder ('speed-cap-'+[Guid]::NewGuid().ToString('N')+'.ini')
+    @('[Movement]',('MaxBunnySpeed='+$case[0]),('MaxBunnySpeedVersion='+$case[1]),'AirAcceleration=30','AirAccelerationVersion=2','JumpBoostPercent=15','JumpBoostVersion=2') | Set-Content $capFile
+    Update-GameplayConfig $template $capFile
+    $capText=Get-Content $capFile -Raw
+    foreach($value in @(('MaxBunnySpeed='+$case[2]),'AirAcceleration=30','JumpBoostPercent=15')){if(!$capText.Contains($value)){throw "Lost speed/acceleration choice: $value"}}
+    $capHash=(Get-FileHash $capFile).Hash;Update-GameplayConfig $template $capFile
+    if((Get-FileHash $capFile).Hash -ne $capHash){throw 'Speed-cap migration repeats.'}
+}
+Write-Output 'PASS 3000 stock speed cap, custom caps, explicit legacy opt-back and unchanged acceleration.'
+
+# New surf controls fill missing keys and retain saved opt-outs/angles on repeated installs.
+$surfFile=Join-Path $folder 'surf.ini'
+@('[Movement]','Mode=classic','[Surfing]','Enabled=false','MaximumAngle=70','ContactDistance=4','ModelContacts=false') | Set-Content $surfFile
+Update-GameplayConfig $template $surfFile
+$surfText=Get-Content $surfFile -Raw
+foreach($value in @('Mode=classic','[Surfing]','Enabled=false','MaximumAngle=70','ContactDistance=4','ModelContacts=false')){if(!$surfText.Contains($value)){throw "Lost surf choice: $value"}}
+$surfHash=(Get-FileHash $surfFile).Hash;Update-GameplayConfig $template $surfFile
+if((Get-FileHash $surfFile).Hash -ne $surfHash){throw 'Surf configuration merge repeats.'}
+Write-Output 'PASS surf defaults insertion, custom tuning, opt-out and idempotence.'

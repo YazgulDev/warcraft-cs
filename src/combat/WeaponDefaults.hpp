@@ -9,7 +9,7 @@ inline const std::array<Weapon,WeaponSlots::Count> Weapons={{
     {"AK47", "ak47-1.wav", 30, 90, 36, 0.100f, 2.45f, 3000, true},
     {"M4A1", "m4a1_unsil-1.wav", 30, 90, 33, 0.0875f, 3.05f, 3000, true}, // Original CS firing interval.
     {"USP", "usp_unsil-1.wav", 12, 100, 34, 0.150f, 2.70f, 2200, false},
-    {"AWP", "awp1.wav", 10, 30, 115, 1.45f, 2.90f, 4000, false},
+    {"AWP", "awp1.wav", 10, 30, 230, 1.45f, 2.90f, 4000, false}, // Fixed stock damage doubled alongside native-mode scaling.
     {"KNIFE", "knife_slash1.wav", 0, 0, 40, 0.50f, 0, 150, false},
     // C4 occupies slot 6; the sword has no ammunition and reaches farther than the knife.
     {"C4", "c4_plant.wav", 1, 0, 2500, 0, 0, 800, false},
@@ -23,19 +23,19 @@ inline const std::array<Weapon,WeaponSlots::Count> Weapons={{
     {"M3", "m3-1.wav", 8, 32, 104, .875f, 4.5f, 1200, false},
     {"XM1014", "xm1014-1.wav", 7, 32, 80, .25f, 3.5f, 1200, true},
     // Fixed blast metadata matches the configurable damage snapshot used by native explosions.
-    {"HE GRENADE","hegrenade-1.wav",1,0,600,0,0,350,false},
+    {"HE GRENADE","hegrenade-1.wav",1,0,1200,0,0,350,false},
     {"FLASHBANG","flashbang-1.wav",2,0,0,0,0,1000,false},
     {"SMOKE GRENADE","sg_explode.wav",1,0,0,0,0,300,false},
     {"RPG","hl_rpg_fire.wav",1,5,1800,1.5f,2,30000,false},
     // Energy cells feed the weapon directly: these two guns never use magazine reloads.
     {"CROWBAR","hl_cbar_miss1.wav",0,0,10,.5f,0,150,true},
-    {"TAU CANNON","hl_gauss2.wav",100,0,20,.2f,0,30000,false},
+    {"TAU CANNON","hl_gauss2.wav",100,0,200,.2f,0,30000,false},
     {"GLUON GUN","hl_egon_run3.wav",100,0,14,.1f,0,30000,true},
     // Owned CS models supply draw/fire/reload clips; these rounds share the ordinary firearm path.
     {"TMP","tmp-1.wav",30,120,20,.07f,2.125f,2500,true},
     {"UMP45","ump45-1.wav",25,100,30,.1f,3.5f,2500,true},
     {"FAMAS","famas-1.wav",25,90,30,.0825f,3.3f,3000,true},
     {"GALIL","galil-1.wav",35,90,30,.0875f,2.45f,3000,true},
-    {"G3SG1","g3sg1-1.wav",20,90,80,.25f,4.7f,4000,true}
+    {"G3SG1","g3sg1-1.wav",20,90,160,.25f,4.7f,4000,true}
 }};
 }

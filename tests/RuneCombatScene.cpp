@@ -6,6 +6,7 @@
 #include "../src/platform/WeaponTargetFilter.hpp"
 #include "../src/platform/UnitCollisionProfile.hpp"
 #include "../src/platform/SpriteTransform.hpp"
+#include "../src/platform/NativeRegistry.hpp"
 #include <fstream>
 #include <sstream>
 #include <vector>
@@ -48,9 +49,9 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
     // A disposable per-render audit distinguishes physical placement jumps from cached camera latency.
     if(BackgroundGameplay::Enabled() && controller.Visible() && GetTickCount()<motionUntil) {
         LARGE_INTEGER clock;QueryPerformanceCounter(&clock);auto actor=controller.TestUnit();
-        wc3::Log("fixture motion clock=%lld x=%.5f y=%.5f feet=%.5f speed=%.5f eyeX=%.5f eyeY=%.5f eyeZ=%.5f wantedZ=%.5f",
+        wc3::Log("fixture motion clock=%lld x=%.5f y=%.5f feet=%.5f speed=%.5f eyeX=%.5f eyeY=%.5f eyeZ=%.5f wantedZ=%.5f surf=%d",
             clock.QuadPart,wc3::Real(wc3::GetUnitX(actor)),wc3::Real(wc3::GetUnitY(actor)),controller.ActorFeet(),controller.DisplaySpeed(),
-            wc3::Real(wc3::GetCameraEyePositionX()),wc3::Real(wc3::GetCameraEyePositionY()),wc3::Real(wc3::GetCameraEyePositionZ()),controller.ViewEyeZ());
+            wc3::Real(wc3::GetCameraEyePositionX()),wc3::Real(wc3::GetCameraEyePositionY()),wc3::Real(wc3::GetCameraEyePositionZ()),controller.ViewEyeZ(),controller.TestSurfing());
     }
     if ((!controller.Visible() && !BackgroundGameplay::Enabled()) || GetTickCount()-check<250) return;
     check=GetTickCount();auto unit=controller.TestUnit();
@@ -254,6 +255,17 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
             InputDispatcher dispatcher(controller);controller.TestInputRoute(true);
             for(unsigned char c:typedLine)dispatcher.Handle(GetActiveWindow(),WM_CHAR,c,0,true);controller.TestInputRoute(false);
         }
+        else if(BackgroundGameplay::Enabled() && command=="courseinspect") {
+            // Read the authored map's copied state through the public native, never its JASS globals.
+            using Value=int (__cdecl*)(wc3::Handle);
+            auto value=reinterpret_cast<Value>(NativeRegistry::Resolve(base,"GetUnitUserData","(Hunit;)I"));
+            using UI=uintptr_t (__fastcall*)(int,int);
+            auto ui=reinterpret_cast<UI>(base+0x300710)(0,0);int menu=0,modal=0;
+            Read(ui+0x258,menu);Read(ui+0x260,modal);
+            wc3::Log("fixture course ready visible=%d menu=%d modal=%d picked=%08X",controller.Visible(),menu,modal,wc3::PickOwnedUnit());
+            wc3::Log("fixture course available=%d state=%d x=%.3f y=%.3f feet=%.3f",value!=nullptr,value ? value(unit) : -1,
+                wc3::Real(wc3::GetUnitX(unit)),wc3::Real(wc3::GetUnitY(unit)),controller.ActorFeet());
+        }
         else if(BackgroundGameplay::Enabled() && command=="nuclearinspect") {
             wc3::Log("fixture nuclear textOpen=%d selected=%d active=%d remaining=%.2f age=%.2f serial=%u ammo=%d gold=%d speed=%.2f",controller.TextInputOpen(),controller.NuclearSelected(),controller.NuclearBomb().Active(),controller.NuclearBomb().Remaining(),controller.NuclearBomb().Age(),controller.ShotSerial(),controller.Ammo(),wc3::GetPlayerState(wc3::GetLocalPlayer(),1),controller.DisplaySpeed());
         }
@@ -308,6 +320,8 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
             // Values expose the actual applied snapshot, not merely the pending draft displayed by the menu.
             auto& s=controller.Settings();wc3::Log("fixture settings open=%d dirty=%d sensitivity=%.3f scope=%.3f volume=%.1f draw=%.0f classic=%d recovery=%d sky=%d csSky=%d preset=%s visible=%d ammo=%d serial=%u",
                 controller.SettingsPanel().Open(),controller.SettingsPanel().Dirty(),s.mouse.sensitivity,s.mouse.scopeSensitivity,s.csVolumePercent,s.render.drawDistance,s.movement.classicCollision,s.movement.platformRecovery,s.skyVisible,s.csSky,controller.SkyName().c_str(),controller.Visible(),controller.Ammo(),controller.ShotSerial());
+            // The native getter returns radians while the setter/config use degrees; compare like units.
+            wc3::Log("fixture camera fov configured=%.1f view=%.1f native=%.1f third=%d",s.render.fieldOfView,controller.ViewFov(),wc3::Real(wc3::GetCameraField(3))/.01745329252f,controller.ThirdPerson());
         }
         else if(BackgroundGameplay::Enabled() && command=="equip") {int slot=-1;input>>slot;controller.TestEquip(slot);}
         else if(BackgroundGameplay::Enabled() && command=="reload")controller.TestReload();

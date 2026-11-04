@@ -6,7 +6,8 @@ struct SettingsMenuLayout {
     enum class HitKind {None,Row,Minus,Plus,Slide,Apply,Cancel,Defaults};
     struct Hit {HitKind kind=HitKind::None;int row=-1;float fraction=0;};
     SettingsMenuLayout(int w,int h) {
-        width=w*.8f;height=h*.88f;x=(w-width)*.5f;y=(h-height)*.5f;rowY=y+height*.15f;row=height*.072f;
+        // Reserve the same total row area as the menu grows, leaving hints and action buttons clear.
+        width=w*.8f;height=h*.88f;x=(w-width)*.5f;y=(h-height)*.5f;rowY=y+height*.15f;row=height*.576f/SettingsMenu::Rows;
         minusX=x+width*.50f;plusX=x+width*.92f;buttonWidth=width*.035f;trackX=x+width*.55f;trackWidth=width*.34f;actionY=y+height*.85f;
     }
     float Fraction(float px) const {return (px-trackX)/trackWidth;}

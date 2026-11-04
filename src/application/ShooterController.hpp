@@ -16,6 +16,7 @@
 #include "../combat/GrenadeThrow.hpp"
 #include "../platform/NativeGrenades.hpp"
 #include "../platform/NativeRockets.hpp"
+#include "../platform/NativePortals.hpp"
 #include "../combat/Weapon.hpp"
 #include "../combat/WeaponSlots.hpp"
 #include "../platform/WarcraftApi.hpp"
@@ -188,7 +189,8 @@ public:
     std::string NearbyWeaponName() const {return nearbyWeapon_<0 ? "" : settings_.weapons[nearbyWeapon_].name;}
     float ViewYaw() const { return yaw_+(ThirdPerson() ? 0 : recoil_.Yaw())+nuclearBomb_.Shake()*nuclearExposure_; }
     float ViewPitch() const { return pitch_+(ThirdPerson() ? 0 : recoil_.Pitch())+nuclearBomb_.Shake()*nuclearExposure_*.5f; }
-    float ViewFov() const { return scopeLevel_==2 ? 10.0f : Scoped() ? 40.0f : 85.0f; }
+    // Camera, sky and aiming overlays share one FOV; third person never inherits an armed scope.
+    float ViewFov() const {return settings_.render.Fov(ThirdPerson() ? 0 : scopeLevel_);}
     const std::string& SkyName() const {
         const auto& choice=settings_.tilesetSky[static_cast<unsigned char>(mapTileset_)];
         return choice.empty() ? settings_.defaultSky : choice;
@@ -233,6 +235,7 @@ public:
 #if defined(WCS_STATUS_TEST) || defined(WCS_GAMEPLAY_TEST) || defined(WCS_TREE_WHEEL_TEST)
     // Expose the active unit only to the separate, opt-in native spell test build.
     wc3::Handle TestUnit() const { return Visible() ? unit_ : 0; }
+    bool TestSurfing() const {return movement_.Surfing();} // Opt-in native terrain oracle, excluded from Player builds.
 #endif
 #ifdef WCS_GAMEPLAY_TEST
     void TestWaterState() const {
@@ -298,6 +301,14 @@ public:
         // Read actual device cursors after release; a loop-stop log alone cannot prove that audio stopped.
         wc3::Log("fixture energy audio active=%d run=%llu windup=%llu off=%llu",energy_.Active(),
             audio_.SamplesPlayed("hl_egon_run3.wav"),audio_.SamplesPlayed("hl_egon_windup2.wav"),audio_.SamplesPlayed("hl_egon_off1.wav"));
+    }
+    void TestHeavyState() const {
+        if(!unit_)return;
+        // Copied native observations prove actual camera synchronization and starting ownership.
+        wc3::Log("fixture heavy actor x=%.3f y=%.3f feet=%.3f eye=%.3f cameraX=%.3f cameraY=%.3f cameraZ=%.3f crowbar=%d available=%d",
+            wc3::Real(wc3::GetUnitX(unit_)),wc3::Real(wc3::GetUnitY(unit_)),movement_.FeetZ(),ViewEyeZ(),
+            wc3::Real(wc3::GetCameraEyePositionX()),wc3::Real(wc3::GetCameraEyePositionY()),wc3::Real(wc3::GetCameraEyePositionZ()),
+            inventory_.owned[WeaponSlots::Crowbar],settings_.WeaponEnabled(WeaponSlots::Crowbar));
     }
     // Disposable scenes exercise the real weapon contact path without desktop mouse input.
     void TestStrike(int slot) {
@@ -373,6 +384,7 @@ private:
     GrenadeThrow grenadeThrow_;
     NativeGrenades grenades_;
     NativeRockets rockets_;
+    NativePortals portals_;
     bool rpgLaser_=true;
     float grenadePullSeconds_=1;
     void CancelPlant();
@@ -388,6 +400,7 @@ private:
     void ApplyMenuSettings();
     void ToggleHealthBars();
     void ResetLoadout();
+    void RebaseAfterTeleport();
     void Buy(int slot,bool ammunition);
     void UpdateBuyMenu();
     void UpdateWeaponSelection(DWORD now);

@@ -6,11 +6,21 @@
 #include <limits>
 #include <vector>
 
+// An empty range requests no special retention of native walkable model surfaces.
+struct MeshSurfaceRange {float minimumNormal=1,maximumNormal=0;};
+
 // Static object narrow phase. A cylinder touches surfaces at its own height, not the
 // enclosing box of a whole arch, column or staircase. No native movement rules live here.
 class CylinderMesh {
 public:
     std::vector<Triangle3> triangles;
+    bool HasSurface(MeshSurfaceRange range) const {
+        for(const auto& triangle:triangles) {
+            float normal[3];Normal(triangle,normal);
+            if(normal[2]>range.minimumNormal && normal[2]<range.maximumNormal)return true;
+        }
+        return false;
+    }
     CylinderMesh Transformed(const ModelTransform& transform) const {
         CylinderMesh result;result.triangles=triangles;
         for(auto& triangle:result.triangles)for(auto& point:triangle.vertices) {

@@ -151,7 +151,7 @@ limits and tuning to subsequent launches; live flights/clouds keep their snapsho
 | Each grenade: Capacity | 1 / 2 / 1 | 1–100 charges |
 | Price / AmmoPrice | above / above | 0–1000000 selected currency; one grenade per purchase |
 | MoveSpeed / ModelScale | 250 / .9 | 50–500 CS units/s / .25–2 model FOV scale |
-| HEGrenade: Damage / Radius | 600 / 350 | 0–1000000 fixed damage / 32–2000 world units |
+| HEGrenade: Damage / Radius | 1200 / 350 in the local heavy-weapon build | 0–1000000 fixed damage / 32–2000 world units |
 | Flashbang: Radius / BlindSeconds / UnitStunSeconds | 1000 / 3 / 2 | 32–3000 units / 0–10 s / 0–10 s |
 | SmokeGrenade: Radius / DurationSeconds / Opacity | 300 / 18 / .85 | 32–1000 units / 1–60 s / 0–1 |
 

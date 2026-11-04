@@ -25,6 +25,7 @@ static float JumpPeak(int fps) {
 static float StrafeSpeed(int fps, bool enabled = true, float acceleration = 10) {
     MovementPhysics movement; movement.Reset(0);
     MovementSettings settings; settings.bunnyHop = enabled; settings.airAcceleration = acceleration;
+    settings.jumpBoostPercent=0; // This oracle isolates classic air-strafe gain from the new takeoff bonus.
     movement.Configure(settings);
     MoveInput run; run.forward = 1;
     for (int frame = 0; frame < fps; ++frame) movement.Step(run, 1.0f / fps, 250);
@@ -89,8 +90,12 @@ int main() {
     Require(std::abs(slowed.Speed() - 187.5f) < 0.01f, "slow must persist while running");
     slowed.Step(jump, 1.0f / 60, 125); slowed.LimitSpeed(187.5f);
     Require(slowed.Speed() <= 187.51f, "jump/strafe must not bypass the slow's speed limit");
+    // The controller reapplies status caps after collision confirms a queued takeoff bonus.
+    slowed.FinishMove();slowed.LimitSpeed(187.5f);
+    Require(slowed.Speed()<=187.51f,"confirmed takeoff must retain the post-collision spell speed cap");
     // Straight hops retain the run-up; acceleration requires changing the airborne wish direction.
     MovementPhysics hopping; hopping.Reset(0);
+    MovementSettings classic;classic.jumpBoostPercent=0;classic.airAcceleration=10;hopping.Configure(classic);
     for (int frame = 0; frame < 60; ++frame) hopping.Step(forward, 1.f/60, 250);
     MoveInput hop = forward; hop.jump = true;
     for (int frame = 0; frame < 360; ++frame) { hopping.Step(hop, 1.f/60, 250); hopping.ResolveFloor(0); }
@@ -106,9 +111,77 @@ int main() {
     Require(StrafeSpeed(60, false) < 450, "disabling bunnyhop must remove accumulated excess speed on each takeoff");
     // A fresh forward jump must use the air-direction cap from its first frame, not ground acceleration.
     MovementPhysics launch; launch.Reset(0); MoveInput launchInput = forward; launchInput.jump = true;
+    launch.Configure(classic);
     launch.Step(launchInput, 1.f/30, 250);
     Require(launch.Speed() <= 45.01f, "takeoff must not grant a ground acceleration impulse");
-    // Existing custom arcade boosts remain opt-in and survive live tuning changes.
+    // Faster defaults increase takeoff speed and 144-Hz air acceleration without changing the vertical arc.
+    MovementPhysics fast,old;fast.Reset(0);old.Reset(0);old.Configure(classic);
+    for(int frame=0;frame<144;++frame){fast.Step(forward,1.f/144,250);old.Step(forward,1.f/144,250);}
+    fast.Step(hop,1.f/144,250);old.Step(hop,1.f/144,250);
+    fast.FinishMove();old.FinishMove();
+    Require(fast.Speed()>old.Speed()*1.14f && std::abs(fast.FeetZ()-old.FeetZ())<.001f,"stock takeoff gains 15 percent while jump height stays intact");
+    MovementSettings accelerated;accelerated.jumpBoostPercent=0;fast.Configure(accelerated);fast.Reset(0);old.Reset(0);
+    fast.Step(launchInput,1.f/144,250);old.Step(launchInput,1.f/144,250);
+    Require(fast.Speed()>old.Speed()*1.5f && fast.Speed()<=45.01f,"new air acceleration reaches the same wish cap faster");
+    // A fast rising body can collide with an uphill plane. Contact preserves XY speed but is
+    // bounded, cannot stick to a departing jump and obeys the classic-only compatibility switch.
+    MovementPhysics ramp;ramp.Reset(100);
+    for(int frame=0;frame<60;++frame)ramp.Step(forward,1.f/60,1000);
+    ramp.Step(hop,1.f/60,1000);auto rising=ramp;float retained=ramp.Speed();
+    MovementSurface contact;contact.height=ramp.FeetZ()+5;contact.ramp=true;contact.normal[0]=-.4472136f;contact.normal[2]=.8944272f;
+    Require(ramp.ResolveClassicRamp(contact) && ramp.Grounded() && std::abs(ramp.Speed()-retained)<.001f,"rising walkable ramp contact preserves horizontal momentum");
+    auto tooHigh=contact;tooHigh.height=rising.FeetZ()+rising.StepHeight()+1;ramp=rising;
+    Require(!ramp.ResolveClassicRamp(tooHigh),"ramp correction cannot exceed the existing step budget");
+    auto away=contact;away.normal[0]*=-1;
+    Require(!ramp.ResolveClassicRamp(away),"a jump moving away from the ramp stays airborne");
+    MovementSettings noRamp;noRamp.classicRampContacts=false;ramp.Configure(noRamp);
+    Require(!ramp.ResolveClassicRamp(contact),"classic ramp-contact opt-out is live configurable");
+    noRamp.classicRampContacts=true;noRamp.classicCollision=false;ramp.Configure(noRamp);
+    Require(!ramp.ResolveClassicRamp(contact),"hull and recovery keep their own floor policy");
+    // A steep uphill run can propose a jump and land on the same ramp every frame. Those
+    // contacts must not multiply 15% each render frame, unlike a confirmed free-flight jump.
+    for(int fps:{30,60,144}) {
+        MovementPhysics repeated;repeated.Reset(100);
+        for(int i=0;i<fps;++i)repeated.Step(forward,1.f/fps,1000);
+        float initial=repeated.Speed();
+        for(int i=0;i<fps*2;++i) {
+            repeated.Step(hop,1.f/fps,1000);
+            auto face=contact;face.height=repeated.FeetZ()+5;
+            Require(repeated.ResolveClassicRamp(face),"regression fixture must recontact each frame");
+            repeated.FinishMove();
+        }
+        Require(std::abs(repeated.Speed()-initial)<.01f,"same-frame recontacts cannot mint bunnyhop bonuses");
+    }
+    // Surf removes velocity into a 60-degree face, keeps air controls and adds no contact energy.
+    for(int fps:{30,60,144}) {
+        MovementPhysics surf;surf.Reset(100);
+        MovementSurface face;face.height=100;face.normal[0]=.8660254f;face.normal[2]=.5f;
+        surf.BeginFall();float initial=0;
+        for(int i=0;i<fps;++i) {
+            surf.Step({},1.f/fps,250);face.height=surf.FeetZ();
+            float energy=surf.Speed()*surf.Speed()+surf.VerticalVelocity()*surf.VerticalVelocity();
+            Require(surf.ResolveSurf(face) && !surf.Grounded(),"steep plane remains an airborne surf contact");
+            surf.FinishMove();
+            Require(surf.Speed()*surf.Speed()+surf.VerticalVelocity()*surf.VerticalVelocity()<=energy+.5f,"surf projection cannot add kinetic energy");
+            if(i==0)initial=surf.Speed();
+        }
+        Require(surf.Speed()>initial+400,"gravity accelerates downhill along the surf plane");
+        auto oldSpeed=surf.Speed();MoveInput steer;steer.right=1;steer.jump=true;
+        surf.Step(steer,1.f/fps,250);face.height=surf.FeetZ();surf.ResolveSurf(face);surf.FinishMove();
+        Require(surf.VelocityY()<0 && surf.Speed()<oldSpeed*1.1f,"A/D steers in air without a Space bonus");
+        auto disabled=MovementSettings{};disabled.surf.enabled=false;surf.Configure(disabled);
+        Require(!surf.ResolveSurf(face),"surf opt-out applies live");
+        disabled.surf.enabled=true;surf.Configure(disabled);face.normal[0]=1;face.normal[2]=0;
+        Require(!surf.ResolveSurf(face),"vertical walls are not surf floors");
+    }
+    // The new default must be reachable yet bounded at common frame rates, without changing acceleration tuning.
+    for(int fps:{30,60,144}) {
+        MovementPhysics capped;capped.Reset(0);
+        for(int frame=0;frame<fps;++frame)capped.Step(forward,1.f/fps,250);
+        for(int frame=0;frame<fps*30;++frame){capped.Step(hop,1.f/fps,250);capped.ResolveFloor(0);Require(capped.Speed()<=4500.01f,"3000-CS-unit cap must hold during repeated takeoffs");}
+        Require(capped.Speed()>4499,"default held jumps must be able to reach the new cap");
+    }
+    // Custom arcade boosts remain editable and survive live tuning changes.
     MovementSettings arcade; arcade.jumpBoostPercent = 8; hopping.Configure(arcade);
     for (int frame = 0; frame < 180; ++frame) { hopping.Step(hop, 1.f/60, 250); hopping.ResolveFloor(0); }
     Require(hopping.Speed() > 450, "explicit takeoff boost must retain its configurable behavior");
