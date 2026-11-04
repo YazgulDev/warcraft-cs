@@ -1,0 +1,8 @@
+- Added active waygate travel with native map destinations and synchronized camera/floor recovery.
+- Added portal re-entry protection and detection of native scripted relocations.
+- Changed AWP and G3SG1 stock damage and native multipliers to twice their previous values.
+- Changed HE damage to 1200 and Tau damage to 200 primary and up to 2000 charged.
+- Added owned-resource Crowbar to the starting kit by default.
+- Added native exploded deaths for enemy Gluon, Tau and RPG kills on Warcraft 1.26a.
+- Added horizontal field of view to F2 settings, adjustable from 60 to 120 degrees with an 85-degree default.
+- Preserved independent scope zoom, saved custom settings, native damage rules and ordinary death events.

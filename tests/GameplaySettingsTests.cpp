@@ -15,6 +15,18 @@ int main() {
     // Headless regressions report assertion details to the captured journal instead of a desktop dialog.
     _set_error_mode(_OUT_TO_STDERR);
     GameplaySettings settings;
+    // Startup and F8 share finite surf bounds and retain an explicit disabled preference.
+    const auto surfPath=(std::filesystem::current_path()/"surf-validation.ini").string();
+    assert(settings.movement.surf.enabled && settings.movement.surf.modelContacts && settings.movement.surf.maximumAngle==80 && settings.movement.surf.contactDistance==8);
+    {std::ofstream f(surfPath);f<<"[Surfing]\nEnabled=false\nModelContacts=false\nMaximumAngle=70\nContactDistance=4\n";}
+    auto surf=GameplaySettings::Load(surfPath).movement.surf;
+    assert(!surf.enabled && !surf.modelContacts && surf.maximumAngle==70 && surf.contactDistance==4);
+    {std::ofstream f(surfPath);f<<"[Surfing]\nEnabled=bad\nMaximumAngle=nan\nContactDistance=inf\n";}
+    surf=GameplaySettings::Load(surfPath).movement.surf;
+    assert(surf.enabled && surf.maximumAngle==80 && surf.contactDistance==8);
+    {std::ofstream f(surfPath);f<<"[Surfing]\nMaximumAngle=999\nContactDistance=-1\n";}
+    surf=GameplaySettings::Load(surfPath).movement.surf;
+    assert(surf.maximumAngle==85 && surf.contactDistance==0);DeleteFileA(surfPath.c_str());
     // The real startup/F8 parser validates water tuning without rewriting custom preferences.
     const auto waterPath=(std::filesystem::current_path()/"swimming-validation.ini").string();
     assert(settings.movement.swimming.enabled && settings.movement.swimming.minimumDepth==96);
@@ -38,8 +50,43 @@ int main() {
     assert(menuConfig.mouse.Gain(0)==.28f && menuConfig.mouse.Gain(1)==.035f && !menuConfig.skyVisible);
     assert(menuConfig.shortcuts.Key(ShortcutAction::ReloadSettings)==VK_F2 && menuConfig.shortcuts.Key(ShortcutAction::SettingsMenu)==VK_F3);
     DeleteFileA(mousePath.c_str());
-    // Appended CS guns remain available without optional Half-Life assets and own complete nonzero tuning.
+    // Startup/F8 share finite horizontal-FOV bounds while scope optics remain independent.
+    const auto fovPath=(std::filesystem::current_path()/"fov-validation.ini").string();
+    const std::pair<const char*,float> fovCases[]={{"",85},{"nan",85},{"inf",85},{"bad",85},{"-1",60},{"0",60},{"999",120},{"106.5",106.5f}};
+    assert(settings.render.fieldOfView==85);
+    for(auto test:fovCases) {
+        {std::ofstream f(fovPath);f<<"[Rendering]\nFieldOfView="<<test.first<<"\n";}
+        auto render=GameplaySettings::Load(fovPath).render;
+        assert(render.fieldOfView==test.second && render.Fov()==test.second && render.Fov(1)==40 && render.Fov(2)==10);
+    }
+    DeleteFileA(fovPath.c_str());
+    // Native skies accept only the verified catalog; movement migrations distinguish stock and explicit opt-backs.
+    for(auto c:{std::pair<const char*,bool>{"false",false},{"true",true},{"bad",true}}) {
+        {std::ofstream f(fovPath);f<<"[Movement]\nClassicRampContacts="<<c.first<<"\n";}
+        assert(GameplaySettings::Load(fovPath).movement.classicRampContacts==c.second);
+    }
+    for(auto name:{"auto","summer","fall","winter","felwood","dalaran"}) {
+        {std::ofstream f(fovPath);f<<"[Sky]\nWarcraftPreset="<<name<<"\n";}
+        assert(GameplaySettings::Load(fovPath).warcraftSkyPreset==name);
+    }
+    {std::ofstream f(fovPath);f<<"[Sky]\nWarcraftPreset=../bad.mdl\n";}assert(GameplaySettings::Load(fovPath).warcraftSkyPreset=="auto");
+    {std::ofstream f(fovPath);f<<"[Sky]\nWarcraftPreset=WINTER\n";}assert(GameplaySettings::Load(fovPath).warcraftSkyPreset=="winter");
+    for(auto c:{std::tuple<const char*,int,float,float>{"0",1,15,0},{"0",2,0,0},{"-1",1,0,0},{"7",1,7,7},{"nan",1,15,30},{"10",1,10,30},{"10",2,10,10}}) {
+        auto raw=std::get<0>(c);int version=std::get<1>(c);
+        {std::ofstream f(fovPath);f<<"[Movement]\nJumpBoostPercent="<<raw<<"\nAirAcceleration="<<raw<<"\nJumpBoostVersion="<<version<<"\nAirAccelerationVersion="<<version<<"\n";}
+        auto m=GameplaySettings::Load(fovPath).movement;assert(m.jumpBoostPercent==std::get<2>(c) && m.airAcceleration==std::get<3>(c));
+    }
+    DeleteFileA(fovPath.c_str());
+    // The larger speed ceiling preserves independent acceleration and explicit per-field opt-backs.
+    for(auto c:{std::tuple<const char*,int,float>{"",1,3000},{"1000",1,3000},{"1000",2,1000},{"2000",1,2000},{"-1",1,250},{"99999",2,3000},{"nan",1,3000},{"inf",1,3000},{"bad",1,3000}}) {
+        // Parse exactly the startup/F8 snapshot, including the independent stock-cap migration marker.
+        {std::ofstream f(fovPath);f<<"[Movement]\nMaxBunnySpeed="<<std::get<0>(c)<<"\nMaxBunnySpeedVersion="<<std::get<1>(c)<<"\n";}
+        auto m=GameplaySettings::Load(fovPath).movement;
+        assert(m.maxBunnySpeed==std::get<2>(c) && m.airAcceleration==30 && m.jumpBoostPercent==15);
+    }
+    DeleteFileA(fovPath.c_str());
     for(int slot=WeaponSlots::TMP;slot<=WeaponSlots::G3SG1;++slot) {
+        // CS guns remain available without optional Half-Life assets and own complete nonzero tuning.
         assert(settings.WeaponEnabled(slot) && WeaponSlots::Firearm(slot) && !WeaponSlots::HalfLife(slot));
         assert(settings.weapons[slot].magazine>0 && settings.maxReserve[slot]>0 && settings.weaponMoveSpeed[slot]>=50);
         assert(settings.heroMultiplier[slot]>0 && settings.damage[slot]>0 && settings.weaponPrice[slot]>0 && settings.ammoPack[slot]>0);
@@ -51,9 +98,9 @@ int main() {
     assert(settings.economy.killReward==200 && settings.economy.maximumMoney==16000);
     assert(settings.weaponDrops.enabled && settings.weaponDrops.chancePercent==.5f);
     assert(settings.rpg.radius==1000 && settings.damage[WeaponSlots::RPG]==1800);
-    assert(settings.damage[WeaponSlots::HE]==600 && settings.heroMultiplier[WeaponSlots::M3]==6 && settings.heroMultiplier[WeaponSlots::XM1014]==4.8f);
+    assert(settings.damage[WeaponSlots::HE]==1200 && settings.heroMultiplier[WeaponSlots::M3]==6 && settings.heroMultiplier[WeaponSlots::XM1014]==4.8f);
     assert(settings.ContactDamage(WeaponSlots::M3,false,100)==600 && std::abs(settings.ContactDamage(WeaponSlots::XM1014,false,100)-480)<.001f);
-    assert(settings.ContactDamage(WeaponSlots::RPG,false,100)==1800 && settings.ContactDamage(WeaponSlots::HE,false,100)==600);
+    assert(settings.ContactDamage(WeaponSlots::RPG,false,100)==1800 && settings.ContactDamage(WeaponSlots::HE,false,100)==1200);
     auto economyPath=(std::filesystem::current_path()/"economy-reload-test.ini").string();
     {std::ofstream f(economyPath);f<<"[Economy]\nCurrency=gold\nStartingMoney=99999\nMaximumMoney=2000\nKillReward=nan\n[WeaponDrops]\nEnabled=false\nChancePercent=999\nLifetimeSeconds=-2\nPickupRadius=nan\nMaximumDrops=0\n[RPG]\nRadius=nan\nDamage=nan\n";}
     auto economyReload=GameplaySettings::Load(economyPath);
@@ -105,7 +152,7 @@ int main() {
     // Default AWP hits use their configured base damage rather than health-dependent finishing damage.
     assert(!settings.FinishingAWP(3));
     assert(CombatDamage::Amount(settings.ContactDamage(3,false,100),false,
-        CombatDamage::FinishesTarget(settings.FinishingAWP(3),false),5000)==300);
+        CombatDamage::FinishesTarget(settings.FinishingAWP(3),false),5000)==600);
     assert(settings.friendlyFirePercent==50);
     assert(settings.floatingTextDistance==1200);
     assert(!settings.showSpeed);
@@ -240,9 +287,9 @@ int main() {
         assert(!configured.FinishingAWP(0));
         float damage=CombatDamage::Amount(configured.ContactDamage(3,false,0),false,
             CombatDamage::FinishesTarget(configured.FinishingAWP(3),false),5000);
-        assert(test.enabled ? damage>5000 : damage==115);
+        assert(test.enabled ? damage>5000 : damage==230);
         assert(CombatDamage::Amount(configured.ContactDamage(3,false,0),true,
-            CombatDamage::FinishesTarget(configured.FinishingAWP(3),true),5000)==57.5f);
+            CombatDamage::FinishesTarget(configured.FinishingAWP(3),true),5000)==115);
         configured.heroDamage=true;assert(!configured.FinishingAWP(3));
     }
     std::string awpReload=path+".awp-reload";DeleteFileA(awpReload.c_str());
@@ -397,19 +444,20 @@ int main() {
     settings=GameplaySettings::Load(path);DeleteFileA(path.c_str());
     assert(!settings.movement.bunnyHop && !settings.movement.autoJump);
     assert(settings.movement.jumpBoostPercent==100 && settings.movement.maxBunnySpeed==250);
-    assert(settings.movement.airAcceleration==10 && settings.movement.jumpSpeed==1);
+    assert(settings.movement.airAcceleration==30 && settings.movement.jumpSpeed==1);
     assert(settings.movement.gravity==3000 && settings.movement.stepHeight==0);
     { std::ofstream file(path); file << "[Movement]\nBunnyHop=broken\nAutoJump=\nJumpBoostPercent=inf\nMaxBunnySpeed=nan\nJumpSpeed=broken\nGravity=nan\nStepHeight=200\n"; }
     settings=GameplaySettings::Load(path);DeleteFileA(path.c_str());
     assert(settings.movement.bunnyHop && settings.movement.autoJump);
-    assert(settings.movement.jumpBoostPercent==0 && settings.movement.maxBunnySpeed==1000);
+    assert(settings.movement.jumpBoostPercent==15 && settings.movement.maxBunnySpeed==3000);
     assert(settings.movement.jumpSpeed==268.328f && settings.movement.gravity==800 && settings.movement.stepHeight==64);
     WritePrivateProfileStringA("Movement","JumpBoostPercent","15",path.c_str());
     assert(GameplaySettings::Load(path).movement.jumpBoostPercent==15);
     WritePrivateProfileStringA("Movement","JumpBoostPercent","0",path.c_str());
+    WritePrivateProfileStringA("Movement","JumpBoostVersion","2",path.c_str()); // Explicit zero opts out of the new stock boost.
     assert(GameplaySettings::Load(path).movement.jumpBoostPercent==0);
     // Consume the actual parsed snapshot in physics, then replace it as F8 does while airborne.
-    { std::ofstream file(path); file << "[Movement]\nMaxBunnySpeed=400\nJumpBoostPercent=0\nAirAcceleration=10\n"; }
+    { std::ofstream file(path); file << "[Movement]\nMaxBunnySpeed=400\nJumpBoostPercent=0\nJumpBoostVersion=2\nAirAcceleration=10\nAirAccelerationVersion=2\n"; }
     MovementPhysics movement; movement.Configure(GameplaySettings::Load(path).movement); movement.Reset(0);
     MoveInput run; run.forward=1;
     for(int frame=0;frame<60;++frame) movement.Step(run,1.f/60,250);
@@ -733,7 +781,7 @@ int main() {
     }
     {std::ofstream f(rpgPath);f<<"[TauCannon]\nChargeSeconds=2\nChargedDamage=777\nMagazine=55\nMaxReserve=999\n[HalfLife]\nBeamWidth=8\n";}
     auto hl=GameplaySettings::Load(rpgPath);assert(hl.halfLife.tauChargeSeconds==2 && hl.halfLife.tauChargedDamage==777 && hl.halfLife.beamWidth==8);
-    assert(hl.damage[WeaponSlots::Tau]==100 && hl.damage[WeaponSlots::Gluon]==70 && !hl.nativeAttackSound);
+    assert(hl.damage[WeaponSlots::Tau]==200 && hl.damage[WeaponSlots::Gluon]==70 && !hl.nativeAttackSound);
     for(const char* value:{"true","false","broken"}) {
         WritePrivateProfileStringA("Combat","NativeAttackSound",value,rpgPath.c_str());hl=GameplaySettings::Load(rpgPath);
         assert(hl.nativeAttackSound==!strcmp(value,"true"));
@@ -747,7 +795,7 @@ int main() {
     WritePrivateProfileStringA("Crowbar","SurfaceSounds","false",rpgPath.c_str());assert(!GameplaySettings::Load(rpgPath).halfLife.crowbarSurfaceSounds);
     WritePrivateProfileStringA("TauCannon","SpinEndRate","6",rpgPath.c_str());assert(GameplaySettings::Load(rpgPath).halfLife.tauSpinEndRate==6);
     assert(hl.weapons[WeaponSlots::Tau].magazine==55 && hl.maxReserve[WeaponSlots::Tau]==0);
-    assert(hl.ContactDamage(WeaponSlots::Tau,false,9999)==100 && hl.ContactDamage(WeaponSlots::Gluon,false,9999)==70);
+    assert(hl.ContactDamage(WeaponSlots::Tau,false,9999)==200 && hl.ContactDamage(WeaponSlots::Gluon,false,9999)==70);
     for(auto value:{"nan","inf","bad","","-1","999999"}) {
         WritePrivateProfileStringA("TauCannon","ChargeSeconds",value,rpgPath.c_str());
         WritePrivateProfileStringA("HalfLife","BeamWidth",value,rpgPath.c_str());hl=GameplaySettings::Load(rpgPath);
@@ -840,28 +888,34 @@ int main() {
     for(const auto& tuning:std::vector<std::tuple<const char*,const char*,const char*,int,int,float,float>>{
         {"RPG","Damage","DamageVersion",2,WeaponSlots::RPG,100,1800},
         {"RPG","Radius","BlastVersion",4,-1,600,1000},
-        {"HEGrenade","Damage","DamageVersion",3,WeaponSlots::HE,300,600},
+        {"HEGrenade","Damage","DamageVersion",4,WeaponSlots::HE,600,1200},
+        {"AWP","Damage","DamageVersion",2,WeaponSlots::AWP,115,230},
+        {"G3SG1","Damage","DamageVersion",2,WeaponSlots::G3SG1,80,160},
+        {"TauCannon","Damage","DamageVersion",3,WeaponSlots::Tau,100,200},
+        {"TauCannon","ChargedDamage","ChargedDamageVersion",2,-6,1000,2000},
+        {"AWP","HeroMultiplier","MultiplierVersion",2,-4,3,6},
+        {"G3SG1","HeroMultiplier","MultiplierVersion",2,-5,2.2f,4.4f},
         {"M3","HeroMultiplier","MultiplierVersion",2,-2,3,6},
         {"XM1014","HeroMultiplier","MultiplierVersion",2,-3,2.4f,4.8f}}) {
         auto [section,key,marker,current,slot,oldValue,newValue]=tuning;
         for(int version:{1,current-1,current})for(float chosen:{-1.f,0.f,oldValue,777.f,2000000.f}) {
             {std::ofstream f(path);f<<"["<<section<<"]\n"<<key<<"="<<chosen<<"\n"<<marker<<"="<<version<<"\n";}
             auto balance=GameplaySettings::Load(path);
-            float actual=slot>=0 ? balance.damage[slot] : slot==-1 ? balance.rpg.radius : balance.heroMultiplier[slot==-2 ? WeaponSlots::M3 : WeaponSlots::XM1014];
+            float actual=slot>=0 ? balance.damage[slot] : slot==-1 ? balance.rpg.radius : slot==-6 ? balance.halfLife.tauChargedDamage : balance.heroMultiplier[slot==-2 ? WeaponSlots::M3 : slot==-3 ? WeaponSlots::XM1014 : slot==-4 ? WeaponSlots::AWP : WeaponSlots::G3SG1];
             float expected=chosen==oldValue && version<current ? newValue : chosen;
-            expected=std::clamp(expected,slot==-1 ? 32.f : 0.f,slot>=0 ? 1000000.f : slot==-1 ? 3000.f : 1000.f);
+            expected=std::clamp(expected,slot==-1 ? 32.f : 0.f,slot>=0 || slot==-6 ? 1000000.f : slot==-1 ? 3000.f : 1000.f);
             assert(std::abs(actual-expected)<.001f);
         }
         for(const char* invalid:{"nan","broken",""}) {
             {std::ofstream f(path);f<<"["<<section<<"]\n"<<key<<"="<<invalid<<"\n";}
             auto balance=GameplaySettings::Load(path);
-            float actual=slot>=0 ? balance.damage[slot] : slot==-1 ? balance.rpg.radius : balance.heroMultiplier[slot==-2 ? WeaponSlots::M3 : WeaponSlots::XM1014];
+            float actual=slot>=0 ? balance.damage[slot] : slot==-1 ? balance.rpg.radius : slot==-6 ? balance.halfLife.tauChargedDamage : balance.heroMultiplier[slot==-2 ? WeaponSlots::M3 : slot==-3 ? WeaponSlots::XM1014 : slot==-4 ? WeaponSlots::AWP : WeaponSlots::G3SG1];
             assert(std::abs(actual-newValue)<.001f);
         }
     }
     // Stock HE migrates once in the actual startup/F8 loader; custom, zero and versioned 100 remain intentional.
     for(const char* config:{"", "[HEGrenade]\nDamage=100\n", "[HEGrenade]\nDamage=100.0\nDamageVersion=1\n"}) {
-        {std::ofstream f(path);f<<config;}assert(GameplaySettings::Load(path).damage[WeaponSlots::HE]==600);
+        {std::ofstream f(path);f<<config;}assert(GameplaySettings::Load(path).damage[WeaponSlots::HE]==1200);
     }
     for(int damage:{0,100,777}) {
         {std::ofstream f(path);f<<"[HEGrenade]\nDamage="<<damage<<"\nDamageVersion=2\n[Flashbang]\nStunAllUnits=false\nStunDistanceFalloff=true\n";}
@@ -883,5 +937,16 @@ int main() {
     repairs=GameplaySettings::Load(path);
     assert(repairs.hitDetection.energyHeadshots && repairs.hitDetection.headshotBoneWeight==.05f);
     assert(repairs.armyAI.showStatus && repairs.armyAI.placementAttempts==1 && repairs.armyAI.lumberWorkers==10);
+    // Actual startup/F8 settings retain current per-field Tau opt-backs even without the legacy shared marker.
+    {std::ofstream f(path);f<<"[TauCannon]\nDamage=20\nDamageVersion=3\nChargedDamage=200\nChargedDamageVersion=2\n";}
+    auto opted=GameplaySettings::Load(path);assert(opted.damage[WeaponSlots::Tau]==20 && opted.halfLife.tauChargedDamage==200);
+    {std::ofstream f(path);f<<"[Portals]\nEnabled=false\nRadius=nan\nHeightTolerance=99999\nCooldownSeconds=0\n[Loadout]\nCrowbar=false\n[Combat]\nExplosiveWeaponDeaths=false\n";}
+    auto interactions=GameplaySettings::Load(path);
+    assert(!interactions.portals.enabled && interactions.portals.radius==160 && interactions.portals.heightTolerance==512 && interactions.portals.cooldownSeconds==.25f);
+    assert(!interactions.startCrowbar && !interactions.explosiveWeaponDeaths);
+    {std::ofstream f(path);f<<"[Portals]\nEnabled=broken\nRadius=0\nHeightTolerance=0\nCooldownSeconds=inf\n[Loadout]\nCrowbar=broken\n[Combat]\nExplosiveWeaponDeaths=broken\n";}
+    interactions=GameplaySettings::Load(path);
+    assert(interactions.portals.enabled && interactions.portals.radius==32 && interactions.portals.heightTolerance==16 && interactions.portals.cooldownSeconds==1);
+    assert(interactions.startCrowbar && interactions.explosiveWeaponDeaths);
     DeleteFileA(path.c_str());return 0;
 }

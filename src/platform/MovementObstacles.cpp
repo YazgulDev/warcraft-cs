@@ -84,7 +84,7 @@ bool MovementObstacles::Bounds(const std::string& path, bool destructable, uintp
     }
     return true;
 }
-std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle actor, float x, float y, float radius,bool nativeUnitCollision,bool detailed,bool retainPlatforms) {
+std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle actor, float x, float y, float radius,bool nativeUnitCollision,bool detailed,bool retainPlatforms,MeshSurfaceRange surf) {
     std::vector<Bounds3> result;
     details_.clear();
     if (!base_) return result;
@@ -126,7 +126,9 @@ std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle actor, float x, flo
             // Keep verified surfaces for movement even when the native deck is present: a missed
             // deck query must not delete a real platform. Never substitute an enclosing bridge box.
             // Classic mode restores native-only bridge support without discarding the new mesh path.
-            if (!wc3::WalkableSurface(cx, cy, deck) || (retainPlatforms && detailed && mesh)) {result.push_back(bounds);details_.push_back(std::move(mesh));}
+            // A native walkable flag gives only a height, not the plane needed for surfing.
+            // Classic retains mesh detail solely for eligible surf faces; other decks stay historical.
+            if (!wc3::WalkableSurface(cx, cy, deck) || (detailed && mesh && (retainPlatforms || mesh->HasSurface(surf)))) {result.push_back(bounds);details_.push_back(std::move(mesh));}
         }
     }
     return result;

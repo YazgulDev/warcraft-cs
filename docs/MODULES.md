@@ -25,6 +25,15 @@ adapters. The WGL captures retain their own context resources. See `PORT-1.27.md
 queried texture state and the GL error queue, and records labelled font lifecycle
 events. The existing platform `DiagnosticLog` still owns serialization and rotation.
 
+`NativeRegistry` resolves exact public JASS name/signature records in the accepted mapped module,
+excluding duplicate zero stubs and ambiguous bindings. `NativePortals` owns waygate queries,
+pause-aware re-entry state and native-position observation; the controller rebases movement/camera
+and stops queued attacks if region callbacks replace the actor/map. `ExplodedFlagLayout` verifies
+the public setter's matching flag operations on the resolved unit. `NativeExplosiveDeath` leases
+that flag for one hostile-creature damage transaction; `NativeBlast`/energy contacts preserve
+native damage and death callbacks, and `NativeRockets` snapshots the policy at launch. Synthetic
+backend injection and `PortalsHeavyScene`/the authored JASS fixture are excluded from ordinary Player builds.
+
 `GraphicsDiagnostics` is a scoped presentation observer for every-pass GL error checkpoints and
 supported driver debug messages, with bounded duplicate suppression and exact callback-state
 restoration. D3D adapters report failed HRESULT operations through the same observer. It consumes
@@ -521,13 +530,41 @@ restoration across replacement contexts.
 
 `ArmyPlan::Detect` prioritizes builders over captured foreign halls. The existing game-thread `ArmyAI` coordinates bounded native construction, worker-centered startup, race-compatible mines and undead lumber ghouls. `ArmyAIStatus` contains the copied domain result; presentation's `ArmyAIStatusText` maps it to HUD text. The controller reports transitions without taking over native orders. No new engine offsets, free units, resource setters or public runtime entry points are introduced.
 
+### Classic ramp contacts
+
+`platform/WalkableTerrainContact.hpp` classifies only local native-walkable ramp contacts
+for the classic strategy, using bounded two-sided slopes and the incoming contact plane.
+`ClassicWarcraftCollision` verifies body/deck clearance and owns tentative-contact rollback;
+`MovementPhysics::ResolveClassicRamp` validates the bounded contact/relative velocity and
+preserves horizontal momentum. The existing hull/recovery strategies remain independent.
+
+### Terrain surf contacts and confirmed takeoffs
+
+`movement/SurfSettings.hpp` owns portable surfing preferences. `MovementPhysics::ResolveSurf`
+projects velocity onto a verified steep plane without adding energy or marking it grounded.
+`platform/TerrainSurfContact.hpp` samples continuous native-walkable terrain and rejects
+cliff transitions, terrace discontinuities and blocked cells. Both collision strategies
+apply its contact tentatively, preserve model/deck clearance and roll it back on rejection.
+Existing static-model collision geometry is not repurposed as terrain support.
+
+`MovementPhysics::FinishMove` consumes the optional pending takeoff bonus once, after the
+selected collision strategy commits support/native placement. A same-frame uphill
+recontact, surf or clipped ascent cannot multiply that bonus on subsequent render frames.
+
+### Native sky presets
+
+`config/WarcraftSkyPresets.hpp` bounds native selection to verified stock model identifiers.
+The settings draft retains separate CS/native choices behind one type-dependent row. NativeSky
+uses the portable `SkyModelLease` to restore the latest map-authored model across preset,
+hide/show, CS and RTS transitions; map unloads discard the lease without stale restoration.
+
 ### Ground camera height
 
 `presentation/CameraHeightMotion.hpp` owns a bounded presentation correction, driven once after collision resolves the frame's physical feet. It integrates the linear ground segment with an exponential response, keeping slope response consistent across frame rates. Airborne vertical changes are not input to this filter. `ShooterController::ViewEyeZ` bounds the corrected eye inside the current collision body and supplies the same origin to the camera, direct weapon traces and spell/item targeting. Ground physics, actor feet and the third-person boom retain physical values. Lifecycle/F8 resets discard old correction; `CameraHeightSettings` validates the editable startup/live preferences. The portable camera-height suite covers steps, frame rates, bounds, jump isolation, relocation and opt-out; a disposable native per-render observer verifies actual camera submissions.
 
 `combat/SmokeVisibility.hpp` owns finite sphere-segment extinction. `GrenadeView` integrates depth-tested slices from the same cloud density/distance snapshots; `NativeGrenades::BlocksSight` resolves verified attack-owner sprites read-only. `FpsCombatGuard` applies its team-neutral callback to native acquisition/script basic orders; native prepare/impact guards cover retained targets. A scoped attack identity permits only synchronous player blind contacts, restoring the previous identity through native callbacks. Overlay markers and names use the same 10% transmission threshold without native handle reads on the render thread.
 
-`config/SettingsMenu` owns an eight-row draft and bounded modal event mailbox; its save/resource callbacks keep native file I/O out of draft rules. `platform/SettingsStore` discovers validated owned WCS1 caches and commits changed whitelisted keys through a flushed sibling-file transaction. `presentation/SettingsMenuLayout` shares pointer geometry with the state-isolated GL/D3D `SettingsMenuView`. `MouseSettings::Gain` is the common config-to-aim multiplier. The controller applies only the menu domains and preserves unrelated session controls; lifecycle transitions discard drafts. `NativeSky` retains a separate authored-sky visibility lease without changing map data.
+`config/SettingsMenu` owns a nine-row draft and bounded modal event mailbox; its save/resource callbacks keep native file I/O out of draft rules. `platform/SettingsStore` discovers validated owned WCS1 caches and commits changed whitelisted keys through a flushed sibling-file transaction. `presentation/SettingsMenuLayout` shares pointer geometry with the state-isolated GL/D3D `SettingsMenuView` and reserves a fixed total row area before hints/buttons. `MouseSettings::Gain` is the common config-to-aim multiplier. `RenderSettings::Fov` supplies the saved horizontal angle or independent scope zoom to the native camera and overlay projection. The controller applies only the menu domains and preserves unrelated session controls; lifecycle transitions discard drafts. `NativeSky` retains a separate authored-sky visibility lease without changing map data.
 
 `input/FpsTextEntry` and `UnicodeText` own bounded UTF-8 input. `platform/NativeChat` owns verified host chat submission. `presentation/FpsTextView` owns UTF-8 wrapping and modal text drawing. `combat/NuclearInventory` owns code-only consumable state; `platform/NativeRockets` shares RPG flight with impact payloads; `platform/NativeNuclearBomb` owns the phase clock, `NativeNuclearDestruction` radial death policy, and `NativeEffectService` scaled native effect ownership. `presentation/NuclearView` draws only the local shock ring through the shared GL/D3D API.
 

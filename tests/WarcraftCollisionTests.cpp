@@ -3,6 +3,7 @@
 #include "../src/platform/UnitCollisionProfile.hpp"
 #include "MovementStrafeInput.hpp"
 #include "CollisionMeshFixture.hpp"
+#include "../src/platform/WalkableTerrainContact.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -30,6 +31,9 @@ float actorFlight=0;
 bool nativeCliffRim=false;
 float slopeGradient=.3f;
 bool narrowPassage=false;
+bool crest=false; // A continuous low hill has no native cliff, solid prop or blocked pathing cell.
+bool surfScene=false,surfWall=false;
+float crestHeight=128,crestYaw=0;
 bool actorColliding=true;
 int meshScene=0;
 bool deckPatch=false;
@@ -38,6 +42,8 @@ wc3::Bits Bits(float value) { wc3::Bits bits;std::memcpy(&bits,&value,4);return 
 wc3::Bits __cdecl X(wc3::Handle) {return Bits(unitX);}
 wc3::Bits __cdecl Y(wc3::Handle) {return Bits(unitY);}
 BOOL __cdecl Blocked(float* x,float* y,int kind) {
+    if(surfScene)return nativeBlocked;
+    if(crest)return nativeBlocked;
     // Different masks deliberately disagree: owned common.j uses 6 for floatability, while 4 is harvest pathing.
     if(swimScene)return kind==1 ? (canalBank || *x<500) : kind==6 ? swimNativeBlocked : TRUE;
     if(deckPatch)return FALSE;
@@ -98,7 +104,7 @@ Bits (__cdecl* GetRectMaxX)(Handle)=Maximum;
 Bits (__cdecl* GetRectMaxY)(Handle)=Maximum;
 void (__cdecl* RemoveRect)(Handle)=Remove;
 float Real(Bits bits){float f;std::memcpy(&f,&bits,4);return f;}
-float TerrainGround(float x,float y){if(swimScene)return canalBank ? (x>=80 ? canalBank : 100.f) : 100+std::clamp((x-100)*.5f,0.f,200.f);if(cliffFace)return 100+std::clamp((FaceDistance(x,y)-32)/128,0.f,1.f)*faceRise;return landingLedge ? (x*std::cos(ledgeYaw)+y*std::sin(ledgeYaw)>=32 ? 140.f : 100.f) : slope ? 100.f+x*slopeGradient : drop && x>=32 ? 0.f : cliff && x>=32 ? 180.f : 100.f;}
+float TerrainGround(float x,float y){if(surfScene)return 2500-x*1.7320508f;if(crest)return 100+std::max(0.f,crestHeight-std::abs(x*std::cos(crestYaw)+y*std::sin(crestYaw))*slopeGradient);if(swimScene)return canalBank ? (x>=80 ? canalBank : 100.f) : 100+std::clamp((x-100)*.5f,0.f,200.f);if(cliffFace)return 100+std::clamp((FaceDistance(x,y)-32)/128,0.f,1.f)*faceRise;return landingLedge ? (x*std::cos(ledgeYaw)+y*std::sin(ledgeYaw)>=32 ? 140.f : 100.f) : slope ? 100.f+x*slopeGradient : drop && x>=32 ? 0.f : cliff && x>=32 ? 180.f : 100.f;}
 float Ground(float x,float y){return swimScene && x<500 ? std::max(300.f,TerrainGround(x,y)) : TerrainGround(x,y)+(water ? 22.f : 0.f);}
 bool WaterSurface(float x,float y,float& height){if(swimScene && x<(canalBank ? 80 : 500)){height=300;return true;}if(water){height=Ground(x,y);return true;}return false;}
 bool WalkableSurface(float x,float y,float& height){
@@ -109,9 +115,21 @@ bool WalkableSurface(float x,float y,float& height){
 }
 bool DiagnosticLog::Due(DWORD&,bool) { return false; }
 // The synthetic world replaces only native discovery; actual swept collision/physics runs unchanged.
-std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,bool,bool detailed,bool retainPlatforms) {
+std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,bool,bool detailed,bool retainPlatforms,MeshSurfaceRange) {
     details_.clear();
+    if(surfScene)return surfWall ? std::vector<Bounds3>{{{200,-4096,-8000},{224,4096,8000}}} : std::vector<Bounds3>{};
     if(swimScene)return swimWall ? std::vector<Bounds3>{{{80,-200,100},{100,200,500}}} : std::vector<Bounds3>{};
+    if(meshScene==5) {
+        auto mesh=std::make_shared<CylinderMesh>();
+        auto z=[](float x,float y){return 1000-.15f*x+1.6f*y;};
+        Triangle3 a={{{-2000,-512,z(-2000,-512)},{2000,-512,z(2000,-512)},{2000,512,z(2000,512)}}};
+        Triangle3 b={{{-2000,-512,z(-2000,-512)},{2000,512,z(2000,512)},{-2000,512,z(-2000,512)}}};
+        mesh->triangles={a,b};
+        // The underside is a distinct solid face, not a walkable top seen through from below.
+        for(auto t:{a,b}){for(auto& p:t.vertices)p[2]-=32;std::swap(t.vertices[1],t.vertices[2]);mesh->triangles.push_back(t);}
+        details_.push_back(detailed ? mesh : nullptr);
+        return {{{-2000,-512,-151},{2000,512,2120}}};
+    }
     if(meshScene) {
         auto mesh=std::make_shared<CylinderMesh>();
         if(meshScene==4)AddMeshBox(*mesh,{{-500,-500,180},{500,500,200}});
@@ -147,6 +165,46 @@ UnitCollisionProfile UnitCollisionProfile::Read(wc3::Handle,uintptr_t) {
     return narrowPassage ? UnitCollisionProfile{true,actorColliding,16} : UnitCollisionProfile{};
 }
 int main(){
+    // Reproduce a descending hop landing mid-sweep near a crest. A stale airborne floor used to
+    // erase horizontal velocity on the next eight-unit step despite clear terrain/pathing.
+    crest=true;bridgeAlive=false;
+    for(int fps:{30,60,144})for(float grade:{.3f,.5f})for(float radius:{16.f,24.f,32.f,48.f})for(int phase:{3,9,12,15,18,28}) {
+        slopeGradient=grade;actorRadius=radius;unitX=-700;unitY=0;
+        MovementPhysics jumper;jumper.Reset(wc3::TerrainGround(unitX,0));WarcraftCollision sweep;MoveInput in;in.forward=1;
+        for(int frame=0;frame<fps*10 && unitX<600;++frame) {
+            in.jump=frame>=int((20+phase)*fps/60.f);jumper.Step(in,1.f/fps,250);float before=jumper.Speed();
+            sweep.Move(1,jumper,1.f/fps);
+            Require(jumper.Speed()>=before-.01f,"classic crest landing must preserve unobstructed horizontal momentum");
+        }
+        Require(unitX>600,"classic held jumps must cross the complete hill and crest");
+    }
+    // High hills and rising contacts need an actual walkable incoming plane, including diagonal crests.
+    crestHeight=384;
+    auto highCrest=[&](int fps,float grade,float radius,int phase,float angle,bool enabled=true) {
+        slopeGradient=grade;crestYaw=angle;actorRadius=radius;
+        float start=-crestHeight/grade-444,dx=std::cos(angle),dy=std::sin(angle);
+        unitX=start*dx;unitY=start*dy;MovementPhysics jumper;MovementSettings settings;settings.classicRampContacts=enabled;
+        jumper.Configure(settings);jumper.Reset(wc3::TerrainGround(unitX,unitY));WarcraftCollision sweep;MoveInput in;in.forward=1;in.yaw=angle*57.2957795f;
+        bool lost=false;
+        for(int frame=0;frame<fps*15 && unitX*dx+unitY*dy<crestHeight/grade+100;++frame) {
+            in.jump=frame>=int((20+phase)*fps/60.f);jumper.Step(in,1.f/fps,250);float before=jumper.Speed();
+            sweep.Move(1,jumper,1.f/fps);lost|=jumper.Speed()<before-.01f;
+        }
+        return lost;
+    };
+    for(int fps:{30,60,144})for(float grade:{.5f,.7f,.9f})for(float radius:{16.f,32.f,48.f})for(int phase:{3,9,15})
+        Require(!highCrest(fps,grade,radius,phase,0),"walkable high ramps must not consume horizontal hop velocity");
+    for(float angle:{.78539816f,1.57079633f,2.35619449f})for(int phase:{3,9,15})
+        Require(!highCrest(60,.9f,32,phase,angle),"diagonal high crest contact must keep the full horizontal vector");
+    Require(highCrest(60,.9f,48,9,0,false),"classic ramp-contact opt-out must retain the prior clipped behavior");
+    // Closed pathing, steep faces and flat terrace tops never become ramp assistance.
+    crestYaw=0;slopeGradient=1.2f;nativeBlocked=false;
+    Require(!WalkableTerrainContact::Sample(-100,0,46,500,0).walkable,"over-limit terrain cannot become a ramp contact");
+    slopeGradient=.5f;nativeBlocked=true;
+    Require(!WalkableTerrainContact::Sample(-100,0,46,500,0).walkable,"unknown native blockers retain authority");
+    nativeBlocked=false;crest=false;landingLedge=true;
+    Require(!WalkableTerrainContact::Sample(32,0,46,500,0).walkable && !WalkableTerrainContact::Sample(64,0,46,500,0).ramp,"a vertical step and its flat top cannot supply an airborne ramp landing");
+    landingLedge=false;bridgeAlive=true;actorRadius=0;slopeGradient=.3f;crestHeight=128;crestYaw=0;
     Require(Walk(true)>300,"living deck crosses blocked terrain beneath the bridge");
     Require(Walk(false)<32,"destroyed bridge supplies no walkable geometry");
     Require(Walk(true,true)<32,"entire player footprint must fit on the deck");
@@ -196,10 +254,10 @@ int main(){
     Require(unitX>1000 && peak>450,"landing on a gentle uphill slope preserves accelerating hop momentum");
     // At the fastest supported setting, one frame travels farther than a thin wall's full width.
     // Actual swept collision must stop the player instead of sampling only the destination.
-    HullSettings fast; fast.maxBunnySpeed = 2000; fast.jumpBoostPercent = 100;
+    HullSettings fast; fast.maxBunnySpeed = 3000; fast.jumpBoostPercent = 100;
     jumper.Configure(fast); jumper.Reset(100);
     for(int frame=0;frame<360;++frame){jumper.Step(jumping,1.f/60,250);jumper.ResolveFloor(100);}
-    Require(jumper.Speed()>2900,"high-speed collision trial must approach the supported maximum");
+    Require(jumper.Speed()>4400,"high-speed collision trial must approach the supported maximum");
     slope=false;wall=true;unitX=unitY=0;
     collision.Move(1,jumper,.05f);
     Require(unitX<36,"swept collision must reject a thin wall at maximum bunnyhop speed");
@@ -544,6 +602,64 @@ int main(){
         for(int frame=0;frame<60;++frame){jumper.Step(outside,1.f/60,250);collision.Move(1,jumper,1.f/60);}
         Require(unitX<3972,"retreat from the map edge remains usable");
     }
+    // Real swept terrain surfing stays airborne in all modes; Space never adds a takeoff.
+    slope=false;crest=false;surfScene=true;bridgeAlive=false;actorRadius=16;nativeBlocked=false;
+    for(int mode=0;mode<3;++mode)for(int fps:{30,60,144})for(bool held:{false,true}) {
+        MovementSettings tuning;tuning.classicCollision=mode==0;tuning.platformRecovery=mode==2;
+        MovementPhysics slider;slider.Configure(tuning);slider.Reset(2500+16*1.7320508f);
+        unitX=unitY=0;WarcraftCollision ramp;MoveInput glide;glide.right=1;
+        // Acquire contact before Space so the fixture models arrival on a ramp, not a ground jump.
+        slider.BeginFall();ramp.Move(1,slider,1.f/fps);
+        int contacts=0;float surfPeak=0;
+        for(int frame=0;frame<fps*2;++frame) {
+            glide.jump=held;slider.Step(glide,1.f/fps,250);ramp.Move(1,slider,1.f/fps);
+            contacts+=slider.Surfing();surfPeak=std::max(surfPeak,slider.Speed());
+            Require(!slider.Grounded(),"surf ramp cannot mint a grounded takeoff");
+            Require(slider.FeetZ()+.05f>=wc3::TerrainGround(unitX-16,unitY),"surf foot remains above the uphill footprint");
+        }
+        Require(unitX>300 && unitY<-50 && contacts>fps*1.9f,"gravity drives downhill while A/D steers a sustained surf contact");
+        Require(surfPeak<1300,"held Space cannot create an exponential surf boost");
+        std::printf("Surf mode=%d fps=%d Space=%d x=%.1f y=%.1f speed=%.1f contacts=%d\n",mode,fps,held,unitX,unitY,slider.Speed(),contacts);
+    }
+    for(int mode=0;mode<3;++mode) {
+        MovementSettings tuning;tuning.classicCollision=mode==0;tuning.platformRecovery=mode==2;
+        for(bool blocked:{false,true}) {
+            nativeBlocked=blocked;surfWall=!blocked;
+            MovementPhysics slider;slider.Configure(tuning);slider.Reset(2500+16*1.7320508f);slider.BeginFall();
+            unitX=unitY=0;WarcraftCollision ramp;
+            for(int frame=0;frame<180;++frame){slider.Step({},1.f/60,250);ramp.Move(1,slider,1.f/60);}
+            Require(unitX<184.01f,"surf cannot bypass a wall or unknown native blocker");
+        }
+    }
+    surfScene=surfWall=nativeBlocked=false;actorRadius=0;
+    // Imported sloping model faces stay airborne across strategies and frame rates; their
+    // empty surrounding volume must not replace contact with the actual triangles.
+    slope=false;meshScene=5;bridgeAlive=false;actorRadius=16;
+    for(int mode=0;mode<3;++mode)for(int fps:{30,60,144}) {
+        MovementSettings setting;setting.classicCollision=mode==0;setting.platformRecovery=mode==2;
+        MovementPhysics rider;rider.Configure(setting);unitX=unitY=0;rider.Reset(1000+16*std::hypot(.15f,1.6f));rider.BeginFall();
+        WarcraftCollision ramp;ramp.Move(1,rider,1.f/fps);int contacts=0;MoveInput along;along.forward=1;
+        for(int frame=0;frame<fps;++frame) {
+            rider.Step(along,1.f/fps,250);ramp.Move(1,rider,1.f/fps);contacts+=rider.Surfing();
+            Require(!rider.Grounded(),"model surf contact never becomes a ground takeoff");
+        }
+        std::printf("Model surf mode=%d fps=%d x=%.1f y=%.1f speed=%.1f contacts=%d\n",mode,fps,unitX,unitY,rider.Speed(),contacts);
+        Require(contacts>fps*.9f && unitX>30 && unitY<-100,"precise model plane must support a sustained gravity-driven surf");
+    }
+    // A jump from below cannot land on an unreachable imported surface or pass its underside.
+    jumper.Configure(MovementSettings{});collision.Reset();unitX=unitY=0;jumper.Reset(800);vertical={};vertical.jump=true;
+    float belowPeak=800;
+    for(int frame=0;frame<120;++frame){jumper.Step(vertical,1.f/60,250);collision.Move(1,jumper,1.f/60);vertical.jump=false;belowPeak=std::max(belowPeak,jumper.FeetZ());}
+    Require(belowPeak<840,"classic model surf adds real underside head clearance");
+    // Both explicit model opt-outs must stop model surf ownership without disabling terrain rules.
+    for(bool disableGeometry:{false,true}) {
+        MovementSettings setting;
+        if(disableGeometry)setting.objectMeshCollision=false;else setting.surf.modelContacts=false;
+        MovementPhysics optedOut;optedOut.Configure(setting);unitX=unitY=0;optedOut.Reset(1026);optedOut.BeginFall();
+        WarcraftCollision legacy;legacy.Move(1,optedOut,1.f/60);
+        Require(!optedOut.Surfing(),"model contact opt-outs must not create a steep model surf");
+    }
+    meshScene=0;actorRadius=0;
     std::puts("Warcraft classic/hull/recovery collision regressions passed.");
     // A real floating path may reject native walking; both solvers still sweep solid walls and banks.
     slope=false;swimScene=true;bridgeAlive=false;

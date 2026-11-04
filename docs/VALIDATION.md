@@ -1,5 +1,154 @@
 # Validation
 
+## Confirmed Bunnyhop takeoffs and terrain surfing (unreleased, 2026-11-04)
+
+The delivered rising-ramp module was reproduced in an owned 1.26a private map: six
+OpenGL takeoff phases each reached the fixture's 1000-CS-unit cap through 16–19
+same-frame takeoff/landing bonuses. Those contacts are not proof of free-flight jumps.
+`FinishMove` now awards the optional bonus only after accepted airborne departure.
+The corrected module passes all six phases in both OpenGL and Direct3D: no crest-window
+speed loss, peak 380.219 CS units/s rather than the false 1000 cap, and no camera-eye
+mismatch. Repeated ramp recontacts still occur physically but cannot multiply bonuses.
+The fixture cap is deliberately 1000; the Player default remains 3000.
+
+Portable checks cover no-energy contact projection, real versus rejected takeoffs,
+held Space, A/D steering, disabled/vertical faces, finite startup/F8 parsing and repeated
+settings-preserving updates. On a 60-degree terrain plane, classic/hull/recovery at
+30/60/144 Hz all reach 1040.2 world units/s after two seconds; held Space gives the same
+result. Swept wall/native-blocker assertions pass along with prior cliff, lip, bridge,
+narrow-passage, recovery, water and camera-height regressions.
+
+The native surf map uses an owned MPQ with an authored offline actor and a continuous
+60-degree descent (heights 100–1700, within the native terrain-height format). In both
+OpenGL and Direct3D the actor acquires airborne surf contact, accelerates downhill and
+lands on flat ground. A/D produces lateral travel; Space cannot award ground bonuses
+on the face, while real jumps resume after the flat landing. The OpenGL trial records
+36–37 surf frames and about 636–641 CS units/s before normal ground braking. Direct3D
+records 37 contacts and about 641 CS units/s; held-Space trials subsequently perform
+real flat-ground hops (about 737–739 CS units/s). Actual camera getters match the
+resolved eye. OpenGL recordings were inspected; D3D evidence is native measurements.
+No native/controller faults were observed. All touched lab modules, maps, settings,
+bridge files and saves were restored by hash after each run.
+
+This covers terrain heightfields, not arbitrary static-model surf meshes or every
+campaign geometry. True cliffs, blocked cells, sharp terrace lips and solid volumes
+remain collision boundaries. Native evidence is 1.26a only; real 1.27a remains unverified.
+
+
+## High/rising classic ramp contact (unreleased, 2026-11-03)
+
+The follow-up reporter module hash matches the delivered lower-crest fix. Its log shows
+another uphill rejection during rising movement, with height gap 30.5 rather than a
+descending-only landing. The additional adapter classifies both sides of local terrain,
+uses the incoming plane at a crest, checks native pathing/cliff levels, bounds correction
+by StepHeight/MaxWalkSlope and verifies model/deck headroom. Rejected XY candidates restore
+their prior physics state. The compatibility flag is validated and preserved by setup.
+
+Tracked collision cases now include 234 low/high/diagonal hill trials, slopes through 0.9,
+30/60/144 Hz, native radii through 48, opt-out and forbidden terrain tests. Domain tests
+cover bounded rising contact, unchanged XY momentum, departing jumps and mode isolation;
+existing wall/cliff/bridge/pathing/water/cap regressions pass. A private broader 640-case
+scan also has no horizontal losses on its clear ramps.
+
+On an owned 1.26a native hill of height 384 and gradient 0.9, the prior repair loses
+330.625 CS units/s to zero in all six takeoff phases. The new module passes all six in
+OpenGL and Direct3D with no crest-window speed drop and no observed camera-height mismatch.
+Comparison uses identical 1000-cap fixture tuning; the Player default remains 3000.
+An additional live Direct3D F8 comparison disables/enables ClassicRampContacts in the same
+process: disabled reproduces the 330.625-to-zero drop; enabled preserves crest momentum.
+OpenGL before/after recording frames were inspected. The experiment does not promise passage through true cliffs, blocked cells or steeper
+surfaces. All touched lab files/saves are restored by hash. Real 1.27a is unverified;
+D3D is native assertions only. OpenGL recordings remain private.
+
+## Classic crest momentum (unreleased, 2026-11-03)
+
+The production classic adapter is exercised across 144 continuous-hill cases: 30/60/144 Hz,
+gradients 0.3/0.5, native radii 16/24/32/48 and six takeoff phases. The new regression
+fails against the previous adapter and passes with floor contact resolved before/after
+each swept step. Existing classic/hull/recovery tests cover walls, steep cliffs, decks,
+narrow passages, world boundaries, water and maximum-speed sweeps; movement/status/jump
+and camera-height suites pass. The collision rejection tests and motor settings are unchanged.
+
+An authored owned 1.26a native hill reproduces the old OpenGL drop from 330.625 CS units/s
+to zero with uphill-terrain rejection at reachable 171.2 versus terrain 200.0. The repaired
+module crosses all six takeoff phases in OpenGL and Direct3D without a frame-to-frame
+speed drop in the crest interval; the observed camera height equals the requested height.
+Comparison uses identical 1000-cap tuning for the older diagnostic module's compatibility;
+the delivered configuration retains the current 3000 cap. OpenGL before/after recordings
+were inspected; no D3D capture or real 1.27a verification is claimed. All lab files/saves
+are restored by hash. Genuine solid/terrain impacts remain blocking, and every custom map
+or steeper ascending contact is not claimed to be covered by this landing regression.
+
+## Bunnyhop speed cap 3000 (unreleased, 2026-11-02)
+
+Portable physics reaches the new 3000 GoldSrc-unit/s default (4500 Warcraft units/s)
+at 30/60/144 Hz and checks the cap at every takeoff. The maximum-speed thin-wall
+fixture now approaches 4500 world units/s before its sweep; collision, ground/water,
+roots, slows, jump-height and reload regressions pass. Config/installer cases cover
+stock 1000 migration, explicit version-2 legacy caps, custom values, finite bounds
+and repeated-update preservation. Air acceleration remains 30 and boost remains 15%.
+This tuning change uses the existing camera/movement/native paths; it adds no hooks.
+
+## Warcraft sky choices and faster Bunnyhop (unreleased, 2026-11-02)
+
+Portable menu tests cover separate native/CS drafts, native choices without CS caches,
+type-dependent labels, cancellation and atomic identifier-only writes. The pure sky lease
+tests cover authored/empty skies, preset changes, hide/show, external script replacements
+and restoration. Real loader and installer tests cover six native identifiers, malformed
+paths, case normalization, stock 0/10 upgrades, separate versioned zero/legacy opt-backs,
+custom values and repeated-update preservation. Movement tests compare faster takeoff/air
+gain against the old profile while retaining height, cap, frame-rate, root/slow and water
+rules; classic/hull/recovery collision regressions pass.
+
+Owned offline 1.26a OpenGL and Direct3D both load all five stock sky models through F2,
+with nonzero native sprites. Real hide/show, CS/native switching and RTS exit restore the
+latest authored winter sky after a map-script replacement during the Dalaran override.
+OpenGL panel/world frames and a recording were captured; panel and model frames were
+inspected. The native movement oracle confirms faster default held-jump acceleration
+within the existing cap. All touched lab files and saves are restored by hash. No retail
+models are packaged; no real 1.27a verification or D3D capture is claimed.
+
+## Editable field of view (unreleased, 2026-11-02)
+
+Real loader tests cover default/empty/malformed/non-finite angles, 60–120 bounds and
+independent scope policy. Menu tests exercise draft/cancel/reset, one-key atomic save,
+loader consumption and nine-row pointer/hint geometry. Installer tests preserve a custom
+106-degree angle, insert missing 85-degree defaults and retain idempotence. Rendered WGL
+panels at 800x600/1024x768 were inspected; beam-anchor regressions include 60/106/120.
+
+Owned offline 1.26a OpenGL and Direct3D runs compare the configured/shared angle with
+the actual native camera: 60, 85, 106 and 120 degrees. Production F2/Enter/Escape paths
+verify drafts do not apply early, save/cancel behavior, F8 reload, applying while scoped,
+scope cycling, TPS and clean F9. Native getters report radians, converted to degrees in
+the fixture. The pre-existing second-zoom request of 10 degrees reads as 20 in this host;
+both the old 85-degree and new 120-degree base preferences retain that same behavior.
+OpenGL menu/world frames and a recording were inspected; no D3D capture is claimed.
+All touched lab files and saves were restored by hash. Real 1.27a remains unverified.
+
+## Portals and heavy weapons (unreleased, 2026-11-02)
+
+Synthetic mapped-PE tests verify exact JASS signatures, real versus null registrations,
+ambiguity/bounds rejection and the exploded setter's paired flag operations. Callback fixtures
+cover active/inactive/height/bounds portal policy, leave-gate latch, map invalidation, native
+position changes versus budgeted movement, hostile creature eligibility, preserved map-owned
+flags, survivor restoration and replacement/reset safety. Real config/installer tests cover
+new defaults, legacy balance chains, finite bounds, custom values and current-marker opt-backs.
+Inventory tests cover sealed starting Crowbar, opt-out, missing resources and native-only mode.
+
+An authored offline 1.26a map tests paired native waygates and initialized hostile Footman,
+Crypt Fiend and Naga Myrmidon targets. OpenGL and Direct3D both verify real destination/camera
+coordinates, no immediate reverse crossing, startup Crowbar, surviving Gluon flag restoration,
+Gluon/Tau/RPG exploded deaths and four normal map death events. Disabling the feature leaves
+an ordinary typed corpse; native exploded deaths immediately remove their typed units.
+OpenGL recording was inspected and shows native flying body fragments. Direct3D additionally
+crosses a map-script region portal in hull mode to terrain 512 with physical feet 512 and
+camera eye 608; no Direct3D capture is claimed. Owned lab files, private optional caches and
+saves are restored by hash. Real 1.27a behavior and every custom portal/creature remain unverified.
+
+## Release 0.18.0 (2026-11-02)
+
+See [the release verification and limits](RELEASE-0.18.0.md#source-setup-and-verification). Full native-independent regressions pass. Owned 1.26a OpenGL/Direct3D scenes verify swimming, canal exits, ordinary movement and militia morph stability; OpenGL water frames were inspected. Source audits and final launcher/package checks bind the native payload to the reviewed sources. Real 1.27a swimming is unavailable and RX580 issue #10 remains unresolved.
+
 ## Surface swimming and canal exits (2026-11-01, unreleased)
 
 Portable physics checks cover finite buoyancy at 30/60/144 Hz, depth hysteresis, capped paddling,

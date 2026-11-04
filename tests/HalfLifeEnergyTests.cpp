@@ -54,7 +54,7 @@ int main() {
     gluon.Step(WeaponSlots::Gluon,1,false,true,false,cells,.1f,settings);assert(cells==0);
     assert(gluon.Step(WeaponSlots::Gluon,1.2,false,true,false,cells,.1f,settings).stopped && cells==0);
     // Independently unavailable resources never unlock via purchases, grants or category selection.
-    GameplaySettings game;BuyInventory inventory;int ammo[WeaponSlots::Count]={},reserve[WeaponSlots::Count]={};
+    GameplaySettings game;game.startCrowbar=false;BuyInventory inventory;int ammo[WeaponSlots::Count]={},reserve[WeaponSlots::Count]={}; // Purchases opt out of the separately tested starting Crowbar.
     int magazines[WeaponSlots::Count]={},reserves[WeaponSlots::Count]={};
     for(int i=0;i<WeaponSlots::Count;++i)magazines[i]=game.weapons[i].magazine;
     for(int slot=WeaponSlots::Crowbar;slot<=WeaponSlots::Gluon;++slot) {

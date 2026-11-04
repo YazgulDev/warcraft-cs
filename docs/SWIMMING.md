@@ -2,7 +2,7 @@
 
 [Project home](../README.md) · [Movement](MOVEMENT.md) · [Settings](CONFIGURATION.md)
 
-The local development build automatically swims in deep native water while using direct FPS,
+Release 0.18.0 automatically swims in deep native water while using direct FPS,
 unit-view or third-person control. The body settles partly below the liquid plane and the
 physical aiming/camera eye rests 12 Warcraft units above it. WASD paddles at 65% of the current
 weapon/unit speed, including native slows and haste. Space does not produce ground jumps or

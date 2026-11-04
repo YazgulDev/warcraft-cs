@@ -1,6 +1,7 @@
 #include "../src/platform/NativeRockets.hpp"
 #include "../src/platform/NativeGrenades.hpp"
 #include "../src/platform/NativeBlast.hpp"
+#include "../src/platform/NativeExplosiveDeath.hpp"
 #include <cassert>
 #include "../src/platform/SpriteTransform.hpp"
 #include <cstring>
@@ -12,9 +13,15 @@ float clockSeconds=0;std::vector<Bounds3> cover;std::vector<wc3::Handle> group;
 std::map<wc3::Handle,float> hp;std::map<wc3::Handle,bool> paused;
 unsigned damages=0,pauses=0,releases=0,sounds=0;
 std::vector<bool> collisionFilters;
+alignas(4) std::array<std::array<unsigned char,128>,16> nativeObjects{};
+std::map<unsigned,bool> deathFlags;
+void __cdecl ExplodeFlag(wc3::Handle unit,BOOL value) {
+    auto& flags=*reinterpret_cast<uint32_t*>(nativeObjects[unit].data()+0x5C);
+    if(value)flags|=0x2000;else flags&=~0x2000;
+}
 std::vector<wc3::Handle> enumerated={1,2,3};bool actorPresent=true;
 wc3::Bits Bits(float value){wc3::Bits result;std::memcpy(&result,&value,4);return result;}
-void Scene() {clockSeconds=0;cover.clear();hp={{1,1000},{2,1000},{3,1000},{10,1000}};paused={{1,false},{2,false},{3,true}};damages=pauses=releases=sounds=0;enumerated={1,2,3};actorPresent=true;}
+void Scene() {clockSeconds=0;cover.clear();hp={{1,1000},{2,1000},{3,1000},{10,1000}};paused={{1,false},{2,false},{3,true}};damages=pauses=releases=sounds=0;enumerated={1,2,3};actorPresent=true;nativeObjects={};deathFlags.clear();}
 }
 namespace wc3 {
 #define NATIVE(result,name,arguments,offset) result (__cdecl* name) arguments=nullptr;
@@ -22,6 +29,7 @@ namespace wc3 {
 #undef NATIVE
 float Real(Bits value){float result;std::memcpy(&result,&value,4);return result;}
 float Ground(float,float){return 0;}
+uintptr_t UnitObject(Handle unit){return GetUnitTypeId(unit) ? reinterpret_cast<uintptr_t>(nativeObjects[unit].data()) : 0;}
 float AttackSurface(float,float,bool){return 0;}
 void Log(const char*,...) {}
 void Trace(const char*,...) {}
@@ -34,7 +42,7 @@ bool Read(uintptr_t sprite,ModelTransform& transform){transform.position[0]=spri
 void GameAudio::Play(const char*,float){++sounds;}
 void GameAudio::SetLoop(const char*,bool,float){}
 // Combat must retain coarse cover snapshots when movement opts into static mesh detail.
-std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,bool nativeCollision,bool detailed,bool){assert(!detailed);collisionFilters.push_back(nativeCollision);return cover;}
+std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,bool nativeCollision,bool detailed,bool,MeshSurfaceRange){assert(!detailed);collisionFilters.push_back(nativeCollision);return cover;}
 int main() {
     _set_error_mode(_OUT_TO_STDERR);
     wc3::CreateTimer=[]()->wc3::Handle{return 1;};wc3::TimerStart=[](wc3::Handle,float*,BOOL,wc3::Handle){};
@@ -53,7 +61,7 @@ int main() {
     wc3::FirstOfGroup=[](wc3::Handle)->wc3::Handle{return group.empty() ? 0 : group.front();};
     wc3::GroupRemoveUnit=[](wc3::Handle,wc3::Handle u){group.erase(std::find(group.begin(),group.end(),u));};wc3::DestroyGroup=[](wc3::Handle){};
     wc3::DestroyEffect=[](wc3::Handle){};
-    wc3::UnitDamageTarget=[](wc3::Handle,wc3::Handle u,float* damage,BOOL,BOOL,int,int,int)->BOOL{hp[u]-=*damage;++damages;return TRUE;};
+    wc3::UnitDamageTarget=[](wc3::Handle,wc3::Handle u,float* damage,BOOL,BOOL,int,int,int)->BOOL{deathFlags[u]=(*reinterpret_cast<uint32_t*>(nativeObjects[u].data()+0x5C)&0x2000)!=0;hp[u]-=*damage;++damages;return TRUE;};
     wc3::GetDestructableTypeId=[](wc3::Handle){return 10;};wc3::IsDestructableInvulnerable=[](wc3::Handle)->BOOL{return FALSE;};
     wc3::GetDestructableLife=[](wc3::Handle u){return Bits(hp[u]);};wc3::GetDestructableX=[](wc3::Handle){return Bits(20);};wc3::GetDestructableY=[](wc3::Handle){return Bits(0);};
     GameplaySettings settings;settings.grenades.fuse=.2f;settings.grenades.throwSpeed=50;settings.grenades.gravity=50;settings.friendlyFirePercent=0;
@@ -63,7 +71,7 @@ int main() {
     assert(field.Throw(1,WeaponSlots::HE,{0,0,100},{1,0,0},{0,0,0},settings));
     settings.damage[WeaponSlots::HE]=9999; // A later F8 snapshot cannot change the launched charge.
     field.Tick(audio,1,{0,0,100},{1,0,0});assert(damages==0);
-    clockSeconds=.3f;assert(field.Tick(audio,1,{0,0,100},{1,0,0}));assert(hp[1]==1000 && hp[2]<1000 && hp[2]>400 && hp[2]<800 && hp[10]<1000);
+    clockSeconds=.3f;assert(field.Tick(audio,1,{0,0,100},{1,0,0}));assert(hp[1]==1000 && hp[2]>-200 && hp[2]<400 && hp[10]<1000);
     unsigned saved=damages;clockSeconds=1;field.Tick(audio,1,{0,0,100},{1,0,0});assert(damages==saved);
     field.Reset();Scene();assert(field.Throw(1,WeaponSlots::Flashbang,{0,0,100},{1,0,0},{},settings));
     // F8 changes after release cannot rewrite the already flying grenade's eligibility/duration snapshot.
@@ -171,5 +179,17 @@ int main() {
     assert(rockets.Launch(1,{0,0,96},{1,0,0},{},rpg));clockSeconds=.3f;
     rockets.Tick(audio,1,false,{0,0,96},{1,0,0},3000);assert(rewards==2);
     clockSeconds=1;rockets.Tick(audio,1,false,{0,0,96},{1,0,0},3000);assert(rewards==2);
-    std::puts("PASS native clock, single detonation, damage/friendly/cover/gate policy, F8 snapshots, flash leases and smoke expiry.");
+    // Flying RPGs retain the death policy captured at launch, including an F8 toggle in either direction.
+    NativeExplosiveDeath::TestBinding(ExplodeFlag,0x5C,0x2000);
+    const struct {bool enabled;float life;} corpseCases[]={{true,100},{false,100},{true,10000}};
+    for(auto test:corpseCases) {
+        rockets.Reset();Scene();enumerated={2};hp[2]=test.life;
+        cover={Bounds3{{60,-100,0},{62,100,300}}};rpg=GameplaySettings{};rpg.rpg.available=true;rpg.friendlyFirePercent=0;
+        rpg.explosiveWeaponDeaths=test.enabled;assert(rockets.Launch(1,{0,0,96},{1,0,0},{},rpg));
+        rpg.explosiveWeaponDeaths=!test.enabled;clockSeconds=.3f;rockets.Tick(audio,1,false,{0,0,96},{1,0,0},3000);
+        assert(deathFlags.count(2) && deathFlags[2]==test.enabled);
+        bool flagged=(*reinterpret_cast<uint32_t*>(nativeObjects[2].data()+0x5C)&0x2000)!=0;
+        assert(flagged==(test.enabled && hp[2]<=.405f));
+    }
+    std::puts("PASS native clock, single detonation, damage/friendly/cover/gate policy, F8/death-policy snapshots, flash leases and smoke expiry.");
 }

@@ -12,10 +12,28 @@ press for every takeoff. Keeping W pressed or turning against the strafe directi
 
 Takeoffs skip ground friction and use air acceleration on their first frame. Air acceleration limits only
 velocity along the input direction, retaining perpendicular momentum; changing that direction with the
-mouse accumulates speed above the weapon's running speed. Straight jumps preserve existing speed without
-creating an automatic bonus. Release Space or stop jumping to let ground friction brake.
+mouse accumulates speed above the weapon's running speed. With zero takeoff boost, straight jumps
+preserve existing speed without creating a bonus. The local development build defaults to a 15%
+moving-takeoff bonus and air acceleration 30 (previously 0% / 10). Release Space or stop jumping to let ground friction brake.
 Shift/Ctrl suppress the extra takeoff boost. Warcraft roots/stuns still stop horizontal movement and
 block takeoff; release Space after recovery. Existing slows still cap movement speed.
+
+The local development build fixes a classic-mode crest landing that could erase horizontal
+momentum. The existing classic floor resolver now runs before the first swept step and after
+each step, so an accepted descending landing is available to the next collision check.
+Previously it could stay airborne until the frame ended and hit an otherwise clear ramp.
+The motor still integrates once per frame; free-air jumps, genuine drops, native pathing,
+solid/terrain clearances and obstacle impacts retain their rules. Default mode stays classic.
+
+The next development fix also handles **rising** contact with a higher walkable ramp. A
+body can rise in world Z while still moving into the uphill plane. With
+`ClassicRampContacts=true`, a verified local foot contact becomes ground within the existing
+StepHeight budget, preserving horizontal velocity. Both sides of the native terrain sample
+must fit MaxWalkSlope and retain walkable pathing/cliff levels; flat terrace tops and blocked
+cliffs do not receive this assistance. Model/deck headroom is checked before correction,
+and a rejected XY candidate restores its previous height/ground state. No jump impulse is
+added by the contact. Set false and press F8 for the earlier classic contact behavior.
+The option is ignored by hull/recovery; installation preserves a saved opt-out.
 
 Jump over low solids when the feet clear their transformed model bounds. Land on their top or continue
 past them. Taller walls, buildings and trees retain collision. Walking or jumping off a ledge keeps the
@@ -25,7 +43,7 @@ the center crosses, and support ends after the trailing foot leaves. Native clif
 lower-bank pathing cell; validated movement there avoids Warcraft's nearest-cell relocation.
 Map bounds and unsupported flat pathing cells remain blocked. Unknown custom models cannot grant
 permission to cross blocked pathing. Native cliff levels distinguish cliff faces from ordinary hills.
-Shallow-water support retains Warcraft's native height rather than dropping onto the submerged mesh.
+With `[Swimming] Enabled=true`, shallow water uses its actual terrain bed and deep water switches to surface swimming. Move toward a reachable bank and press Space once to leave a canal. Bridges and native flight retain separate support. See [swimming and its editable settings](SWIMMING.md); disabling swimming restores the previous water-support movement.
 
 World boundaries include the actor radius in every mode. An actor already outside is clamped
 back before floor resolution even while idle; motion along the edge and inward remains usable.
@@ -72,17 +90,18 @@ simulation step applies the new speed cap. Jump speed applies to the next takeof
 
 | `[Movement]` key | Default | Range and units |
 | --- | --- | --- |
-| Mode | recovery | classic/hull/recovery, case-insensitive. classic restores 24 October pre-rework movement (2babf58); hull retains the intermediate 25 October round-hull build; recovery retains the latest platform/Home behavior. F8 switches without resetting motion |
+| Mode | classic | classic/hull/recovery, case-insensitive. classic restores 24 October pre-rework movement (2babf58); hull retains the intermediate 25 October round-hull build; recovery retains the latest platform/Home behavior. F8 switches without resetting motion |
 | UseNativeUnitCollision | true | true/false; live Warcraft actor/creature footprints. Ignore Locust/pathing-disabled helpers; buildings/trees retain solid model volumes. false restores visual creature boxes and the 24-unit actor footprint |
 | BunnyHop | true | true/false; preserves excess takeoff momentum and enables the optional boost and air speed cap. false clips excess speed to the current weapon's running speed at each takeoff |
 | AutoJump | true | true/false; false requires a new Space press per jump |
-| JumpBoostPercent | 0 | 0–100 percent per moving takeoff; optional arcade bonus, separate from air strafe acceleration |
-| MaxBunnySpeed | 1000 | 250–2000 GoldSrc units/s |
-| AirAcceleration | 10 | 0–100 wish-direction acceleration multiplier |
+| ClassicRampContacts | true (local development) | Classic only; bounded airborne foot contact on verified walkable native ramps, including rising contact. Startup/F8 |
+| JumpBoostPercent | 15 (local development) | 0–100 percent per moving takeoff; arcade bonus, separate from air strafe acceleration |
+| MaxBunnySpeed | 3000 (local development) | 250–3000 GoldSrc units/s; horizontal cap, independent of air acceleration |
+| AirAcceleration | 30 (local development) | 0–100 wish-direction acceleration multiplier |
 | JumpSpeed | 268.328 | 1–800 GoldSrc units/s upwards |
 | Gravity | 800 | 100–3000 GoldSrc units/s² downwards |
 | StepHeight | 27 | 0–64 Warcraft units; automatic rise/drop limit, larger drops fall |
-| MaxWalkSlope | 46 | Hull/recovery only; 15–75 degrees; maximum local walkable slope. Blocked native cliff faces remain non-walkable |
+| MaxWalkSlope | 46 | 15–75 degrees; hull/recovery terrain support and classic airborne ramp assistance. Blocked native cliff faces remain non-walkable |
 | HullRadius | 24 | Hull/recovery only; 8–64 Warcraft units; maximum player collision radius, preserving smaller native footprints |
 | ObjectMeshCollision | true | Hull/recovery only; true/false; use supported stationary prop surfaces for fit, support and head clearance. false restores conservative whole-model volumes |
 | RecoverInvalidPosition | true | true/false; repair proven below-terrain states and lost deck support for an established rider; ordinary falls and underpasses stay unchanged |
@@ -92,10 +111,16 @@ One GoldSrc unit corresponds to 1.5 Warcraft units. The default jump rises about
 Finite out-of-range numbers are clamped; missing/empty/malformed/non-finite values use the defaults.
 Boolean values accept true/false case-insensitively; invalid values use their default.
 
-Older test configs with `JumpBoostPercent=8` keep that value during an update. Set it to **0** and press
-**F8** for the strafe-only behavior described above. Set `AirAcceleration=0` to disable air strafe gain.
-The default cap is 1500 Warcraft units/s, four times the knife's running speed of 375. The supported maximum
-is 2000 GoldSrc units/s (3000 Warcraft units/s); swept collision still checks eight-unit segments.
+Older test configs with `JumpBoostPercent=8` keep that value during an update. The local development
+build upgrades former stock 0/10 once through independent `JumpBoostVersion=2` and
+`AirAccelerationVersion=2` markers. Keep those markers at 2 when choosing a deliberate old value.
+For strafe-only behavior, set `JumpBoostPercent=0`, `JumpBoostVersion=2` and press **F8**.
+For the former air response also set `AirAcceleration=10`, `AirAccelerationVersion=2`.
+Set `AirAcceleration=0` to disable air strafe gain. Jump height, gravity, collision and the cap remain unchanged.
+The local development default and supported maximum cap are 3000 GoldSrc units/s (4500 Warcraft units/s).
+Air acceleration stays 30 and the moving-takeoff bonus stays 15 percent. Stock 1000 upgrades once through
+`MaxBunnySpeedVersion=2`; keep this marker at 2 for an explicit 1000 or another custom cap. Missing/invalid
+values use 3000, finite values clamp to 250–3000, and startup/F8 apply it. Swept collision still checks eight-unit segments.
 
 This is a Warcraft adaptation, not an exact GoldSrc engine port. It omits Half-Life's punitive 1.7×
 takeoff limiter in favor of the editable cap. Like discrete GoldSrc air acceleration, gain depends on

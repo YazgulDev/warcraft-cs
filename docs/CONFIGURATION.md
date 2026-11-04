@@ -33,6 +33,8 @@ prepares the private 1.26a graphics components automatically.
 | Topic | Guide |
 | --- | --- |
 | Air strafing, jumping and collision | [Movement](MOVEMENT.md) |
+| Deep water, buoyancy and canal exits | [Swimming](SWIMMING.md) |
+| Portal travel, starting Crowbar and explosive deaths | [Portals and heavy weapons](PORTALS-HEAVY-WEAPONS.md) |
 | Owned weapon groups and wheel preview | [Weapon selection](WEAPON-SELECTION.md) |
 | Firearms, prices, ammo, grenades and army AI | [Arsenal and shops](ARSENAL-SHOPS-AI.md) |
 | Rockets and laser guidance | [Half-Life RPG](HALF-LIFE-RPG.md) |
@@ -159,7 +161,17 @@ automated. Existing native autocast settings may still act independently.
 native limiter. `DrawDistance=5000` accepts 3000–20000 world units. Actual performance
 depends on hardware and map load; farther rendering does not reveal fog-hidden units.
 
+The local development build adds `[Rendering] FieldOfView=85`: horizontal world-camera
+degrees, clamped to 60–120. Edit **F2 → Field of view → Apply & Save** or reload a manual
+INI edit with F8. FPS, F9 and third person share the preference; existing scope zoom stays
+independent. Missing/invalid/non-finite values use 85. Updates preserve custom angles.
+
 `[Sky] WarcraftEnabled=true` supplies the native sky on maps without one.
+The local development build adds `WarcraftPreset=auto`: auto / summer / fall / winter /
+felwood / dalaran. With Warcraft type selected, the F2 preset row chooses these stock models.
+Auto preserves authored map skies; other choices override only controlled views. F2 Apply
+and F8 take effect immediately. Leaving FPS, selecting CS or hiding/revealing the sky restores
+the appropriate leased map/selected model, including later map-script sky replacements.
 `Enabled=false` keeps Warcraft skies; true uses privately converted CS skyboxes.
 `Default=Des` and tileset mappings such as `W=snow` choose cache stems. Missing
 caches retain the native sky. F8 applies changes; map/RTS transitions restore the
@@ -235,8 +247,37 @@ Only camera/aim height receives the bounded correction. Horizontal position, col
 
 The [arsenal/smoke preview](ARSENAL-SMOKE-PREVIEW.md) documents the new TMP, UMP45, FAMAS, Galil and G3SG1 sections and `[SmokeGrenade] VisibilityDistance=96` / `BlocksAI=true`. Existing opacity and weapon tuning are preserved during updates.
 
-The [F2 in-game settings panel](INGAME-SETTINGS.md) edits mouse sensitivity, CS volume, movement physics, view distance and sky. `[Mouse] Sensitivity=1` and `ScopeSensitivity=1` preserve previous aiming; `[Sky] Visible=true` adds explicit controlled-view sky visibility. Apply saves only changed keys; F8 still reloads manual edits.
+The [F2 in-game settings panel](INGAME-SETTINGS.md) edits mouse sensitivity, CS volume, movement physics, view distance and sky; the local development build also exposes field of view. `[Mouse] Sensitivity=1` and `ScopeSensitivity=1` preserve previous aiming; `[Sky] Visible=true` adds explicit controlled-view sky visibility. Apply saves only changed keys; F8 still reloads manual edits.
 
 The [nuclear bomb and chat preview](NUCLEAR-CHAT-PREVIEW.md) documents `[Chat]` and `[NuclearBomb]` keys, ranges and next-launch F8 snapshots.
 
 [Release 0.17.0](RELEASE-0.17.0.md) collects all new weapon, smoke, mouse, sky, chat and nuclear defaults/ranges. Nuclear gameplay settings apply to future launches on F8; `[NuclearAudio]` layer edits require Install/asset reconversion. Existing custom codes survive; the former stock nuclear code upgrades to `warneverchanges`.
+
+
+## Terrain and model surfing (development preview)
+
+`[Surfing] Enabled=true` enables airborne sliding on continuous, native-walkable terrain slopes
+steeper than `[Movement] MaxWalkSlope` (46 degrees by default). Gravity accelerates along the
+contact plane; A/D and mouse turning use the existing air-strafe controls. Space does not
+create a ground jump or takeoff bonus on the steep face. Flat support restores ordinary
+walking/bunnyhop. The shared `MaxBunnySpeed=3000` cap remains in GoldSrc units/s.
+
+`MaximumAngle=80` accepts 50–85 degrees; `ContactDistance=8` accepts 0–32 Warcraft world units.
+The latter is a small contact tolerance, not a distant snap. Missing/malformed/non-finite
+values use the defaults. Startup/F8 apply the same settings; updates add missing keys and
+preserve explicit disabled/custom choices. `Enabled=false` opts out without switching the
+saved classic/hull/recovery strategy. `ModelContacts=true` additionally resolves steep faces
+from decoded stationary destructable meshes when `[Movement] ObjectMeshCollision=true`.
+It uses transformed triangle normals and foot contacts, including rotated imported ramps;
+model bounds alone never grant a surf plane. `ModelContacts=false` keeps terrain surfing
+only. Startup/F8 applies this toggle and updates preserve an explicit opt-out.
+Classic retains its historical collision for other objects and native decks. Blocked
+native cells, cliff transitions, sharp terrace lips, solid walls and body headroom still
+restrict movement; surf contact does not permit passing through a ramp's underside.
+
+The original [Surf Skyline time trial](SURF-SKYLINE.md) includes imported solid ramps,
+two checkpoints, gaps, a timer and session records. Its models require this newer build.
+
+The optional 15% Bunnyhop bonus is confirmed only after collision accepts a real airborne
+takeoff. A proposed jump that lands on the uphill ramp in the same frame earns no bonus;
+repeated ramp contacts therefore cannot multiply speed at the rendering frame rate.

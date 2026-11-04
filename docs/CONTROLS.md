@@ -20,14 +20,23 @@ show default bindings; `[Shortcuts]` in the INI can change keyboard actions.
 | Home (Mode=recovery) | Emergency return to nearby visited safe ground after a fall or invalid placement |
 | Mouse wheel in third person | Change camera distance |
 
+In the local development build, **F2 → Field of view → Apply & Save** changes the horizontal
+angle in FPS, F9 and third person (60–120°, default 85°). Scope zoom remains unchanged.
+
 With **Only Warcraft modes** installed, T switches between F7 and F9 instead.
 F9 keeps movement and ambience but hides the HUD and blocks player attacks, spells
 and inventory actions. Enemy basic attacks are blocked by default in this view;
 `[UnitView] PreventEnemyAttacks=false` allows them.
 
-Hold Space to repeat jumps. For air strafing, build speed with W, jump, release W,
+Deep water automatically enables [surface swimming](SWIMMING.md) on verified 1.26a. Move toward a reachable bank and press Space once to jump out; holding Space in open water does not repeat swimming jumps. Shallow water returns to walking.
+
+On dry ground, hold Space to repeat jumps. For air strafing, build speed with W, jump, release W,
 then alternate A with a left mouse turn and D with a right turn.
 See [movement](MOVEMENT.md) and [third-person control](THIRD-PERSON.md).
+
+The local [portal development build](PORTALS-HEAVY-WEAPONS.md) teleports through active waygates
+when you approach them. Leave the arrival gate before using it again. Native scripted in-map
+teleports retain their own triggers; the controlled camera/floor follow the new position.
 
 Select `[Movement] Mode=recovery` and press F8 to enable the latest recovery movement.
 Release 0.13.0 defaults to `Mode=classic`, restoring movement before the 24 October collision redesign and leaving Home inactive. Optional `Mode=recovery` enables platform protection and Home recovery. Published 0.12.0 used recovery by default.

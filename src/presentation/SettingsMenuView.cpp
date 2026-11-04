@@ -21,7 +21,8 @@ void SettingsMenuView::Draw(const SettingsMenu& menu,int width,int height,int cu
     for(int row=0;row<SettingsMenu::Rows;++row) {
         float y=box.rowY+row*box.row;
         glColor4f(row==menu.Selected() ? .18f : .055f,row==menu.Selected() ? .14f : .07f,.065f,1);Rect(box.x+box.width*.025f,y,box.width*.95f,box.row*.88f);
-        glColor4f(.95f,.95f,.9f,1);text(box.x+box.width*.04f,y+box.row*.58f,SettingsMenu::Label(row));
+        // The preset row follows the draft sky type before Apply, keeping native and CS choices distinct.
+        glColor4f(.95f,.95f,.9f,1);text(box.x+box.width*.04f,y+box.row*.58f,menu.Label(row));
         glColor4f(1,.75f,.3f,1);text(box.minusX,y+box.row*.55f,"-");text(box.plusX,y+box.row*.55f,"+");
         std::string value=menu.Value(row);if(value.size()>26)value=value.substr(0,23)+"...";
         text(box.trackX,y+box.row*(SettingsMenu::Numeric(row) ? .48f : .58f),value.c_str());
@@ -30,7 +31,7 @@ void SettingsMenuView::Draw(const SettingsMenu& menu,int width,int height,int cu
             glColor4f(1,.7f,.2f,1);Rect(box.trackX,y+box.row*.7f,box.trackWidth*std::clamp(menu.Fraction(row),0.f,1.f),3);
         }
     }
-    glColor4f(.75f,.8f,.85f,1);text(box.x+box.width*.04f,box.y+box.height*.755f,SettingsMenu::Hint(menu.Selected()));
+    glColor4f(.75f,.8f,.85f,1);text(box.x+box.width*.04f,box.y+box.height*.755f,menu.Hint(menu.Selected()));
     glColor4f(menu.Error().empty() ? .8f : 1,.45f,.25f,1);
     const char* notice=!menu.Error().empty() ? menu.Error().c_str() : menu.Dirty() ? "Unsaved changes. Apply to save and use them." : "Changes apply after Apply & Save.";
     text(box.x+box.width*.04f,box.y+box.height*.80f,notice);

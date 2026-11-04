@@ -8,7 +8,7 @@ quests and combat rules. Third-person and unarmed first-person views are also av
 [Install and play](INSTALL.md) · [Documentation](docs/README.md) ·
 [Discussions](https://github.com/YazgulDev/warcraft-cs/discussions)
 
-**Release 0.17.0:** TMP, UMP45, FAMAS, Galil and G3SG1, dense smoke, F2 settings and mouse sensitivity, controlled-view chat, a nuclear RPG granted by `warneverchanges`, and Gluon sound fixes. See [downloads and all changes](docs/RELEASE-0.17.0.md). [1.27a/D3D9 support remains experimental](docs/PORT-1.27.md).
+**Release 0.18.0:** deep-water swimming and exits from canals, a fix for militia-alarm crashes, C4 in Bombs, and a wider RPG blast with distance falloff. See [downloads and all changes](docs/RELEASE-0.18.0.md). [1.27a/D3D9 support remains experimental](docs/PORT-1.27.md).
 
 ## Start here
 

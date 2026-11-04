@@ -42,6 +42,7 @@
 #include "../../tests/FramePresentationScene.hpp"
 #include "../../tests/MilitiaMorphScene.hpp"
 #include "../../tests/SwimmingScene.hpp"
+#include "../../tests/PortalsHeavyScene.hpp"
 #endif
 #ifdef WCS_TREE_WHEEL_TEST
 #include "../../tests/TreeAndWheelScene.hpp"
@@ -347,6 +348,7 @@ static void FinishFrame(HDC dc,const char* route) {
     // Morph fixtures must precede the NEXT native pose update, not create unskinned models during RenderWorld.
     if(healthy && worldReady)MilitiaMorphScene::Tick(controller,root);
     if(healthy && worldReady)SwimmingScene::Tick(controller,root);
+    if(healthy && worldReady)PortalsHeavyScene::Tick(controller,root,gameBase);
 #endif
     // Observe skipped frames too: a valid context alone does not establish an active FPS overlay.
     if (DiagnosticLog::Due(previous)) {

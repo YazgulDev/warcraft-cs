@@ -3,6 +3,7 @@
 #include <cmath>
 
 void MovementPhysics::Reset(float floor) {
+    surfing_=false;pendingJumpBoost_=0;
     water_={};swimming_=waterJump_=false;waterAllowed_=true; // Map, actor and cargo resets cannot retain another pool's buoyancy.
     vx_ = vy_ = vz_ = duck_ = 0; feetZ_ = floor;
     previousFeetZ_ = floor; previousDuck_=0;
@@ -15,6 +16,8 @@ void MovementPhysics::LimitSpeed(float maximum) {
     if (speed > maximum) { vx_ *= maximum / speed; vy_ *= maximum / speed; }
 }
 void MovementPhysics::Step(const MoveInput& input, float dt, float weaponSpeed) {
+    // Portable callers may omit an explicit commit; the previous resolved frame is still finalized once.
+    FinishMove();surfing_=false;
     dt = std::clamp(dt, 0.0f, 0.05f);
     if (!dt) return;
     previousFeetZ_ = feetZ_;
@@ -79,9 +82,7 @@ void MovementPhysics::Step(const MoveInput& input, float dt, float weaponSpeed) 
     if (jump) {
         // Optional arcade boost is independent of classic strafe gain; Shift/Ctrl suppress it.
         if (settings_.bunnyHop && !input.walk && !input.duck && length > 0) {
-            float speed = Speed();
-            float boosted = std::min(speed * (1 + settings_.jumpBoostPercent / 100), settings_.maxBunnySpeed * worldScale);
-            if (speed > 0 && boosted > speed) { vx_ *= boosted / speed; vy_ *= boosted / speed; }
+            pendingJumpBoost_=settings_.jumpBoostPercent/100;
         }
     }
     if (settings_.bunnyHop) LimitSpeed(settings_.maxBunnySpeed * worldScale);
@@ -91,6 +92,29 @@ void MovementPhysics::Step(const MoveInput& input, float dt, float weaponSpeed) 
         feetZ_ += vz_ * dt - 0.5f * gravity * dt * dt;
         vz_ -= gravity * dt;
     }
+}
+void MovementPhysics::FinishMove() {
+    float bonus=pendingJumpBoost_;pendingJumpBoost_=0;
+    // Ramp recontacts and ceiling hits are not a free-flight jump. Repeated takeoff/landing
+    // within one frame must never multiply the arcade bonus at the rendering frame rate.
+    if(bonus<=0 || grounded_ || swimming_ || surfing_ || vz_<=0)return;
+    float speed=Speed(),boosted=std::min(speed*(1+bonus),settings_.maxBunnySpeed*worldScale);
+    if(speed>0 && boosted>speed){vx_*=boosted/speed;vy_*=boosted/speed;}
+}
+bool MovementPhysics::ResolveSurf(const MovementSurface& surface) {
+    if(!settings_.surf.enabled || swimming_ || !std::isfinite(surface.height))return false;
+    float z=surface.normal[2];
+    if(!std::isfinite(z) || z<=std::cos(settings_.surf.maximumAngle*.01745329252f) ||
+        z>=std::cos(settings_.maxWalkSlope*.01745329252f) ||
+        surface.height>std::max(feetZ_,previousFeetZ_)+settings_.stepHeight+.01f ||
+        feetZ_-surface.height>settings_.surf.contactDistance+.01f)return false;
+    float into=vx_*surface.normal[0]+vy_*surface.normal[1]+vz_*z;
+    if(!std::isfinite(into) || into>.001f)return false; // Moving away from the face releases the contact.
+    // Remove only velocity into the plane. Gravity/air input supply motion; the contact adds no energy.
+    vx_-=std::min(0.f,into)*surface.normal[0];vy_-=std::min(0.f,into)*surface.normal[1];vz_-=std::min(0.f,into)*z;
+    float speed=Speed(),cap=settings_.maxBunnySpeed*worldScale;
+    if(speed>cap){float scale=cap/speed;vx_*=scale;vy_*=scale;vz_*=scale;}
+    feetZ_=surface.height;grounded_=false;surfing_=true;pendingJumpBoost_=0;return true;
 }
 float MovementPhysics::FloatFeet() const {
     return std::max(water_.bottom,water_.surface-(64-28*duck_)*worldScale+settings_.swimming.eyeAboveWater);
@@ -142,6 +166,16 @@ void MovementPhysics::ResolveClassicFloor(float floor) {
     // later slope, ceiling or reachable-height rules to the restored movement strategy.
     if(grounded_ && feetZ_-floor>settings_.stepHeight){grounded_=false;vz_=0;return;}
     if(grounded_ || (vz_<=0 && feetZ_<=floor)){feetZ_=floor;vz_=0;grounded_=true;}
+}
+bool MovementPhysics::ResolveClassicRamp(const MovementSurface& surface) {
+    // Rising in world Z can still move INTO an uphill plane. Only a real, bounded foot contact
+    // becomes ground; no velocity is minted and a departing jump cannot stick back to the ramp.
+    if(!settings_.classicCollision || !settings_.classicRampContacts || grounded_ || swimming_ ||
+        !surface.walkable || !surface.ramp || !std::isfinite(surface.height) ||
+        surface.height<feetZ_-.01f || surface.height>std::max(feetZ_,previousFeetZ_)+settings_.stepHeight+.01f)return false;
+    float into=vx_*surface.normal[0]+vy_*surface.normal[1]+vz_*surface.normal[2];
+    if(!std::isfinite(into) || into>=-.001f)return false;
+    feetZ_=surface.height;vz_=0;grounded_=true;return true;
 }
 void MovementPhysics::ResolveSurface(const MovementSurface& surface) {
     float floor=surface.height;

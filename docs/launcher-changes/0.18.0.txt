@@ -1,0 +1,11 @@
+- Added automatic surface swimming in deep native water on verified Warcraft 1.26a.
+- Added slower paddling, smooth buoyancy and shallow-water walking in classic, hull and recovery.
+- Added fresh-Space exits toward reachable banks and canal edges while retaining solid collision.
+- Added editable Swimming settings for depth, speed, buoyancy, eye clearance and shore exits with F8 reload.
+- Preserved custom water settings, bridge riders and native flying movement.
+- Added authored swimming animation selection with native gait fallback and water body positioning.
+- Fixed the visible Town Hall militia-alarm crash triggered by combat and worker model changes.
+- Changed carried C4 to Bombs group 4 and removed its separate column while retaining Half-Life on group 6.
+- Changed ordinary RPG stock radius from 600 to 1000 with 1800 peak damage and linear distance falloff.
+- Preserved custom RPG tuning and flying-rocket snapshots during F8 and versioned upgrades.
+- Updated movement guides, configuration, native fixtures and regression coverage.

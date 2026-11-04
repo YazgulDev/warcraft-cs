@@ -3,6 +3,8 @@
 #include "MovementWorldBounds.hpp"
 #include "UnitCollisionProfile.hpp"
 #include "MovementWater.hpp"
+#include "TerrainSurfContact.hpp"
+#include "ModelSurfContact.hpp"
 #include "../geometry/CylinderHull.hpp"
 #include <algorithm>
 #include <cmath>
@@ -311,6 +313,7 @@ void WarcraftCollision::Move(wc3::Handle unit, MovementPhysics& movement, float 
     // Select the complete pre-rework strategy, including its original landing resolver,
     // rather than approximating old movement by disabling individual recovery features.
     if(movement.ClassicCollision()){ResetRecovery();classic_.Move(unit,movement,dt);return;}
+    struct CommitJump {MovementPhysics& motion;~CommitJump(){motion.FinishMove();}} commit{movement};
     dt = std::clamp(dt, 0.f, .05f);
     terrain_.clear();
     modelPathing_=false;
@@ -331,35 +334,53 @@ void WarcraftCollision::Move(wc3::Handle unit, MovementPhysics& movement, float 
     float minX=bounds.minX,maxX=bounds.maxX,minY=bounds.minY,maxY=bounds.maxY;
     float dx = movement.VelocityX() * dt, dy = movement.VelocityY() * dt;
     float search=movement.PlatformRecovery() ? std::max(600.f,movement.RecoveryDistance()+radius_) : 600.f;
-    auto obstacles = obstacles_.Snapshot(unit,x,y,search+std::hypot(dx,dy),movement.NativeUnitCollision(),movement.ObjectMeshCollision(),movement.PlatformRecovery());
+    // Hull mode normally delegates native walkable decks; eligible steep meshes still
+    // need their normals even when platform recovery is disabled.
+    auto obstacles = obstacles_.Snapshot(unit,x,y,search+std::hypot(dx,dy),movement.NativeUnitCollision(),movement.ObjectMeshCollision(),movement.PlatformRecovery(),ModelSurfContact::Range(movement));
+    ModelSurfContact::Meshes surfMeshes;
+    for(size_t index=0;index<obstacles.size();++index)surfMeshes.push_back(obstacles_.Geometry(index));
     Ceiling(x,y,movement,obstacles);
+    auto support=[&]() {
+        auto floor=Floor(x,y,movement,obstacles);
+        if(!ModelSurfContact::OwnsFloor(x,y,radius_,floor.height,movement,surfMeshes) &&
+            !TerrainSurfContact::OwnsFloor(x,y,radius_,floor.height,movement))movement.ResolveSurface(floor);
+    };
+    auto settle=[&](float tx,float ty,float fx,float fy,float* normal=nullptr) {
+        // Surf correction belongs to this candidate only; a wall rejection rolls it back too.
+        auto before=movement;bool contact=ModelSurfContact::Resolve(tx,ty,radius_,movement,surfMeshes) ||
+            TerrainSurfContact::Resolve(tx,ty,radius_,movement,obstacles);
+        if(Clear(tx,ty,fx,fy,movement,obstacles,normal))return true;
+        if(contact)movement=before;return false;
+    };
     if (std::hypot(dx,dy)<.001f) {
         // Standing still needs floor resolution, but no collision rejection or blocked-movement telemetry.
-        movement.ResolveSurface(Floor(x,y,movement,obstacles));Recover(unit,x,y,movement,obstacles);MovementWater::Update(unit,movement);return;
+        support();settle(x,y,x,y);Recover(unit,x,y,movement,obstacles);MovementWater::Update(unit,movement);return;
     }
-    int steps = std::max(1, int(std::ceil(std::hypot(dx, dy) / 8)));
+    settle(x,y,x,y);dx=movement.VelocityX()*dt;dy=movement.VelocityY()*dt;
+    int steps=std::max(1,int(std::ceil(std::hypot(std::hypot(dx,dy),movement.VerticalVelocity()*dt)/8)));
     // Eight-unit swept steps retain thin-wall collision at maximum bunnyhop speed.
     for (int step = 0; step < steps; ++step) {
         float nx = x + dx / steps, ny = y + dy / steps;
         if (nx < minX || nx > maxX) { Blocked("world-boundary",nx,ny,x,y,movement.FeetZ(),0);nx = x; movement.BlockX(); dx = 0; }
         if (ny < minY || ny > maxY) { Blocked("world-boundary",nx,ny,x,y,movement.FeetZ(),0);ny = y; movement.BlockY(); dy = 0; }
         float normal[2]={};
-        if (Clear(nx, ny, x, y, movement, obstacles,normal)) { x = nx; y = ny; }
+        if (settle(nx, ny, x, y,normal)) { x = nx; y = ny; }
         else {
             float into=(nx-x)*normal[0]+(ny-y)*normal[1];
             float sx=nx-into*normal[0],sy=ny-into*normal[1];
             // Try the actual contact tangent before axis fallback; curved corners must not eat forward motion.
-            if(into<-.0001f && std::hypot(sx-x,sy-y)>.0001f && Clear(sx,sy,x,y,movement,obstacles)) {
+            if(into<-.0001f && std::hypot(sx-x,sy-y)>.0001f && settle(sx,sy,x,y)) {
                 x=sx;y=sy;movement.SlideHorizontal(normal[0],normal[1]);
                 dx=movement.VelocityX()*dt;dy=movement.VelocityY()*dt;
             } else {
-                if (Clear(nx, y, x, y, movement, obstacles)) x = nx; else { movement.BlockX(); dx = 0; }
-                if (Clear(x, ny, x, y, movement, obstacles)) y = ny; else { movement.BlockY(); dy = 0; }
+                if (settle(nx, y, x, y)) x = nx; else { movement.BlockX(); dx = 0; }
+                if (settle(x, ny, x, y)) y = ny; else { movement.BlockY(); dy = 0; }
             }
         }
         // Follow support after each accepted ground substep. Fast uphill sweeps cannot reuse an outdated frame-start floor.
         // Airborne feet remain controlled by the vertical integrator.
-        if(movement.Grounded())movement.ResolveSurface(Floor(x,y,movement,obstacles));
+        if(movement.Grounded() || movement.Surfing())support();
+        dx=movement.VelocityX()*dt;dy=movement.VelocityY()*dt;
     }
     float floor = Floor(x, y, movement, obstacles).height;
     if (std::hypot(x - originalX, y - originalY) > 0.001f) {
@@ -392,7 +413,7 @@ void WarcraftCollision::Move(wc3::Handle unit, MovementPhysics& movement, float 
     x = wc3::Real(wc3::GetUnitX(unit)); y = wc3::Real(wc3::GetUnitY(unit));
     bounds.Constrain(unit,movement,x,y);
     Ceiling(x,y,movement,obstacles);
-    movement.ResolveSurface(Floor(x, y,movement,obstacles));
+    support();
     Recover(unit,x,y,movement,obstacles);
     MovementWater::Update(unit,movement);
 }
