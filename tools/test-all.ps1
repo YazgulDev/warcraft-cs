@@ -2,6 +2,8 @@ $ErrorActionPreference='Stop'
 $root=Split-Path -Parent $PSScriptRoot
 # Standalone checkouts start without build output; each numerical regression runs without game files.
 New-Item -ItemType Directory -Path (Join-Path $root 'build') -Force | Out-Null
+# The optional surf map is generated from authored source, with no installed game needed.
+& (Join-Path $PSScriptRoot 'test-surf-map.ps1')
 # Camera edge ownership, ground-height response and static mesh contacts join the synthetic adapter suites;
 # none of these checks controls an active Warcraft game or campaign.
 foreach ($name in @('window-input','fog-of-war','diagnostic-log','native-frame-rate','native-frame-presentation','native-camera-far-clip','map-camera-guard','camera-height','movement','movement-obstacles','static-collision','warcraft-collision','fullscreen-view','minimap-layout','native-minimap','fps-projection','world-labels','mouse-look','hitboxes','melee','combat-damage','gameplay-settings','recoil')) {

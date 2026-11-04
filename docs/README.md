@@ -22,6 +22,7 @@ Current release: [0.18.0 — downloads, upgrade and complete changes](RELEASE-0.
 | Page | What it covers |
 | --- | --- |
 | [Movement](MOVEMENT.md) | Air strafing, bunnyhopping, speed and collision settings |
+| [Surf practice map](SURF-PRACTICE.md) | Three training slopes, FPS chat commands, automatic return and original map builder |
 | [Surface swimming](SWIMMING.md) | Deep water, buoyancy, shallow banks, canal exits and editable water tuning |
 | [Portals and heavy weapons](PORTALS-HEAVY-WEAPONS.md) | Development-build portal interaction, heavy damage, starting Crowbar and native exploded deaths |
 | [Weapon selection](WEAPON-SELECTION.md) | Carried groups, wheel preview and item-number mode |
