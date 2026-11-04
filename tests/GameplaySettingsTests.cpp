@@ -15,6 +15,19 @@ int main() {
     // Headless regressions report assertion details to the captured journal instead of a desktop dialog.
     _set_error_mode(_OUT_TO_STDERR);
     GameplaySettings settings;
+    // Impulse/self-damage keys share the normal startup/F8 loader, independent of owned asset seals.
+    const auto impulsePath=(std::filesystem::current_path()/"impulse-validation.ini").string();
+    assert(settings.rpg.selfDamagePercent==5 && settings.blastJump.enabled && settings.blastJump.speed==650 &&
+        settings.blastJump.maximumUpSpeed==1500 && settings.halfLife.tauJumpRecoil && settings.halfLife.tauChargedJumpSpeed==800);
+    {std::ofstream f(impulsePath);f<<"[BlastJump]\nEnabled=false\nSpeed=777\nMaximumUpSpeed=999\n[RPG]\nSelfDamagePercent=2.5\n[TauCannon]\nJumpRecoil=false\nPrimaryJumpSpeed=0\nChargedJumpSpeed=432\n";}
+    auto impulseConfig=GameplaySettings::Load(impulsePath);
+    assert(!impulseConfig.blastJump.enabled && impulseConfig.blastJump.speed==777 && impulseConfig.blastJump.maximumUpSpeed==999 &&
+        impulseConfig.rpg.selfDamagePercent==2.5f && !impulseConfig.halfLife.tauJumpRecoil && impulseConfig.halfLife.tauPrimaryJumpSpeed==0 && impulseConfig.halfLife.tauChargedJumpSpeed==432);
+    {std::ofstream f(impulsePath);f<<"[BlastJump]\nSpeed=inf\nMaximumUpSpeed=-5\n[RPG]\nSelfDamagePercent=500\n[TauCannon]\nPrimaryJumpSpeed=nan\nChargedJumpSpeed=9000\n";}
+    impulseConfig=GameplaySettings::Load(impulsePath);
+    assert(impulseConfig.blastJump.speed==650 && impulseConfig.blastJump.maximumUpSpeed==100 && impulseConfig.rpg.selfDamagePercent==100 &&
+        impulseConfig.halfLife.tauPrimaryJumpSpeed==120 && impulseConfig.halfLife.tauChargedJumpSpeed==3000);
+    std::filesystem::remove(impulsePath);
     // Startup and F8 share finite surf bounds and retain an explicit disabled preference.
     const auto surfPath=(std::filesystem::current_path()/"surf-validation.ini").string();
     assert(settings.movement.surf.enabled && settings.movement.surf.modelContacts && settings.movement.surf.accelerationMultiplier==2 && settings.movement.surf.maximumAngle==80 && settings.movement.surf.contactDistance==8);

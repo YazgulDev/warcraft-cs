@@ -3,6 +3,7 @@
 #include "KillReward.hpp"
 #include "../combat/GrenadeProjectile.hpp"
 #include "../combat/GrenadeVisual.hpp"
+#include "../combat/BlastJumpEvent.hpp"
 #include "../config/GameplaySettings.hpp"
 #include "../audio/GameAudio.hpp"
 
@@ -14,17 +15,17 @@ public:
     void Configure(uintptr_t base) {obstacles_.Configure(base);}
     void Reset();
     bool Throw(wc3::Handle actor,int slot,const GrenadePoint& eye,const GrenadePoint& direction,const GrenadePoint& motion,const GameplaySettings& settings);
-    bool Tick(GameAudio& audio,wc3::Handle viewer,const GrenadePoint& eye,const GrenadePoint& direction);
+    bool Tick(GameAudio& audio,wc3::Handle viewer,const GrenadePoint& eye,const GrenadePoint& direction,BlastJumpEvents* jumps=nullptr);
     const std::vector<GrenadeVisual>& Visuals() const {return visuals_;}
     // Read-only verified native attack source/target positions, with no range/stat leases to leak.
     bool BlocksSight(uintptr_t attack,uintptr_t target) const;
     float FlashOpacity() const {return flashOpacity_;}
 private:
     KillReward::Sink onKill_;
-    struct Charge {GrenadeProjectile flight;wc3::Handle actor=0;int type=0,slot=0;float born=0,damage=0,friendly=0;bool detonated=false;};
+    struct Charge {GrenadeProjectile flight;wc3::Handle actor=0;int type=0,slot=0;float born=0,damage=0,friendly=0;bool detonated=false;BlastJumpSettings jump;};
     struct Stun {wc3::Handle unit;int type;float until;};
     float Time() const;
-    bool Detonate(const Charge& charge,float now,GameAudio& audio,wc3::Handle viewer,const GrenadePoint& eye,const GrenadePoint& direction);
+    bool Detonate(const Charge& charge,float now,GameAudio& audio,wc3::Handle viewer,const GrenadePoint& eye,const GrenadePoint& direction,BlastJumpEvents* jumps);
     bool Covered(const GrenadePoint& from,const GrenadePoint& to,const std::vector<Bounds3>& obstacles) const;
     std::vector<Charge> charges_;
     std::vector<Stun> stuns_;

@@ -1,0 +1,34 @@
+# Explosion and Tau jumps (development build)
+
+Ordinary RPG, HE and planted C4 explosions push the controlled player away from the
+blast. Aim an RPG at nearby ground to rocket jump. Tau Cannon pushes opposite its
+accepted shot: aim down and fire, or hold/release secondary fire for a stronger jump.
+Charge-only, cancelled and empty shots add no force. Nuclear blasts are excluded.
+
+RPG self damage defaults to **5% of its ordinary blast damage after distance falloff**,
+independently of friendly fire. With Damage=1800 this is at most 90 raw damage, then
+native armor/immunity applies. This is not 5% of the player's maximum health.
+Other allied targets retain friendly-fire rules; HE/C4 damage rules are unchanged.
+Invulnerability prevents damage but does not suppress blast propulsion.
+
+| Section / key | Default | Range / meaning |
+| --- | --- | --- |
+| BlastJump / Enabled | true | true/false; ordinary RPG, HE and C4 propulsion |
+| BlastJump / Speed | 650 | 0–3000 GoldSrc units/s at blast center; linear 3D falloff |
+| BlastJump / MaximumUpSpeed | 1500 | 100–3000 GoldSrc units/s; shared upward impulse cap |
+| RPG / SelfDamagePercent | 5 | 0–100 percent; 0 disables RPG self damage |
+| TauCannon / JumpRecoil | true | true/false; independent of BlastJump.Enabled |
+| TauCannon / PrimaryJumpSpeed | 120 | 0–3000 GoldSrc units/s |
+| TauCannon / ChargedJumpSpeed | 800 | 0–3000 GoldSrc units/s at full charge; interpolated from primary |
+
+One GoldSrc speed unit equals 1.5 Warcraft world units/s. Edit
+`WarcraftCS/WarcraftCS.ini`, then press F8 in FPS. Missing keys are inserted during
+installation updates without replacing saved values. Flying rockets, thrown HE
+and planted C4 retain their launch/plant settings; Tau uses settings at shot acceptance.
+
+Force uses physical body height and the existing blast cover checks. Existing
+movement collision handles walls, ceilings, ground and swimming after the velocity
+change. The impulse does not teleport the unit, grant a second Space bonus or
+bypass stuns, roots, cargo or hidden actors. The current Bunnyhop speed cap still
+bounds horizontal speed. These impulses cover the mod's weapons, not arbitrary
+Warcraft map spells or visual explosion effects.

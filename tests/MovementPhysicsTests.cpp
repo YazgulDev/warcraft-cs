@@ -1,6 +1,7 @@
 #include "../src/movement/MovementPhysics.hpp"
 #include <algorithm>
 #include "MovementStrafeInput.hpp"
+#include "../src/movement/MovementImpulse.hpp"
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -193,6 +194,22 @@ int main() {
             Require(std::abs(free.VelocityY()+45)<.01f,"surf setting cannot alter ordinary free-air steering");
         }
         Require(sideways[1]>sideways[0]*1.9f,"default surf steering must accelerate more than the legacy gain");
+    }
+    // Explosion impulses have true radial falloff, including a defined coincident-center direction.
+    auto nearBlast=MovementImpulse::Explosion({0,0,0},{0,0,100},1000,975);
+    auto farBlast=MovementImpulse::Explosion({0,0,0},{0,0,500},1000,975);
+    Require(nearBlast[2]>farBlast[2] && std::abs(farBlast[2]-487.5f)<.01f,"blast impulse fades with three-dimensional distance");
+    Require(MovementImpulse::Explosion({0,0,0},{0,0,1000},1000,975)==MovementImpulse::Vector{},"blast edge has no impulse");
+    Require(MovementImpulse::Explosion({0,0,0},{0,0,0},1000,975)[2]==975,"coincident blast stays finite and upward");
+    for(int fps:{30,60,144}) {
+        MovementPhysics launched;launched.Reset(100);
+        Require(launched.AddImpulse(450,0,900,2250) && !launched.Grounded() && launched.FeetZ()==100,"impulse detaches support without teleporting feet");
+        MoveInput held;held.jump=true;float peak=100;
+        for(int frame=0;frame<fps*2;++frame){launched.Step(held,1.f/fps,250);launched.FinishMove();peak=std::max(peak,launched.FeetZ());}
+        Require(peak>430 && peak<440,"external ascent remains ballistic without a stacked Space bonus");
+        Require(std::abs(launched.VelocityX()-450)<.01f,"no-input impulse keeps horizontal momentum");
+        launched.Reset(100);for(int blast=0;blast<30;++blast)launched.AddImpulse(500,0,900,2250);
+        Require(launched.Speed()<=4500.01f && launched.VerticalVelocity()<=2250.01f,"overlapping blasts obey horizontal and upward limits");
     }
     // The new default must be reachable yet bounded at common frame rates, without changing acceleration tuning.
     for(int fps:{30,60,144}) {

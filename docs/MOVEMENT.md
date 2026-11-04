@@ -230,3 +230,9 @@ The reported Ancient One campaign traversal with the corrected DLL has not yet b
 ## Surfing
 
 Release 0.19.0 adds configurable gravity-driven sliding on steep native-walkable terrain and verified stationary model faces in classic/hull/recovery. It remains airborne, uses existing air strafing and does not earn ground-jump bonuses. Model bounds alone never grant a surf plane; walls, undersides and headroom still block. See [settings and opt-outs](CONFIGURATION.md#terrain-and-model-surfing-0190), [Surf Practice](SURF-PRACTICE.md) and the [Surf Skyline time trial](SURF-SKYLINE.md).
+
+## Weapon jumps (development build)
+
+RPG, HE and C4 can propel the controlled player; Tau recoil pushes opposite the shot
+and grows with charge. Aim down to jump upward. Existing collision and the horizontal
+speed cap resolve the resulting trajectory. See [defaults, self damage and opt-outs](WEAPON-JUMPS.md).

@@ -46,6 +46,7 @@ public:
     void BlockY() { vy_ = 0; }
     void Stop() { vx_ = vy_ = 0; }
     void LimitSpeed(float maximum);
+    bool AddImpulse(float x,float y,float z,float maximumUpSpeed);
     float VelocityX() const { return vx_; }
     float VelocityY() const { return vy_; }
     float Speed() const;

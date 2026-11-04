@@ -663,6 +663,11 @@ int main(){
     }
     meshScene=0;actorRadius=0;
     std::puts("Warcraft classic/hull/recovery collision regressions passed.");
+    // External launches still traverse the same solid sweeps; velocity cannot teleport through a wall.
+    slope=false;wall=true;unitX=unitY=0;jumper.Configure(MovementSettings{});collision.Reset();jumper.Reset(100);
+    jumper.AddImpulse(4000,0,0,2250);
+    for(int frame=0;frame<30;++frame){jumper.Step({},1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(unitX<80,"blast launch must retain ordinary solid wall collision");wall=false;
     // A real floating path may reject native walking; both solvers still sweep solid walls and banks.
     slope=false;swimScene=true;bridgeAlive=false;
     for(int mode=0;mode<3;++mode) {

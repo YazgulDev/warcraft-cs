@@ -11,6 +11,7 @@
 #include "ViewmodelSettings.hpp"
 #include "GrenadeSettings.hpp"
 #include "RpgSettings.hpp"
+#include "BlastJumpSettings.hpp"
 #include "EconomySettings.hpp"
 #include "WeaponDropSettings.hpp"
 
@@ -40,6 +41,7 @@ struct GameplaySettings {
     ViewmodelSettings viewmodel;
     GrenadeSettings grenades;
     RpgSettings rpg;
+    BlastJumpSettings blastJump;
     EconomySettings economy;
     WeaponDropSettings weaponDrops;
 

@@ -63,6 +63,7 @@ void ShooterController::Configure(const char* root, uintptr_t gameBase) {
     destructableHitboxes_.Configure(gameBase);
     collision_.Configure(gameBase);
     grenades_.Configure(gameBase);rockets_.Configure(gameBase);nuclearBomb_.Configure(gameBase);
+    movementImpulse_.Configure(gameBase);
     // Projectile adapters report deaths; the application applies the current wallet/drop policy.
     auto rewards=[this](const KillReward& reward){RewardKill(reward);};
     grenades_.SetKillSink(rewards);rockets_.SetKillSink(rewards);
@@ -326,7 +327,7 @@ void ShooterController::ResetMap() {
     audio_.Stop(); stepDistance_ = 0; reloadEnd_ = 0;
     menuRequested_ = false;
     itemRequested_=settingsRequested_=itemNearby_=speedToggleRequested_=minimapToggleRequested_=false;squadRequested_=0;ammoRecovery_.Reset();
-    hits_.Clear();combatVisuals_.Reset(); refillRequested_ = false; allWeaponsRequested_=false; refillTick_ = 0; fixtureTarget_ = 0; blastFixtures_.clear();
+    hits_.Clear();combatVisuals_.Reset();movementImpulse_.Reset(); refillRequested_ = false; allWeaponsRequested_=false; refillTick_ = 0; fixtureTarget_ = 0; blastFixtures_.clear();
     ResetLoadout();
 }
 void ShooterController::Toggle(ControlView initial) {
@@ -983,7 +984,18 @@ void ShooterController::FireEnergy(bool primaryPressed,bool secondaryHeld,DWORD 
     if(event.charged)damage+=(settings_.halfLife.tauChargedDamage-damage)*event.charge;
     if(!gluon){Play("fire2");Sound(w.sound);} // Both Tau modes use its complete authored recoil/recovery clip.
     ++shotSerial_;flashWeapon_=weapon_;lastShot_=now;
+    // Native damage can synchronously remove the actor/map; recoil belongs only to this accepted shot.
+    auto impulseActor=unit_;auto impulseObject=wc3::UnitObject(unit_);auto impulseGeneration=rewardGeneration_;
+    float impulseX=wc3::Real(wc3::GetUnitX(unit_)),impulseY=wc3::Real(wc3::GetUnitY(unit_));
+    float impulseEye[3],impulseAim[3];AimRay(impulseEye,impulseAim);
+    float jumpSpeed=settings_.halfLife.tauPrimaryJumpSpeed;
+    if(event.charged)jumpSpeed+=(settings_.halfLife.tauChargedJumpSpeed-jumpSpeed)*event.charge;
+    bool jumpRecoil=!gluon && settings_.halfLife.tauJumpRecoil;
+    float maximumUpSpeed=settings_.blastJump.maximumUpSpeed;
     Strike(0,0,1,damage); // Charged damage remains configurable even when ordinary Tau damage is zero.
+    if(jumpRecoil && Visible() && !paused_ && !Casting() && impulseGeneration==rewardGeneration_ && unit_==impulseActor && wc3::UnitObject(unit_)==impulseObject &&
+        std::hypot(wc3::Real(wc3::GetUnitX(unit_))-impulseX,wc3::Real(wc3::GetUnitY(unit_))-impulseY)<1)
+        movementImpulse_.Recoil(unit_,movement_,{impulseAim[0],impulseAim[1],impulseAim[2]},jumpSpeed,maximumUpSpeed);
     recoil_.Shot(weapon_,movement_.Speed(),movement_.Grounded(),movement_.Duck()>=.5f,settings_.weaponKick[weapon_]);
     wc3::Log("Half-Life energy shot weapon=%s cells=%d charged=%d fraction=%.3f damage=%.1f",w.name,ammo_[weapon_],event.charged,event.charge,damage);
 }
@@ -1131,7 +1143,7 @@ void ShooterController::PlantC4(float dt) {
     if (std::abs(x - plantX_) + std::abs(y - plantY_) > 4) { CancelPlant(); return; }
     plantProgress_ += dt;
     if (plantProgress_ >= 3) {
-        if (bombs_.Plant(unit_, x, y, audio_,settings_.damage[WeaponSlots::C4],settings_.friendlyFirePercent)) { --ammo_[WeaponSlots::C4]; Play("drop"); }
+        if (bombs_.Plant(unit_, x, y, audio_,settings_.damage[WeaponSlots::C4],settings_.friendlyFirePercent,settings_.blastJump)) { --ammo_[WeaponSlots::C4]; Play("drop"); }
         plantProgress_ = 0;
     }
 }
@@ -1208,9 +1220,18 @@ void ShooterController::Tick(uintptr_t ui) {
     if(rewardGeneration!=rewardGeneration_ || ui_!=ui)return;
     // Flash/shake attenuate locally; a remote detonation never shakes every point of the map.
     nuclearExposure_=Visible() && unit_ && wc3::GetUnitTypeId(unit_) ? nuclearBomb_.Exposure({wc3::Real(wc3::GetUnitX(unit_)),wc3::Real(wc3::GetUnitY(unit_)),ViewEyeZ()}) : 0;
+    BlastJumpEvents blastJumps;
+    // Capture before any explosive callbacks: a scripted relocation/replacement owns its new velocity.
+    NativeBlast::TargetPoint physicalTarget;uintptr_t impulseObject=0;
+    if(Visible() && unit_ && wc3::GetUnitTypeId(unit_)) {
+        impulseObject=wc3::UnitObject(unit_);
+        physicalTarget={unit_,{wc3::Real(wc3::GetUnitX(unit_)),wc3::Real(wc3::GetUnitY(unit_)),
+            movement_.FeetZ()+wc3::Real(wc3::GetUnitFlyHeight(unit_))+movement_.BodyHeight()*.5f}};
+    }
     if (bombs_.Tick(audio_,[this,rewardGeneration](const KillReward& reward){
         if(rewardGeneration==rewardGeneration_)RewardKill(reward);
-    }) && Visible()) hits_.Record();
+    },&blastJumps) && Visible()) hits_.Record();
+    if(rewardGeneration!=rewardGeneration_ || ui_!=ui)return;
     // Native timers continue after holstering/RTS return and freeze with Warcraft's simulation pause.
     GrenadePoint grenadeEye{},grenadeDirection{};wc3::Handle grenadeViewer=Visible() ? unit_ : 0;
     if(grenadeViewer) {
@@ -1218,7 +1239,8 @@ void ShooterController::Tick(uintptr_t ui) {
         float cy=std::cos(yaw_*radians),sy=std::sin(yaw_*radians),cp=std::cos(pitch_*radians);
         grenadeDirection={cy*cp,sy*cp,std::sin(pitch_*radians)};
     }
-    if(grenades_.Tick(audio_,grenadeViewer,grenadeEye,grenadeDirection) && Visible())hits_.Record();
+    if(grenades_.Tick(audio_,grenadeViewer,grenadeEye,grenadeDirection,&blastJumps) && Visible())hits_.Record();
+    if(rewardGeneration!=rewardGeneration_ || ui_!=ui)return;
     auto rocketViewer=!paused_ && foregroundPid==GetCurrentProcessId() ? grenadeViewer : 0;
     bool guiding=rocketViewer && !ThirdPerson() && !UnitFirstPerson() &&
         weapon_==WeaponSlots::RPG && rpgLaser_ && settings_.WeaponEnabled(weapon_) && !reloadEnd_ && !CursorMode() && !Casting() &&
@@ -1226,7 +1248,12 @@ void ShooterController::Tick(uintptr_t ui) {
     auto rocketEye=grenadeEye,rocketDirection=grenadeDirection;
     // The designator follows the same recoil-adjusted physical ray as the accepted RPG shot.
     if(guiding){float eye[3],aim[3];AimRay(eye,aim);for(int i=0;i<3;++i){rocketEye[i]=eye[i];rocketDirection[i]=aim[i];}}
-    if(rockets_.Tick(audio_,rocketViewer,guiding,rocketEye,rocketDirection,std::min(settings_.render.drawDistance,settings_.FirearmRange(WeaponSlots::RPG))) && Visible())hits_.Record();
+    if(rockets_.Tick(audio_,rocketViewer,guiding,rocketEye,rocketDirection,std::min(settings_.render.drawDistance,settings_.FirearmRange(WeaponSlots::RPG)),&blastJumps,&physicalTarget) && Visible())hits_.Record();
+    if(rewardGeneration!=rewardGeneration_ || ui_!=ui)return;
+    // HP callbacks finish first. Do not replay impulses after actor replacement or scripted relocation.
+    if(Visible() && !paused_ && !Casting() && physicalTarget.unit==unit_ && wc3::GetUnitTypeId(unit_) && wc3::UnitObject(unit_)==impulseObject &&
+        std::hypot(wc3::Real(wc3::GetUnitX(unit_))-physicalTarget.center[0],wc3::Real(wc3::GetUnitY(unit_))-physicalTarget.center[1])<1)
+        for(const auto& event:blastJumps)movementImpulse_.Blast(unit_,movement_,event);
 
     bool requireForeground=true;
 #ifdef WCS_GAMEPLAY_TEST

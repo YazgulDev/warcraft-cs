@@ -762,3 +762,17 @@ Update-GameplayConfig $template $surfLegacy
 $surfLegacyText=Get-Content $surfLegacy -Raw
 if(!$surfLegacyText.Contains('AccelerationMultiplier=2') -or !$surfLegacyText.Contains('MaximumAngle=72')){throw 'Independent surf acceleration default was not merged safely.'}
 Write-Output 'PASS missing surf acceleration insertion and existing profile preservation.'
+# New weapon impulses add missing defaults without replacing explicit damage/response opt-outs.
+$jumpFile=Join-Path $folder 'weapon-jumps.ini'
+@('[BlastJump]','Enabled=false','Speed=777','MaximumUpSpeed=999','[RPG]','SelfDamagePercent=1.5','[TauCannon]','JumpRecoil=false','PrimaryJumpSpeed=0','ChargedJumpSpeed=432') | Set-Content $jumpFile
+Update-GameplayConfig $template $jumpFile
+$jumpText=Get-Content $jumpFile -Raw
+foreach($value in @('Enabled=false','Speed=777','MaximumUpSpeed=999','SelfDamagePercent=1.5','JumpRecoil=false','PrimaryJumpSpeed=0','ChargedJumpSpeed=432')){if(!$jumpText.Contains($value)){throw "Lost impulse preference: $value"}}
+$jumpHash=(Get-FileHash $jumpFile).Hash;Update-GameplayConfig $template $jumpFile
+if((Get-FileHash $jumpFile).Hash -ne $jumpHash){throw 'Impulse merge is not idempotent.'}
+$jumpFresh=Join-Path $folder 'weapon-jumps-fresh.ini'
+@('[Movement]','Mode=classic','[Combat]','FriendlyFirePercent=0') | Set-Content $jumpFresh
+Update-GameplayConfig $template $jumpFresh
+$jumpFreshText=Get-Content $jumpFresh -Raw
+foreach($value in @('[BlastJump]','Speed=650','MaximumUpSpeed=1500','SelfDamagePercent=5','JumpRecoil=true','PrimaryJumpSpeed=120','ChargedJumpSpeed=800','FriendlyFirePercent=0')){if(!$jumpFreshText.Contains($value)){throw "Missing impulse default: $value"}}
+Write-Output 'PASS RPG self damage, impulse/Tau custom choices, missing defaults and repeated upgrade preservation.'

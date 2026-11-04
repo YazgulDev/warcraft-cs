@@ -25,6 +25,7 @@ Current release: [0.19.0 — downloads, upgrade and complete changes](RELEASE-0.
 | [Surf practice map](SURF-PRACTICE.md) | Three training slopes, FPS chat commands, automatic return and original map builder |
 | [Surf Skyline time trial](SURF-SKYLINE.md) | Floating solid ramps, gaps, ordered checkpoints, timer and session records |
 | [Connected Surf Flow](SURF-FLOW.md) | Development course with joined ramps/decks and independent surf acceleration |
+| [Explosion and Tau jumps](WEAPON-JUMPS.md) | Development-build propulsion, 5-percent RPG self damage and editable impulse settings |
 | [Surface swimming](SWIMMING.md) | Deep water, buoyancy, shallow banks, canal exits and editable water tuning |
 | [Portals and heavy weapons](PORTALS-HEAVY-WEAPONS.md) | Development-build portal interaction, heavy damage, starting Crowbar and native exploded deaths |
 | [Weapon selection](WEAPON-SELECTION.md) | Carried groups, wheel preview and item-number mode |

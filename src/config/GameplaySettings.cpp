@@ -588,6 +588,11 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     }
     // Optional RPG defaults use the same bounded F8 snapshot, while availability comes only from owned caches.
     auto& rpg=result.rpg;rpg.enabled=enabled("RPG","Enabled");rpg.guidance=enabled("RPG","GuidanceByDefault");
+    rpg.selfDamagePercent=number("RPG","SelfDamagePercent",5,100);
+    // Shared explosion impulses are independent of blast HP damage and allied-fire settings.
+    result.blastJump.enabled=enabled("BlastJump","Enabled");
+    result.blastJump.speed=number("BlastJump","Speed",650,3000);
+    result.blastJump.maximumUpSpeed=std::max(100.f,number("BlastJump","MaximumUpSpeed",1500,3000));
     rpg.available=!result.warcraftOnly && OptionalWeaponAssets::Rpg(std::filesystem::path(filename).parent_path());
     rpg.radius=std::max(32.f,number("RPG","Radius",1000,3000));
     // Upgrade only the former stock blast, including an old config loaded directly with F8.
@@ -619,6 +624,9 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     hl.tauDrainSeconds=std::max(.05f,number("TauCannon","ChargeDrainSeconds",.3f,2));
     hl.tauChargedDamage=number("TauCannon","ChargedDamage",2000,1000000);
     hl.tauPrimaryCost=int(std::max(1.f,number("TauCannon","PrimaryCost",2,100)));
+    hl.tauJumpRecoil=enabled("TauCannon","JumpRecoil");
+    hl.tauPrimaryJumpSpeed=number("TauCannon","PrimaryJumpSpeed",120,3000);
+    hl.tauChargedJumpSpeed=number("TauCannon","ChargedJumpSpeed",800,3000);
     hl.crowbarContactSeconds=number("Crowbar","ContactSeconds",.1f,1);
     hl.crowbarSurfaceSounds=enabled("Crowbar","SurfaceSounds");
     hl.beamSeconds=std::max(.025f,number("HalfLife","BeamSeconds",.15f,1));

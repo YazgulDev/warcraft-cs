@@ -1,5 +1,29 @@
 # Validation
 
+## Weapon impulses (development build, 2026-11-05)
+
+Movement regressions cover radial 3D falloff, coincident blast centers, ballistic
+ascent at 30/60/144 Hz, no stacked Space bonus, overlapping impulse caps and solid
+wall collision. Native-adapter mocks cover independent 5-percent RPG self damage
+with friendly fire at 0/100, physical airborne height, zero-damage pressure,
+launch-time snapshots, cover/status rejection, Tau recoil and C4 map-reset callbacks.
+Settings and installer tests cover defaults, malformed/bounded values, custom
+opt-outs and repeated update preservation. The authored `tests/fixtures/ImpulseJumps.j`
+passes classic pjass against owner-provided common.j.
+
+In an isolated owned 1.26a OpenGL game, a vulnerable footman with friendly fire 0
+lost 72.75 HP to an ordinary downward RPG shot and rose about 101.5 world units.
+An invulnerable repeat lost no HP and reached the same height. Primary Tau rose
+about 11 units and a full charged release about 493, with the corresponding native
+ammo expenditure and no HP loss. F8 disabling explosion propulsion retained the
+actual RPG explosion but produced no physical ascent. The exact test process was
+stopped and its module, map, settings and saves restored by hash.
+
+These measurements establish the actual mod weapon/controller/movement path on
+the tested host. They do not establish 1.27a behavior, every campaign trigger or
+propulsion from arbitrary Warcraft spells. Ordinary Player builds exclude the
+background command fixture.
+
 ## Connected Surf Flow and independent surf acceleration (development, 2026-11-05)
 
 The [connected course](SURF-FLOW.md#verification) completed all three physical stages,

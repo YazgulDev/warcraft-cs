@@ -64,4 +64,8 @@ The primary behavior reference is [Valve's RPG implementation](https://github.co
 Only factual numerical behavior is independently adapted; SDK code and game assets
 are not copied into this source tree. See NOTICE for the distinct upstream terms.
 
+The [weapon-jump development build](WEAPON-JUMPS.md) adds configurable propulsion
+and `SelfDamagePercent=5`, independent of friendly fire. Self damage is five percent
+of the distance-attenuated blast damage before native defenses, not maximum HP.
+
 `BlastVersion=4` upgrades only the old stock 600 radius once. A version-4 `Radius=600` opt-back and other custom radii remain supported. Damage already falls linearly with **3D** distance to the target: `Damage × max(0, 1 − distance / Radius)`. With defaults: 1800 at the center, 900 at 500 units, 450 at 750, and zero at or beyond 1000. Cover, native defenses and friendly-fire scaling still apply. Trees/destructables use the same distance falloff. Startup/F8 changes apply to new rockets; flying rockets keep their launch snapshot. Nuclear blast radius and its instant-death policy are separate.

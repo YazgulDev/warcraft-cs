@@ -14,7 +14,7 @@ ROOT_FILES = {'README.md','INSTALL.md','TROUBLESHOOTING.md','NOTICE','LICENSE-MI
               # Allow the owned support form explicitly without admitting arbitrary GitHub workflows or files.
               '.github/DISCUSSION_TEMPLATE/q-a.yml',
               # This authored native-regression script is source; arbitrary extracted JASS remains excluded.
-              'tests/fixtures/MilitiaAlarm.j','tests/fixtures/Swimming.j','tests/fixtures/PortalsHeavy.j','tests/fixtures/CrestMomentum.j',
+              'tests/fixtures/MilitiaAlarm.j','tests/fixtures/Swimming.j','tests/fixtures/PortalsHeavy.j','tests/fixtures/CrestMomentum.j','tests/fixtures/ImpulseJumps.j',
               # Authored downloadable map logic; extracted map scripts remain excluded.
               'tools/maps/SurfPractice.j','tools/maps/SurfSkyline.j'}
 ROOTS = {'src','tests','tools','setup','config','skills','licenses','docs','launcher'}

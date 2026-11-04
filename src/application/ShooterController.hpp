@@ -16,6 +16,7 @@
 #include "../combat/GrenadeThrow.hpp"
 #include "../platform/NativeGrenades.hpp"
 #include "../platform/NativeRockets.hpp"
+#include "../platform/NativeMovementImpulse.hpp"
 #include "../platform/NativePortals.hpp"
 #include "../combat/Weapon.hpp"
 #include "../combat/WeaponSlots.hpp"
@@ -293,6 +294,7 @@ public:
     void TestEquip(int slot) {SwitchWeapon(slot);}
     void TestReload() {Reload();}
     void TestSecondary() {keys_[VK_RBUTTON]=false;testSecondaryUntil_=GetTickCount()+100;}
+    void TestHoldSecondary(DWORD duration) {keys_[VK_RBUTTON]=false;testSecondaryUntil_=GetTickCount()+std::min(duration,DWORD(8000));}
     void TestSmoke(float x,float y,float z) {
         grenades_.Throw(unit_,WeaponSlots::Smoke,{x,y,z},{1,0,0},{},settings_);
     }
@@ -384,6 +386,7 @@ private:
     GrenadeThrow grenadeThrow_;
     NativeGrenades grenades_;
     NativeRockets rockets_;
+    NativeMovementImpulse movementImpulse_;
     NativePortals portals_;
     bool rpgLaser_=true;
     float grenadePullSeconds_=1;

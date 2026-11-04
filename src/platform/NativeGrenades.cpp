@@ -19,6 +19,7 @@ bool NativeGrenades::Throw(wc3::Handle actor,int slot,const GrenadePoint& eye,co
     if(!timer_) {timer_=wc3::CreateTimer();if(!timer_)return false;float duration=360000;wc3::TimerStart(timer_,&duration,FALSE,0);}
     Charge charge;charge.slot=slot;charge.actor=actor;charge.type=wc3::GetUnitTypeId(actor);charge.born=Time();charge.damage=settings.damage[slot];charge.friendly=settings.friendlyFirePercent;
     charge.flight.settings=settings.grenades;
+    charge.jump=settings.blastJump; // Preserve launch-time knockback across later F8 edits.
     if(slot!=WeaponSlots::HE)charge.flight.settings.gravity*=settings.grenades.lightGravityScale;
     if(!GrenadeLaunch::Prepare(charge.flight,eye,direction,motion))return false;
     auto releaseObstacles=obstacles_.Snapshot(actor,eye[0],eye[1],64,true);
@@ -31,12 +32,14 @@ bool NativeGrenades::Throw(wc3::Handle actor,int slot,const GrenadePoint& eye,co
 bool NativeGrenades::Covered(const GrenadePoint& from,const GrenadePoint& to,const std::vector<Bounds3>& obstacles) const {
     return NativeBlast::Covered(from,to,obstacles);
 }
-bool NativeGrenades::Detonate(const Charge& charge,float now,GameAudio& audio,wc3::Handle viewer,const GrenadePoint& eye,const GrenadePoint& direction) {
+bool NativeGrenades::Detonate(const Charge& charge,float now,GameAudio& audio,wc3::Handle viewer,const GrenadePoint& eye,const GrenadePoint& direction,BlastJumpEvents* jumps) {
     const auto& settings=charge.flight.settings;auto from=charge.flight.position;from[2]+=8;
     audio.Play(charge.slot==WeaponSlots::HE ? "hegrenade-1.wav" : charge.slot==WeaponSlots::Flashbang ? "flashbang-1.wav" : "sg_explode.wav",1);
     wc3::Log("grenade detonated slot=%d at=%.1f,%.1f,%.1f",charge.slot,from[0],from[1],from[2]);
     if(charge.slot==WeaponSlots::Smoke)return false;
     if(charge.slot==WeaponSlots::HE) {
+        // Flash/smoke have no damaging pressure wave; only HE publishes a movement event.
+        if(jumps)jumps->push_back({from,settings.heRadius,charge.jump,"HE"});
         auto effect=wc3::Effect("Objects\\Spawnmodels\\Other\\NeutralBuildingExplosion\\NeutralBuildingExplosion.mdl",from[0],from[1]);if(effect)wc3::DestroyEffect(effect);
         // HE and RPG share native damage attribution, cover, gates and callback-safe map reset handling.
         unsigned generation=generation_;auto obstacles=obstacles_.Snapshot(0,from[0],from[1],settings.heRadius+256,true);
@@ -77,7 +80,7 @@ bool NativeGrenades::Detonate(const Charge& charge,float now,GameAudio& audio,wc
     }
     return hit;
 }
-bool NativeGrenades::Tick(GameAudio& audio,wc3::Handle viewer,const GrenadePoint& eye,const GrenadePoint& direction) {
+bool NativeGrenades::Tick(GameAudio& audio,wc3::Handle viewer,const GrenadePoint& eye,const GrenadePoint& direction,BlastJumpEvents* jumps) {
     if(!timer_)return false;float now=Time();unsigned generation=generation_;
     // Only pauses acquired by this adapter are released; pre-paused campaign units are never leased.
     for(auto it=stuns_.begin();it!=stuns_.end();) {
@@ -108,7 +111,7 @@ bool NativeGrenades::Tick(GameAudio& audio,wc3::Handle viewer,const GrenadePoint
         }
     }
     charges_.erase(std::remove_if(charges_.begin(),charges_.end(),[&](const Charge& c){return c.detonated && (c.slot!=WeaponSlots::Smoke || now-c.born>=c.flight.settings.fuse+c.flight.settings.smokeSeconds);}),charges_.end());
-    bool hit=false;for(const auto& event:events){hit=Detonate(event,now,audio,viewer,eye,direction)||hit;if(generation_!=generation)return hit;}
+    bool hit=false;for(const auto& event:events){hit=Detonate(event,now,audio,viewer,eye,direction,jumps)||hit;if(generation_!=generation)return hit;}
     float remaining=flashStart_+flashDuration_-now;
     flashOpacity_=remaining>0 && flashDuration_>0 ? std::clamp(remaining/(flashDuration_*.6f),0.f,1.f) : 0;
     return hit;

@@ -254,6 +254,11 @@ The [nuclear bomb and chat preview](NUCLEAR-CHAT-PREVIEW.md) documents `[Chat]` 
 [Release 0.17.0](RELEASE-0.17.0.md) collects all new weapon, smoke, mouse, sky, chat and nuclear defaults/ranges. Nuclear gameplay settings apply to future launches on F8; `[NuclearAudio]` layer edits require Install/asset reconversion. Existing custom codes survive; the former stock nuclear code upgrades to `warneverchanges`.
 
 
+## Weapon impulses (development build)
+
+The [weapon-jump development build](WEAPON-JUMPS.md) documents RPG/HE/C4 propulsion,
+Tau recoil, 5-percent RPG self damage and all new keys, units, bounds and reload timing.
+
 ## Terrain and model surfing (0.19.0)
 
 The [connected Surf Flow development build](SURF-FLOW.md) adds
