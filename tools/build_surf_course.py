@@ -12,25 +12,38 @@ ROOT = Path(__file__).resolve().parents[1]
 CELLS, ORIGIN, PIT = 128, -8192, -1800
 
 
-def terrain() -> bytes:
+def terrain(pit: int = PIT) -> bytes:
     # A low, flat safety floor never supplies hidden support beneath floating rails.
     data = bytearray(b'W3E!' + struct.pack('<IcII',11,b'L',1,1) + b'Ldrt')
     data += struct.pack('<I',2) + b'CLdiCLgr' + struct.pack('<IIff',CELLS+1,CELLS+1,ORIGIN,ORIGIN)
-    data += struct.pack('<HHBBB',8192+PIT*4,0,0,0,2)*((CELLS+1)**2)
+    data += struct.pack('<HHBBB',8192+pit*4,0,0,0,2)*((CELLS+1)**2)
     return bytes(data)
 
 
-def info() -> bytes:
+def info(title='Warcraft CS - Surf Skyline', description='Original three-stage surf time trial. Floating rails, gaps, checkpoints. Requires the model-surf launcher.', spawn=PADS[0]) -> bytes:
     bounds=(-7808.,-7808.,7808.,7808.,-7808.,7808.,7808.,-7808.)
-    data=struct.pack('<III',18,1,6052)+text('Warcraft CS - Surf Skyline')+text('Yazgul / Codex')
-    data+=text('Original three-stage surf time trial. Floating rails, gaps, checkpoints. Requires the model-surf launcher.')+text('1 player')
+    data=struct.pack('<III',18,1,6052)+text(title)+text('Yazgul / Codex')
+    data+=text(description)+text('1 player')
     data+=struct.pack('<8f4i3I',*bounds,3,3,3,3,CELLS-6,CELLS-6,0x60)+b'L'
     data+=struct.pack('<i',-1)+text('F6: FPS. P: speed. -cp: checkpoint. -restart: full timed run. -stage 1/2/3: practice.')
-    data+=text('SURF SKYLINE')+text('Three stages / two checkpoints')+struct.pack('<i',-1)+text('')*3
+    # Loading/team labels follow the selected course rather than inheriting the first map's name.
+    course_name=title.replace('Warcraft CS - ','')
+    data+=text(course_name.upper())+text('Three stages / two checkpoints')+struct.pack('<i',-1)+text('')*3
     data+=struct.pack('<5I',1,0,1,1,1)+text('Surfer')
-    data+=struct.pack('<ffII',PADS[0].x,PADS[0].y-100,0,0)
-    data+=struct.pack('<III',1,1,1)+text('Surf Skyline')+struct.pack('<III',0,0,0)
+    data+=struct.pack('<ffII',spawn.x,spawn.y-100,0,0)
+    data+=struct.pack('<III',1,1,1)+text(course_name)+struct.pack('<III',0,0,0)
     return data
+
+
+def course_script(data: str, title='Warcraft CS - Surf Skyline', description='Оригинальная surf-трасса на время: рампы, 2 чекпоинта и рекорд сессии.', spawn=PADS[0], labels=None) -> bytes:
+    # Both courses share tested timer/chat rules instead of maintaining duplicate JASS logic.
+    labels=labels or ('START -> EAST / F6 FPS','CP 1 -> NORTH / TURN LEFT','CP 2 -> EAST / AIR GAPS','FINISH / -restart')
+    values={'COURSE_DATA':data,'MAP_NAME':title,'MAP_DESCRIPTION':description,
+            'START_X':f'{spawn.x:.2f}','START_Y':f'{spawn.y-100:.2f}',
+            'COURSE_LABELS':'\n'.join(f'    call SkylineLabel({i},"{caption}")' for i,caption in enumerate(labels))}
+    script=(ROOT/'tools/maps/SurfSkyline.j').read_text(encoding='utf-8')
+    for key,value in values.items():script=script.replace('@'+key+'@',value)
+    return script.encode('utf-8')
 
 
 def preview() -> bytes:
@@ -61,8 +74,7 @@ def build() -> tuple[bytes,dict[str,bytes]]:
                   'war3map.wpm':b'MP3W'+struct.pack('<III',0,side,side)+bytes(side*side),
                   'war3map.shd':bytes(side*side),'war3map.w3b':destructables()})
     files.update(assets())
-    script=(ROOT/'tools/maps/SurfSkyline.j').read_text(encoding='utf-8').replace('@COURSE_DATA@',script_data())
-    files['war3map.j']=script.encode('utf-8')
+    files['war3map.j']=course_script(script_data())
     files['war3mapMap.tga']=files['war3mapPreview.tga']=preview()
     # Import names are authored paths; models and textures are portable original map content.
     imported=tuple(assets())

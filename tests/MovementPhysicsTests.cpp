@@ -174,6 +174,26 @@ int main() {
         disabled.surf.enabled=true;surf.Configure(disabled);face.normal[0]=1;face.normal[2]=0;
         Require(!surf.ResolveSurf(face),"vertical walls are not surf floors");
     }
+    // The independent surf gain changes tangent steering after real contact, not ordinary
+    // free-air motion. Re-querying a swept face cannot stack the gain within one frame.
+    for(int fps:{30,60,144}) {
+        float sideways[2]={};
+        for(int variant=0;variant<2;++variant) {
+            MovementSettings setting;setting.surf.accelerationMultiplier=variant ? 2.f : 1.f;
+            MovementPhysics rider;rider.Configure(setting);rider.Reset(100);rider.BeginFall();
+            MovementSurface face;face.height=100;face.normal[0]=.8660254f;face.normal[2]=.5f;
+            rider.Step({},1.f/fps,250);face.height=rider.FeetZ();Require(rider.ResolveSurf(face),"prepare actual surf contact");
+            auto repeated=rider;
+            for(int query=0;query<30;++query)repeated.ResolveSurf(face);
+            MoveInput strafe;strafe.right=1;
+            rider.Step(strafe,1.f/fps,250);repeated.Step(strafe,1.f/fps,250);
+            Require(std::abs(rider.VelocityY()-repeated.VelocityY())<.001f,"swept queries do not stack input acceleration");
+            sideways[variant]=-rider.VelocityY();
+            MovementPhysics free;free.Configure(setting);free.Reset(100);free.BeginFall();free.Step(strafe,1.f/fps,250);
+            Require(std::abs(free.VelocityY()+45)<.01f,"surf setting cannot alter ordinary free-air steering");
+        }
+        Require(sideways[1]>sideways[0]*1.9f,"default surf steering must accelerate more than the legacy gain");
+    }
     // The new default must be reachable yet bounded at common frame rates, without changing acceleration tuning.
     for(int fps:{30,60,144}) {
         MovementPhysics capped;capped.Reset(0);

@@ -22,6 +22,15 @@ globals
     boolean practice=false
     boolean automatic=true
     boolean showHud=true
+    // Builders select course geometry/rules; timing and checkpoint behavior stay shared.
+    string courseTitle="SURF SKYLINE"
+    string courseHelp="Синий этап: восток, оранжевый: север, финальный: восток. Разгон W, на грани рампы A/D к её гребню + плавная мышь."
+    real courseStartEdge=256.
+    real courseStartMinimum=900.
+    real courseFall=-1200.
+    real coursePadWidth=230.
+    real coursePadDepth=400.
+    real courseFinishWidth=700.
 endglobals
 
 function SkylineAbs takes real value returns real
@@ -72,10 +81,10 @@ function SkylineHeight takes nothing returns real
 endfunction
 
 function SkylineHelp takes nothing returns nothing
-    call SkylineMessage("|cffffcc00SURF SKYLINE|r — 3 этапа, 2 чекпоинта. F6: FPS, P: скорость. Старт по выходу с первой площадки.")
-    call SkylineMessage("Синий этап: восток, оранжевый: север, финальный: восток. Разгон W, на грани рампы A/D к её гребню + плавная мышь.")
+    call SkylineMessage("|cffffcc00"+courseTitle+"|r — 3 этапа, 2 чекпоинта. F6: FPS, P: скорость. Старт по выходу с первой площадки.")
+    call SkylineMessage(courseHelp)
     call SkylineMessage("-cp: последний чекпоинт | -restart: новый забег | -stage 1/2/3: тренировка | -stats | -hud | -auto | -help")
-    call SkylineMessage("Время при падениях и -cp продолжает идти. Тренировка не обновляет рекорд. Прыжки через разрывы проверяй в FPS.")
+    call SkylineMessage("Время при падениях и -cp продолжает идти. Тренировка не обновляет рекорд. Прохождение проверяй в FPS.")
 endfunction
 
 function SkylineReturn takes nothing returns nothing
@@ -147,7 +156,7 @@ function SkylineHud takes nothing returns nothing
     if practice then
         set mode="PRACTICE"
     endif
-    call SetTextTagText(hud,"SKYLINE | "+mode+" | "+SkylineFormat(SkylineTime())+" | CP "+I2S(checkpoint)+"/2 | FALLS "+I2S(falls),0.023)
+    call SetTextTagText(hud,courseTitle+" | "+mode+" | "+SkylineFormat(SkylineTime())+" | CP "+I2S(checkpoint)+"/2 | FALLS "+I2S(falls),0.023)
     call SetTextTagPos(hud,x,y,z-SkylineGround(x,y))
     call SetTextTagVisibility(hud,true)
 endfunction
@@ -224,10 +233,10 @@ function SkylineTick takes nothing returns nothing
     local real y=GetUnitY(runner)
     local real z=SkylineHeight()
     local integer next=checkpoint+1
-    local real landingWidth=230.
+    local real landingWidth=coursePadWidth
     if next == 3 then
         // Match the longer final braking deck while keeping its edges outside the finish gate.
-        set landingWidth=700.
+        set landingWidth=courseFinishWidth
     endif
     if SkylineAbs(z-lastZ) < 5. then
         set stable=stable+0.05
@@ -236,14 +245,14 @@ function SkylineTick takes nothing returns nothing
     endif
     set lastZ=z
     if now > grace then
-        if not active and not finished and checkpoint == 0 and x > cpX[0]+256. and z > 900. then
+        if not active and not finished and checkpoint == 0 and x > cpX[0]+courseStartEdge and z > courseStartMinimum then
             set started=now
             set active=true
             set attempts=attempts+1
             call SkylineMessage("|cff70ff80СТАРТ|r Пройди оба чекпоинта и финиш.")
         endif
         // Checkpoints must be reached in order and near their actual top after a stable landing.
-        if active and SkylineAbs(x-cpX[next]) < landingWidth and SkylineAbs(y-cpY[next]) < 400. and SkylineAbs(z-cpZ[next]) < 64. and stable >= 0.1 then
+        if active and SkylineAbs(x-cpX[next]) < landingWidth and SkylineAbs(y-cpY[next]) < coursePadDepth and SkylineAbs(z-cpZ[next]) < 64. and stable >= 0.1 then
             if next == 3 then
                 set result=now-started
                 set active=false
@@ -260,7 +269,7 @@ function SkylineTick takes nothing returns nothing
                 call SkylineMessage("|cff70ff80ЧЕКПОИНТ "+I2S(checkpoint)+"/2|r Время: "+SkylineFormat(now-started))
             endif
         endif
-        if automatic and z < -1200. then
+        if automatic and z < courseFall then
             if active then
                 set falls=falls+1
             endif
@@ -306,10 +315,7 @@ function main takes nothing returns nothing
     set hud=CreateTextTag()
     call SetTextTagPermanent(hud,true)
     call SetTextTagColor(hud,255,240,150,255)
-    call SkylineLabel(0,"START -> EAST / F6 FPS")
-    call SkylineLabel(1,"CP 1 -> NORTH / TURN LEFT")
-    call SkylineLabel(2,"CP 2 -> EAST / AIR GAPS")
-    call SkylineLabel(3,"FINISH / -restart")
+@COURSE_LABELS@
     call TriggerRegisterPlayerChatEvent(chat,Player(0),"-",false)
     call TriggerAddAction(chat,function SkylineChat)
     call SkylineRestart()
@@ -319,12 +325,12 @@ function main takes nothing returns nothing
 endfunction
 
 function config takes nothing returns nothing
-    call SetMapName("Warcraft CS - Surf Skyline")
-    call SetMapDescription("Оригинальная surf-трасса на время: рампы над пустотой, разрывы, 2 чекпоинта и рекорд сессии. Нужен новый лаунчер с контактом по моделям.")
+    call SetMapName("@MAP_NAME@")
+    call SetMapDescription("@MAP_DESCRIPTION@")
     call SetPlayers(1)
     call SetTeams(1)
     call SetGamePlacement(MAP_PLACEMENT_FIXED)
-    call DefineStartLocation(0,-6400.,-2700.)
+    call DefineStartLocation(0,@START_X@,@START_Y@)
     call SetPlayerStartLocation(Player(0),0)
     call SetPlayerTeam(Player(0),0)
     call SetPlayerController(Player(0),MAP_CONTROL_USER)

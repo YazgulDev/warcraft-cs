@@ -267,6 +267,8 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     // Surfing is an airborne terrain contact; it shares the validated walk angle and speed ceiling.
     result.movement.surf.enabled=enabled("Surfing","Enabled");
     result.movement.surf.modelContacts=enabled("Surfing","ModelContacts");
+    // One bounded multiplier changes surf input only, preserving ordinary airborne tuning.
+    result.movement.surf.accelerationMultiplier=std::max(.1f,number("Surfing","AccelerationMultiplier",2,4));
     result.movement.surf.maximumAngle=std::max(50.f,number("Surfing","MaximumAngle",80,85));
     result.movement.surf.contactDistance=number("Surfing","ContactDistance",8,32);
     result.movement.jumpBoostPercent = number("Movement", "JumpBoostPercent", 15, 100);

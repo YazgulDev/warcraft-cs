@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add the original connected Surf Flow time trial: 40 joined banked sections and four broad turning/checkpoint decks, with matching flat endpoints and descending profiles across the entire width. Reuse the tested timer/chat/checkpoint logic without requiring stage teleports; retain Skyline and Practice as separate courses.
+- Add Surfing.AccelerationMultiplier, default2/range0.1-4, with1 restoring the former response. Apply independent surf air-input acceleration/wish allowance once per confirmed contact step, preserving ordinary free-air/Bunnyhop tuning, no-input gravity and the shared speed cap. Validate startup/F8 and preserve custom values through installation updates.
+
 ## 0.19.0 - 2026-11-04
 
 - Publish [downloads, upgrade instructions and complete Release Notes](docs/RELEASE-0.19.0.md), both launchers, source-only public ZIPs and separate original surf maps, with a matching compact launcher summary.

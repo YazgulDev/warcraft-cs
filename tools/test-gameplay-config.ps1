@@ -748,10 +748,17 @@ Write-Output 'PASS 3000 stock speed cap, custom caps, explicit legacy opt-back a
 
 # New surf controls fill missing keys and retain saved opt-outs/angles on repeated installs.
 $surfFile=Join-Path $folder 'surf.ini'
-@('[Movement]','Mode=classic','[Surfing]','Enabled=false','MaximumAngle=70','ContactDistance=4','ModelContacts=false') | Set-Content $surfFile
+@('[Movement]','Mode=classic','[Surfing]','Enabled=false','MaximumAngle=70','ContactDistance=4','ModelContacts=false','AccelerationMultiplier=1.25') | Set-Content $surfFile
 Update-GameplayConfig $template $surfFile
 $surfText=Get-Content $surfFile -Raw
-foreach($value in @('Mode=classic','[Surfing]','Enabled=false','MaximumAngle=70','ContactDistance=4','ModelContacts=false')){if(!$surfText.Contains($value)){throw "Lost surf choice: $value"}}
+foreach($value in @('Mode=classic','[Surfing]','Enabled=false','MaximumAngle=70','ContactDistance=4','ModelContacts=false','AccelerationMultiplier=1.25')){if(!$surfText.Contains($value)){throw "Lost surf choice: $value"}}
 $surfHash=(Get-FileHash $surfFile).Hash;Update-GameplayConfig $template $surfFile
 if((Get-FileHash $surfFile).Hash -ne $surfHash){throw 'Surf configuration merge repeats.'}
 Write-Output 'PASS surf defaults insertion, custom tuning, opt-out and idempotence.'
+# Older terrain/model surf profiles gain the new response knob without resetting their other choices.
+$surfLegacy=Join-Path $folder 'surf-legacy.ini'
+@('[Surfing]','Enabled=true','MaximumAngle=72') | Set-Content $surfLegacy
+Update-GameplayConfig $template $surfLegacy
+$surfLegacyText=Get-Content $surfLegacy -Raw
+if(!$surfLegacyText.Contains('AccelerationMultiplier=2') -or !$surfLegacyText.Contains('MaximumAngle=72')){throw 'Independent surf acceleration default was not merged safely.'}
+Write-Output 'PASS missing surf acceleration insertion and existing profile preservation.'

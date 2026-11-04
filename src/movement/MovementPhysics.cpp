@@ -17,6 +17,9 @@ void MovementPhysics::LimitSpeed(float maximum) {
 }
 void MovementPhysics::Step(const MoveInput& input, float dt, float weaponSpeed) {
     // Portable callers may omit an explicit commit; the previous resolved frame is still finalized once.
+    // Consume only the last confirmed face contact, once per simulation step. Repeated
+    // swept contact queries cannot multiply acceleration, and free-air bunnyhop stays unchanged.
+    bool surfInput=surfing_ && settings_.surf.enabled && !grounded_ && !swimming_;
     FinishMove();surfing_=false;
     dt = std::clamp(dt, 0.0f, 0.05f);
     if (!dt) return;
@@ -73,9 +76,10 @@ void MovementPhysics::Step(const MoveInput& input, float dt, float weaponSpeed) 
         if (input.duck) speed *= 0.34f;
         // Cap only the velocity projected onto the input direction. Turning A/D adds sideways
         // momentum above running speed; holding forward alone cannot keep accelerating.
-        float cap = grounded_ ? speed : std::min(speed, 30 * worldScale);
+        float surfGain=surfInput ? settings_.surf.accelerationMultiplier : 1;
+        float cap = grounded_ ? speed : std::min(speed, 30 * worldScale * surfGain);
         float needed = cap - (vx_ * wx + vy_ * wy);
-        float acceleration = grounded_ ? 10.0f : settings_.airAcceleration;
+        float acceleration = grounded_ ? 10.0f : settings_.airAcceleration * surfGain;
         float addition = std::max(0.0f, std::min(needed, acceleration * speed * dt));
         vx_ += addition * wx; vy_ += addition * wy;
     }

@@ -1,5 +1,18 @@
 # Validation
 
+## Connected Surf Flow and independent surf acceleration (development, 2026-11-05)
+
+The [connected course](SURF-FLOW.md#verification) completed all three physical stages,
+both turning decks and the ordered finish with no falls or returns on owned 1.26a
+classic: OpenGL33.25s, Direct3D33.31s. A preliminary tail profile could turn uphill
+on the outer bank and erase momentum; the final longer fade descends across every
+cross-section, with a regression for that condition. The independent surf input gain
+defaults to2, is bounded0.1-4 and preserves the legacy response at1. Ordinary free-air
+and no-input gravity remain separate; repeated swept queries cannot multiply the gain.
+Movement/collision/settings/map/config checks pass. OpenGL frames inspected, D3D native
+assertions only; lab data/saves restored by hash. Native1.27a and full hull/recovery
+course completion are unverified. Published0.19.0 assets/tags remain unchanged.
+
 ## Release 0.19.0 (2026-11-04)
 
 See the [complete release checks and limits](RELEASE-0.19.0.md#verification-and-packaging) and [Surf Skyline verification](SURF-SKYLINE-VALIDATION.md). The full native-independent suite passes. Owned 1.26a OpenGL/Direct3D scenes cover portals, heavy-weapon deaths, FOV, Warcraft sky restoration, crest momentum and terrain surfing; Skyline completes in classic on both renderers. Native hull/recovery course completion and real 1.27a remain unverified. Final source-bound dual-launcher, setup/update/reinstall and asset checks accompany publication. Earlier unreleased headings below record the original development dates; their included behavior ships in 0.19.0.

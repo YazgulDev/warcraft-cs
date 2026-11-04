@@ -425,7 +425,9 @@ int main(){
     for(int frame=0;frame<60;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
     Require(unitX>300, "HullRadius caps a native actor footprint without rejecting a physically wide enough passage");
     narrowPassage=false;actorRadius=0;
-    slope=true;slopeGradient=.8f;unitX=unitY=0;jumper.Reset(100);narrowHull.maxWalkSlope=30;jumper.Configure(narrowHull);
+    // This case isolates walking angle. Stronger enabled surf can deliberately carry an
+    // airborne rider up a native-walkable face steeper than that walking limit.
+    slope=true;slopeGradient=.8f;unitX=unitY=0;jumper.Reset(100);narrowHull.maxWalkSlope=30;narrowHull.surf.enabled=false;jumper.Configure(narrowHull);
     for(int frame=0;frame<60;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
     Require(unitX<32, "the configured walk angle controls ordinary ramp contacts");
     narrowHull.maxWalkSlope=60;jumper.Configure(narrowHull);

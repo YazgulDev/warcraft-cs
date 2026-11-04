@@ -256,6 +256,12 @@ The [nuclear bomb and chat preview](NUCLEAR-CHAT-PREVIEW.md) documents `[Chat]` 
 
 ## Terrain and model surfing (0.19.0)
 
+The [connected Surf Flow development build](SURF-FLOW.md) adds
+`AccelerationMultiplier=2` (0.1–4; 1 restores the 0.19.0 response). It scales air-input
+acceleration and the wish-direction allowance only after confirmed surf contact,
+once per physics step. No-input gravity, ordinary free-air Bunnyhop and the saved
+speed cap remain independent. Startup/F8 applies it and updates preserve custom values.
+
 `[Surfing] Enabled=true` enables airborne sliding on continuous, native-walkable terrain slopes
 steeper than `[Movement] MaxWalkSlope` (46 degrees by default). Gravity accelerates along the
 contact plane; A/D and mouse turning use the existing air-strafe controls. Space does not
