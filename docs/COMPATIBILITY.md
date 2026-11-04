@@ -4,7 +4,7 @@
 
 ## Supported setup
 
-Release **0.16.0** targets Windows 10/11 x64 and **Warcraft III 1.26a
+Release **0.19.0** targets Windows 10/11 x64 and **Warcraft III 1.26a
 x86**, with `Game.dll` version **1.26.0.6401**, using OpenGL or Direct3D. It additionally accepts
 experimental **1.27a (1.27.0.52240)** with D3D9 in both Player and Developer setup.
 [1.27a remains a partial port without real-game verification](PORT-1.27.md). Both Reign of Chaos
@@ -26,6 +26,8 @@ Check the notes bundled with a development build before assuming it supports ano
 ## Maps and gameplay
 
 - Offline single player only; multiplayer is unsupported.
+- [Surf maps](SURF-SKYLINE.md) are optional separate downloads. Full Skyline completion is verified in classic on 1.26a/OpenGL and Direct3D; hull/recovery model contacts have portable coverage. No real 1.27a course verification is claimed.
+- [Portals](PORTALS-HEAVY-WEAPONS.md) use active native waygates and existing map destinations; campaign transitions are not created.
 - A living owned unit is required. Maps do not need editing, but full campaign and
   custom-map compatibility has not been verified.
 - Map scripts may replace the camera or interfere with unit control. Two-player

@@ -37,5 +37,5 @@ The outer downloadable ZIP contains only the authored map and instructions.
 
 Real 1.27a gameplay and native hull/recovery course completion have not been
 verified. The course requires the new model-surf build; the older terrain-only
-practice launcher is insufficient. This is a local preview, with no change to the
-published 0.18.0 release or its immutable tag.
+practice launcher is insufficient. This course ships in release 0.19.0. The
+previously published 0.18.0 tag remains immutable.

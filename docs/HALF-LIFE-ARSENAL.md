@@ -12,7 +12,7 @@ $200 / $5000 / $6000 / $4000 with the default dollar economy. RPG moves out of E
 never spend money. All carried Half-Life weapons appear in group **6 HALF-LIFE**, in
 this order, and in sequential wheel selection. Click to confirm. Turn Tab item numbers
 off to use 1–6 for weapons. Custom bindings and the optional legacy direct-slot mode
-remain available. The local [portal/heavy-weapon development build](PORTALS-HEAVY-WEAPONS.md)
+remain available. The [0.19.0 portal/heavy-weapon update](PORTALS-HEAVY-WEAPONS.md)
 adds an installed Crowbar to the initial kit by default; `[Loadout] Crowbar=false` keeps the
 purchase-only kit. F8 grants no inventory. F12 grants every available weapon; F11 refills owned ones. Existing IDs stay stable.
 

@@ -1,6 +1,7 @@
 # Surf Practice
 
 An original offline practice map for the Warcraft CS build with terrain surfing.
+[Download map and instructions](https://github.com/YazgulDev/warcraft-cs/releases/download/v0.19.0/WarcraftCS-Surf-Practice.zip).
 No additional launcher update is needed if that build is already installed.
 
 Copy `WarcraftCS-Surf-Practice.w3m` to `Maps/Download` in the modded game, then select

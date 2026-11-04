@@ -1,11 +1,11 @@
 # Surf Skyline
 
-An original single-player surf time trial for Warcraft CS. Three stages contain 18
+An original single-player surf time trial for Warcraft CS. [Download map and instructions](https://github.com/YazgulDev/warcraft-cs/releases/download/v0.19.0/WarcraftCS-Surf-Skyline.zip). Three stages contain 18
 solid A-frame rail sections, two turns, two air gaps and two ordered checkpoint pads.
 The long gold finish deck gives room to brake. Models, checker textures, overview,
 placement and map logic are authored project content, not an imported CS map.
 
-Install the matching development Player launcher, then copy
+Install the 0.19.0 (or newer) Player launcher, then copy
 `WarcraftCS-Surf-Skyline.w3m` into the modded game's `Maps/Download` folder.
 Choose **Single Player → Custom Game → Warcraft CS - Surf Skyline**.
 Press **F6** for FPS and **P** for speed. Default classic physics is supported;

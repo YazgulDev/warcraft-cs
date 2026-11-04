@@ -1,5 +1,9 @@
 # Validation
 
+## Release 0.19.0 (2026-11-04)
+
+See the [complete release checks and limits](RELEASE-0.19.0.md#verification-and-packaging) and [Surf Skyline verification](SURF-SKYLINE-VALIDATION.md). The full native-independent suite passes. Owned 1.26a OpenGL/Direct3D scenes cover portals, heavy-weapon deaths, FOV, Warcraft sky restoration, crest momentum and terrain surfing; Skyline completes in classic on both renderers. Native hull/recovery course completion and real 1.27a remain unverified. Final source-bound dual-launcher, setup/update/reinstall and asset checks accompany publication. Earlier unreleased headings below record the original development dates; their included behavior ships in 0.19.0.
+
 ## Confirmed Bunnyhop takeoffs and terrain surfing (unreleased, 2026-11-04)
 
 The delivered rising-ramp module was reproduced in an owned 1.26a private map: six

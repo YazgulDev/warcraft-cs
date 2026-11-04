@@ -8,7 +8,7 @@ quests and combat rules. Third-person and unarmed first-person views are also av
 [Install and play](INSTALL.md) · [Documentation](docs/README.md) ·
 [Discussions](https://github.com/YazgulDev/warcraft-cs/discussions)
 
-**Release 0.18.0:** deep-water swimming and exits from canals, a fix for militia-alarm crashes, C4 in Bombs, and a wider RPG blast with distance falloff. See [downloads and all changes](docs/RELEASE-0.18.0.md). [1.27a/D3D9 support remains experimental](docs/PORT-1.27.md).
+**Release 0.19.0:** in-map portals, heavy-weapon balance, FOV and Warcraft skies, faster Bunnyhop with crest fixes, terrain/model surfing and two original surf maps. See [downloads and all changes](docs/RELEASE-0.19.0.md). [1.27a/D3D9 support remains experimental](docs/PORT-1.27.md).
 
 ## Start here
 
@@ -22,7 +22,8 @@ quests and combat rules. Third-person and unarmed first-person views are also av
 
 - First-person movement with WASD, mouse aiming, jumping and crouching.
 - CS weapons, dollar purchases, rare loot, grenades and optional Half-Life Crowbar, Tau, Gluon and RPG from your own game files.
-- Native Warcraft spells, inventory, shops and squad commands.
+- Native Warcraft spells, inventory, shops, active in-map portals and squad commands.
+- Configurable Bunnyhop/surfing and optional [practice and timed surf maps](docs/SURF-SKYLINE.md).
 - Third-person unit control and a clean first-person view without weapons or HUD.
 
 ## Requirements
