@@ -2,6 +2,7 @@
 #include <algorithm>
 #include "MovementStrafeInput.hpp"
 #include "../src/movement/MovementImpulse.hpp"
+#include "../src/movement/MovementRelocation.hpp"
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -210,6 +211,22 @@ int main() {
         Require(std::abs(launched.VelocityX()-450)<.01f,"no-input impulse keeps horizontal momentum");
         launched.Reset(100);for(int blast=0;blast<30;++blast)launched.AddImpulse(500,0,900,2250);
         Require(launched.Speed()<=4500.01f && launched.VerticalVelocity()<=2250.01f,"overlapping blasts obey horizontal and upward limits");
+    }
+    // Local native XY correction must not collapse a rocket/Tau flight; real destination changes still rebase.
+    for(int fps:{30,60,144}) {
+        MovementPhysics flight;flight.Reset(0);flight.AddImpulse(450,0,900,2250);
+        for(int frame=0;frame<fps/3;++frame)flight.Step({},1.f/fps,250);
+        float feet=flight.FeetZ(),vertical=flight.VerticalVelocity(),speed=flight.Speed();
+        Require(MovementRelocation::Rebase(flight,0,80) && flight.FeetZ()==feet && flight.VerticalVelocity()==vertical &&
+            flight.Speed()==speed && !flight.Grounded(),"native local correction retains ballistic height and all momentum");
+        Require(MovementRelocation::Rebase(flight,0,220,100),"local correction accounts for the already budgeted motor step");
+        Require(!MovementRelocation::Rebase(flight,0,2000) && flight.FeetZ()==0 && flight.Grounded() &&
+            flight.VerticalVelocity()==0 && flight.Speed()==0,"distant native teleport still resets old flight");
+        flight.AddImpulse(0,0,900,2250);flight.Step({},1.f/fps,250);
+        Require(!MovementRelocation::Rebase(flight,0),"confirmed waygate travel always discards the previous flight");
+        flight.AddImpulse(0,0,900,2250);flight.Step({},1.f/fps,250);
+        Require(!MovementRelocation::Rebase(flight,500,80) && flight.FeetZ()==500,"a raised destination cannot preserve buried feet");
+        Require(!MovementRelocation::Rebase(flight,510,80) && flight.FeetZ()==510,"grounded native relocation retains normal floor rebasing");
     }
     // The new default must be reachable yet bounded at common frame rates, without changing acceleration tuning.
     for(int fps:{30,60,144}) {

@@ -10,6 +10,11 @@ function ImpulseChat takes nothing returns nothing
         call SetUnitInvulnerable(runner,false)
     elseif command == "-restore" then
         call SetUnitState(runner,UNIT_STATE_LIFE,GetUnitState(runner,UNIT_STATE_MAX_LIFE))
+    // Evaluate on the game thread: host-side sampled coordinates become stale during fast flight.
+    elseif command == "-nudge" then
+        call SetUnitX(runner,GetUnitX(runner)+80.)
+    elseif command == "-warp" then
+        call SetUnitX(runner,GetUnitX(runner)+2000.)
     endif
 endfunction
 function main takes nothing returns nothing

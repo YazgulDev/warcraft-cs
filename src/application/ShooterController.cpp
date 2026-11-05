@@ -1,5 +1,6 @@
 #include "../platform/GameBuild.hpp"
 #include "ShooterController.hpp"
+#include "../movement/MovementRelocation.hpp"
 #include "../platform/NativeHeadGore.hpp"
 #include "../platform/NativeExplosiveDeath.hpp"
 #include "../presentation/TauChargeFeedback.hpp"
@@ -404,9 +405,13 @@ SpellAim ShooterController::InventoryAim(int x,int y,int width,int height) {
     }
     return SpellAim::Pick(unit_,origin,direction,settings_.spells.aimDistance,hitboxes_,destructableHitboxes_);
 }
-void ShooterController::RebaseAfterTeleport() {
-    // Native placement owns XY; no velocity, old floor, ground-eye correction or recovery checkpoint follows it.
-    movement_.Reset(wc3::Ground(wc3::Real(wc3::GetUnitX(unit_)),wc3::Real(wc3::GetUnitY(unit_))));
+void ShooterController::RebaseAfterRelocation(float distance,float motorDistance) {
+    // Native placement owns XY. A local pathing nudge must not reset an airborne body to ground;
+    // actual portals/distant relocations discard the previous floor and momentum as before.
+    float floor=wc3::Ground(wc3::Real(wc3::GetUnitX(unit_)),wc3::Real(wc3::GetUnitY(unit_)));
+    bool preserved=MovementRelocation::Rebase(movement_,floor,distance,motorDistance);
+    wc3::Log("movement relocation mode=%s distance=%.1f allowance=%.1f floor=%.1f feet=%.1f velocity=%.1f,%.1f,%.1f",
+        preserved ? "preserve-flight" : "reset",distance,motorDistance,floor,movement_.FeetZ(),movement_.VelocityX(),movement_.VelocityY(),movement_.VerticalVelocity());
     collision_.ResetRecovery();positionRecoveryRequested_=false;cameraHeight_.Reset();viewmodelMotion_.Reset();stepDistance_=0;
 }
 void ShooterController::AimAndMove(float dt) {
@@ -416,9 +421,10 @@ void ShooterController::AimAndMove(float dt) {
     if (status_.contained || status_.hidden) { mouseLook_.Reset();movement_.Stop();viewmodelMotion_.Reset();cameraHeight_.Reset(); stepDistance_ = 0; return; }
     auto actor=unit_;auto object=wc3::UnitObject(actor);unsigned generation=rewardGeneration_;
     auto valid=[&]{return generation==rewardGeneration_ && unit_==actor && wc3::UnitObject(actor)==object;};
-    if(settings_.portals.enabled && portals_.Observe(unit_,movement_.HullRadius()*2)) {
-        // Map-script/engine teleports do not retain a remote floor or the old FPS camera correction.
-        RebaseAfterTeleport();
+    float relocationDistance=0;
+    if(settings_.portals.enabled && portals_.Observe(unit_,movement_.HullRadius()*2,&relocationDistance)) {
+        // Distinguish local engine correction from a remote map-script destination before rebasing height.
+        RebaseAfterRelocation(relocationDistance);
     }
     if(recover && !status_.immobilized && !status_.incapacitated && !Casting() && !CursorMode())collision_.RequestRecovery();
     // Mouse capture occurs only in the foreground and only after the player enables FPS.
@@ -492,15 +498,15 @@ void ShooterController::AimAndMove(float dt) {
         } else stepDistance_ = 0;
     }
     if(!valid())return;
-    if(settings_.portals.enabled && portals_.Observe(actor,manualDistance)) {
+    if(settings_.portals.enabled && portals_.Observe(actor,manualDistance,&relocationDistance)) {
         // A native region trigger may teleport during a movement setter as well as between ticks.
         // Budget the actual motor step so fast ordinary movement cannot be mistaken for a teleport.
-        RebaseAfterTeleport();
+        RebaseAfterRelocation(relocationDistance,std::max(0.f,manualDistance-movement_.HullRadius()*2));
     }
     if(portals_.Travel(actor,movement_.FeetZ()+wc3::Real(wc3::GetUnitFlyHeight(actor)),settings_.portals,
         !status_.immobilized && !status_.incapacitated && !CursorMode() && !Casting(),valid)) {
         // Native placement owns the destination. Camera and physics must discard the pre-portal floor/momentum.
-        RebaseAfterTeleport();
+        RebaseAfterRelocation();
         heroAttack_.Cancel();glockBurst_.Cancel();meleeContact_=0;CancelPlant();CancelEnergy();stepDistance_=0;
         Notice("TELEPORTED");
     }

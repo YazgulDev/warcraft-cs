@@ -32,3 +32,10 @@ change. The impulse does not teleport the unit, grant a second Space bonus or
 bypass stuns, roots, cargo or hidden actors. The current Bunnyhop speed cap still
 bounds horizontal speed. These impulses cover the mod's weapons, not arbitrary
 Warcraft map spells or visual explosion effects.
+
+Small external native XY corrections while airborne retain physical height and
+momentum instead of being treated as ground spawns. The correction allowance is four
+32-unit pathing cells beyond the budgeted motor step; destination ground must remain
+below the feet. Confirmed waygates and distant scripted relocations still discard the
+old flight. Logs distinguish `preserve-flight` from `reset`, including distance,
+allowance, floor, physical feet and velocity.

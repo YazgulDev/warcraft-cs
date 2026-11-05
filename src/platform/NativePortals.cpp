@@ -20,13 +20,16 @@ bool NativePortals::Select(wc3::Handle actor) {
     if(actor_!=actor || actorObject_!=object){actor_=actor;actorObject_=object;leaveGate_=tracked_=false;nextTravel_=nextScan_=0;}
     return true;
 }
-bool NativePortals::Observe(wc3::Handle actor,float tolerance) {
+bool NativePortals::Observe(wc3::Handle actor,float tolerance,float* distance) {
+    if(distance)*distance=0;
     if(!Select(actor))return false;
     float x=wc3::Real(wc3::GetUnitX(actor)),y=wc3::Real(wc3::GetUnitY(actor));
-    bool relocated=tracked_ && std::hypot(x-lastX_,y-lastY_)>std::max(32.f,tolerance);
+    float displacement=tracked_ ? std::hypot(x-lastX_,y-lastY_) : 0;
+    if(distance)*distance=displacement;
+    bool relocated=tracked_ && displacement>std::max(32.f,tolerance);
     // Native/scripted region teleports can occur between motor ticks. They need the same camera/floor
     // rebase and arrival latch, without guessing their trigger destinations or cancelling native casts.
-    if(relocated){leaveGate_=true;wc3::Log("Portal/native relocation actor=%08X from=%.1f,%.1f actual=%.1f,%.1f",actor,lastX_,lastY_,x,y);}
+    if(relocated){leaveGate_=true;wc3::Log("Portal/native relocation actor=%08X from=%.1f,%.1f actual=%.1f,%.1f distance=%.1f tolerance=%.1f",actor,lastX_,lastY_,x,y,displacement,tolerance);}
     lastX_=x;lastY_=y;tracked_=true;return relocated;
 }
 void NativePortals::Commit(wc3::Handle actor) {

@@ -1,5 +1,26 @@
 # Validation
 
+## Airborne native corrections and fixture grids (development build, 2026-11-05)
+
+Reporter logs contain bounded `Portal/native relocation` events during airborne
+movement. The former controller treated every such event as a new ground spawn.
+An isolated owned 1.26a baseline reproduced a Tau flight dropping from about 300
+world units to zero after an external XY correction.
+
+The corrected controller was checked in OpenGL and Direct3D with the authored
+arena's game-thread `-nudge` (80 units) and `-warp` (2000 units) commands. The local
+nudge retained the ballistic trajectory and emitted `preserve-flight`; the distant
+warp reset to destination ground. Physics tests at 30/60/144 Hz additionally cover
+the motor-distance allowance, confirmed waygates, grounded actors and destinations
+above the previous feet. Portal/death and classic/hull/recovery collision suites pass.
+
+The earlier privately assembled arena reused 64-cell shadow/pathing grids beside
+128-cell terrain, causing Warcraft's invalid-shadow-map dialog. The reproducible
+`tools/build_impulse_fixture.py` supplies matching 512-by-512 fine grids. The map
+regression reads W3E dimensions and verifies WPM/SHD payload sizes; classic pjass and
+both native launches pass. Fixture commands remain excluded from normal Player
+modules. These native results cover owned 1.26a, not experimental 1.27a.
+
 ## Weapon impulses (development build, 2026-11-05)
 
 Movement regressions cover radial 3D falloff, coincident blast centers, ballistic

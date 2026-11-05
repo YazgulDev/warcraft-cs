@@ -403,7 +403,7 @@ private:
     void ApplyMenuSettings();
     void ToggleHealthBars();
     void ResetLoadout();
-    void RebaseAfterTeleport();
+    void RebaseAfterRelocation(float distance=-1,float motorDistance=0);
     void Buy(int slot,bool ammunition);
     void UpdateBuyMenu();
     void UpdateWeaponSelection(DWORD now);
