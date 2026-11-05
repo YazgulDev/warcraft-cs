@@ -16,6 +16,7 @@ namespace {
 struct HullSettings : MovementSettings {HullSettings(){classicCollision=false;platformRecovery=false;}};
 float unitX=0,unitY=0;
 bool bridgeAlive=true,edge=false,nativeBlocked=false,cliff=false,invalidDeck=false;
+bool flightStrip=false,flightStripClosed=false;
 bool drop=false, prop=false, wall=false, slope=false, water=false;
 bool swimScene=false,swimWall=false,swimNativeBlocked=false;
 float canalBank=0; // A vertical canal edge exercises Space exits independently of the shallow beach.
@@ -42,6 +43,7 @@ wc3::Bits Bits(float value) { wc3::Bits bits;std::memcpy(&bits,&value,4);return 
 wc3::Bits __cdecl X(wc3::Handle) {return Bits(unitX);}
 wc3::Bits __cdecl Y(wc3::Handle) {return Bits(unitY);}
 BOOL __cdecl Blocked(float* x,float* y,int kind) {
+    if(flightStrip)return *x>=32 && *x<128 && (kind==1 || (kind==2 && flightStripClosed));
     if(surfScene)return nativeBlocked;
     if(crest)return nativeBlocked;
     // Different masks deliberately disagree: owned common.j uses 6 for floatability, while 4 is harvest pathing.
@@ -157,7 +159,7 @@ std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,b
     }
     if (tree) return canopyBounds ? std::vector<Bounds3>{{{-93,-231,100},{334,193,413}}} :
         std::vector<Bounds3>{{{101,-21,100},{138,22,384}}};
-    if (prop || wall) return {{{60,-50,100},{80,50,wall ? 300.f : 140.f}}};
+    if (prop || wall) return {{{60,-50,100},{80,50,flightStrip ? 1100.f : wall ? 300.f : 140.f}}};
     return {};
 }
 UnitCollisionProfile UnitCollisionProfile::Read(wc3::Handle,uintptr_t) {
@@ -668,6 +670,28 @@ int main(){
     jumper.AddImpulse(4000,0,0,2250);
     for(int frame=0;frame<30;++frame){jumper.Step({},1.f/60,250);collision.Move(1,jumper,1.f/60);}
     Require(unitX<80,"blast launch must retain ordinary solid wall collision");wall=false;
+    // A walk-only strip must not act as an infinite wall during a high impulse jump.
+    // Try the same strip with its flight mask closed and with an ordinary low jump.
+    flightStrip=true;bridgeAlive=false;
+    for(int mode=0;mode<3;++mode) {
+        MovementSettings settings;settings.classicCollision=mode==0;settings.platformRecovery=mode==2;
+        for(int test=0;test<5;++test) {
+            flightStripClosed=test==1;wall=test==3;unitX=-64;unitY=0;
+            MovementPhysics flight;flight.Configure(settings);flight.Reset(100);
+            WarcraftCollision strip;
+            MoveInput input;input.forward=1;
+            if(test==2)input.jump=true;
+            else if(test<4)flight.AddImpulse(320,0,1080,2250);
+            for(int frame=0;frame<125;++frame) {
+                flight.Step(input,1.f/60,250);strip.Move(1,flight,1.f/60);input.jump=false;
+            }
+            if(test==0)Require(unitX>152 && flight.Grounded(),"high launch clears a walk-only strip and lands beyond it");
+            else if(test==3)Require(unitX<60,"flight clearance cannot bypass an actual tall solid");
+            else Require(unitX<32,"closed flight mask, walking and low jumps retain the strip boundary");
+        }
+    }
+    flightStrip=flightStripClosed=wall=false;
+    std::puts("Airborne pathing passed: high overflight, native flight restriction and low-jump rejection in all modes.");
     // A real floating path may reject native walking; both solvers still sweep solid walls and banks.
     slope=false;swimScene=true;bridgeAlive=false;
     for(int mode=0;mode<3;++mode) {

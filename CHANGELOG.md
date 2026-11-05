@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Let high airborne movement cross ground-only pathing cells when Warcraft's flight mask allows it. Apply the exception after terrain and solid-object checks in classic, hull and recovery.
+
 - Fix airborne height/velocity resetting to ground after bounded native pathing corrections. Preserve flight for local XY adjustments within four pathing cells plus the budgeted motor step; confirmed waygates, distant relocations, grounded actors and buried destinations retain floor rebasing. Add explicit relocation diagnostics and portable/native regression coverage.
 - Fix the authored weapon-jump test arena's mismatched 64-cell shadow/pathing grids after its terrain expanded to 128 cells. Add a reproducible original fixture builder and dimension regression to prevent blocking invalid-shadow-map dialogs.
 - Add physical RPG/HE/C4 blast propulsion and primary/charged Tau recoil jumps, with copied detonation events, native status/cover checks and velocity-only integration through existing movement collision. Add editable BlastJump/Tau tuning, F8 reload, settings preservation and portable/native regression coverage; exclude nuclear blasts.

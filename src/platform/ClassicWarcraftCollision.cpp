@@ -7,6 +7,7 @@
 #include "WalkableTerrainContact.hpp"
 #include "TerrainSurfContact.hpp"
 #include "ModelSurfContact.hpp"
+#include "AirbornePathing.hpp"
 #include <algorithm>
 #include <cmath>
 
@@ -126,6 +127,7 @@ bool ClassicWarcraftCollision::Clear(float x, float y, float oldX, float oldY, c
         // Native cliff cells block walkers even above an edge. Recognize their cliff-level discontinuity,
         // keeping flat unknown blockers closed rather than disabling pathing for every jump.
         if (CliffCell(px,py) || wc3::GetTerrainCliffLevel(&oldX,&oldY)>wc3::GetTerrainCliffLevel(&px,&py)) continue;
+        if (AirbornePathing::CanOverfly(px, py, terrain, movement)) continue;
         Blocked("native-pathing",px,py,oldX,oldY,bottom,terrain);return false;
     }
     return true;

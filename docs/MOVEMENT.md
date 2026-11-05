@@ -41,8 +41,10 @@ current height initially, then gravity accelerates the fall until landing. No fa
 Landing uses the player's full collision footprint: a foot reaching the top catches the lip before
 the center crosses, and support ends after the trailing foot leaves. Native cliff rims include the
 lower-bank pathing cell; validated movement there avoids Warcraft's nearest-cell relocation.
-Map bounds and unsupported flat pathing cells remain blocked. Unknown custom models cannot grant
-permission to cross blocked pathing. Native cliff levels distinguish cliff faces from ordinary hills.
+Map bounds remain blocked. When a cell blocks walking, high airborne movement can cross it
+if Warcraft allows flying there and the feet clear the terrain by at least the current body height.
+This check follows the terrain and solid-object sweeps. Native cliff levels distinguish cliff faces
+from ordinary hills.
 With `[Swimming] Enabled=true`, shallow water uses its actual terrain bed and deep water switches to surface swimming. Move toward a reachable bank and press Space once to leave a canal. Bridges and native flight retain separate support. See [swimming and its editable settings](SWIMMING.md); disabling swimming restores the previous water-support movement.
 
 World boundaries include the actor radius in every mode. An actor already outside is clamped
