@@ -405,6 +405,11 @@ SpellAim ShooterController::InventoryAim(int x,int y,int width,int height) {
     }
     return SpellAim::Pick(unit_,origin,direction,settings_.spells.aimDistance,hitboxes_,destructableHitboxes_);
 }
+void ShooterController::CancelNativeOrders() {
+    // Warcraft treats the FPS actor as a ground unit. Stop can relocate its native
+    // footprint to a walkable cell while the mod's body is still in the air.
+    FpsCombatGuard::CancelOrders(unit_, movement_.Grounded());
+}
 void ShooterController::RebaseAfterRelocation(float distance,float motorDistance) {
     // Native placement owns XY. A local pathing nudge must not reset an airborne body to ground;
     // actual portals/distant relocations discard the previous floor and momentum as before.
@@ -1538,7 +1543,7 @@ void ShooterController::Tick(uintptr_t ui) {
     UpdateStatus();
     if(settingsMenu_.Open() || TextInputOpen()) {
         // Modal settings/text do not pause the map or gravity; movement and combat stay owned by the editor.
-        unitLocomotion_.Release();UpdateReload(now);FpsCombatGuard::CancelOrders(unit_);
+        unitLocomotion_.Release();UpdateReload(now);CancelNativeOrders();
         for(int key='0';key<='9';++key)Pressed(key);Pressed(ShortcutAction::Reload);
         movement_.Stop();AimAndMove(dt);Camera();audio_.Tick(now);return;
     }
@@ -1604,7 +1609,7 @@ void ShooterController::Tick(uintptr_t ui) {
         CancelCasting();heroAttack_.Cancel();CancelPlant();meleeContact_=0;reloadEnd_=0;
         refillRequested_=allWeaponsRequested_=itemRequested_=buyToggleRequested_=buyAmmoRequested_=false;
         buyKeyRequested_=spellRequested_=-1;spellCancelRequested_=false;buyMenu_.Close();CloseWeaponSelection();
-        FpsCombatGuard::CancelOrders(unit_);UpdateSquad(now);
+        CancelNativeOrders();UpdateSquad(now);
         AimAndMove(dt);Camera();audio_.Tick(now);return;
     }
     // Drop CS input mailboxes before the shared TPS attack/spell path in reduced installations.
@@ -1627,7 +1632,7 @@ void ShooterController::Tick(uintptr_t ui) {
         itemRequested_=false;squadRequested_=0; // Menu taps cannot queue RTS interaction for after closing.
         for (int key='0';key<='9';++key) Pressed(key);
         Pressed(VK_LBUTTON);Pressed(VK_RBUTTON);Pressed(ShortcutAction::Reload);
-        if (!status_.contained && !status_.hidden) FpsCombatGuard::CancelOrders(unit_);
+        if (!status_.contained && !status_.hidden) CancelNativeOrders();
         squad_.Tick(unit_,settings_,now,!status_.contained && !status_.hidden,yaw_,movement_.VelocityX(),movement_.VelocityY());
         movement_.Stop();weaponWheel_.Reset();cameraWheel_.Reset();AimAndMove(dt);Camera();audio_.Tick(now);return;
     }
@@ -1636,7 +1641,7 @@ void ShooterController::Tick(uintptr_t ui) {
         glockBurst_.Cancel();
         // Native item channels continue while the panel owns pointer/movement; clicks cannot become attacks.
         spellRequested_=-1;spellCancelRequested_=false;itemRequested_=false;squadRequested_=0;
-        if(!Casting())FpsCombatGuard::CancelOrders(unit_);
+        if(!Casting())CancelNativeOrders();
         for(int key='0';key<='9';++key)Pressed(key);
         Pressed(VK_LBUTTON);Pressed(VK_RBUTTON);Pressed(ShortcutAction::Reload);
         movement_.Stop();weaponWheel_.Reset();cameraWheel_.Reset();UpdateSquad(now);
@@ -1656,7 +1661,7 @@ void ShooterController::Tick(uintptr_t ui) {
             suppressFire_=true;
         }
         // An armed action replaces the gun; no round, native autoattack, scope or delayed melee can leak.
-        FpsCombatGuard::CancelOrders(unit_);CancelEnergy();glockBurst_.Cancel();CancelPlant();meleeContact_=0;
+        CancelNativeOrders();CancelEnergy();glockBurst_.Cancel();CancelPlant();meleeContact_=0;
         AimAndMove(dt);Camera();audio_.Tick(now);return;
     }
     // TPS zoom and FPS weapon selection consume separate queues; scrolling never crosses view modes.
@@ -1695,7 +1700,7 @@ void ShooterController::Tick(uintptr_t ui) {
     // Native combat/movement guards still block AI while a manual clip owns the pose. Defer Stop:
     // repeated crowd acquisitions otherwise enqueue Stand and interrupt the player's backswing.
     if (!Casting() && !status_.incapacitated && !status_.contained && !status_.hidden &&
-        !heroAttack_.Animating(now*.001)) FpsCombatGuard::CancelOrders(unit_);
+        !heroAttack_.Animating(now*.001)) CancelNativeOrders();
     if (itemRequested_) { itemRequested_=false;if(OpenShop())return;PickupItem(); }
     UpdateSquad(now);
     static DWORD lastItemScan=0;

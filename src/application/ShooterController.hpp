@@ -120,6 +120,12 @@ public:
     bool SquadPassive() const { return squad_.Passive(); }
     // Explicit spell approach/channeling may use the native motor; idle FPS never does.
     bool NativeCastMovement() const { return Visible() && Casting(); }
+    wc3::Handle NativeAirborneActor() const {
+        // Script-owned motion and liquid support stay outside the airborne ground-repair guard.
+        if(!Visible() || cinematicRequested_ || paused_ || Casting() || status_.hidden || status_.contained ||
+            movement_.Grounded() || movement_.Swimming())return 0;
+        return unit_;
+    }
     void RequestSettingsReload() { settingsRequested_=true; }
     void RequestPositionRecovery() {positionRecoveryRequested_=true;}
     // Queue the display switch for the simulation thread, like the other FPS controls.
@@ -403,6 +409,7 @@ private:
     void ApplyMenuSettings();
     void ToggleHealthBars();
     void ResetLoadout();
+    void CancelNativeOrders();
     void RebaseAfterRelocation(float distance=-1,float motorDistance=0);
     void Buy(int slot,bool ammunition);
     void UpdateBuyMenu();

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Prevent Warcraft 1.26a's path-mask refresh from moving an airborne FPS actor onto a walking cell. Defer automatic Stop until landing while the basic-attack and pursuit guards remain active.
+
 - Let high airborne movement cross ground-only pathing cells when Warcraft's flight mask allows it. Apply the exception after terrain and solid-object checks in classic, hull and recovery.
 
 - Fix airborne height/velocity resetting to ground after bounded native pathing corrections. Preserve flight for local XY adjustments within four pathing cells plus the budgeted motor step; confirmed waygates, distant relocations, grounded actors and buried destinations retain floor rebasing. Add explicit relocation diagnostics and portable/native regression coverage.

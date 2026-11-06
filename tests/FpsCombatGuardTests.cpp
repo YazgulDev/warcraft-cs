@@ -83,7 +83,11 @@ int main() {
     assert(targetGetter(13,0)==123 && FpsCombatGuard::HasAttackTarget(1));
     // One Stop per acquired target; squad observations do not restart the controlled hero's manual animation.
     *reinterpret_cast<uintptr_t*>(otherObject.data()+0x1E8)=13;
-    FpsCombatGuard::CancelOrders(1);FpsCombatGuard::CancelOrders(2);FpsCombatGuard::CancelOrders(1);FpsCombatGuard::CancelOrders(2);
+    // Airborne frames neither issue Stop nor mark the pending acquisition as handled.
+    FpsCombatGuard::CancelOrders(1,false);FpsCombatGuard::CancelOrders(1,false);
+    assert(stops==0);
+    FpsCombatGuard::CancelOrders(2);assert(stops==1); // Passive followers use their own normal policy.
+    FpsCombatGuard::CancelOrders(1);FpsCombatGuard::CancelOrders(1);FpsCombatGuard::CancelOrders(2);
     assert(stops==2);
     // Neither validation nor direct retaliation dispatch can start the actor's basic attack.
     assert(checked(actorAttack,0,1,2,3,4)==0xDD);started(actorAttack,0,1,2,3,4,5,6,7,8,9,10);

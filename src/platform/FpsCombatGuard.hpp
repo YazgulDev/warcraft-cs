@@ -10,7 +10,7 @@ void Install(uintptr_t base,wc3::Handle (*actor)(),bool (*passiveUnit)(uintptr_t
 uintptr_t PermitBlindContact(uintptr_t attack);
 bool BlocksUnseenTarget(uintptr_t attack,uintptr_t target);
 bool BlocksIncomingAttack(uintptr_t attack,uintptr_t target);
-void CancelOrders(wc3::Handle unit);
+void CancelOrders(wc3::Handle unit, bool allowStop=true);
 void CancelAttacks(wc3::Handle unit);
 bool HasAttackTarget(wc3::Handle unit);
 // Read-only identity lets temporary squad orders yield to newer native targets without canceling them.
