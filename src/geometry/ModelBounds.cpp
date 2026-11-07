@@ -1,5 +1,6 @@
 #include "ModelBounds.hpp"
 #include "../platform/WarcraftApi.hpp"
+#include "../platform/StormFile.hpp"
 #include "TreeTrunkMesh.hpp"
 #include "StaticModelMesh.hpp"
 #include <cstring>
@@ -12,20 +13,8 @@ bool Valid(const Bounds3& b) {
             b.maximum[i] <= b.minimum[i] || b.maximum[i] - b.minimum[i] > 6000) return false;
     return true;
 }
-// Storm's open-file API searches the active map before the installed archives, including custom imports.
 bool ModelBytes(const std::string& path, std::vector<unsigned char>& bytes) {
-    HMODULE storm = GetModuleHandleA("Storm.dll");
-    if (!storm) return false;
-    auto open = reinterpret_cast<BOOL(WINAPI*)(const char*, HANDLE*)>(GetProcAddress(storm, MAKEINTRESOURCEA(267)));
-    auto size = reinterpret_cast<DWORD(WINAPI*)(HANDLE, DWORD*)>(GetProcAddress(storm, MAKEINTRESOURCEA(265)));
-    auto read = reinterpret_cast<BOOL(WINAPI*)(HANDLE, void*, DWORD, DWORD*, LONG)>(GetProcAddress(storm, MAKEINTRESOURCEA(269)));
-    auto close = reinterpret_cast<BOOL(WINAPI*)(HANDLE)>(GetProcAddress(storm, MAKEINTRESOURCEA(253)));
-    HANDLE file = nullptr;
-    if (!open || !size || !read || !close || !open(path.c_str(), &file)) return false;
-    DWORD length = size(file, nullptr), got = 0;
-    bool ok = length >= 4 && length <= 32 * 1024 * 1024;
-    if (ok) { bytes.resize(length); ok = read(file, bytes.data(), length, &got, 0) && got == length; }
-    close(file); return ok;
+    return StormFile::Read(path.c_str(), bytes, 32 * 1024 * 1024);
 }
 bool Extents(const std::vector<unsigned char>& bytes, Bounds3& result) {
     if (bytes.size() < 4 || memcmp(bytes.data(), "MDLX", 4)) return false;

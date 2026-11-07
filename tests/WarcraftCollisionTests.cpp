@@ -117,8 +117,9 @@ bool WalkableSurface(float x,float y,float& height){
 }
 bool DiagnosticLog::Due(DWORD&,bool) { return false; }
 // The synthetic world replaces only native discovery; actual swept collision/physics runs unchanged.
-std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,bool,bool detailed,bool retainPlatforms,MeshSurfaceRange) {
+std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,bool,bool detailed,bool retainPlatforms,MeshSurfaceRange,bool) {
     details_.clear();
+    rockStart_=std::numeric_limits<size_t>::max();
     if(surfScene)return surfWall ? std::vector<Bounds3>{{{200,-4096,-8000},{224,4096,8000}}} : std::vector<Bounds3>{};
     if(swimScene)return swimWall ? std::vector<Bounds3>{{{80,-200,100},{100,200,500}}} : std::vector<Bounds3>{};
     if(meshScene==5) {

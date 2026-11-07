@@ -119,7 +119,9 @@ MovementSurface WarcraftCollision::Floor(float x, float y, const MovementPhysics
         if(!Overlaps(box,x,y,radius_))continue;
         if(const auto* mesh=obstacles_.Geometry(index)) {
             float height=0,normal[3]={};
-            if(mesh->Floor(x,y,radius_,reachable,.0001f,height,normal,movement.PlatformRecovery()) && height>=surface.height-.01f) {
+            bool rock = obstacles_.IsMapRock(index);
+            float reach = rock ? MapRockObstacles::ReachableHeight(box, movement.Grounded(), movement.FeetZ(), reachable) : reachable;
+            if(mesh->Floor(x,y,radius_,reach,.0001f,height,normal,!rock && movement.PlatformRecovery()) && height>=surface.height-.01f) {
                 surface.height=height;
                 for(int axis=0;axis<3;++axis)surface.normal[axis]=normal[axis];
                 // Steep prop roofs behave like steep terrain: contact slides downhill instead of falling through.
@@ -156,14 +158,16 @@ bool WarcraftCollision::Clear(float x, float y, float oldX, float oldY, const Mo
         const auto& box=obstacles[index];
         if(const auto* mesh=obstacles_.Geometry(index)) {
             if(!Overlaps(box,x,y,radius_))continue;
+            bool rock = obstacles_.IsMapRock(index);
+            float reach = rock ? MapRockObstacles::ReachableHeight(box, movement.Grounded(), movement.FeetZ(), bottom) : bottom;
             float contact[2]={};
-            if(!mesh->Contact(x,y,radius_,std::max(feet,bottom),top,contact))continue;
+            if(!mesh->Contact(x,y,radius_,std::max(feet,reach),top,contact))continue;
             // Existing mesh overlap can recover along its actual outward face, including arch interiors.
             // Newly raised headroom is never treated as an old overlap.
             bool existing=mesh->Contact(oldX,oldY,radius_,movement.FeetZ(),movement.FeetZ()+movement.BodyHeight());
             if(existing && (x-oldX)*contact[0]+(y-oldY)*contact[1]>.001f)continue;
             if(normal){normal[0]=contact[0];normal[1]=contact[1];}
-            Blocked("solid-mesh",x,y,oldX,oldY,bottom,box.maximum[2]);return false;
+            Blocked(rock ? "map-rock" : "solid-mesh",x,y,oldX,oldY,reach,box.maximum[2]);return false;
         }
         // Height-aware solid volumes prevent flying through buildings/trees, while low props can be cleared.
         if (Overlaps(box, x, y, radius_) && box.maximum[2] > bottom + .01f && box.minimum[2] < top) {
@@ -338,9 +342,11 @@ void WarcraftCollision::Move(wc3::Handle unit, MovementPhysics& movement, float 
     float search=movement.PlatformRecovery() ? std::max(600.f,movement.RecoveryDistance()+radius_) : 600.f;
     // Hull mode normally delegates native walkable decks; eligible steep meshes still
     // need their normals even when platform recovery is disabled.
-    auto obstacles = obstacles_.Snapshot(unit,x,y,search+std::hypot(dx,dy),movement.NativeUnitCollision(),movement.ObjectMeshCollision(),movement.PlatformRecovery(),ModelSurfContact::Range(movement));
+    auto obstacles = obstacles_.Snapshot(unit,x,y,search+std::hypot(dx,dy),movement.NativeUnitCollision(),movement.ObjectMeshCollision(),movement.PlatformRecovery(),ModelSurfContact::Range(movement),true);
     ModelSurfContact::Meshes surfMeshes;
-    for(size_t index=0;index<obstacles.size();++index)surfMeshes.push_back(obstacles_.Geometry(index));
+    // Rock doodads are solid in the hull sweep without becoming new surf ramps.
+    for(size_t index=0;index<obstacles.size();++index)
+        surfMeshes.push_back(obstacles_.IsMapRock(index) ? nullptr : obstacles_.Geometry(index));
     Ceiling(x,y,movement,obstacles);
     auto support=[&]() {
         auto floor=Floor(x,y,movement,obstacles);
