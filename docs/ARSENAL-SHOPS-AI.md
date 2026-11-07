@@ -8,6 +8,9 @@ The [0.13.0 release](RELEASE-0.13.0.md) doubles whole-shell native attack multip
 
 The [expanded arsenal preview](ARSENAL-SMOKE-PREVIEW.md) adds TMP/UMP45 SMGs, FAMAS/Galil rifles and a scoped self-loading G3SG1. It also introduces dense smoke with all-team basic-attack sight obstruction on 1.26a.
 
+**B → 1 Pistols → 4 P228 / 5 Five-SeveN** offers the CS 1.6 pistols with 13- and 20-round magazines.
+Prices, ammunition and tuning are under `[P228]` and `[FiveSeven]` in the INI.
+
 The paid firearms are Desert Eagle (650), Glock 18 (400), MP5 (1500),
 P90 (2350), M249 (5750), M3 (1700), and XM1014 (3000). Open **B**: 1 pistols,
 2 shotguns, 3 SMGs, 4 rifles, 5 machine guns, 6 primary ammo, 7 pistol ammo,

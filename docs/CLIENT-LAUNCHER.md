@@ -124,6 +124,10 @@ Licenses and credits are in [NOTICE](../NOTICE).
 
 ## Files and troubleshooting
 
+Use **Edit INI…** to edit the selected private client's `Game/WarcraftCS/WarcraftCS.ini`
+from either launcher variant. **Save** writes a `WarcraftCS.ini.bak` copy of the previous file.
+Press **F8** in FPS to reload supported settings.
+
 The selected folder contains `Game` (your private Warcraft copy), `sources/<payload-hash>`
 (project-owned source), optional `dependencies` and `downloads`, `install.log` and local request/state JSON.
 Paths travel through JSON rather than shell interpolation. Source extraction rejects archive traversal.

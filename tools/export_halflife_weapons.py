@@ -12,8 +12,11 @@ WEAPONS = {
     'crowbar': ('cbar_miss1.wav', 'cbar_hit1.wav', 'cbar_hitbod1.wav', 'cbar_hit2.wav', 'cbar_hitbod2.wav', 'cbar_hitbod3.wav', 'cbar_ground1.wav', 'cbar_ground2.wav', 'cbar_ground3.wav'),
     'gauss': ('gauss2.wav', 'gauss_charge.wav'),
     'egon': ('egon_windup2.wav', 'egon_run3.wav', 'egon_off1.wav'),
+    'grenade': ('explode3.wav',),
+    'satchel': ('explode5.wav',),
 }
-GLOVES = ('GLOVED_sleeve.bmp', 'rubbergloveCHROME.bmp', 'GLOVED_knuckle.bmp', 'GLOVE_handpak.bmp.bmp')
+THROWABLES = ('grenade', 'satchel')
+GLOVES = ('GLOVED_sleeve.bmp', 'rubbergloveCHROME.bmp', 'GLOVED_knuckle.bmp', 'GLOVE_handpak.bmp.bmp', 'xbow_sleeve.bmp')
 
 def sound_source(name: str) -> str:
     # Soft ground uses the owner's dirt contacts, distinct from metal-bar and flesh impact variants.
@@ -23,7 +26,8 @@ def sound_source(name: str) -> str:
 
 
 def outputs(stem: str) -> tuple[str, ...]:
-    return (f'{stem}.wcg', f'{stem}.wca', f'buy/{stem}.wcg') + tuple('sounds/hl_' + name for name in WEAPONS[stem])
+    world = (f'world/{stem}.wcg',) if stem in THROWABLES else ()
+    return (f'{stem}.wcg', f'{stem}.wca', f'buy/{stem}.wcg') + world + tuple('sounds/hl_' + name for name in WEAPONS[stem])
 
 
 def export_one(cstrike: Path, output: Path, stem: str) -> dict:
@@ -69,6 +73,18 @@ def export_one(cstrike: Path, output: Path, stem: str) -> dict:
                     at += 68
             timeline.write_bytes(data)
             export_preview(stage / f'{stem}.wcg', stage / f'buy/{stem}.wcg', model.texture_names(), GLOVES)
+            if stem in THROWABLES:
+                # The world object uses its own stock model, including the satchel's resting pose.
+                world_bytes = source.read(f'models/w_{stem}.mdl')
+                if world_bytes is None:
+                    raise ValueError('Missing owned world model')
+                world_model = raw / f'w_{stem}.mdl'
+                world_model.write_bytes(world_bytes)
+                companion = source.read(f'models/w_{stem}t.mdl')
+                if companion is not None:
+                    (raw / f'w_{stem}t.mdl').write_bytes(companion)
+                (stage / 'world').mkdir()
+                StudioModel(world_model).export(stage / f'world/{stem}.wcg', muzzle_attachments=())
             sounds = stage / 'sounds'
             sounds.mkdir()
             for name in samples | set(WEAPONS[stem]):

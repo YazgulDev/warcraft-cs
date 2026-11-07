@@ -48,6 +48,8 @@ public static class LauncherTests {
             Require(!agreement.Checked && !install.Enabled && !update.Enabled && (developer==null || !developer.Enabled),"UI grants consent by default");
             form.Controls["WarcraftDirectory"].Text=wc; form.Controls["CounterStrikeDirectory"].Text=cs;
             form.Controls["InstallDirectory"].Text=destination;
+            var edit=(Button)form.Controls["EditIniButton"];
+            Require(edit!=null && !edit.Enabled,"INI editor requires an existing file");
             Require(!install.Enabled && !update.Enabled && (developer==null || !developer.Enabled),"Folders alone enable install");
             agreement.Checked=true; Require(install.Enabled && update.Enabled && (developer==null || developer.Enabled),"Valid agreement/folders do not enable actions");
             // Real controls must allow a Warcraft-only install with an empty CS folder, in either EXE.
@@ -66,6 +68,24 @@ public static class LauncherTests {
         Reject(() => SetupRunner.Install(request,false,Console.WriteLine),"No-consent runner started work");
         Reject(() => SourcePayload.Extract(destination,false),"No-consent payload was extracted");
         Require(!Directory.Exists(destination),"No-consent install wrote files");
+        // Exercise the live INI's backup and reject saving over an external F2/F8-era edit.
+        string ini=GameIniFile.Location(destination);
+        Directory.CreateDirectory(Path.GetDirectoryName(ini));
+        string original="; Custom setting\r\n[Mouse]\r\nSensitivity=1.25\r\n";
+        File.WriteAllText(ini,original,System.Text.Encoding.Unicode);
+        using (var form=new LauncherForm(true,true)) {
+            form.Controls["InstallDirectory"].Text=destination;
+            Require(form.Controls["EditIniButton"].Enabled,"Existing INI is consent-gated");
+        }
+        var iniFile=new GameIniFile(destination);
+        string changed=original.Replace("1.25","2.5");
+        iniFile.Save(changed);
+        Require(File.ReadAllText(ini)==changed && File.ReadAllText(ini+".bak")==original &&
+            File.ReadAllBytes(ini)[0]==255,"INI edit lost its original text, encoding or backup");
+        File.WriteAllText(ini,original);
+        bool conflict=false;
+        try { iniFile.Save(changed); } catch (IOException) { conflict=true; }
+        Require(conflict && File.ReadAllText(ini)==original,"INI editor overwrote a concurrent change");
         request.InstallDirectory=Path.Combine(wc,"child");Reject(request.ValidateDestination,"Warcraft child allowed");
         request.InstallDirectory=cs;Reject(request.ValidateDestination,"Original CS folder allowed");
         request.InstallDirectory=Path.GetPathRoot(root);Reject(request.ValidateDestination,"Drive root allowed");

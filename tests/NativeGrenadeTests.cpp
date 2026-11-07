@@ -143,6 +143,27 @@ int main() {
         assert(std::abs(field.Visuals()[0].position[2]-expected.position[2])<.01f);
     }
     field.Reset();assert(field.Visuals().empty() && field.FlashOpacity()==0);
+    // Timed and remote guest charges preserve owner HP even with full friendly fire, but still publish pressure.
+    for(int slot:{WeaponSlots::HandGrenade,WeaponSlots::Satchel}) {
+        field.Reset();Scene();GameplaySettings guest;guest.friendlyFirePercent=100;
+        guest.halfLife.grenade.available=guest.halfLife.satchel.available=true;
+        guest.halfLife.grenade.throwSpeed=guest.halfLife.satchel.throwSpeed=50;
+        guest.halfLife.handGrenadeFuse=.2f;
+        BlastJumpEvents jumps;
+        assert(field.Throw(1,slot,{0,0,96},{1,0,0},{},guest));
+        clockSeconds=.1f;field.Tick(audio,1,{0,0,96},{1,0,0},&jumps);
+        assert(jumps.empty() && damages==0);
+        clockSeconds=.3f;
+        if(slot==WeaponSlots::Satchel) {
+            clockSeconds=12;
+            field.Tick(audio,1,{0,0,96},{1,0,0},&jumps);
+            assert(jumps.empty() && damages==0 && field.HasSatchel(1) && !field.RequestSatchel(2));
+            assert(field.RequestSatchel(1) && !field.RequestSatchel(1));
+        }
+        assert(field.Tick(audio,1,{0,0,96},{1,0,0},&jumps));
+        assert(hp[1]==1000 && hp[2]<1000 && jumps.size()==1 && !field.HasSatchel(1));
+        field.Tick(audio,1,{0,0,96},{1,0,0},&jumps);assert(jumps.size()==1);
+    }
     // RPG shares native blast policy but owns pause-aware swept flight and one impact event.
     NativeRockets rockets;GameplaySettings rpg;rpg.rpg.available=true;rpg.friendlyFirePercent=0;rpg.rpg.maxActive=1;
     Scene();collisionFilters.clear();cover={Bounds3{{60,-100,0},{62,100,300}}};

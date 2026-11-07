@@ -100,22 +100,26 @@ class StudioModel:
         texture_names = []
         excluded = {name.casefold() for name in excluded_textures}
         excluded_meshes = 0
-        for i in range(self.integer(180)):
-            at = self.integer(184) + i * 80
-            texture_names.append(self.data[at:at + 64].split(b"\0")[0].decode("ascii"))
-            flags, width, height, pixels = struct.unpack_from("<4i", self.data, at + 64)
+        texture_data = self.texture_data()
+        count, index = struct.unpack_from("<2i", texture_data, 180)
+        for i in range(count):
+            at = index + i * 80
+            texture_names.append(texture_data[at:at + 64].split(b"\0")[0].decode("ascii"))
+            flags, width, height, pixels = struct.unpack_from("<4i", texture_data, at + 64)
             material_flags.append(flags)
             if not (0 < width <= 2048 and 0 < height <= 2048):
                 raise ValueError("Unsafe texture dimensions")
-            indexed = np.frombuffer(self.data, dtype=np.uint8, count=width * height, offset=pixels)
-            palette = np.frombuffer(self.data, dtype=np.uint8, count=768, offset=pixels + width * height).reshape(256, 3)
+            indexed = np.frombuffer(texture_data, dtype=np.uint8, count=width * height, offset=pixels)
+            palette = np.frombuffer(texture_data, dtype=np.uint8, count=768, offset=pixels + width * height).reshape(256, 3)
             rgba = np.empty((width * height, 4), dtype=np.uint8)
             rgba[:, :3] = palette[indexed]
             rgba[:, 3] = np.where((indexed == 255) & bool(flags & 64), 0, 255)
             textures.append((width, height, rgba.tobytes()))
         if not textures:
-            raise ValueError("External texture models are not supported by this viewmodel exporter")
-        skin = struct.unpack_from(f"<{self.integer(192)}h", self.data, self.integer(200))
+            raise ValueError("Studio model has no textures")
+        skin_count = struct.unpack_from("<i", texture_data, 192)[0]
+        skin_offset = struct.unpack_from("<i", texture_data, 200)[0]
+        skin = struct.unpack_from(f"<{skin_count}h", texture_data, skin_offset)
         meshes = []
         for body in range(self.integer(204)):
             body_at = self.integer(208) + body * 76
@@ -219,10 +223,22 @@ class StudioModel:
                 "cache_bytes": destination.stat().st_size,
                 "excluded_textures": sorted(excluded), "excluded_meshes": excluded_meshes}
 
+    def texture_data(self) -> bytes:
+        if self.integer(180):
+            return self.data
+        # GoldSrc world props can store textures and skin references in a companion *t.mdl.
+        companion = self.path.with_name(self.path.stem + "t" + self.path.suffix)
+        data = companion.read_bytes()
+        if data[:4] != b"IDST" or struct.unpack_from("<i", data, 4)[0] != 10 or struct.unpack_from("<i", data, 72)[0] != len(data):
+            raise ValueError("Invalid studio texture companion")
+        return data
+
     def texture_names(self) -> list[str]:
         # Preview conversion identifies arm/glove materials from the owned model's texture table.
-        return [self.data[self.integer(184) + i * 80:self.integer(184) + i * 80 + 64]
-                .split(b"\0")[0].decode("ascii") for i in range(self.integer(180))]
+        data = self.texture_data()
+        count, index = struct.unpack_from("<2i", data, 180)
+        return [data[index + i * 80:index + i * 80 + 64]
+                .split(b"\0")[0].decode("ascii") for i in range(count)]
 
     def audio_timeline(self, destination: Path) -> set[str]:
         # Studio event 5004 supplies the original sound's animation frame, not a guess.
@@ -269,7 +285,8 @@ def main():
     args.output.mkdir(parents=True, exist_ok=True)
     manifest = []
     weapon_sounds = set()
-    for weapon in ("ak47", "m4a1", "usp", "awp", "knife", "c4", "deagle", "glock18", "mp5", "p90", "m249", "m3", "xm1014", "tmp", "ump45", "famas", "galil", "g3sg1", "hegrenade", "flashbang", "smokegrenade"):
+    # Both new pistols share CS reload timelines, muzzle attachments and hand-free previews.
+    for weapon in ("ak47", "m4a1", "usp", "awp", "knife", "c4", "deagle", "glock18", "mp5", "p90", "m249", "m3", "xm1014", "tmp", "ump45", "famas", "galil", "g3sg1", "p228", "fiveseven", "hegrenade", "flashbang", "smokegrenade"):
         model = StudioModel(args.cstrike / "models" / f"v_{weapon}.mdl")
         # Both silencer-capable weapons are permanently unsilenced in this mod, including their geometry.
         excluded = ("silencer.bmp",) if weapon in ("m4a1", "usp") else ()
@@ -297,6 +314,7 @@ def main():
                           "c4_explode1.wav", "c4_beep1.wav", "c4_beep3.wav", "c4_beep4.wav", "c4_beep5.wav"}
     # Engine-driven shell sounds are needed even when an owned shotgun model has no sound event.
     required_sounds.update({"m3_insertshell.wav", "m3_pump.wav"})
+    required_sounds.update({"p228-1.wav", "fiveseven-1.wav"})
     # Grenade flight/impact effects use the owner's stock CS samples, never bundled retail audio.
     required_sounds.update({"grenade_hit1.wav","grenade_hit2.wav","grenade_hit3.wav","hegrenade-1.wav","flashbang-1.wav","sg_explode.wav"})
     weapon_sounds.update(required_sounds)

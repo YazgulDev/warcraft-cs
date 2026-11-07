@@ -388,7 +388,7 @@ private:
     bool shotgunReloadPerShell_=true,shotgunReloadInterrupt_=true;
     void SwitchWeapon(int slot);
     void PlantC4(float dt);
-    void ThrowGrenade(bool pressed);
+    void ThrowGrenade(bool pressed,bool secondaryPressed);
     GrenadeThrow grenadeThrow_;
     NativeGrenades grenades_;
     NativeRockets rockets_;

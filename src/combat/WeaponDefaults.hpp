@@ -36,6 +36,11 @@ inline const std::array<Weapon,WeaponSlots::Count> Weapons={{
     {"UMP45","ump45-1.wav",25,100,30,.1f,3.5f,2500,true},
     {"FAMAS","famas-1.wav",25,90,30,.0825f,3.3f,3000,true},
     {"GALIL","galil-1.wav",35,90,30,.0875f,2.45f,3000,true},
-    {"G3SG1","g3sg1-1.wav",20,90,160,.25f,4.7f,4000,true}
+    {"G3SG1","g3sg1-1.wav",20,90,160,.25f,4.7f,4000,true},
+    {"P228","p228-1.wav",13,52,40,.15f,2.7f,2500,false},
+    {"FIVE-SEVEN","fiveseven-1.wav",20,100,30,.15f,2.7f,2500,false},
+    // These are inventory counts, with a separate snapshotted native blast per accepted throw.
+    {"HAND GRENADE","hl_explode3.wav",3,0,850,0,0,500,false},
+    {"SATCHEL CHARGE","hl_explode5.wav",3,0,1200,0,0,650,false}
 }};
 }

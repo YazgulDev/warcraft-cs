@@ -615,6 +615,17 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         hl.enabled[i]=enabled(WeaponSlots::Sections[WeaponSlots::Crowbar+i],"Enabled");
         hl.available[i]=!result.warcraftOnly && OptionalWeaponAssets::HalfLife(std::filesystem::path(filename).parent_path(),i);
     }
+    // Store only validated guest launch settings in the F8 snapshot.
+    for (int slot : {WeaponSlots::HandGrenade,WeaponSlots::Satchel}) {
+        bool remote=slot==WeaponSlots::Satchel;
+        auto& explosive=remote ? hl.satchel : hl.grenade;
+        const char* section=WeaponSlots::Sections[slot];
+        explosive.enabled=enabled(section,"Enabled");
+        explosive.available=!result.warcraftOnly && OptionalWeaponAssets::HalfLifeExplosive(std::filesystem::path(filename).parent_path(),remote);
+        explosive.radius=std::max(32.f,number(section,"Radius",explosive.radius,2000));
+        explosive.throwSpeed=std::max(50.f,number(section,"ThrowSpeed",explosive.throwSpeed,2000));
+    }
+    hl.handGrenadeFuse=std::max(.2f,number("HalfLifeGrenade","FuseSeconds",2.5f,10));
     hl.tauChargeSeconds=std::max(.1f,number("TauCannon","ChargeSeconds",4,10));
     // The same bounded charge clock drives a continuous spinner phase and live loop pitch; equal rates disable the ramp.
     hl.tauSpinStartRate=std::max(.25f,number("TauCannon","SpinStartRate",1,8));

@@ -6,13 +6,15 @@
 #include <cmath>
 
 void GrenadeWorldView::Reset(bool deleteTextures) {for(auto& model:models_)model.Reset(deleteTextures);loaded_.fill(false);attempted_.fill(false);}
-bool GrenadeWorldView::Valid() const {for(int i=0;i<3;++i)if(loaded_[i] && !models_[i].TexturesValid())return false;return true;}
+bool GrenadeWorldView::Valid() const {for(size_t i=0;i<models_.size();++i)if(loaded_[i] && !models_[i].TexturesValid())return false;return true;}
 unsigned GrenadeWorldView::Draw(const std::string& root,const std::vector<GrenadeVisual>& items,const WorldLabelView& view,int width,int height,float nearPlane,float farPlane) {
     if(!view.active || width<=0 || height<=0 || nearPlane<=0 || farPlane<=nearPlane)return 0;
     bool flight=false;for(const auto& item:items)flight|=!item.smoke && WeaponSlots::Grenade(item.slot);if(!flight)return 0;
     WorldEffectPass pass(view,nearPlane,farPlane);unsigned submitted=0;
     for(const auto& item:items) {
-        if(item.smoke || !WeaponSlots::Grenade(item.slot))continue;int index=item.slot-WeaponSlots::HE;
+        if(item.smoke || !WeaponSlots::Grenade(item.slot))continue;
+        // Five world meshes map two stable inventory ranges into a compact rendering cache.
+        int index=WeaponSlots::GuestExplosive(item.slot) ? 3+item.slot-WeaponSlots::HandGrenade : item.slot-WeaponSlots::HE;
         if(!attempted_[index]) {
             attempted_[index]=true;auto path=root+"/assets/world/"+WeaponSlots::Caches[item.slot]+".wcg";
             loaded_[index]=models_[index].Load(path);

@@ -194,7 +194,14 @@ const char* ShooterController::Sequence(const char* name) const {
     }
     if(weapon_==WeaponSlots::Tau && !strcmp(name,"shoot1"))return "fire";
     if(weapon_==WeaponSlots::Gluon && !strcmp(name,"idle"))return "idle1";
-    if(WeaponSlots::Grenade(weapon_) && !strcmp(name,"draw"))return "deploy";
+    if(weapon_==WeaponSlots::HandGrenade) {
+        // The owned Half-Life model has different names for pin pull and medium throw.
+        if(!strcmp(name,"pullpin"))return "pinpull";
+        if(!strcmp(name,"throw"))return "throw2";
+    } else if(weapon_==WeaponSlots::Satchel) {
+        if(!strcmp(name,"idle"))return "idle1";
+        if(!strcmp(name,"throw"))return "drop";
+    } else if(WeaponSlots::Grenade(weapon_) && !strcmp(name,"draw"))return "deploy";
     // Half-Life uses separate empty/loaded deploy and idle clips, with a single authored fire action.
     if(weapon_==WeaponSlots::RPG) {
         if(!strcmp(name,"draw"))return ammo_[weapon_]>0 ? "draw1" : "draw2";
@@ -206,7 +213,8 @@ const char* ShooterController::Sequence(const char* name) const {
     // TMP and G3SG1 author their first shot as shoot, rather than shoot1.
     if((weapon_==WeaponSlots::TMP || weapon_==WeaponSlots::G3SG1) && !strcmp(name,"shoot1"))return "shoot";
     if((weapon_==WeaponSlots::TMP || weapon_==WeaponSlots::UMP45 || weapon_==WeaponSlots::G3SG1) && !strcmp(name,"idle"))return "idle1";
-    if((weapon_==WeaponSlots::Deagle || weapon_==WeaponSlots::Glock || weapon_==WeaponSlots::MP5 || weapon_==WeaponSlots::M249) && !strcmp(name,"idle"))return "idle1";
+    if((weapon_==WeaponSlots::Deagle || weapon_==WeaponSlots::Glock || weapon_==WeaponSlots::MP5 || weapon_==WeaponSlots::M249 ||
+        weapon_==WeaponSlots::P228 || weapon_==WeaponSlots::FiveSeven) && !strcmp(name,"idle"))return "idle1";
     // The exported M4/USP body is unsilenced, so pose and shot sound must agree.
     if (weapon_ == 1 || weapon_ == 2) {
         if (!strcmp(name, "shoot1")) return "shoot1_unsil";
@@ -644,7 +652,9 @@ WeaponSelection::Available ShooterController::AvailableWeapons() const {
     WeaponSelection::Available available={};
     for(int i=0;i<WeaponSlots::Count;++i)
         available[i]=inventory_.owned[i] && settings_.WeaponEnabled(i) &&
-            ((i!=WeaponSlots::C4 && !WeaponSlots::Grenade(i)) || ammo_[i]>0);
+            // The remote remains selectable while one of this unit's charges is in the world.
+            ((i!=WeaponSlots::C4 && !WeaponSlots::Grenade(i)) || ammo_[i]>0 ||
+                (i==WeaponSlots::Satchel && grenades_.HasSatchel(unit_)));
     return available;
 }
 void ShooterController::CloseWeaponSelection() {
@@ -1126,21 +1136,28 @@ void ShooterController::CancelPlant() {
     plantProgress_ = 0; audio_.CancelAnimation(); Play("idle");
     wc3::Log("C4 planting canceled");
 }
-void ShooterController::ThrowGrenade(bool pressed) {
-    if(!settings_.grenades.enabled || Casting() || suppressFire_ || status_.disarmed || status_.incapacitated || CursorMode()) {CancelPlant();return;}
+void ShooterController::ThrowGrenade(bool pressed,bool secondaryPressed) {
+    if(!settings_.WeaponEnabled(weapon_) || Casting() || suppressFire_ || status_.disarmed || status_.incapacitated || CursorMode()) {CancelPlant();return;}
+    bool remote=weapon_==WeaponSlots::Satchel;
+    if(remote && secondaryPressed && !grenadeThrow_.Active()) {
+        if(!grenades_.RequestSatchel(unit_))Notice("NO PLACED SATCHELS");
+        return;
+    }
     if(!grenadeThrow_.Active() && ammo_[weapon_]<=0){if(pressed)Notice("NO GRENADES");return;}
     auto event=grenadeThrow_.Step(GetTickCount()*.001,pressed,Down(VK_LBUTTON),grenadePullSeconds_,settings_.grenades.releaseDelay,settings_.grenades.recovery);
     if(event==GrenadeThrow::Event::Pull) {
-        grenadePullSeconds_=Play("pullpin");if(grenadePullSeconds_<=0)grenadePullSeconds_=1;
+        // A remote satchel has no pin to pull. Release still uses the ordinary throw timeline.
+        grenadePullSeconds_=remote ? .01f : Play("pullpin");if(grenadePullSeconds_<=0)grenadePullSeconds_=1;
     } else if(event==GrenadeThrow::Event::Throw)Play("throw");
     else if(event==GrenadeThrow::Event::Launch) {
         float eye[3],direction[3];AimRay(eye,direction);
         GrenadePoint motion={movement_.VelocityX(),movement_.VelocityY(),movement_.VerticalVelocity()};
         if(grenades_.Throw(unit_,weapon_,{eye[0],eye[1],eye[2]},{direction[0],direction[1],direction[2]},motion,settings_)) {
             --ammo_[weapon_];wc3::Log("grenade inventory slot=%d remaining=%d",weapon_,ammo_[weapon_]);
+            if(remote)Notice("SATCHEL PLACED - RMB TO DETONATE");
         } else Notice("GRENADE LIMIT REACHED");
     } else if(event==GrenadeThrow::Event::Finished) {
-        if(ammo_[weapon_]>0)Play("draw");
+        if(ammo_[weapon_]>0 || (remote && grenades_.HasSatchel(unit_)))Play("draw");
         else {SwitchWeapon(inventory_.owned[WeaponSlots::Pistol] ? WeaponSlots::Pistol : WeaponSlots::Knife);}
     }
 }
@@ -1741,7 +1758,7 @@ void ShooterController::Tick(uintptr_t ui) {
     } else if(WeaponSlots::Energy(weapon_)) {
         if(!Casting() && !suppressFire_ && !status_.disarmed && settings_.WeaponEnabled(weapon_))FireEnergy(firePressed,Down(VK_RBUTTON) && !SquadReticleOrdersEnabled(),now);
         else CancelEnergy();
-    } else if(WeaponSlots::Grenade(weapon_))ThrowGrenade(firePressed);
+    } else if(WeaponSlots::Grenade(weapon_))ThrowGrenade(firePressed,secondaryPressed);
     else if (!Casting() && !suppressFire_ && weapon_ == WeaponSlots::C4) PlantC4(dt);
     else if(weapon_==WeaponSlots::Glock) {
         if(!Casting() && !suppressFire_ && !status_.disarmed)FireGlock(firePressed,secondaryPressed,GetTickCount());

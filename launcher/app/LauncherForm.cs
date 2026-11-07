@@ -19,6 +19,7 @@ namespace WarcraftCSLauncher {
         private readonly ComboBox edition = new ComboBox();
         private readonly ComboBox renderer = new ComboBox();
         private readonly Button readLogs = new Button();
+        private readonly Button editIni = new Button();
         private bool busy;
         private bool checking;
         private ReleaseUpdate latest;
@@ -104,6 +105,9 @@ namespace WarcraftCSLauncher {
             renderer.Name="GameRenderer";renderer.DropDownStyle=ComboBoxStyle.DropDownList;
             renderer.Items.AddRange(new object[] {"Auto (recommended)","OpenGL","Direct3D"});renderer.SelectedIndex=0;
             renderer.SetBounds(190,695,282,32);Controls.Add(renderer);
+            // Edit only the selected private client's live INI, independently of download consent.
+            editIni.Name="EditIniButton";editIni.Text="Edit INI...";
+            editIni.SetBounds(486,695,270,32);editIni.Click+=(s,e)=>EditIni();Controls.Add(editIni);
             // Insert the profile above consent, keeping the complete small-screen scroll layout together.
             foreach(Control control in Controls)if(control.Top>=323)control.Top+=58;
             warcraftOnly.Name="WarcraftOnly";warcraftOnly.Text="Only Warcraft modes: third person (F7) and first person without UI (F9)";
@@ -151,9 +155,18 @@ namespace WarcraftCSLauncher {
             developer.Enabled=includesRuntime && install.Enabled;
             update.Enabled=install.Enabled && !checking;
             play.Enabled=!busy && File.Exists(Path.Combine(destination.Text,"client-installed.json"));
+            editIni.Enabled=!busy && File.Exists(GameIniFile.Location(destination.Text));
             edition.Enabled=!busy;
             renderer.Enabled=!busy;
             check.Enabled=!busy && !checking;
+        }
+        private void EditIni() {
+            try {
+                using (var dialog=new GameIniForm(new GameIniFile(destination.Text))) dialog.ShowDialog(this);
+            } catch (Exception error) {
+                Report("INI editor: "+error.Message);
+                MessageBox.Show(this,error.Message,"Warcraft CS INI",MessageBoxButtons.OK,MessageBoxIcon.Error);
+            }
         }
         private void SetBusy(bool value) {
             busy=value; foreach (var box in new[] {warcraft,cs,destination}) box.Enabled=!value; consent.Enabled=!value;

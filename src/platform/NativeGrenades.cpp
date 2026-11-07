@@ -15,12 +15,19 @@ void NativeGrenades::Reset() {
     ++generation_;timer_=0;charges_.clear();stuns_.clear();visuals_.clear();obstacles_.Reset();flashStart_=flashDuration_=flashOpacity_=0;
 }
 bool NativeGrenades::Throw(wc3::Handle actor,int slot,const GrenadePoint& eye,const GrenadePoint& direction,const GrenadePoint& motion,const GameplaySettings& settings) {
-    if(!settings.grenades.enabled || !WeaponSlots::Grenade(slot) || charges_.size()>=settings.grenades.maxActive || !wc3::GetUnitTypeId(actor))return false;
+    if(!WeaponSlots::Grenade(slot) || !settings.WeaponEnabled(slot) || charges_.size()>=settings.grenades.maxActive || !wc3::GetUnitTypeId(actor))return false;
     if(!timer_) {timer_=wc3::CreateTimer();if(!timer_)return false;float duration=360000;wc3::TimerStart(timer_,&duration,FALSE,0);}
     Charge charge;charge.slot=slot;charge.actor=actor;charge.type=wc3::GetUnitTypeId(actor);charge.born=Time();charge.damage=settings.damage[slot];charge.friendly=settings.friendlyFirePercent;
     charge.flight.settings=settings.grenades;
     charge.jump=settings.blastJump; // Preserve launch-time knockback across later F8 edits.
-    if(slot!=WeaponSlots::HE)charge.flight.settings.gravity*=settings.grenades.lightGravityScale;
+    if(WeaponSlots::GuestExplosive(slot)) {
+        bool remote=slot==WeaponSlots::Satchel;
+        const auto& explosive=remote ? settings.halfLife.satchel : settings.halfLife.grenade;
+        charge.flight.settings.throwSpeed=explosive.throwSpeed;
+        charge.flight.settings.heRadius=explosive.radius;
+        // A satchel keeps its position when the bounded flight is over, until the owner triggers it.
+        charge.flight.settings.fuse=remote ? 10.f : settings.halfLife.handGrenadeFuse;
+    } else if(slot!=WeaponSlots::HE)charge.flight.settings.gravity*=settings.grenades.lightGravityScale;
     if(!GrenadeLaunch::Prepare(charge.flight,eye,direction,motion))return false;
     auto releaseObstacles=obstacles_.Snapshot(actor,eye[0],eye[1],64,true);
     GrenadeLaunch::ClipRelease(charge.flight,eye,releaseObstacles,[](float x,float y){return wc3::AttackSurface(x,y,false);});
@@ -29,22 +36,38 @@ bool NativeGrenades::Throw(wc3::Handle actor,int slot,const GrenadePoint& eye,co
         charge.flight.position[0],charge.flight.position[1],charge.flight.position[2],charge.flight.velocity[0],charge.flight.velocity[1],charge.flight.velocity[2],
         charge.flight.settings.gravity,charge.flight.settings.fuse,charge.damage);return true;
 }
+bool NativeGrenades::HasSatchel(wc3::Handle actor) const {
+    return std::any_of(charges_.begin(),charges_.end(),[&](const Charge& charge) {
+        return charge.slot==WeaponSlots::Satchel && charge.actor==actor && !charge.detonated;
+    });
+}
+bool NativeGrenades::RequestSatchel(wc3::Handle actor) {
+    // Queue owner's live charges together. Tick copies detonation data before callbacks can change the map.
+    bool requested=false;
+    for(auto& charge:charges_) {
+        if(charge.slot!=WeaponSlots::Satchel || charge.actor!=actor || charge.detonated || charge.requested)continue;
+        charge.requested=true;requested=true;
+    }
+    return requested;
+}
 bool NativeGrenades::Covered(const GrenadePoint& from,const GrenadePoint& to,const std::vector<Bounds3>& obstacles) const {
     return NativeBlast::Covered(from,to,obstacles);
 }
 bool NativeGrenades::Detonate(const Charge& charge,float now,GameAudio& audio,wc3::Handle viewer,const GrenadePoint& eye,const GrenadePoint& direction,BlastJumpEvents* jumps) {
     const auto& settings=charge.flight.settings;auto from=charge.flight.position;from[2]+=8;
-    audio.Play(charge.slot==WeaponSlots::HE ? "hegrenade-1.wav" : charge.slot==WeaponSlots::Flashbang ? "flashbang-1.wav" : "sg_explode.wav",1);
+    audio.Play(WeaponDefaults::Weapons[charge.slot].sound,1);
     wc3::Log("grenade detonated slot=%d at=%.1f,%.1f,%.1f",charge.slot,from[0],from[1],from[2]);
     if(charge.slot==WeaponSlots::Smoke)return false;
-    if(charge.slot==WeaponSlots::HE) {
-        // Flash/smoke have no damaging pressure wave; only HE publishes a movement event.
-        if(jumps)jumps->push_back({from,settings.heRadius,charge.jump,"HE"});
+    bool guest=WeaponSlots::GuestExplosive(charge.slot);
+    if(charge.slot==WeaponSlots::HE || guest) {
+        const char* name=guest ? WeaponDefaults::Weapons[charge.slot].name : "HE";
+        // Guest charges still publish pressure even though the owner takes exactly zero damage.
+        if(jumps)jumps->push_back({from,settings.heRadius,charge.jump,name});
         auto effect=wc3::Effect("Objects\\Spawnmodels\\Other\\NeutralBuildingExplosion\\NeutralBuildingExplosion.mdl",from[0],from[1]);if(effect)wc3::DestroyEffect(effect);
         // HE and RPG share native damage attribution, cover, gates and callback-safe map reset handling.
         unsigned generation=generation_;auto obstacles=obstacles_.Snapshot(0,from[0],from[1],settings.heRadius+256,true);
         return NativeBlast::Apply(charge.actor,charge.type,from,charge.damage,settings.heRadius,charge.friendly,obstacles,
-            [&]{return generation_==generation;},"grenade HE",onKill_);
+            [&]{return generation_==generation;},guest ? name : "grenade HE",onKill_,false,guest ? 0.f : -1.f);
     }
     float radius=settings.flashRadius;
     auto obstacles=obstacles_.Snapshot(0,from[0],from[1],radius+256,true);
@@ -89,17 +112,25 @@ bool NativeGrenades::Tick(GameAudio& audio,wc3::Handle viewer,const GrenadePoint
     std::vector<Charge> events;visuals_.clear();
     for(auto& charge:charges_) {
         auto& flight=charge.flight;float elapsed=std::max(0.f,now-charge.born),effectAge=elapsed-flight.settings.fuse;
+        bool remote=charge.slot==WeaponSlots::Satchel;
+        if(remote && wc3::GetUnitTypeId(charge.actor)!=charge.type) {charge.detonated=true;continue;}
         if(!charge.detonated) {
             float pending=std::max(0.f,std::min(elapsed,flight.settings.fuse)-float(flight.age));
             float speed=std::sqrt(flight.velocity[0]*flight.velocity[0]+flight.velocity[1]*flight.velocity[1]+flight.velocity[2]*flight.velocity[2]);
             // Cover the whole pending flight even after a slow frame, rather than querying only its first quarter-second.
             float reach=std::min(20000.f,speed*pending+.5f*flight.settings.gravity*pending*pending+256);
-            auto obstacles=obstacles_.Snapshot(charge.actor,flight.position[0],flight.position[1],reach,true);
-            flight.Advance(elapsed,obstacles,[](float x,float y){return wc3::AttackSurface(x,y,false);});
-            if(flight.bounced)audio.Play("grenade_hit1.wav",.3f);
-            if(elapsed>=flight.settings.fuse){charge.detonated=true;events.push_back(charge);}
+            if(!charge.resting && pending>0) {
+                auto obstacles=obstacles_.Snapshot(charge.actor,flight.position[0],flight.position[1],reach,true);
+                flight.Advance(elapsed,obstacles,[](float x,float y){return wc3::AttackSurface(x,y,false);});
+                if(flight.bounced)audio.Play("grenade_hit1.wav",.3f);
+                // Only freeze a remote charge when it has settled on the floor, or its bounded flight ends.
+                charge.resting=remote && (elapsed>=flight.settings.fuse ||
+                    (flight.velocity[2]==0 && std::hypot(flight.velocity[0],flight.velocity[1])<1 &&
+                     flight.position[2]<=wc3::AttackSurface(flight.position[0],flight.position[1],false)+5));
+            }
+            if(remote ? charge.requested : elapsed>=flight.settings.fuse){charge.detonated=true;events.push_back(charge);}
             else {
-                bool resting=std::abs(flight.velocity[2])<1 && std::hypot(flight.velocity[0],flight.velocity[1])<10;
+                bool resting=charge.resting || (std::abs(flight.velocity[2])<1 && std::hypot(flight.velocity[0],flight.velocity[1])<10);
                 // Only the visual prop spins; settling restores the retail model's flat resting pose.
                 float yaw=std::atan2(flight.velocity[1],flight.velocity[0])*57.2957795f;
                 visuals_.push_back({flight.position,charge.slot,5,1,elapsed,false,yaw,resting ? 0 : elapsed*flight.settings.worldSpin,flight.settings.worldModelScale});
