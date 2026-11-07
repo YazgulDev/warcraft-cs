@@ -116,7 +116,7 @@ std::vector<float> GunMesh::SamplePose(const char* animation,float seconds,const
     if (sequences_.empty()) return {};
     const Sequence* sequence = &sequences_.front();
     for (const auto& item : sequences_) if (item.name == animation) { sequence = &item; break; }
-    float frame = WeaponAnimation::Frame(sequence->frames,sequence->fps,seconds,false);
+    float frame = WeaponAnimation::HeldActionFrame(sequence->name,WeaponAnimation::Frame(sequence->frames,sequence->fps,seconds,false));
     // One-shot actions settle into idle; idle itself loops smoothly.
     bool loop=sequence->name.find("idle")==0 || (studio_ ? bool(sequence->flags&1) && sequence->name!="spinup" : sequence->name=="spin" || sequence->name=="altfirecycle");
     if(loop)frame=studio_ && sequence->frames>1 ? std::fmod(std::max(0.f,seconds)*sequence->fps,float(sequence->frames-1)) : WeaponAnimation::Frame(sequence->frames,sequence->fps,seconds,true);

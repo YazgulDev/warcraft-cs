@@ -13,4 +13,8 @@ inline float Frame(unsigned frames,float fps,float seconds,bool loop) {
     float frame=std::max(0.f,seconds)*fps;
     return loop ? std::fmod(frame,float(frames)) : std::min(frame,float(frames-1));
 }
+inline float HeldActionFrame(std::string_view name,float frame) {
+    // The stock Half-Life pinpull leaves the screen after frame 22. Hold its last visible primed pose.
+    return name=="pinpull" ? std::min(frame,22.f) : frame;
+}
 }

@@ -61,6 +61,10 @@ int main() {
     assert(action.Step(20.8,true,true,0,0,.9f)==E::None);
     assert(action.Step(20.91,false,true,0,0,.9f)==E::Finished);
     assert(WeaponAnimation::HoldLastFrame("pinpull") && WeaponAnimation::HoldLastFrame("throw2"));
+    // A held pin must never sample the two offscreen frames or fall back to idle.
+    assert(WeaponAnimation::HeldActionFrame("pinpull",12)==12);
+    assert(WeaponAnimation::HeldActionFrame("pinpull",24)==22);
+    assert(WeaponAnimation::HeldActionFrame("throw2",18)==18);
     GrenadeProjectile a,b;a.position=b.position={0,0,96};a.velocity=b.velocity={750,0,135};
     auto ground=[](float,float){return 0.f;};
     for(int i=1;i<=30;++i)a.Advance(i/30.,{},ground);
