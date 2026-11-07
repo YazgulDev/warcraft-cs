@@ -4,6 +4,7 @@
 #include <cassert>
 #include "../src/combat/WeaponSlots.hpp"
 #include "../src/combat/SmokeVisibility.hpp"
+#include "../src/presentation/WeaponAnimation.hpp"
 
 int main() {
     GrenadeVisual cloud={{0,0,0},WeaponSlots::Smoke,300,.99f,2,true};
@@ -55,6 +56,11 @@ int main() {
     assert(action.Step(10.4,false,false,1,.25f,.8f)==E::None);
     assert(action.Step(11,false,false,1,.25f,.8f)==E::Finished);
     assert(action.Step(12,true,false,1,.25f,.8f)==E::Pull);action.Reset();assert(!action.Active());
+    // An immediate throw owns the recovery pose and cannot emit a second launch on a held button.
+    action.StartRecovery(20);
+    assert(action.Step(20.8,true,true,0,0,.9f)==E::None);
+    assert(action.Step(20.91,false,true,0,0,.9f)==E::Finished);
+    assert(WeaponAnimation::HoldLastFrame("pinpull") && WeaponAnimation::HoldLastFrame("throw2"));
     GrenadeProjectile a,b;a.position=b.position={0,0,96};a.velocity=b.velocity={750,0,135};
     auto ground=[](float,float){return 0.f;};
     for(int i=1;i<=30;++i)a.Advance(i/30.,{},ground);
@@ -65,6 +71,16 @@ int main() {
     wall.Advance(.3,{box},ground);assert(wall.position[0]<96 && wall.velocity[0]<0 && wall.bounced);
     wall.Advance(10,{box},ground);assert(std::abs(wall.age-wall.settings.fuse)<.001 && wall.position[2]>=4);
     auto saved=wall.position;wall.Advance(20,{box},ground);assert(saved==wall.position);
+    // A satchel stops at first ground contact. A wall removes normal velocity without suspending it.
+    GrenadeProjectile satchel;satchel.settleOnGround=true;satchel.position={0,0,96};satchel.velocity={400,0,30};
+    satchel.Advance(.5,{box},ground);
+    assert(!satchel.settled && !satchel.bounced && satchel.position[0]<96 && satchel.velocity[0]==0 && satchel.velocity[2]<0);
+    satchel.Advance(1,{box},ground);
+    assert(satchel.settled && !satchel.bounced && satchel.position[2]==4 && satchel.velocity==GrenadePoint{});
+    saved=satchel.position;satchel.Advance(20,{box},ground);assert(saved==satchel.position);
+    GrenadeProjectile falling;falling.settleOnGround=true;falling.position={101,0,240};
+    falling.Advance(1,{box},ground);
+    assert(falling.settled && !falling.bounced && falling.position[2]>203.9f && falling.position[2]<204.2f);
     assert(GrenadeProjectile::Falloff(0,350)==1 && GrenadeProjectile::Falloff(400,350)==0);
     GrenadePoint flash={100,0,0},eye={0,0,0};
     assert(GrenadeProjectile::Exposure(flash,eye,{1,0,0},1000)>GrenadeProjectile::Exposure(flash,eye,{-1,0,0},1000)*4);

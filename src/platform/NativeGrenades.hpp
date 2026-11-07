@@ -28,8 +28,8 @@ private:
         GrenadeProjectile flight;
         wc3::Handle actor=0;
         int type=0,slot=0;
-        float born=0,damage=0,friendly=0;
-        bool detonated=false,requested=false,resting=false;
+        float born=0,damage=0,friendly=0,yaw=0;
+        bool detonated=false,requested=false;
         BlastJumpSettings jump;
     };
     struct Stun {wc3::Handle unit;int type;float until;};

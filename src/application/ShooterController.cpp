@@ -1136,27 +1136,45 @@ void ShooterController::CancelPlant() {
     plantProgress_ = 0; audio_.CancelAnimation(); Play("idle");
     wc3::Log("C4 planting canceled");
 }
+bool ShooterController::LaunchGrenade() {
+    float eye[3],direction[3];AimRay(eye,direction);
+    GrenadePoint motion={movement_.VelocityX(),movement_.VelocityY(),movement_.VerticalVelocity()};
+    if(!grenades_.Throw(unit_,weapon_,{eye[0],eye[1],eye[2]},{direction[0],direction[1],direction[2]},motion,settings_)) {
+        Notice("GRENADE LIMIT REACHED");return false;
+    }
+    // Only a charge that reached the world spends ammunition.
+    --ammo_[weapon_];wc3::Log("grenade inventory slot=%d remaining=%d",weapon_,ammo_[weapon_]);
+    if(weapon_==WeaponSlots::Satchel)Notice("SATCHEL PLACED - RMB TO DETONATE");
+    return true;
+}
 void ShooterController::ThrowGrenade(bool pressed,bool secondaryPressed) {
     if(!settings_.WeaponEnabled(weapon_) || Casting() || suppressFire_ || status_.disarmed || status_.incapacitated || CursorMode()) {CancelPlant();return;}
     bool remote=weapon_==WeaponSlots::Satchel;
+    bool guest=WeaponSlots::GuestExplosive(weapon_);
     if(remote && secondaryPressed && !grenadeThrow_.Active()) {
         if(!grenades_.RequestSatchel(unit_))Notice("NO PLACED SATCHELS");
         return;
     }
     if(!grenadeThrow_.Active() && ammo_[weapon_]<=0){if(pressed)Notice("NO GRENADES");return;}
-    auto event=grenadeThrow_.Step(GetTickCount()*.001,pressed,Down(VK_LBUTTON),grenadePullSeconds_,settings_.grenades.releaseDelay,settings_.grenades.recovery);
+    auto launchGuest=[&] {
+        // The guest model is already out of the hand at the first throw frame.
+        if(!LaunchGrenade()){CancelPlant();return;}
+        grenadeRecoverySeconds_=Play("throw");
+        if(grenadeRecoverySeconds_<=0)grenadeRecoverySeconds_=settings_.grenades.recovery;
+        grenadeThrow_.StartRecovery(GetTickCount()*.001);
+    };
+    if(remote && !grenadeThrow_.Active()) {
+        if(pressed)launchGuest();
+        return;
+    }
+    auto event=grenadeThrow_.Step(GetTickCount()*.001,pressed,Down(VK_LBUTTON),grenadePullSeconds_,
+        guest ? 0.f : settings_.grenades.releaseDelay,guest ? grenadeRecoverySeconds_ : settings_.grenades.recovery);
     if(event==GrenadeThrow::Event::Pull) {
-        // A remote satchel has no pin to pull. Release still uses the ordinary throw timeline.
-        grenadePullSeconds_=remote ? .01f : Play("pullpin");if(grenadePullSeconds_<=0)grenadePullSeconds_=1;
-    } else if(event==GrenadeThrow::Event::Throw)Play("throw");
-    else if(event==GrenadeThrow::Event::Launch) {
-        float eye[3],direction[3];AimRay(eye,direction);
-        GrenadePoint motion={movement_.VelocityX(),movement_.VelocityY(),movement_.VerticalVelocity()};
-        if(grenades_.Throw(unit_,weapon_,{eye[0],eye[1],eye[2]},{direction[0],direction[1],direction[2]},motion,settings_)) {
-            --ammo_[weapon_];wc3::Log("grenade inventory slot=%d remaining=%d",weapon_,ammo_[weapon_]);
-            if(remote)Notice("SATCHEL PLACED - RMB TO DETONATE");
-        } else Notice("GRENADE LIMIT REACHED");
-    } else if(event==GrenadeThrow::Event::Finished) {
+        grenadePullSeconds_=Play("pullpin");if(grenadePullSeconds_<=0)grenadePullSeconds_=1;
+    } else if(event==GrenadeThrow::Event::Throw) {
+        if(guest)launchGuest();else Play("throw");
+    } else if(event==GrenadeThrow::Event::Launch)LaunchGrenade();
+    else if(event==GrenadeThrow::Event::Finished) {
         if(ammo_[weapon_]>0 || (remote && grenades_.HasSatchel(unit_)))Play("draw");
         else {SwitchWeapon(inventory_.owned[WeaponSlots::Pistol] ? WeaponSlots::Pistol : WeaponSlots::Knife);}
     }

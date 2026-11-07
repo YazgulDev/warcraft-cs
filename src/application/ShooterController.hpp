@@ -389,13 +389,14 @@ private:
     void SwitchWeapon(int slot);
     void PlantC4(float dt);
     void ThrowGrenade(bool pressed,bool secondaryPressed);
+    bool LaunchGrenade();
     GrenadeThrow grenadeThrow_;
     NativeGrenades grenades_;
     NativeRockets rockets_;
     NativeMovementImpulse movementImpulse_;
     NativePortals portals_;
     bool rpgLaser_=true;
-    float grenadePullSeconds_=1;
+    float grenadePullSeconds_=1,grenadeRecoverySeconds_=0;
     void CancelPlant();
     void RefillAmmo(bool grantAll=false);
     void PickupItem();

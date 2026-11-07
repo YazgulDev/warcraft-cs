@@ -39,8 +39,8 @@ purchase-only kit. F8 grants no inventory. F12 grants every available weapon; F1
   cell. Release, exhaustion or loss of attack ownership stops its sound and beam.
   Native target/wall tests update the beam every game frame, including between damage ticks.
   Damage is fixed at 70 per tick by default (about 700/second at the default cadence).
-- **Hand Grenade:** hold and release LMB. The 2.5-second fuse starts on release.
-- **Satchel Charge:** hold and release LMB to throw, then press RMB to detonate your deployed charges. Use Y to switch RMB from squad orders to weapon controls if necessary.
+- **Hand Grenade** holds the primed pose while LMB is down. Release LMB to throw and start the 2.5-second fuse.
+- **Satchel Charge** throws as soon as you press LMB and settles without bouncing. Press RMB to detonate your deployed charges. Use Y to switch RMB from squad orders to weapon controls if necessary.
 
 Both explosives use their own `[HalfLifeGrenade]` or `[Satchel]` tuning and the shared
 `[BlastJump]` impulse. Enemy damage falls off with distance and cover. The owner

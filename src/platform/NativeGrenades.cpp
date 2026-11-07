@@ -27,8 +27,10 @@ bool NativeGrenades::Throw(wc3::Handle actor,int slot,const GrenadePoint& eye,co
         charge.flight.settings.heRadius=explosive.radius;
         // A satchel keeps its position when the bounded flight is over, until the owner triggers it.
         charge.flight.settings.fuse=remote ? 10.f : settings.halfLife.handGrenadeFuse;
+        charge.flight.settleOnGround=remote;
     } else if(slot!=WeaponSlots::HE)charge.flight.settings.gravity*=settings.grenades.lightGravityScale;
     if(!GrenadeLaunch::Prepare(charge.flight,eye,direction,motion))return false;
+    if(charge.flight.settleOnGround)charge.yaw=std::atan2(direction[1],direction[0])*57.2957795f;
     auto releaseObstacles=obstacles_.Snapshot(actor,eye[0],eye[1],64,true);
     GrenadeLaunch::ClipRelease(charge.flight,eye,releaseObstacles,[](float x,float y){return wc3::AttackSurface(x,y,false);});
     charges_.push_back(charge);
@@ -119,21 +121,19 @@ bool NativeGrenades::Tick(GameAudio& audio,wc3::Handle viewer,const GrenadePoint
             float speed=std::sqrt(flight.velocity[0]*flight.velocity[0]+flight.velocity[1]*flight.velocity[1]+flight.velocity[2]*flight.velocity[2]);
             // Cover the whole pending flight even after a slow frame, rather than querying only its first quarter-second.
             float reach=std::min(20000.f,speed*pending+.5f*flight.settings.gravity*pending*pending+256);
-            if(!charge.resting && pending>0) {
+            if(!flight.settled && pending>0) {
                 auto obstacles=obstacles_.Snapshot(charge.actor,flight.position[0],flight.position[1],reach,true);
                 flight.Advance(elapsed,obstacles,[](float x,float y){return wc3::AttackSurface(x,y,false);});
                 if(flight.bounced)audio.Play("grenade_hit1.wav",.3f);
-                // Only freeze a remote charge when it has settled on the floor, or its bounded flight ends.
-                charge.resting=remote && (elapsed>=flight.settings.fuse ||
-                    (flight.velocity[2]==0 && std::hypot(flight.velocity[0],flight.velocity[1])<1 &&
-                     flight.position[2]<=wc3::AttackSurface(flight.position[0],flight.position[1],false)+5));
+                if(flight.settled)wc3::Log("satchel landed at=%.1f,%.1f,%.1f",
+                    flight.position[0],flight.position[1],flight.position[2]);
             }
             if(remote ? charge.requested : elapsed>=flight.settings.fuse){charge.detonated=true;events.push_back(charge);}
             else {
-                bool resting=charge.resting || (std::abs(flight.velocity[2])<1 && std::hypot(flight.velocity[0],flight.velocity[1])<10);
-                // Only the visual prop spins; settling restores the retail model's flat resting pose.
-                float yaw=std::atan2(flight.velocity[1],flight.velocity[0])*57.2957795f;
-                visuals_.push_back({flight.position,charge.slot,5,1,elapsed,false,yaw,resting ? 0 : elapsed*flight.settings.worldSpin,flight.settings.worldModelScale});
+                bool resting=std::abs(flight.velocity[2])<1 && std::hypot(flight.velocity[0],flight.velocity[1])<10;
+                // Keep a satchel flat and facing the throw direction when it settles.
+                float yaw=remote ? charge.yaw : std::atan2(flight.velocity[1],flight.velocity[0])*57.2957795f;
+                visuals_.push_back({flight.position,charge.slot,5,1,elapsed,false,yaw,remote || resting ? 0 : elapsed*flight.settings.worldSpin,flight.settings.worldModelScale});
             }
         }
         if(charge.detonated && charge.slot==WeaponSlots::Smoke) {
