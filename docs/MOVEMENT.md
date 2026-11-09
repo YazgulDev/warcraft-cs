@@ -41,8 +41,10 @@ current height initially, then gravity accelerates the fall until landing. No fa
 Landing uses the player's full collision footprint: a foot reaching the top catches the lip before
 the center crosses, and support ends after the trailing foot leaves. Native cliff rims include the
 lower-bank pathing cell; validated movement there avoids Warcraft's nearest-cell relocation.
-Map bounds and unsupported flat pathing cells remain blocked. Unknown custom models cannot grant
-permission to cross blocked pathing. Native cliff levels distinguish cliff faces from ordinary hills.
+Map bounds remain blocked. When a cell blocks walking, high airborne movement can cross it
+if Warcraft allows flying there and the feet clear the terrain by at least the current body height.
+This check follows the terrain and solid-object sweeps. Native cliff levels distinguish cliff faces
+from ordinary hills.
 With `[Swimming] Enabled=true`, shallow water uses its actual terrain bed and deep water switches to surface swimming. Move toward a reachable bank and press Space once to leave a canal. Bridges and native flight retain separate support. See [swimming and its editable settings](SWIMMING.md); disabling swimming restores the previous water-support movement.
 
 World boundaries include the actor radius in every mode. An actor already outside is clamped
@@ -230,3 +232,9 @@ The reported Ancient One campaign traversal with the corrected DLL has not yet b
 ## Surfing
 
 Release 0.19.0 adds configurable gravity-driven sliding on steep native-walkable terrain and verified stationary model faces in classic/hull/recovery. It remains airborne, uses existing air strafing and does not earn ground-jump bonuses. Model bounds alone never grant a surf plane; walls, undersides and headroom still block. See [settings and opt-outs](CONFIGURATION.md#terrain-and-model-surfing-0190), [Surf Practice](SURF-PRACTICE.md) and the [Surf Skyline time trial](SURF-SKYLINE.md).
+
+## Weapon jumps (development build)
+
+RPG, HE and C4 can propel the controlled player; Tau recoil pushes opposite the shot
+and grows with charge. Aim down to jump upward. Existing collision and the horizontal
+speed cap resolve the resulting trajectory. See [defaults, self damage and opt-outs](WEAPON-JUMPS.md).

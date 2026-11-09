@@ -63,8 +63,16 @@ function Read-RuntimePackage([byte[]]$Bytes,[string]$Revision,[string]$Version) 
 }
 function Expand-LauncherRuntime([string]$LauncherFile,[string]$Source,[string]$Destination) {
     Assert-OrdinaryRuntimePath $Destination
-    # Read embedded data only: no code in the candidate launcher is invoked during extraction.
-    $assembly=[Reflection.Assembly]::LoadFile([IO.Path]::GetFullPath($LauncherFile))
+    $launcherPath=[IO.Path]::GetFullPath($LauncherFile)
+    if ($PSVersionTable.PSEdition -eq 'Desktop') {
+        # Inspect bytes in the reflection-only context. Path-based .NET Framework loads reject
+        # the Internet-zone marker browsers attach even to a locally downloaded launcher.
+        if ((Get-Item -LiteralPath $launcherPath).Length -gt 16MB) { throw 'Player launcher is too large.' }
+        $assembly=[Reflection.Assembly]::ReflectionOnlyLoad([IO.File]::ReadAllBytes($launcherPath))
+    } else {
+        # PowerShell Core has no reflection-only context and can inspect these resources by path.
+        $assembly=[Reflection.Assembly]::LoadFile($launcherPath)
+    }
     $resource=$assembly.GetManifestResourceStream('WarcraftCS.Runtime.zip')
     $sourceResource=$assembly.GetManifestResourceStream('WarcraftCS.Source.zip')
     if (!$resource -or !$sourceResource) {

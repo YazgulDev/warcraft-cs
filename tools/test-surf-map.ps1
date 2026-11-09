@@ -6,3 +6,8 @@ $root=Split-Path -Parent $PSScriptRoot
 if($LASTEXITCODE){throw 'Surf practice map verification failed.'}
 & (Get-WarcraftCsPython $root) (Join-Path $root 'tests/SurfCourseMapTests.py')
 if($LASTEXITCODE){throw 'Surf Skyline map verification failed.'}
+& (Get-WarcraftCsPython $root) (Join-Path $root 'tests/SurfFlowMapTests.py')
+if($LASTEXITCODE){throw 'Connected Surf Flow map verification failed.'}
+# The native movement arena reuses these original containers; verify every resized fine grid too.
+& (Get-WarcraftCsPython $root) (Join-Path $root 'tests/NativeFixtureMapTests.py')
+if($LASTEXITCODE){throw 'Native fixture terrain/shadow/pathing verification failed.'}

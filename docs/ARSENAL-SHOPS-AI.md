@@ -8,6 +8,9 @@ The [0.13.0 release](RELEASE-0.13.0.md) doubles whole-shell native attack multip
 
 The [expanded arsenal preview](ARSENAL-SMOKE-PREVIEW.md) adds TMP/UMP45 SMGs, FAMAS/Galil rifles and a scoped self-loading G3SG1. It also introduces dense smoke with all-team basic-attack sight obstruction on 1.26a.
 
+**B → 1 Pistols → 4 P228 / 5 Five-SeveN** offers the CS 1.6 pistols with 13- and 20-round magazines.
+Prices, ammunition and tuning are under `[P228]` and `[FiveSeven]` in the INI.
+
 The paid firearms are Desert Eagle (650), Glock 18 (400), MP5 (1500),
 P90 (2350), M249 (5750), M3 (1700), and XM1014 (3000). Open **B**: 1 pistols,
 2 shotguns, 3 SMGs, 4 rifles, 5 machine guns, 6 primary ammo, 7 pistol ammo,
@@ -104,8 +107,8 @@ model's barrel attachments; older WCG2 caches use a geometry-derived fallback.
 
 Equipment keys **4 HE, 5 Flashbang, 6 Smoke** append stable slots 15–17. Original
 number keys remain unchanged. Each purchase buys one grenade, including quick
-ammo on a carried grenade. Defaults: HE 300/capacity 1, flash 200/capacity 2,
-smoke 300/capacity 1. Full inventory never charges either wallet. Fresh standard kits have
+ammo on a carried grenade. HE costs 300, flash costs 200 and smoke costs 300.
+The default carry limit is three of each type. A full stack never charges either wallet. Fresh standard kits have
 no grenades; all-weapons grants them and free refill restores carried stacks.
 Grenades have no reserve, magazine reload, hitscan bullet or muzzle flash.
 
@@ -148,12 +151,18 @@ limits and tuning to subsequent launches; live flights/clouds keep their snapsho
 | ReleaseDelay / RecoverySeconds | .25 / .8 | 0–1 / .1–3 seconds of throw animation |
 | MaxActive | 32 | 1–128 simultaneous flights/clouds |
 | WorldModelScale / WorldSpinDegrees | 1 / 360 | .25–4 visual scale / 0–1440 degrees/s in flight; F8 affects new throws |
-| Each grenade: Capacity | 1 / 2 / 1 | 1–100 charges |
+| Each CS grenade: Capacity | 3 | 1–100 charges |
 | Price / AmmoPrice | above / above | 0–1000000 selected currency; one grenade per purchase |
 | MoveSpeed / ModelScale | 250 / .9 | 50–500 CS units/s / .25–2 model FOV scale |
-| HEGrenade: Damage / Radius | 1200 / 350 in the local heavy-weapon build | 0–1000000 fixed damage / 32–2000 world units |
+| HEGrenade: Damage / Radius | 1800 / 600 | 0–1000000 peak damage / 32–2000 world units |
+| HalfLifeGrenade: Damage / Radius | 1250 / 700 | 0–1000000 peak damage / 32–2000 world units |
 | Flashbang: Radius / BlindSeconds / UnitStunSeconds | 1000 / 3 / 2 | 32–3000 units / 0–10 s / 0–10 s |
 | SmokeGrenade: Radius / DurationSeconds / Opacity | 300 / 18 / .85 | 32–1000 units / 1–60 s / 0–1 |
+
+Both damaging grenades apply half their peak damage halfway to the edge and zero
+at or beyond it, before native defenses and friendly-fire rules. F8 changes new
+throws and purchases. Keep the shipped damage, blast and capacity version keys
+when choosing previous stock values deliberately.
 
 ## Native shops in F6/F7
 

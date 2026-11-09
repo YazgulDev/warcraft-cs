@@ -15,6 +15,10 @@ Save and press **F8** in a controlled view. Most settings apply immediately;
 starting kits apply on the next map, and live explosives retain their launch/plant
 settings. Installation updates add missing keys and preserve custom values.
 
+The launcher can open the installed file with **Edit INI**. The numbered English
+categories group related sections while keeping the existing section and key names.
+Updates organize existing files and keep saved comments and custom sections.
+
 The [annotated INI](../config/WarcraftCS.ini) is the complete list of keys, defaults,
 units, bounds and reload rules. Values below describe the published release;
 an older installation may retain different saved choices.
@@ -254,7 +258,18 @@ The [nuclear bomb and chat preview](NUCLEAR-CHAT-PREVIEW.md) documents `[Chat]` 
 [Release 0.17.0](RELEASE-0.17.0.md) collects all new weapon, smoke, mouse, sky, chat and nuclear defaults/ranges. Nuclear gameplay settings apply to future launches on F8; `[NuclearAudio]` layer edits require Install/asset reconversion. Existing custom codes survive; the former stock nuclear code upgrades to `warneverchanges`.
 
 
+## Weapon impulses (development build)
+
+The [weapon-jump development build](WEAPON-JUMPS.md) documents RPG/HE/C4 propulsion,
+Tau recoil, 5-percent RPG self damage and all new keys, units, bounds and reload timing.
+
 ## Terrain and model surfing (0.19.0)
+
+The [connected Surf Flow development build](SURF-FLOW.md) adds
+`AccelerationMultiplier=2` (0.1–4; 1 restores the 0.19.0 response). It scales air-input
+acceleration and the wish-direction allowance only after confirmed surf contact,
+once per physics step. No-input gravity, ordinary free-air Bunnyhop and the saved
+speed cap remain independent. Startup/F8 applies it and updates preserve custom values.
 
 `[Surfing] Enabled=true` enables airborne sliding on continuous, native-walkable terrain slopes
 steeper than `[Movement] MaxWalkSlope` (46 degrees by default). Gravity accelerates along the

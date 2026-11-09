@@ -7,6 +7,10 @@ public:
     enum class Event {None,Pull,Throw,Launch,Finished};
     void Reset() {state_=0;released_=launched_=false;}
     bool Active() const {return state_!=0;}
+    void StartRecovery(double now) {
+        // Guest explosives can launch on the same tick as their animation and skip the delayed launch event.
+        state_=2;released_=launched_=true;start_=now;
+    }
     Event Step(double now,bool pressed,bool down,float pull,float delay,float recovery) {
         if(!state_){if(!pressed)return Event::None;state_=1;start_=now;return Event::Pull;}
         if(state_==1){released_|=!down;if(!released_ || now-start_<pull)return Event::None;state_=2;start_=now;return Event::Throw;}

@@ -1,5 +1,6 @@
 #include "../platform/GameBuild.hpp"
 #include "ShooterController.hpp"
+#include "../movement/MovementRelocation.hpp"
 #include "../platform/NativeHeadGore.hpp"
 #include "../platform/NativeExplosiveDeath.hpp"
 #include "../presentation/TauChargeFeedback.hpp"
@@ -63,6 +64,7 @@ void ShooterController::Configure(const char* root, uintptr_t gameBase) {
     destructableHitboxes_.Configure(gameBase);
     collision_.Configure(gameBase);
     grenades_.Configure(gameBase);rockets_.Configure(gameBase);nuclearBomb_.Configure(gameBase);
+    movementImpulse_.Configure(gameBase);
     // Projectile adapters report deaths; the application applies the current wallet/drop policy.
     auto rewards=[this](const KillReward& reward){RewardKill(reward);};
     grenades_.SetKillSink(rewards);rockets_.SetKillSink(rewards);
@@ -192,7 +194,14 @@ const char* ShooterController::Sequence(const char* name) const {
     }
     if(weapon_==WeaponSlots::Tau && !strcmp(name,"shoot1"))return "fire";
     if(weapon_==WeaponSlots::Gluon && !strcmp(name,"idle"))return "idle1";
-    if(WeaponSlots::Grenade(weapon_) && !strcmp(name,"draw"))return "deploy";
+    if(weapon_==WeaponSlots::HandGrenade) {
+        // The owned Half-Life model has different names for pin pull and medium throw.
+        if(!strcmp(name,"pullpin"))return "pinpull";
+        if(!strcmp(name,"throw"))return "throw2";
+    } else if(weapon_==WeaponSlots::Satchel) {
+        if(!strcmp(name,"idle"))return "idle1";
+        if(!strcmp(name,"throw"))return "drop";
+    } else if(WeaponSlots::Grenade(weapon_) && !strcmp(name,"draw"))return "deploy";
     // Half-Life uses separate empty/loaded deploy and idle clips, with a single authored fire action.
     if(weapon_==WeaponSlots::RPG) {
         if(!strcmp(name,"draw"))return ammo_[weapon_]>0 ? "draw1" : "draw2";
@@ -204,7 +213,8 @@ const char* ShooterController::Sequence(const char* name) const {
     // TMP and G3SG1 author their first shot as shoot, rather than shoot1.
     if((weapon_==WeaponSlots::TMP || weapon_==WeaponSlots::G3SG1) && !strcmp(name,"shoot1"))return "shoot";
     if((weapon_==WeaponSlots::TMP || weapon_==WeaponSlots::UMP45 || weapon_==WeaponSlots::G3SG1) && !strcmp(name,"idle"))return "idle1";
-    if((weapon_==WeaponSlots::Deagle || weapon_==WeaponSlots::Glock || weapon_==WeaponSlots::MP5 || weapon_==WeaponSlots::M249) && !strcmp(name,"idle"))return "idle1";
+    if((weapon_==WeaponSlots::Deagle || weapon_==WeaponSlots::Glock || weapon_==WeaponSlots::MP5 || weapon_==WeaponSlots::M249 ||
+        weapon_==WeaponSlots::P228 || weapon_==WeaponSlots::FiveSeven) && !strcmp(name,"idle"))return "idle1";
     // The exported M4/USP body is unsilenced, so pose and shot sound must agree.
     if (weapon_ == 1 || weapon_ == 2) {
         if (!strcmp(name, "shoot1")) return "shoot1_unsil";
@@ -326,7 +336,7 @@ void ShooterController::ResetMap() {
     audio_.Stop(); stepDistance_ = 0; reloadEnd_ = 0;
     menuRequested_ = false;
     itemRequested_=settingsRequested_=itemNearby_=speedToggleRequested_=minimapToggleRequested_=false;squadRequested_=0;ammoRecovery_.Reset();
-    hits_.Clear();combatVisuals_.Reset(); refillRequested_ = false; allWeaponsRequested_=false; refillTick_ = 0; fixtureTarget_ = 0; blastFixtures_.clear();
+    hits_.Clear();combatVisuals_.Reset();movementImpulse_.Reset(); refillRequested_ = false; allWeaponsRequested_=false; refillTick_ = 0; fixtureTarget_ = 0; blastFixtures_.clear();
     ResetLoadout();
 }
 void ShooterController::Toggle(ControlView initial) {
@@ -403,9 +413,18 @@ SpellAim ShooterController::InventoryAim(int x,int y,int width,int height) {
     }
     return SpellAim::Pick(unit_,origin,direction,settings_.spells.aimDistance,hitboxes_,destructableHitboxes_);
 }
-void ShooterController::RebaseAfterTeleport() {
-    // Native placement owns XY; no velocity, old floor, ground-eye correction or recovery checkpoint follows it.
-    movement_.Reset(wc3::Ground(wc3::Real(wc3::GetUnitX(unit_)),wc3::Real(wc3::GetUnitY(unit_))));
+void ShooterController::CancelNativeOrders() {
+    // Warcraft treats the FPS actor as a ground unit. Stop can relocate its native
+    // footprint to a walkable cell while the mod's body is still in the air.
+    FpsCombatGuard::CancelOrders(unit_, movement_.Grounded());
+}
+void ShooterController::RebaseAfterRelocation(float distance,float motorDistance) {
+    // Native placement owns XY. A local pathing nudge must not reset an airborne body to ground;
+    // actual portals/distant relocations discard the previous floor and momentum as before.
+    float floor=wc3::Ground(wc3::Real(wc3::GetUnitX(unit_)),wc3::Real(wc3::GetUnitY(unit_)));
+    bool preserved=MovementRelocation::Rebase(movement_,floor,distance,motorDistance);
+    wc3::Log("movement relocation mode=%s distance=%.1f allowance=%.1f floor=%.1f feet=%.1f velocity=%.1f,%.1f,%.1f",
+        preserved ? "preserve-flight" : "reset",distance,motorDistance,floor,movement_.FeetZ(),movement_.VelocityX(),movement_.VelocityY(),movement_.VerticalVelocity());
     collision_.ResetRecovery();positionRecoveryRequested_=false;cameraHeight_.Reset();viewmodelMotion_.Reset();stepDistance_=0;
 }
 void ShooterController::AimAndMove(float dt) {
@@ -415,9 +434,10 @@ void ShooterController::AimAndMove(float dt) {
     if (status_.contained || status_.hidden) { mouseLook_.Reset();movement_.Stop();viewmodelMotion_.Reset();cameraHeight_.Reset(); stepDistance_ = 0; return; }
     auto actor=unit_;auto object=wc3::UnitObject(actor);unsigned generation=rewardGeneration_;
     auto valid=[&]{return generation==rewardGeneration_ && unit_==actor && wc3::UnitObject(actor)==object;};
-    if(settings_.portals.enabled && portals_.Observe(unit_,movement_.HullRadius()*2)) {
-        // Map-script/engine teleports do not retain a remote floor or the old FPS camera correction.
-        RebaseAfterTeleport();
+    float relocationDistance=0;
+    if(settings_.portals.enabled && portals_.Observe(unit_,movement_.HullRadius()*2,&relocationDistance)) {
+        // Distinguish local engine correction from a remote map-script destination before rebasing height.
+        RebaseAfterRelocation(relocationDistance);
     }
     if(recover && !status_.immobilized && !status_.incapacitated && !Casting() && !CursorMode())collision_.RequestRecovery();
     // Mouse capture occurs only in the foreground and only after the player enables FPS.
@@ -491,15 +511,15 @@ void ShooterController::AimAndMove(float dt) {
         } else stepDistance_ = 0;
     }
     if(!valid())return;
-    if(settings_.portals.enabled && portals_.Observe(actor,manualDistance)) {
+    if(settings_.portals.enabled && portals_.Observe(actor,manualDistance,&relocationDistance)) {
         // A native region trigger may teleport during a movement setter as well as between ticks.
         // Budget the actual motor step so fast ordinary movement cannot be mistaken for a teleport.
-        RebaseAfterTeleport();
+        RebaseAfterRelocation(relocationDistance,std::max(0.f,manualDistance-movement_.HullRadius()*2));
     }
     if(portals_.Travel(actor,movement_.FeetZ()+wc3::Real(wc3::GetUnitFlyHeight(actor)),settings_.portals,
         !status_.immobilized && !status_.incapacitated && !CursorMode() && !Casting(),valid)) {
         // Native placement owns the destination. Camera and physics must discard the pre-portal floor/momentum.
-        RebaseAfterTeleport();
+        RebaseAfterRelocation();
         heroAttack_.Cancel();glockBurst_.Cancel();meleeContact_=0;CancelPlant();CancelEnergy();stepDistance_=0;
         Notice("TELEPORTED");
     }
@@ -632,7 +652,9 @@ WeaponSelection::Available ShooterController::AvailableWeapons() const {
     WeaponSelection::Available available={};
     for(int i=0;i<WeaponSlots::Count;++i)
         available[i]=inventory_.owned[i] && settings_.WeaponEnabled(i) &&
-            ((i!=WeaponSlots::C4 && !WeaponSlots::Grenade(i)) || ammo_[i]>0);
+            // The remote remains selectable while one of this unit's charges is in the world.
+            ((i!=WeaponSlots::C4 && !WeaponSlots::Grenade(i)) || ammo_[i]>0 ||
+                (i==WeaponSlots::Satchel && grenades_.HasSatchel(unit_)));
     return available;
 }
 void ShooterController::CloseWeaponSelection() {
@@ -983,7 +1005,18 @@ void ShooterController::FireEnergy(bool primaryPressed,bool secondaryHeld,DWORD 
     if(event.charged)damage+=(settings_.halfLife.tauChargedDamage-damage)*event.charge;
     if(!gluon){Play("fire2");Sound(w.sound);} // Both Tau modes use its complete authored recoil/recovery clip.
     ++shotSerial_;flashWeapon_=weapon_;lastShot_=now;
+    // Native damage can synchronously remove the actor/map; recoil belongs only to this accepted shot.
+    auto impulseActor=unit_;auto impulseObject=wc3::UnitObject(unit_);auto impulseGeneration=rewardGeneration_;
+    float impulseX=wc3::Real(wc3::GetUnitX(unit_)),impulseY=wc3::Real(wc3::GetUnitY(unit_));
+    float impulseEye[3],impulseAim[3];AimRay(impulseEye,impulseAim);
+    float jumpSpeed=settings_.halfLife.tauPrimaryJumpSpeed;
+    if(event.charged)jumpSpeed+=(settings_.halfLife.tauChargedJumpSpeed-jumpSpeed)*event.charge;
+    bool jumpRecoil=!gluon && settings_.halfLife.tauJumpRecoil;
+    float maximumUpSpeed=settings_.blastJump.maximumUpSpeed;
     Strike(0,0,1,damage); // Charged damage remains configurable even when ordinary Tau damage is zero.
+    if(jumpRecoil && Visible() && !paused_ && !Casting() && impulseGeneration==rewardGeneration_ && unit_==impulseActor && wc3::UnitObject(unit_)==impulseObject &&
+        std::hypot(wc3::Real(wc3::GetUnitX(unit_))-impulseX,wc3::Real(wc3::GetUnitY(unit_))-impulseY)<1)
+        movementImpulse_.Recoil(unit_,movement_,{impulseAim[0],impulseAim[1],impulseAim[2]},jumpSpeed,maximumUpSpeed);
     recoil_.Shot(weapon_,movement_.Speed(),movement_.Grounded(),movement_.Duck()>=.5f,settings_.weaponKick[weapon_]);
     wc3::Log("Half-Life energy shot weapon=%s cells=%d charged=%d fraction=%.3f damage=%.1f",w.name,ammo_[weapon_],event.charged,event.charge,damage);
 }
@@ -1103,21 +1136,46 @@ void ShooterController::CancelPlant() {
     plantProgress_ = 0; audio_.CancelAnimation(); Play("idle");
     wc3::Log("C4 planting canceled");
 }
-void ShooterController::ThrowGrenade(bool pressed) {
-    if(!settings_.grenades.enabled || Casting() || suppressFire_ || status_.disarmed || status_.incapacitated || CursorMode()) {CancelPlant();return;}
+bool ShooterController::LaunchGrenade() {
+    float eye[3],direction[3];AimRay(eye,direction);
+    GrenadePoint motion={movement_.VelocityX(),movement_.VelocityY(),movement_.VerticalVelocity()};
+    if(!grenades_.Throw(unit_,weapon_,{eye[0],eye[1],eye[2]},{direction[0],direction[1],direction[2]},motion,settings_)) {
+        Notice("GRENADE LIMIT REACHED");return false;
+    }
+    // Only a charge that reached the world spends ammunition.
+    --ammo_[weapon_];wc3::Log("grenade inventory slot=%d remaining=%d",weapon_,ammo_[weapon_]);
+    if(weapon_==WeaponSlots::Satchel)Notice("SATCHEL PLACED - RMB TO DETONATE");
+    return true;
+}
+void ShooterController::ThrowGrenade(bool pressed,bool secondaryPressed) {
+    if(!settings_.WeaponEnabled(weapon_) || Casting() || suppressFire_ || status_.disarmed || status_.incapacitated || CursorMode()) {CancelPlant();return;}
+    bool remote=weapon_==WeaponSlots::Satchel;
+    bool guest=WeaponSlots::GuestExplosive(weapon_);
+    if(remote && secondaryPressed && !grenadeThrow_.Active()) {
+        if(!grenades_.RequestSatchel(unit_))Notice("NO PLACED SATCHELS");
+        return;
+    }
     if(!grenadeThrow_.Active() && ammo_[weapon_]<=0){if(pressed)Notice("NO GRENADES");return;}
-    auto event=grenadeThrow_.Step(GetTickCount()*.001,pressed,Down(VK_LBUTTON),grenadePullSeconds_,settings_.grenades.releaseDelay,settings_.grenades.recovery);
+    auto launchGuest=[&] {
+        // The guest model is already out of the hand at the first throw frame.
+        if(!LaunchGrenade()){CancelPlant();return;}
+        grenadeRecoverySeconds_=Play("throw");
+        if(grenadeRecoverySeconds_<=0)grenadeRecoverySeconds_=settings_.grenades.recovery;
+        grenadeThrow_.StartRecovery(GetTickCount()*.001);
+    };
+    if(remote && !grenadeThrow_.Active()) {
+        if(pressed)launchGuest();
+        return;
+    }
+    auto event=grenadeThrow_.Step(GetTickCount()*.001,pressed,Down(VK_LBUTTON),grenadePullSeconds_,
+        guest ? 0.f : settings_.grenades.releaseDelay,guest ? grenadeRecoverySeconds_ : settings_.grenades.recovery);
     if(event==GrenadeThrow::Event::Pull) {
         grenadePullSeconds_=Play("pullpin");if(grenadePullSeconds_<=0)grenadePullSeconds_=1;
-    } else if(event==GrenadeThrow::Event::Throw)Play("throw");
-    else if(event==GrenadeThrow::Event::Launch) {
-        float eye[3],direction[3];AimRay(eye,direction);
-        GrenadePoint motion={movement_.VelocityX(),movement_.VelocityY(),movement_.VerticalVelocity()};
-        if(grenades_.Throw(unit_,weapon_,{eye[0],eye[1],eye[2]},{direction[0],direction[1],direction[2]},motion,settings_)) {
-            --ammo_[weapon_];wc3::Log("grenade inventory slot=%d remaining=%d",weapon_,ammo_[weapon_]);
-        } else Notice("GRENADE LIMIT REACHED");
-    } else if(event==GrenadeThrow::Event::Finished) {
-        if(ammo_[weapon_]>0)Play("draw");
+    } else if(event==GrenadeThrow::Event::Throw) {
+        if(guest)launchGuest();else Play("throw");
+    } else if(event==GrenadeThrow::Event::Launch)LaunchGrenade();
+    else if(event==GrenadeThrow::Event::Finished) {
+        if(ammo_[weapon_]>0 || (remote && grenades_.HasSatchel(unit_)))Play("draw");
         else {SwitchWeapon(inventory_.owned[WeaponSlots::Pistol] ? WeaponSlots::Pistol : WeaponSlots::Knife);}
     }
 }
@@ -1131,7 +1189,7 @@ void ShooterController::PlantC4(float dt) {
     if (std::abs(x - plantX_) + std::abs(y - plantY_) > 4) { CancelPlant(); return; }
     plantProgress_ += dt;
     if (plantProgress_ >= 3) {
-        if (bombs_.Plant(unit_, x, y, audio_,settings_.damage[WeaponSlots::C4],settings_.friendlyFirePercent)) { --ammo_[WeaponSlots::C4]; Play("drop"); }
+        if (bombs_.Plant(unit_, x, y, audio_,settings_.damage[WeaponSlots::C4],settings_.friendlyFirePercent,settings_.blastJump)) { --ammo_[WeaponSlots::C4]; Play("drop"); }
         plantProgress_ = 0;
     }
 }
@@ -1208,9 +1266,18 @@ void ShooterController::Tick(uintptr_t ui) {
     if(rewardGeneration!=rewardGeneration_ || ui_!=ui)return;
     // Flash/shake attenuate locally; a remote detonation never shakes every point of the map.
     nuclearExposure_=Visible() && unit_ && wc3::GetUnitTypeId(unit_) ? nuclearBomb_.Exposure({wc3::Real(wc3::GetUnitX(unit_)),wc3::Real(wc3::GetUnitY(unit_)),ViewEyeZ()}) : 0;
+    BlastJumpEvents blastJumps;
+    // Capture before any explosive callbacks: a scripted relocation/replacement owns its new velocity.
+    NativeBlast::TargetPoint physicalTarget;uintptr_t impulseObject=0;
+    if(Visible() && unit_ && wc3::GetUnitTypeId(unit_)) {
+        impulseObject=wc3::UnitObject(unit_);
+        physicalTarget={unit_,{wc3::Real(wc3::GetUnitX(unit_)),wc3::Real(wc3::GetUnitY(unit_)),
+            movement_.FeetZ()+wc3::Real(wc3::GetUnitFlyHeight(unit_))+movement_.BodyHeight()*.5f}};
+    }
     if (bombs_.Tick(audio_,[this,rewardGeneration](const KillReward& reward){
         if(rewardGeneration==rewardGeneration_)RewardKill(reward);
-    }) && Visible()) hits_.Record();
+    },&blastJumps) && Visible()) hits_.Record();
+    if(rewardGeneration!=rewardGeneration_ || ui_!=ui)return;
     // Native timers continue after holstering/RTS return and freeze with Warcraft's simulation pause.
     GrenadePoint grenadeEye{},grenadeDirection{};wc3::Handle grenadeViewer=Visible() ? unit_ : 0;
     if(grenadeViewer) {
@@ -1218,7 +1285,8 @@ void ShooterController::Tick(uintptr_t ui) {
         float cy=std::cos(yaw_*radians),sy=std::sin(yaw_*radians),cp=std::cos(pitch_*radians);
         grenadeDirection={cy*cp,sy*cp,std::sin(pitch_*radians)};
     }
-    if(grenades_.Tick(audio_,grenadeViewer,grenadeEye,grenadeDirection) && Visible())hits_.Record();
+    if(grenades_.Tick(audio_,grenadeViewer,grenadeEye,grenadeDirection,&blastJumps) && Visible())hits_.Record();
+    if(rewardGeneration!=rewardGeneration_ || ui_!=ui)return;
     auto rocketViewer=!paused_ && foregroundPid==GetCurrentProcessId() ? grenadeViewer : 0;
     bool guiding=rocketViewer && !ThirdPerson() && !UnitFirstPerson() &&
         weapon_==WeaponSlots::RPG && rpgLaser_ && settings_.WeaponEnabled(weapon_) && !reloadEnd_ && !CursorMode() && !Casting() &&
@@ -1226,7 +1294,12 @@ void ShooterController::Tick(uintptr_t ui) {
     auto rocketEye=grenadeEye,rocketDirection=grenadeDirection;
     // The designator follows the same recoil-adjusted physical ray as the accepted RPG shot.
     if(guiding){float eye[3],aim[3];AimRay(eye,aim);for(int i=0;i<3;++i){rocketEye[i]=eye[i];rocketDirection[i]=aim[i];}}
-    if(rockets_.Tick(audio_,rocketViewer,guiding,rocketEye,rocketDirection,std::min(settings_.render.drawDistance,settings_.FirearmRange(WeaponSlots::RPG))) && Visible())hits_.Record();
+    if(rockets_.Tick(audio_,rocketViewer,guiding,rocketEye,rocketDirection,std::min(settings_.render.drawDistance,settings_.FirearmRange(WeaponSlots::RPG)),&blastJumps,&physicalTarget) && Visible())hits_.Record();
+    if(rewardGeneration!=rewardGeneration_ || ui_!=ui)return;
+    // HP callbacks finish first. Do not replay impulses after actor replacement or scripted relocation.
+    if(Visible() && !paused_ && !Casting() && physicalTarget.unit==unit_ && wc3::GetUnitTypeId(unit_) && wc3::UnitObject(unit_)==impulseObject &&
+        std::hypot(wc3::Real(wc3::GetUnitX(unit_))-physicalTarget.center[0],wc3::Real(wc3::GetUnitY(unit_))-physicalTarget.center[1])<1)
+        for(const auto& event:blastJumps)movementImpulse_.Blast(unit_,movement_,event);
 
     bool requireForeground=true;
 #ifdef WCS_GAMEPLAY_TEST
@@ -1505,7 +1578,7 @@ void ShooterController::Tick(uintptr_t ui) {
     UpdateStatus();
     if(settingsMenu_.Open() || TextInputOpen()) {
         // Modal settings/text do not pause the map or gravity; movement and combat stay owned by the editor.
-        unitLocomotion_.Release();UpdateReload(now);FpsCombatGuard::CancelOrders(unit_);
+        unitLocomotion_.Release();UpdateReload(now);CancelNativeOrders();
         for(int key='0';key<='9';++key)Pressed(key);Pressed(ShortcutAction::Reload);
         movement_.Stop();AimAndMove(dt);Camera();audio_.Tick(now);return;
     }
@@ -1571,7 +1644,7 @@ void ShooterController::Tick(uintptr_t ui) {
         CancelCasting();heroAttack_.Cancel();CancelPlant();meleeContact_=0;reloadEnd_=0;
         refillRequested_=allWeaponsRequested_=itemRequested_=buyToggleRequested_=buyAmmoRequested_=false;
         buyKeyRequested_=spellRequested_=-1;spellCancelRequested_=false;buyMenu_.Close();CloseWeaponSelection();
-        FpsCombatGuard::CancelOrders(unit_);UpdateSquad(now);
+        CancelNativeOrders();UpdateSquad(now);
         AimAndMove(dt);Camera();audio_.Tick(now);return;
     }
     // Drop CS input mailboxes before the shared TPS attack/spell path in reduced installations.
@@ -1594,7 +1667,7 @@ void ShooterController::Tick(uintptr_t ui) {
         itemRequested_=false;squadRequested_=0; // Menu taps cannot queue RTS interaction for after closing.
         for (int key='0';key<='9';++key) Pressed(key);
         Pressed(VK_LBUTTON);Pressed(VK_RBUTTON);Pressed(ShortcutAction::Reload);
-        if (!status_.contained && !status_.hidden) FpsCombatGuard::CancelOrders(unit_);
+        if (!status_.contained && !status_.hidden) CancelNativeOrders();
         squad_.Tick(unit_,settings_,now,!status_.contained && !status_.hidden,yaw_,movement_.VelocityX(),movement_.VelocityY());
         movement_.Stop();weaponWheel_.Reset();cameraWheel_.Reset();AimAndMove(dt);Camera();audio_.Tick(now);return;
     }
@@ -1603,7 +1676,7 @@ void ShooterController::Tick(uintptr_t ui) {
         glockBurst_.Cancel();
         // Native item channels continue while the panel owns pointer/movement; clicks cannot become attacks.
         spellRequested_=-1;spellCancelRequested_=false;itemRequested_=false;squadRequested_=0;
-        if(!Casting())FpsCombatGuard::CancelOrders(unit_);
+        if(!Casting())CancelNativeOrders();
         for(int key='0';key<='9';++key)Pressed(key);
         Pressed(VK_LBUTTON);Pressed(VK_RBUTTON);Pressed(ShortcutAction::Reload);
         movement_.Stop();weaponWheel_.Reset();cameraWheel_.Reset();UpdateSquad(now);
@@ -1623,7 +1696,7 @@ void ShooterController::Tick(uintptr_t ui) {
             suppressFire_=true;
         }
         // An armed action replaces the gun; no round, native autoattack, scope or delayed melee can leak.
-        FpsCombatGuard::CancelOrders(unit_);CancelEnergy();glockBurst_.Cancel();CancelPlant();meleeContact_=0;
+        CancelNativeOrders();CancelEnergy();glockBurst_.Cancel();CancelPlant();meleeContact_=0;
         AimAndMove(dt);Camera();audio_.Tick(now);return;
     }
     // TPS zoom and FPS weapon selection consume separate queues; scrolling never crosses view modes.
@@ -1662,7 +1735,7 @@ void ShooterController::Tick(uintptr_t ui) {
     // Native combat/movement guards still block AI while a manual clip owns the pose. Defer Stop:
     // repeated crowd acquisitions otherwise enqueue Stand and interrupt the player's backswing.
     if (!Casting() && !status_.incapacitated && !status_.contained && !status_.hidden &&
-        !heroAttack_.Animating(now*.001)) FpsCombatGuard::CancelOrders(unit_);
+        !heroAttack_.Animating(now*.001)) CancelNativeOrders();
     if (itemRequested_) { itemRequested_=false;if(OpenShop())return;PickupItem(); }
     UpdateSquad(now);
     static DWORD lastItemScan=0;
@@ -1703,7 +1776,7 @@ void ShooterController::Tick(uintptr_t ui) {
     } else if(WeaponSlots::Energy(weapon_)) {
         if(!Casting() && !suppressFire_ && !status_.disarmed && settings_.WeaponEnabled(weapon_))FireEnergy(firePressed,Down(VK_RBUTTON) && !SquadReticleOrdersEnabled(),now);
         else CancelEnergy();
-    } else if(WeaponSlots::Grenade(weapon_))ThrowGrenade(firePressed);
+    } else if(WeaponSlots::Grenade(weapon_))ThrowGrenade(firePressed,secondaryPressed);
     else if (!Casting() && !suppressFire_ && weapon_ == WeaponSlots::C4) PlantC4(dt);
     else if(weapon_==WeaponSlots::Glock) {
         if(!Casting() && !suppressFire_ && !status_.disarmed)FireGlock(firePressed,secondaryPressed,GetTickCount());

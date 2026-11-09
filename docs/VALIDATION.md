@@ -1,5 +1,63 @@
 # Validation
 
+## Airborne native corrections and fixture grids (development build, 2026-11-05)
+
+Reporter logs contain bounded `Portal/native relocation` events during airborne
+movement. The former controller treated every such event as a new ground spawn.
+An isolated owned 1.26a baseline reproduced a Tau flight dropping from about 300
+world units to zero after an external XY correction.
+
+The corrected controller was checked in OpenGL and Direct3D with the authored
+arena's game-thread `-nudge` (80 units) and `-warp` (2000 units) commands. The local
+nudge retained the ballistic trajectory and emitted `preserve-flight`; the distant
+warp reset to destination ground. Physics tests at 30/60/144 Hz additionally cover
+the motor-distance allowance, confirmed waygates, grounded actors and destinations
+above the previous feet. Portal/death and classic/hull/recovery collision suites pass.
+
+The earlier privately assembled arena reused 64-cell shadow/pathing grids beside
+128-cell terrain, causing Warcraft's invalid-shadow-map dialog. The reproducible
+`tools/build_impulse_fixture.py` supplies matching 512-by-512 fine grids. The map
+regression reads W3E dimensions and verifies WPM/SHD payload sizes; classic pjass and
+both native launches pass. Fixture commands remain excluded from normal Player
+modules. These native results cover owned 1.26a, not experimental 1.27a.
+
+## Weapon impulses (development build, 2026-11-05)
+
+Movement regressions cover radial 3D falloff, coincident blast centers, ballistic
+ascent at 30/60/144 Hz, no stacked Space bonus, overlapping impulse caps and solid
+wall collision. Native-adapter mocks cover independent 5-percent RPG self damage
+with friendly fire at 0/100, physical airborne height, zero-damage pressure,
+launch-time snapshots, cover/status rejection, Tau recoil and C4 map-reset callbacks.
+Settings and installer tests cover defaults, malformed/bounded values, custom
+opt-outs and repeated update preservation. The authored `tests/fixtures/ImpulseJumps.j`
+passes classic pjass against owner-provided common.j.
+
+In an isolated owned 1.26a OpenGL game, a vulnerable footman with friendly fire 0
+lost 72.75 HP to an ordinary downward RPG shot and rose about 101.5 world units.
+An invulnerable repeat lost no HP and reached the same height. Primary Tau rose
+about 11 units and a full charged release about 493, with the corresponding native
+ammo expenditure and no HP loss. F8 disabling explosion propulsion retained the
+actual RPG explosion but produced no physical ascent. The exact test process was
+stopped and its module, map, settings and saves restored by hash.
+
+These measurements establish the actual mod weapon/controller/movement path on
+the tested host. They do not establish 1.27a behavior, every campaign trigger or
+propulsion from arbitrary Warcraft spells. Ordinary Player builds exclude the
+background command fixture.
+
+## Connected Surf Flow and independent surf acceleration (development, 2026-11-05)
+
+The [connected course](SURF-FLOW.md#verification) completed all three physical stages,
+both turning decks and the ordered finish with no falls or returns on owned 1.26a
+classic: OpenGL33.25s, Direct3D33.31s. A preliminary tail profile could turn uphill
+on the outer bank and erase momentum; the final longer fade descends across every
+cross-section, with a regression for that condition. The independent surf input gain
+defaults to2, is bounded0.1-4 and preserves the legacy response at1. Ordinary free-air
+and no-input gravity remain separate; repeated swept queries cannot multiply the gain.
+Movement/collision/settings/map/config checks pass. OpenGL frames inspected, D3D native
+assertions only; lab data/saves restored by hash. Native1.27a and full hull/recovery
+course completion are unverified. Published0.19.0 assets/tags remain unchanged.
+
 ## Release 0.19.0 (2026-11-04)
 
 See the [complete release checks and limits](RELEASE-0.19.0.md#verification-and-packaging) and [Surf Skyline verification](SURF-SKYLINE-VALIDATION.md). The full native-independent suite passes. Owned 1.26a OpenGL/Direct3D scenes cover portals, heavy-weapon deaths, FOV, Warcraft sky restoration, crest momentum and terrain surfing; Skyline completes in classic on both renderers. Native hull/recovery course completion and real 1.27a remain unverified. Final source-bound dual-launcher, setup/update/reinstall and asset checks accompany publication. Earlier unreleased headings below record the original development dates; their included behavior ships in 0.19.0.

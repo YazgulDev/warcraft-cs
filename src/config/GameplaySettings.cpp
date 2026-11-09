@@ -107,7 +107,7 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     grenades.fuse=std::max(.2f,number("Grenades","FuseSeconds",1.5f,10));
     grenades.releaseDelay=number("Grenades","ReleaseDelay",.25f,1);
     grenades.recovery=std::max(.1f,number("Grenades","RecoverySeconds",.8f,3));
-    grenades.heRadius=std::max(32.f,number("HEGrenade","Radius",350,2000));
+    grenades.heRadius=std::max(32.f,number("HEGrenade","Radius",grenades.heRadius,2000));
     grenades.flashRadius=std::max(32.f,number("Flashbang","Radius",1000,3000));
     grenades.flashSeconds=number("Flashbang","BlindSeconds",3,10);
     grenades.flashUnitStunSeconds=number("Flashbang","UnitStunSeconds",2,10);
@@ -267,6 +267,8 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     // Surfing is an airborne terrain contact; it shares the validated walk angle and speed ceiling.
     result.movement.surf.enabled=enabled("Surfing","Enabled");
     result.movement.surf.modelContacts=enabled("Surfing","ModelContacts");
+    // One bounded multiplier changes surf input only, preserving ordinary airborne tuning.
+    result.movement.surf.accelerationMultiplier=std::max(.1f,number("Surfing","AccelerationMultiplier",2,4));
     result.movement.surf.maximumAngle=std::max(50.f,number("Surfing","MaximumAngle",80,85));
     result.movement.surf.contactDistance=number("Surfing","ContactDistance",8,32);
     result.movement.jumpBoostPercent = number("Movement", "JumpBoostPercent", 15, 100);
@@ -586,6 +588,11 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     }
     // Optional RPG defaults use the same bounded F8 snapshot, while availability comes only from owned caches.
     auto& rpg=result.rpg;rpg.enabled=enabled("RPG","Enabled");rpg.guidance=enabled("RPG","GuidanceByDefault");
+    rpg.selfDamagePercent=number("RPG","SelfDamagePercent",5,100);
+    // Shared explosion impulses are independent of blast HP damage and allied-fire settings.
+    result.blastJump.enabled=enabled("BlastJump","Enabled");
+    result.blastJump.speed=number("BlastJump","Speed",650,3000);
+    result.blastJump.maximumUpSpeed=std::max(100.f,number("BlastJump","MaximumUpSpeed",1500,3000));
     rpg.available=!result.warcraftOnly && OptionalWeaponAssets::Rpg(std::filesystem::path(filename).parent_path());
     rpg.radius=std::max(32.f,number("RPG","Radius",1000,3000));
     // Upgrade only the former stock blast, including an old config loaded directly with F8.
@@ -608,6 +615,17 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         hl.enabled[i]=enabled(WeaponSlots::Sections[WeaponSlots::Crowbar+i],"Enabled");
         hl.available[i]=!result.warcraftOnly && OptionalWeaponAssets::HalfLife(std::filesystem::path(filename).parent_path(),i);
     }
+    // Store only validated guest launch settings in the F8 snapshot.
+    for (int slot : {WeaponSlots::HandGrenade,WeaponSlots::Satchel}) {
+        bool remote=slot==WeaponSlots::Satchel;
+        auto& explosive=remote ? hl.satchel : hl.grenade;
+        const char* section=WeaponSlots::Sections[slot];
+        explosive.enabled=enabled(section,"Enabled");
+        explosive.available=!result.warcraftOnly && OptionalWeaponAssets::HalfLifeExplosive(std::filesystem::path(filename).parent_path(),remote);
+        explosive.radius=std::max(32.f,number(section,"Radius",explosive.radius,2000));
+        explosive.throwSpeed=std::max(50.f,number(section,"ThrowSpeed",explosive.throwSpeed,2000));
+    }
+    hl.handGrenadeFuse=std::max(.2f,number("HalfLifeGrenade","FuseSeconds",2.5f,10));
     hl.tauChargeSeconds=std::max(.1f,number("TauCannon","ChargeSeconds",4,10));
     // The same bounded charge clock drives a continuous spinner phase and live loop pitch; equal rates disable the ramp.
     hl.tauSpinStartRate=std::max(.25f,number("TauCannon","SpinStartRate",1,8));
@@ -617,6 +635,9 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     hl.tauDrainSeconds=std::max(.05f,number("TauCannon","ChargeDrainSeconds",.3f,2));
     hl.tauChargedDamage=number("TauCannon","ChargedDamage",2000,1000000);
     hl.tauPrimaryCost=int(std::max(1.f,number("TauCannon","PrimaryCost",2,100)));
+    hl.tauJumpRecoil=enabled("TauCannon","JumpRecoil");
+    hl.tauPrimaryJumpSpeed=number("TauCannon","PrimaryJumpSpeed",120,3000);
+    hl.tauChargedJumpSpeed=number("TauCannon","ChargedJumpSpeed",800,3000);
     hl.crowbarContactSeconds=number("Crowbar","ContactSeconds",.1f,1);
     hl.crowbarSurfaceSounds=enabled("Crowbar","SurfaceSounds");
     hl.beamSeconds=std::max(.025f,number("HalfLife","BeamSeconds",.15f,1));
@@ -669,9 +690,21 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     upgradeStock("RPG","BlastVersion",3,525,600,rpg.radius);
     // Expand the previous stock blast once; existing linear 3D falloff still reaches zero at the edge.
     upgradeStock("RPG","BlastVersion",4,600,1000,rpg.radius);
-    upgradeStock("HEGrenade","DamageVersion",3,300,600,result.damage[WeaponSlots::HE]);
+    upgradeStock("HEGrenade","DamageVersion",3,300.f,600.f,result.damage[WeaponSlots::HE]);
     // Raise prior stock once in both damage modes, leaving custom values and explicit opt-backs alone.
-    upgradeStock("HEGrenade","DamageVersion",4,600,1200,result.damage[WeaponSlots::HE]);
+    upgradeStock("HEGrenade","DamageVersion",4,600.f,1200.f,result.damage[WeaponSlots::HE]);
+    // HE and the Half-Life hand grenade keep the shared 3D blast falloff at their wider radius.
+    upgradeStock("HEGrenade","DamageVersion",5,1200.f,1800.f,result.damage[WeaponSlots::HE]);
+    upgradeStock("HEGrenade","BlastVersion",2,350.f,GrenadeSettings{}.heRadius,grenades.heRadius);
+    upgradeStock("HalfLifeGrenade","DamageVersion",2,850.f,1250.f,result.damage[WeaponSlots::HandGrenade]);
+    upgradeStock("HalfLifeGrenade","BlastVersion",2,500.f,HalfLifeSettings{}.grenade.radius,hl.grenade.radius);
+    // Older stock capacities upgrade once; a saved current marker allows choosing the old limits again.
+    for(int slot:{WeaponSlots::HE,WeaponSlots::Flashbang,WeaponSlots::Smoke}) {
+        int& capacity=result.weapons[slot].magazine;
+        int previous=slot==WeaponSlots::Flashbang ? 2 : 1;
+        if(capacity==previous && GetPrivateProfileIntA(sections[slot],"CapacityVersion",1,filename.c_str())<2)
+            capacity=WeaponDefaults::Weapons[slot].magazine;
+    }
     upgradeStock("AWP","DamageVersion",2,115,230,result.damage[WeaponSlots::AWP]);
     upgradeStock("AWP","MultiplierVersion",2,3,6,result.heroMultiplier[WeaponSlots::AWP]);
     upgradeStock("G3SG1","DamageVersion",2,80,160,result.damage[WeaponSlots::G3SG1]);

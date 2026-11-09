@@ -73,8 +73,9 @@ int main() {
     units[2].active=true;units[2].toX=std::numeric_limits<float>::quiet_NaN();clockSeconds+=.2f;assert(!portals.Travel(1,0,settings,true,alive));
     units[2].toX=9000;clockSeconds+=.2f;assert(!portals.Travel(1,0,settings,true,alive) && !placements);
     Scene();portals.Reset();placed=[&]{valid=false;portals.Reset();};assert(!portals.Travel(1,0,settings,true,alive));
-    Scene();portals.Reset();assert(!portals.Observe(1,48));units[1].x+=500;
-    assert(portals.Observe(1,48));assert(!portals.Observe(1,48));
+    Scene();portals.Reset();float displacement=-1;assert(!portals.Observe(1,48,&displacement) && displacement==0);units[1].x+=500;
+    // The controller needs actual displacement, not just a teleport boolean, to retain local airborne motion.
+    assert(portals.Observe(1,48,&displacement) && displacement==500);assert(!portals.Observe(1,48,&displacement) && displacement==0);
     units[1].x+=200;portals.Commit(1);assert(!portals.Observe(1,48)); // Our committed movement is never a script teleport.
     units[1].x+=100;assert(!portals.Observe(1,148)); // A budgeted fast motor substep is not a teleport either.
     // Scoped death flags survive neither a nonlethal hit nor handle reuse; native-dead targets retain their corpse policy.

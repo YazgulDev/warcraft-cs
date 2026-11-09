@@ -10,6 +10,16 @@ void MovementPhysics::Reset(float floor) {
     grounded_ = true; jumpHeld_ = jumpSuppressed_ = false;
 }
 float MovementPhysics::Speed() const { return std::hypot(vx_, vy_); }
+bool MovementPhysics::AddImpulse(float x,float y,float z,float maximumUpSpeed) {
+    if(!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z) || !std::isfinite(maximumUpSpeed) || maximumUpSpeed<=0 ||
+        std::hypot(std::hypot(x,y),z)<.001f)return false;
+    // Never teleport or issue a ground jump: pending takeoff bonuses cannot amplify this impulse.
+    vx_+=x;vy_+=y;vz_=z>0 ? std::max(vz_,std::min(vz_+z,maximumUpSpeed)) : vz_+z;
+    if(z>0){grounded_=false;if(swimming_){swimming_=false;waterJump_=true;}}
+    surfing_=false;pendingJumpBoost_=0;
+    LimitSpeed(settings_.maxBunnySpeed*worldScale);
+    return true;
+}
 void MovementPhysics::LimitSpeed(float maximum) {
     // Applying a slow must also constrain existing momentum, including airborne strafing.
     float speed = Speed(); maximum = std::max(0.0f, maximum);
@@ -17,6 +27,9 @@ void MovementPhysics::LimitSpeed(float maximum) {
 }
 void MovementPhysics::Step(const MoveInput& input, float dt, float weaponSpeed) {
     // Portable callers may omit an explicit commit; the previous resolved frame is still finalized once.
+    // Consume only the last confirmed face contact, once per simulation step. Repeated
+    // swept contact queries cannot multiply acceleration, and free-air bunnyhop stays unchanged.
+    bool surfInput=surfing_ && settings_.surf.enabled && !grounded_ && !swimming_;
     FinishMove();surfing_=false;
     dt = std::clamp(dt, 0.0f, 0.05f);
     if (!dt) return;
@@ -73,9 +86,10 @@ void MovementPhysics::Step(const MoveInput& input, float dt, float weaponSpeed) 
         if (input.duck) speed *= 0.34f;
         // Cap only the velocity projected onto the input direction. Turning A/D adds sideways
         // momentum above running speed; holding forward alone cannot keep accelerating.
-        float cap = grounded_ ? speed : std::min(speed, 30 * worldScale);
+        float surfGain=surfInput ? settings_.surf.accelerationMultiplier : 1;
+        float cap = grounded_ ? speed : std::min(speed, 30 * worldScale * surfGain);
         float needed = cap - (vx_ * wx + vy_ * wy);
-        float acceleration = grounded_ ? 10.0f : settings_.airAcceleration;
+        float acceleration = grounded_ ? 10.0f : settings_.airAcceleration * surfGain;
         float addition = std::max(0.0f, std::min(needed, acceleration * speed * dt));
         vx_ += addition * wx; vy_ += addition * wy;
     }

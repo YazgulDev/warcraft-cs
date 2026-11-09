@@ -1,17 +1,77 @@
+# Organize complete sections using the stock headings, preserving the player's lines within each section.
+function Format-GameplayConfig($Lines,$Defaults) {
+    $result=[Collections.Generic.List[string]]::new()
+    $sections=@{}
+    $order=[Collections.Generic.List[string]]::new()
+    $customHeading='; ==== 99. Custom sections ===='
+    $headings=@($Defaults | ForEach-Object {$_.category}) + $customHeading
+    $block=$result
+    foreach($line in $Lines) {
+        if($line -in $headings){continue}
+        if($line -match '^\s*\[([^\]]+)\]\s*$') {
+            $name=$Matches[1]
+            if(!$sections.ContainsKey($name)){
+                $sections[$name]=[Collections.Generic.List[string]]::new()
+                $order.Add($name)
+            }
+            $block=$sections[$name]
+        }
+        $block.Add($line)
+    }
+    foreach($block in (,$result) + @($sections.Values)) {
+        while($block.Count -gt 0 -and [string]::IsNullOrWhiteSpace($block[$block.Count-1])){$block.RemoveAt($block.Count-1)}
+    }
+    $category=''
+    foreach($entry in $Defaults) {
+        if($entry.category -ne $category) {
+            if($result.Count -gt 0){$result.Add('')}
+            $category=$entry.category
+            $result.Add($category)
+        }
+        $result.Add('')
+        $result.AddRange($sections[$entry.name])
+        $sections.Remove($entry.name)
+    }
+    # Unknown sections can belong to a local tool or a newer version; retain them in their saved order.
+    if($sections.Count -gt 0) {
+        $result.Add('')
+        $result.Add($customHeading)
+        foreach($name in $order) {
+            if(!$sections.ContainsKey($name)){continue}
+            $result.Add('')
+            $result.AddRange($sections[$name])
+        }
+    }
+    return ,$result
+}
+
 # Add newly introduced settings without replacing the player's prices, controls or damage preferences.
 function Update-GameplayConfig([string]$Template,[string]$Destination) {
     if (!(Test-Path -LiteralPath $Destination)) { Copy-Item -LiteralPath $Template -Destination $Destination;return }
     $defaults=[Collections.Generic.List[object]]::new()
     $section=$null
+    $category=''
     foreach ($line in Get-Content -LiteralPath $Template) {
+        if($line -match '^; ==== \d{2}\. .+ ====$'){$category=$line;continue}
         if ($line -match '^\s*\[([^\]]+)\]\s*$') {
-            $section=@{name=$Matches[1];lines=[Collections.Generic.List[string]]::new()}
+            $section=@{name=$Matches[1];category=$category;lines=[Collections.Generic.List[string]]::new()}
             $defaults.Add($section)
         }
         if ($null -ne $section) { $section.lines.Add($line) }
     }
     $lines=[Collections.Generic.List[string]]::new()
-    $lines.AddRange([string[]]@(Get-Content -LiteralPath $Destination))
+    # Read UTF-8 and BOM-tagged files losslessly, with a fallback for older local ANSI files.
+    $encoding=[Text.UTF8Encoding]::new($false,$true)
+    $reader=[IO.StreamReader]::new($Destination,$encoding,$true)
+    try {
+        # In Windows PowerShell a decoding error in the EndOfStream getter can be swallowed.
+        while($null -ne ($line=$reader.ReadLine())){$lines.Add($line)}
+        $encoding=$reader.CurrentEncoding
+    } catch [Text.DecoderFallbackException] {
+        $encoding=[Text.Encoding]::Default
+        $lines.Clear()
+        $lines.AddRange([IO.File]::ReadAllLines($Destination,$encoding))
+    } finally { $reader.Dispose() }
     $changed=$false
     # Upgrade former nuclear stock tuning once, while retaining deliberate v3 and customized values.
     $nuclearSection=$false;$nuclearVersion=1;$nuclearVersionIndex=-1;$nuclearValues=@{}
@@ -139,6 +199,14 @@ function Update-GameplayConfig([string]$Template,[string]$Destination) {
         @('HEGrenade','Damage','DamageVersion',3,300,600),
         # Heavy stock upgrades are independent: custom values and current-version opt-backs survive.
         @('HEGrenade','Damage','DamageVersion',4,600,1200),
+        # Update only previous stock grenade values and keep current-version opt-backs.
+        @('HEGrenade','Damage','DamageVersion',5,1200,1800),
+        @('HEGrenade','Radius','BlastVersion',2,350,600),
+        @('HalfLifeGrenade','Damage','DamageVersion',2,850,1250),
+        @('HalfLifeGrenade','Radius','BlastVersion',2,500,700),
+        @('HEGrenade','Capacity','CapacityVersion',2,1,3),
+        @('Flashbang','Capacity','CapacityVersion',2,2,3),
+        @('SmokeGrenade','Capacity','CapacityVersion',2,1,3),
         @('AWP','Damage','DamageVersion',2,115,230),
         @('AWP','HeroMultiplier','MultiplierVersion',2,3,6),
         @('G3SG1','Damage','DamageVersion',2,80,160),
@@ -281,11 +349,16 @@ function Update-GameplayConfig([string]$Template,[string]$Destination) {
             $comments.Clear()
         }
     }
+    if($defaults[0].category) {
+        $formatted=Format-GameplayConfig $lines $defaults
+        $changed=$changed -or ($formatted -join "`n") -cne ($lines -join "`n")
+        $lines=$formatted
+    }
     if ($changed) {
         # Atomic replacement keeps interrupted updates from leaving a partial settings file.
         $temporary=$Destination+'.'+[guid]::NewGuid().ToString('N')+'.tmp'
         try {
-            [IO.File]::WriteAllLines($temporary,$lines,[Text.UTF8Encoding]::new($false))
+            [IO.File]::WriteAllLines($temporary,$lines,$encoding)
             [IO.File]::Replace($temporary,$Destination,[NullString]::Value)
         } finally { if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary } }
     }

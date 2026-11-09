@@ -1,0 +1,27 @@
+- Added active in-map waygates with native destinations, cooldown and camera and floor relocation.
+- Added an owned-resource Crowbar to the starting kit by default with a saved opt-out.
+- Changed stock AWP, G3SG1, HE and Tau damage while preserving custom tuning and explicit opt-backs.
+- Added configurable native exploded deaths for hostile Gluon, Tau and ordinary RPG kills on verified Warcraft 1.26a.
+- Added horizontal field of view to F2 settings with an 85-degree default and 60 to 120 range.
+- Added Warcraft sky choices for automatic map skies, summer, autumn, winter, Felwood and Dalaran.
+- Preserved independent Warcraft and CS sky choices and restored authored map skies across visibility and view changes.
+- Changed default Bunnyhop takeoff boost to 15 percent, air acceleration to 30 and maximum speed to 3000 GoldSrc units per second.
+- Preserved saved custom movement tuning and versioned deliberate legacy choices during updates.
+- Fixed classic Bunnyhop speed loss on descending crests and bounded rising walkable-ramp contacts.
+- Added a configurable classic ramp-contact opt-out while retaining cliffs, walls and head clearance.
+- Fixed sudden Bunnyhop launches from repeated same-frame takeoff and landing bonuses.
+- Added configurable gravity-driven terrain and stationary-model surfing in classic, hull and recovery.
+- Added precise transformed surf faces, solid ramp undersides and model-contact opt-outs.
+- Added the original three-lane Surf Practice map as a separate optional download.
+- Added the original Surf Skyline time trial with floating rails, gaps, ordered checkpoints, recovery and session records.
+- Updated gameplay guides, original map builders, source audits and native and portable regression coverage.
+- Added the connected Surf Flow time trial with forty joined banked ramps and four broad turning and checkpoint decks.
+- Added independent surf input acceleration at twice the former response by default, editable from 0.1 to 4 with F8 reload.
+- Improved connected ramp transitions with descending seam profiles and shared timer and checkpoint rules.
+- Added ordinary RPG, HE and planted C4 propulsion with distance falloff, cover checks and configurable strength.
+- Added Tau Cannon recoil jumps with stronger charged-shot propulsion and independent tuning.
+- Changed ordinary RPG self damage to five percent of its blast damage independently of friendly fire.
+- Preserved existing movement collision, swimming, saved settings and connected Surf Flow improvements.
+- Fixed rocket and Tau flight collapsing to ground after local native pathing corrections.
+- Fixed mismatched shadow and pathing grids in the original weapon-jump test arena.
+- Fixed invisible airborne walls caused by ground-only Warcraft pathing cells.

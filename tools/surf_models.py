@@ -95,11 +95,12 @@ def assets() -> dict[str, bytes]:
     return result
 
 
-def destructables() -> bytes:
+def destructables(definitions=None) -> bytes:
     # Custom W3B fields reference only our imported models. Empty pathing leaves the precise
     # model collision in charge; the native walkable flag supplies initial placement height.
-    result = bytearray(struct.pack('<III', 2, 0, 4))
-    for raw, model_name in (('SR01','Rail'), ('SR02','RailOrange'), ('SP01','Pad'), ('SP02','FinishPad')):
+    definitions=definitions or (('SR01','Rail'), ('SR02','RailOrange'), ('SP01','Pad'), ('SP02','FinishPad'))
+    result = bytearray(struct.pack('<III', 2, 0, len(definitions)))
+    for raw, model_name in definitions:
         fields = [('bfil',3,'WarcraftCS\\Surf\\'+model_name+'.mdx'), ('bnam',3,'Surf '+model_name),
                   ('bptx',3,''), ('bvar',0,1), ('bwal',0,1), ('buch',0,0),
                   ('bhps',2,99999.), ('bmap',2,0.), ('bmar',2,0.)]

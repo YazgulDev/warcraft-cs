@@ -11,6 +11,7 @@ bool NativeRockets::Launch(wc3::Handle actor,const GrenadePoint& eye,const Grena
     Charge charge;charge.payload=std::move(payload);charge.actor=actor;charge.type=wc3::GetUnitTypeId(actor);charge.born=Time();charge.damage=settings.damage[WeaponSlots::RPG];charge.friendly=settings.friendlyFirePercent;
     charge.flight.settings=settings.rpg;charge.flight.range=settings.FirearmRange(WeaponSlots::RPG);
     charge.explosiveDeaths=settings.explosiveWeaponDeaths; // F8 cannot change the death policy of an already flying rocket.
+    charge.jump=settings.blastJump; // Momentum tuning is part of this launch, independently of friendly-fire damage.
     // Rockets hit visible building models even when Warcraft uses a pathing texture instead of a unit collision radius.
     auto boxes=obstacles_.Snapshot(actor,eye[0],eye[1],128);
     if(!charge.flight.Launch(eye,direction,motion,boxes,[](float x,float y){return wc3::AttackSurface(x,y,false);}))return false;
@@ -18,7 +19,7 @@ bool NativeRockets::Launch(wc3::Handle actor,const GrenadePoint& eye,const Grena
     wc3::Log("RPG launched at=%.1f,%.1f,%.1f velocity=%.1f,%.1f,%.1f damage=%.1f radius=%.1f",charge.flight.position[0],charge.flight.position[1],charge.flight.position[2],
         charge.flight.velocity[0],charge.flight.velocity[1],charge.flight.velocity[2],charge.damage,settings.rpg.radius);return true;
 }
-bool NativeRockets::Tick(GameAudio& audio,wc3::Handle viewer,bool guide,const GrenadePoint& eye,const GrenadePoint& direction,float guideRange) {
+bool NativeRockets::Tick(GameAudio& audio,wc3::Handle viewer,bool guide,const GrenadePoint& eye,const GrenadePoint& direction,float guideRange,BlastJumpEvents* jumps,const NativeBlast::TargetPoint* physicalTarget) {
     if(guide && !Clock())guide=false;
     if(!timer_){audio.SetLoop("hl_rpg_motor.wav",false);laserVisible_=false;return false;}
     float now=Time();unsigned generation=generation_;bool hit=false,powered=false;
@@ -56,10 +57,13 @@ bool NativeRockets::Tick(GameAudio& audio,wc3::Handle viewer,bool guide,const Gr
         wc3::Log("RPG exploded at=%.1f,%.1f,%.1f age=%.3f travelled=%.1f",from[0],from[1],from[2],charge.flight.age,charge.flight.travelled);
         // Nuclear payloads share swept flight/visuals, then replace the ordinary RPG blast exactly once.
         if(charge.payload){charge.payload(from);if(generation_!=generation)return hit;continue;}
+        // Copy one event even when native immunity/friendly-fire prevents HP loss. The controller
+        // consumes it only after callback-safe damage completes; nuclear payloads intentionally opt out.
+        if(jumps)jumps->push_back({from,charge.flight.settings.radius,charge.jump,"RPG"});
         audio.Play("hl_rpg_explode.wav",1);bursts_.push_back({from,now,charge.flight.settings.radius*.3f});
         auto effect=wc3::Effect("Objects\\Spawnmodels\\Other\\NeutralBuildingExplosion\\NeutralBuildingExplosion.mdl",from[0],from[1]);if(effect)wc3::DestroyEffect(effect);
         auto boxes=obstacles_.Snapshot(0,from[0],from[1],charge.flight.settings.radius+256);
-        hit=NativeBlast::Apply(charge.actor,charge.type,from,charge.damage,charge.flight.settings.radius,charge.friendly,boxes,[&]{return generation_==generation;},"RPG",onKill_,charge.explosiveDeaths) || hit;
+        hit=NativeBlast::Apply(charge.actor,charge.type,from,charge.damage,charge.flight.settings.radius,charge.friendly,boxes,[&]{return generation_==generation;},"RPG",onKill_,charge.explosiveDeaths,charge.flight.settings.selfDamagePercent,physicalTarget) || hit;
     }
     if(generation_!=generation)return hit;
     bursts_.erase(std::remove_if(bursts_.begin(),bursts_.end(),[&](const Burst& b){return now-b.born>=.65f;}),bursts_.end());

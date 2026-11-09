@@ -424,7 +424,8 @@ static DWORD WINAPI Initialize(void*) {
         []() { return healthy ? controller.EnemyProtectedActor() : 0; },
         [](uintptr_t attack,uintptr_t target) {return healthy && controller.BlocksSmokeSight(attack,target);});
     NativeMovementGuard::Install(base,[]() { return healthy ? controller.ViewActor() : 0; },
-        []() { return healthy && controller.NativeCastMovement(); },Hook);
+        []() { return healthy && controller.NativeCastMovement(); },Hook,
+        []() { return healthy ? controller.NativeAirborneActor() : 0; });
     Hook(reinterpret_cast<void*>(base + wc3::Rva(0x3BC4D0)), reinterpret_cast<void*>(PauseHook), reinterpret_cast<void**>(&originalPause));
     Hook(reinterpret_cast<void*>(wc3::ShowInterface), reinterpret_cast<void*>(InterfaceHook), reinterpret_cast<void**>(&originalInterface));
     if (legacyWorld && !Hook(reinterpret_cast<void*>(base + wc3::Rva(0x395900)), reinterpret_cast<void*>(WorldHook), reinterpret_cast<void**>(&originalWorld))) return 0;

@@ -32,7 +32,12 @@ inline constexpr std::array<Entry,WeaponSlots::Count> Entries={{
     {WeaponSlots::UMP45,4,Category::SMGs,"K&M UMP45","ump45",".45 ACP"},
     {WeaponSlots::FAMAS,4,Category::Rifles,"CLARION / FAMAS","famas","5.56 MM"},
     {WeaponSlots::Galil,5,Category::Rifles,"IDF DEFENDER / GALIL","galil","5.56 MM"},
-    {WeaponSlots::G3SG1,6,Category::Rifles,"D3/AU-1 / G3SG1","g3sg1","7.62 MM"}
+    {WeaponSlots::G3SG1,6,Category::Rifles,"D3/AU-1 / G3SG1","g3sg1","7.62 MM"},
+    // Appended entries use the existing pistol and Half-Life purchase and selection pages.
+    {WeaponSlots::P228,4,Category::Pistols,"SIG SAUER P228","p228",".357 SIG"},
+    {WeaponSlots::FiveSeven,5,Category::Pistols,"FN FIVE-SEVEN","fiveseven","5.7 MM"},
+    {WeaponSlots::HandGrenade,5,Category::HalfLife,"HALF-LIFE HAND GRENADE","grenade","TIMED EXPLOSIVE"},
+    {WeaponSlots::Satchel,6,Category::HalfLife,"SATCHEL CHARGE","satchel","REMOTE EXPLOSIVE"}
 }};
 inline const Entry* Find(Category category,int key) {
     for (const auto& item : Entries) if (item.category==category && item.key==key) return &item;

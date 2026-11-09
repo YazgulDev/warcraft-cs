@@ -7,6 +7,7 @@
 #include "WalkableTerrainContact.hpp"
 #include "TerrainSurfContact.hpp"
 #include "ModelSurfContact.hpp"
+#include "AirbornePathing.hpp"
 #include <algorithm>
 #include <cmath>
 
@@ -65,9 +66,12 @@ float ClassicWarcraftCollision::Floor(float x, float y, const MovementPhysics& m
     // A low solid prop supports the entire foot too; support ends only after its trailing edge clears.
     for (size_t index=0;index<obstacles.size();++index) {
         const auto& box=obstacles[index];if(!Overlaps(box,x,y,radius_))continue;
-        if(index<surfMeshes_.size() && surfMeshes_[index]) {
+        bool rock = obstacles_.IsMapRock(index);
+        const auto* mesh = rock ? obstacles_.Geometry(index) : surfMeshes_[index];
+        if(mesh) {
             float height=0;
-            if(surfMeshes_[index]->Floor(x,y,radius_,reachable,.0001f,height,nullptr,false))floor=std::max(floor,height);
+            float reach = rock ? MapRockObstacles::ReachableHeight(box, movement.Grounded(), movement.FeetZ(), reachable) : reachable;
+            if(mesh->Floor(x,y,radius_,reach,.0001f,height,nullptr,false))floor=std::max(floor,height);
         } else if(box.maximum[2]<=reachable+.01f)floor=std::max(floor,box.maximum[2]);
     }
     return floor;
@@ -77,13 +81,18 @@ bool ClassicWarcraftCollision::Clear(float x, float y, float oldX, float oldY, c
     float bottom = ReachableHeight(movement), top = movement.EyeZ() + 12;
     for (size_t index=0;index<obstacles.size();++index) {
         const auto& box=obstacles[index];
-        if(index<surfMeshes_.size() && surfMeshes_[index]) {
-            float normal[2]={};const auto* mesh=surfMeshes_[index];
-            if(!mesh->Contact(x,y,radius_,bottom,top,normal))continue;
+        // A rock's actual mesh blocks the body before cliff pathing exceptions are evaluated.
+        bool rock = obstacles_.IsMapRock(index);
+        const auto* mesh = rock ? obstacles_.Geometry(index) : surfMeshes_[index];
+        if(mesh) {
+            if(rock && !Overlaps(box,x,y,radius_))continue;
+            float reach = rock ? MapRockObstacles::ReachableHeight(box, movement.Grounded(), movement.FeetZ(), bottom) : bottom;
+            float normal[2]={};
+            if(!mesh->Contact(x,y,radius_,reach,top,normal))continue;
             // Outward retreat from an existing overlap is legal; entering any solid face is not.
             if(mesh->Contact(oldX,oldY,radius_,movement.FeetZ(),movement.FeetZ()+movement.BodyHeight()) &&
                 (x-oldX)*normal[0]+(y-oldY)*normal[1]>.001f)continue;
-            Blocked("surf-solid-mesh",x,y,oldX,oldY,bottom,box.maximum[2]);return false;
+            Blocked(rock ? "map-rock" : "surf-solid-mesh",x,y,oldX,oldY,reach,box.maximum[2]);return false;
         }
         // Height-aware solid volumes prevent flying through buildings/trees, while low props can be cleared.
         if (Overlaps(box, x, y, radius_) && box.maximum[2] > bottom + .01f && box.minimum[2] < top) {
@@ -115,7 +124,8 @@ bool ClassicWarcraftCollision::Clear(float x, float y, float oldX, float oldY, c
         bool knownObject = false;
         for(size_t index=0;index<obstacles.size();++index) {
             const auto& box=obstacles[index];
-            if(index<surfMeshes_.size() && surfMeshes_[index] && ModelSurfContact::PathCell(box,px,py)){knownObject=true;continue;}
+            // Once the mesh has cleared the body, its pathing cell must not fill an empty corner.
+            if((obstacles_.IsMapRock(index) || surfMeshes_[index]) && ModelSurfContact::PathCell(box,px,py)){knownObject=true;continue;}
             if (Overlaps(box, px, py, radius_) &&
             (box.maximum[2] <= bottom + .01f ||
             // Native footprints can exceed the mesh: allow the trailing foot samples to clear a nearby
@@ -126,6 +136,7 @@ bool ClassicWarcraftCollision::Clear(float x, float y, float oldX, float oldY, c
         // Native cliff cells block walkers even above an edge. Recognize their cliff-level discontinuity,
         // keeping flat unknown blockers closed rather than disabling pathing for every jump.
         if (CliffCell(px,py) || wc3::GetTerrainCliffLevel(&oldX,&oldY)>wc3::GetTerrainCliffLevel(&px,&py)) continue;
+        if (AirbornePathing::CanOverfly(px, py, terrain, movement)) continue;
         Blocked("native-pathing",px,py,oldX,oldY,bottom,terrain);return false;
     }
     return true;
@@ -169,11 +180,12 @@ void ClassicWarcraftCollision::Move(wc3::Handle unit, MovementPhysics& movement,
     float minX=bounds.minX,maxX=bounds.maxX,minY=bounds.minY,maxY=bounds.maxY;
     float dx = movement.VelocityX() * dt, dy = movement.VelocityY() * dt;
     auto range=ModelSurfContact::Range(movement);
-    auto obstacles = obstacles_.Snapshot(unit, x, y, 600 + std::hypot(dx, dy),movement.NativeUnitCollision(),movement.SurfModelContacts(),false,range);
+    auto obstacles = obstacles_.Snapshot(unit, x, y, 600 + std::hypot(dx, dy),movement.NativeUnitCollision(),movement.SurfModelContacts(),false,range,true);
     surfMeshes_.clear();
     for(size_t index=0;index<obstacles.size();++index) {
         const auto* mesh=obstacles_.Geometry(index);
-        surfMeshes_.push_back(mesh && mesh->HasSurface(range) ? mesh : nullptr);
+        // Ordinary rock doodads provide solid contact without creating new surf ramps.
+        surfMeshes_.push_back(mesh && !obstacles_.IsMapRock(index) && mesh->HasSurface(range) ? mesh : nullptr);
     }
     // Imported surf ramps have real undersides too; scope head clipping to these eligible meshes.
     auto ceiling=[&](float px,float py) {

@@ -38,6 +38,8 @@ class HalfLifeConversionTests(unittest.TestCase):
                 root=Path(folder);(root/'valve').mkdir();cs=root/'cstrike';cs.mkdir();out=root/'out'
                 helper=OptionalRpgTests();sound=next(v for k,v in helper.resources().items() if k.endswith('.wav'))
                 files={f'models/v_{stem}.mdl': b'owned-model' for stem in hl.WEAPONS}
+                # Throwables are offered only with their distinct world models.
+                files.update({f'models/w_{stem}.mdl': b'owned-model' for stem in hl.THROWABLES})
                 files.update({hl.sound_source(name): sound for names in hl.WEAPONS.values() for name in names})
                 self.assertTrue(all(not result['available'] for result in hl.export(cs,out)))
                 if packed:helper.write_pak(root/'valve/pak0.pak',files)
@@ -54,7 +56,7 @@ class HalfLifeConversionTests(unittest.TestCase):
                 # One corrupt loose override invalidates only Tau, including when a valid PAK remains.
                 corrupt=root/'valve/models/v_gauss.mdl';corrupt.parent.mkdir(parents=True,exist_ok=True);corrupt.write_bytes(b'corrupt')
                 results={result['weapon']:result['available'] for result in hl.export(cs,out)}
-                self.assertEqual(results,{'crowbar':True,'gauss':False,'egon':True});self.assertFalse((out/'gauss.ready').exists())
+                self.assertEqual(results,{stem:stem!='gauss' for stem in hl.WEAPONS});self.assertFalse((out/'gauss.ready').exists())
 
 
 if __name__=='__main__':unittest.main()
