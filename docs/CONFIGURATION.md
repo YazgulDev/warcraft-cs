@@ -15,6 +15,10 @@ Save and press **F8** in a controlled view. Most settings apply immediately;
 starting kits apply on the next map, and live explosives retain their launch/plant
 settings. Installation updates add missing keys and preserve custom values.
 
+The launcher can open the installed file with **Edit INI**. The numbered English
+categories group related sections while keeping the existing section and key names.
+Updates organize existing files and keep saved comments and custom sections.
+
 The [annotated INI](../config/WarcraftCS.ini) is the complete list of keys, defaults,
 units, bounds and reload rules. Values below describe the published release;
 an older installation may retain different saved choices.

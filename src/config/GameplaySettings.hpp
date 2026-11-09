@@ -154,9 +154,8 @@ struct GameplaySettings {
     std::string warcraftSkyPreset="auto"; // Stock model override in controlled views; Auto preserves authored map skies.
     std::string defaultSky="Des";
     std::array<std::string,256> tilesetSky{};
-    // Explosives use fixed peaks (HE 600, RPG 1800); shotgun multipliers scale the unit's native attack.
-    // Stock increases cover both fixed damage and the default native-attack multiplier mode.
-    std::array<float, WeaponSlots::Count> damage = {36,33,34,230,40,2500,120,54,25,26,21,32,104,80,1200,0,0,1800,10,200,70,20,30,30,30,160,40,30,850,1200};
+    // Explosives use configurable fixed peaks; shotgun multipliers scale the unit's native attack.
+    std::array<float, WeaponSlots::Count> damage = {36,33,34,230,40,2500,120,54,25,26,21,32,104,80,1800,0,0,1800,10,200,70,20,30,30,30,160,40,30,1250,1200};
     std::array<float, WeaponSlots::Count> heroMultiplier = {1,1,1,6,1,1,3,1.6f,.75f,.8f,.65f,1,6,4.8f,0,0,0,0,1,0,0,.65f,.9f,1,1,4.4f,1.15f,.95f,0,0};
     float knifeSecondaryDamage = 65, swordSecondaryDamage = 240;
     static GameplaySettings Load(const std::string& filename);

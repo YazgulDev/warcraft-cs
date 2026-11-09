@@ -76,7 +76,14 @@ int main() {
     assert(field.Throw(1,WeaponSlots::HE,{0,0,100},{1,0,0},{0,0,0},settings));
     settings.damage[WeaponSlots::HE]=9999; // A later F8 snapshot cannot change the launched charge.
     field.Tick(audio,1,{0,0,100},{1,0,0});assert(damages==0);
-    clockSeconds=.3f;assert(field.Tick(audio,1,{0,0,100},{1,0,0}));assert(hp[1]==1000 && hp[2]>-200 && hp[2]<400 && hp[10]<1000);
+    // Measure the launched stock blast at the actual detonation point after the live settings changed.
+    BlastJumpEvents heJumps;
+    clockSeconds=.3f;assert(field.Tick(audio,1,{0,0,100},{1,0,0},&heJumps));
+    assert(heJumps.size()==1 && heJumps.front().radius==600);
+    const auto& blast=heJumps.front().position;
+    float nearDistance=std::hypot(blast[0]-20,blast[2]-100);
+    float expectedDamage=1800*(1-nearDistance/600);
+    assert(hp[1]==1000 && std::abs(hp[2]-(1000-expectedDamage))<.01f && hp[10]<1000);
     unsigned saved=damages;clockSeconds=1;field.Tick(audio,1,{0,0,100},{1,0,0});assert(damages==saved);
     field.Reset();Scene();assert(field.Throw(1,WeaponSlots::Flashbang,{0,0,100},{1,0,0},{},settings));
     // F8 changes after release cannot rewrite the already flying grenade's eligibility/duration snapshot.

@@ -4,6 +4,31 @@ $root=Split-Path -Parent $PSScriptRoot
 $folder=Join-Path $root ('.local/config-merge-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $folder -Force | Out-Null
 $template=Join-Path $root 'config/WarcraftCS.ini'
+# Upgrade old layouts once, keeping comments, unknown keys/sections and non-ASCII text.
+$layout=Join-Path $folder 'layout.ini'
+$utf8=[Text.UTF8Encoding]::new($false)
+$customComment='; Personal setting '+[char]0x0410
+[IO.File]::WriteAllLines($layout,@('[HEGrenade]',$customComment,'Damage=777','FutureKey=custom','[Custom]','Keep=1','[Mouse]','Sensitivity=1.7','[CustomExtra]','Keep=2'),$utf8)
+Update-GameplayConfig $template $layout
+$organized=[IO.File]::ReadAllText($layout,$utf8)
+if($organized -notmatch '(?s)01\. Controls and input ====.+\[Mouse\].+Sensitivity=1\.7.+13\. Counter-Strike grenades and C4 ====.+\[HEGrenade\].+FutureKey=custom.+99\. Custom sections ====.+\[Custom\].+Keep=1.+\[CustomExtra\].+Keep=2' -or
+    !$organized.Contains($customComment) -or ([regex]::Matches($organized,'(?m)^\[HEGrenade\]')).Count -ne 1) {
+    throw 'INI layout lost saved content or failed to group sections.'
+}
+$layoutHash=(Get-FileHash $layout).Hash;Update-GameplayConfig $template $layout
+if((Get-FileHash $layout).Hash -ne $layoutHash){throw 'INI layout must remain stable on reinstall.'}
+# The launcher uses Windows PowerShell, where the installed file may be encoded in the local ANSI page.
+$ansi=[Text.Encoding]::Default
+if($ansi.CodePage -ne 65001) {
+    $legacyLayout=Join-Path $folder 'layout-ansi.ini'
+    $legacyComment='; Personal setting '+$ansi.GetString([byte[]](0xC0,0xC0))
+    [IO.File]::WriteAllLines($legacyLayout,@('[Mouse]','Sensitivity=1.6',$legacyComment),$ansi)
+    Update-GameplayConfig $template $legacyLayout
+    $legacyText=[IO.File]::ReadAllText($legacyLayout,$ansi)
+    if(!$legacyText.Contains($legacyComment) -or !$legacyText.Contains('Sensitivity=1.6')){
+        throw 'Windows PowerShell failed to preserve the ANSI INI.'
+    }
+}
 # Surface swimming fills old clients while retaining explicit opt-outs and custom water tuning on repeat updates.
 $waterFile=Join-Path $folder 'swimming.ini'
 @('[Movement]','Mode=classic','[Swimming]','Enabled=false','MinimumDepth=144','SpeedPercent=42','FloatSeconds=0.4','ExitHeight=0','[Mouse]','Sensitivity=1.7') | Set-Content $waterFile
@@ -572,12 +597,12 @@ foreach($bloodCase in @(@('1','16','48'),@('2','16','16'),@('1','7','7'))) {
 }
 
 # Only former unversioned stock HE upgrades. Later returns to 100 and custom damage/flash opt-outs survive.
-foreach($case in @(@('100','','1200'),@('100','1','1200'),@('300','2','1200'),@('300','3','300'),@('100','2','100'),@('0','','0'),@('777','','777'),@('600','4','600'))) {
+foreach($case in @(@('100','','1800'),@('100','1','1800'),@('300','2','1800'),@('300','3','300'),@('100','2','100'),@('0','','0'),@('777','','777'),@('600','4','600'))) {
     $heConfig=Join-Path $folder ('he-damage-'+[guid]::NewGuid().ToString('N')+'.ini')
     @('[HEGrenade]',('Damage='+$case[0]),$(if($case[1]){'DamageVersion='+$case[1]}),'[Flashbang]','StunAllUnits=false','StunDistanceFalloff=true','UnitStunSeconds=4','[Movement]','Mode=classic') | Set-Content -LiteralPath $heConfig -Encoding ascii
     Update-GameplayConfig $template $heConfig
     $heText=Get-Content $heConfig -Raw
-    foreach($expected in @(('Damage='+$case[2]),'DamageVersion=4','StunAllUnits=false','StunDistanceFalloff=true','UnitStunSeconds=4','Mode=classic')) {
+    foreach($expected in @(('Damage='+$case[2]),'DamageVersion=5','StunAllUnits=false','StunDistanceFalloff=true','UnitStunSeconds=4','Mode=classic')) {
         if(!$heText.Contains($expected)){throw ('HE/flash migration lost '+$expected)}
     }
     $heHash=(Get-FileHash $heConfig).Hash;Update-GameplayConfig $template $heConfig
@@ -588,7 +613,13 @@ foreach($case in @(@('100','','1200'),@('100','1','1200'),@('300','2','1200'),@(
 foreach($spec in @(
     @('RPG','Damage','DamageVersion',2,'100','1800'),
     @('RPG','Radius','BlastVersion',4,'600','1000'),
-    @('HEGrenade','Damage','DamageVersion',4,'600','1200'),
+    @('HEGrenade','Damage','DamageVersion',5,'1200','1800'),
+    @('HEGrenade','Radius','BlastVersion',2,'350','600'),
+    @('HalfLifeGrenade','Damage','DamageVersion',2,'850','1250'),
+    @('HalfLifeGrenade','Radius','BlastVersion',2,'500','700'),
+    @('HEGrenade','Capacity','CapacityVersion',2,'1','3'),
+    @('Flashbang','Capacity','CapacityVersion',2,'2','3'),
+    @('SmokeGrenade','Capacity','CapacityVersion',2,'1','3'),
     @('AWP','Damage','DamageVersion',2,'115','230'),
     @('AWP','HeroMultiplier','MultiplierVersion',2,'3','6'),
     @('G3SG1','Damage','DamageVersion',2,'80','160'),

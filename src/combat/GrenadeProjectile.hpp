@@ -65,6 +65,7 @@ public:
             position=next;
         }
     }
+    // Native blast damage uses 3D distance: half strength halfway out, zero at the radius.
     static float Falloff(float distance,float radius) {return radius>0 ? std::clamp(1-distance/radius,0.f,1.f) : 0;}
     // Turning away reduces flash exposure; distance and facing both matter, without applying HP damage.
     static float Exposure(const GrenadePoint& from,const GrenadePoint& eye,const GrenadePoint& direction,float radius) {

@@ -107,7 +107,7 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     grenades.fuse=std::max(.2f,number("Grenades","FuseSeconds",1.5f,10));
     grenades.releaseDelay=number("Grenades","ReleaseDelay",.25f,1);
     grenades.recovery=std::max(.1f,number("Grenades","RecoverySeconds",.8f,3));
-    grenades.heRadius=std::max(32.f,number("HEGrenade","Radius",350,2000));
+    grenades.heRadius=std::max(32.f,number("HEGrenade","Radius",grenades.heRadius,2000));
     grenades.flashRadius=std::max(32.f,number("Flashbang","Radius",1000,3000));
     grenades.flashSeconds=number("Flashbang","BlindSeconds",3,10);
     grenades.flashUnitStunSeconds=number("Flashbang","UnitStunSeconds",2,10);
@@ -690,9 +690,21 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     upgradeStock("RPG","BlastVersion",3,525,600,rpg.radius);
     // Expand the previous stock blast once; existing linear 3D falloff still reaches zero at the edge.
     upgradeStock("RPG","BlastVersion",4,600,1000,rpg.radius);
-    upgradeStock("HEGrenade","DamageVersion",3,300,600,result.damage[WeaponSlots::HE]);
+    upgradeStock("HEGrenade","DamageVersion",3,300.f,600.f,result.damage[WeaponSlots::HE]);
     // Raise prior stock once in both damage modes, leaving custom values and explicit opt-backs alone.
-    upgradeStock("HEGrenade","DamageVersion",4,600,1200,result.damage[WeaponSlots::HE]);
+    upgradeStock("HEGrenade","DamageVersion",4,600.f,1200.f,result.damage[WeaponSlots::HE]);
+    // HE and the Half-Life hand grenade keep the shared 3D blast falloff at their wider radius.
+    upgradeStock("HEGrenade","DamageVersion",5,1200.f,1800.f,result.damage[WeaponSlots::HE]);
+    upgradeStock("HEGrenade","BlastVersion",2,350.f,GrenadeSettings{}.heRadius,grenades.heRadius);
+    upgradeStock("HalfLifeGrenade","DamageVersion",2,850.f,1250.f,result.damage[WeaponSlots::HandGrenade]);
+    upgradeStock("HalfLifeGrenade","BlastVersion",2,500.f,HalfLifeSettings{}.grenade.radius,hl.grenade.radius);
+    // Older stock capacities upgrade once; a saved current marker allows choosing the old limits again.
+    for(int slot:{WeaponSlots::HE,WeaponSlots::Flashbang,WeaponSlots::Smoke}) {
+        int& capacity=result.weapons[slot].magazine;
+        int previous=slot==WeaponSlots::Flashbang ? 2 : 1;
+        if(capacity==previous && GetPrivateProfileIntA(sections[slot],"CapacityVersion",1,filename.c_str())<2)
+            capacity=WeaponDefaults::Weapons[slot].magazine;
+    }
     upgradeStock("AWP","DamageVersion",2,115,230,result.damage[WeaponSlots::AWP]);
     upgradeStock("AWP","MultiplierVersion",2,3,6,result.heroMultiplier[WeaponSlots::AWP]);
     upgradeStock("G3SG1","DamageVersion",2,80,160,result.damage[WeaponSlots::G3SG1]);
