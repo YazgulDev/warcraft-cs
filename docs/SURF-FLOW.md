@@ -1,13 +1,13 @@
 # Connected Surf Flow
 
-This local development map is a continuous east/north/east time trial. Forty closed
+This original map is a continuous east/north/east time trial. Forty closed
 banked ramp pieces meet four broad 1536-unit decks. Each ramp starts/ends with a
 flat cross-section matching its neighboring deck; adjacent sections share the same
 ridge and side heights. There are no mandatory launch gaps or checkpoint teleports.
 The turning decks are physical connections where you can brake and change direction.
 The previously published Skyline and Practice maps remain available separately.
 
-Use the matching development Player launcher, then copy
+Use the 0.20.0 Player launcher, then copy
 `WarcraftCS-Surf-Flow.w3m` into the modded game's `Maps/Download` directory.
 Select **Single Player → Custom Game → Warcraft CS - Surf Flow** and press **F6**
 for FPS, **P** for speed. Start east along blue ramps, turn north at the first green
@@ -38,7 +38,7 @@ speed cap remain independent. No keys means no extra input acceleration.
 
 The map does not overwrite movement preferences. Model surfing requires
 `[Surfing] Enabled=true`, `ModelContacts=true` and `[Movement] ObjectMeshCollision=true`.
-The stronger response needs the new development launcher; the map geometry itself
+The stronger response needs the 0.20.0 launcher; the map geometry itself
 uses the 0.19.0 model-surf path.
 
 ## Original source

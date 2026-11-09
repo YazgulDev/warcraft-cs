@@ -2,16 +2,24 @@
 
 ## Unreleased
 
-- Prevent Warcraft 1.26a's path-mask refresh from moving an airborne FPS actor onto a walking cell. Defer automatic Stop until landing while the basic-attack and pursuit guards remain active.
+## 0.20.0 - 2026-11-09
 
-- Let high airborne movement cross ground-only pathing cells when Warcraft's flight mask allows it. Apply the exception after terrain and solid-object checks in classic, hull and recovery.
-
-- Fix airborne height/velocity resetting to ground after bounded native pathing corrections. Preserve flight for local XY adjustments within four pathing cells plus the budgeted motor step; confirmed waygates, distant relocations, grounded actors and buried destinations retain floor rebasing. Add explicit relocation diagnostics and portable/native regression coverage.
-- Fix the authored weapon-jump test arena's mismatched 64-cell shadow/pathing grids after its terrain expanded to 128 cells. Add a reproducible original fixture builder and dimension regression to prevent blocking invalid-shadow-map dialogs.
-- Add physical RPG/HE/C4 blast propulsion and primary/charged Tau recoil jumps, with copied detonation events, native status/cover checks and velocity-only integration through existing movement collision. Add editable BlastJump/Tau tuning, F8 reload, settings preservation and portable/native regression coverage; exclude nuclear blasts.
-- Set ordinary RPG self damage to 5% of distance-attenuated blast damage independently of friendly fire, retaining native armor/immunity. Snapshot SelfDamagePercent per launch and use physical player height while airborne. Keep other allied damage policies unchanged; make C4 iteration safe across synchronous map-reset callbacks.
-- Add the original connected Surf Flow time trial: 40 joined banked sections and four broad turning/checkpoint decks, with matching flat endpoints and descending profiles across the entire width. Reuse the tested timer/chat/checkpoint logic without requiring stage teleports; retain Skyline and Practice as separate courses.
-- Add Surfing.AccelerationMultiplier, default2/range0.1-4, with1 restoring the former response. Apply independent surf air-input acceleration/wish allowance once per confirmed contact step, preserving ordinary free-air/Bunnyhop tuning, no-input gravity and the shared speed cap. Validate startup/F8 and preserve custom values through installation updates.
+- Publish [downloads, upgrade instructions and complete Release Notes](docs/RELEASE-0.20.0.md), both launchers, native-free public archives and the original Surf Flow map.
+- Added Surf Flow, a connected time trial with 40 banked ramp sections and four turning decks.
+- Added a configurable twofold surf acceleration multiplier while retaining ordinary Bunnyhop steering.
+- Added RPG, HE, C4 and Half-Life blast jumps and primary or charged Tau recoil jumps.
+- Changed ordinary RPG self damage to five percent of its distance-attenuated blast damage.
+- Fixed airborne FPS actors snapping down during nearby native pathing corrections.
+- Fixed invisible airborne walls from ground-only pathing cells and added solid rock doodad collision.
+- Fixed the mismatched shadow and pathing grids in the original weapon-jump test arena.
+- Fixed Player installation when Windows marks the launcher as downloaded.
+- Added the launcher INI editor and organized the English configuration into 16 categories.
+- Added the P228 and Five-SeveN with owned CS models, audio and shop entries.
+- Added the Half-Life hand grenade and remote Satchel Charge with owner-safe blast jumps.
+- Fixed the Half-Life grenade throw animation and made Satchel throws immediate and non-bouncing.
+- Changed HE and Half-Life hand grenade damage and radius with linear three-dimensional falloff.
+- Changed the default carry limit to three of each CS grenade type.
+- Fixed the hero XP HUD showing MAX one level early.
 
 ## 0.19.0 - 2026-11-04
 

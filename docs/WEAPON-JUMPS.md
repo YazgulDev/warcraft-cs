@@ -1,6 +1,6 @@
-# Explosion and Tau jumps (development build)
+# Explosion and Tau jumps
 
-Ordinary RPG, HE and planted C4 explosions push the controlled player away from the
+Ordinary RPG, HE, planted C4 and Half-Life explosive blasts push the controlled player away from the
 blast. Aim an RPG at nearby ground to rocket jump. Tau Cannon pushes opposite its
 accepted shot: aim down and fire, or hold/release secondary fire for a stronger jump.
 Charge-only, cancelled and empty shots add no force. Nuclear blasts are excluded.
@@ -13,7 +13,7 @@ Invulnerability prevents damage but does not suppress blast propulsion.
 
 | Section / key | Default | Range / meaning |
 | --- | --- | --- |
-| BlastJump / Enabled | true | true/false; ordinary RPG, HE and C4 propulsion |
+| BlastJump / Enabled | true | true/false; ordinary RPG, HE, C4 and Half-Life explosive propulsion |
 | BlastJump / Speed | 650 | 0–3000 GoldSrc units/s at blast center; linear 3D falloff |
 | BlastJump / MaximumUpSpeed | 1500 | 100–3000 GoldSrc units/s; shared upward impulse cap |
 | RPG / SelfDamagePercent | 5 | 0–100 percent; 0 disables RPG self damage |
@@ -23,8 +23,8 @@ Invulnerability prevents damage but does not suppress blast propulsion.
 
 One GoldSrc speed unit equals 1.5 Warcraft world units/s. Edit
 `WarcraftCS/WarcraftCS.ini`, then press F8 in FPS. Missing keys are inserted during
-installation updates without replacing saved values. Flying rockets, thrown HE
-and planted C4 retain their launch/plant settings; Tau uses settings at shot acceptance.
+installation updates without replacing saved values. Flying rockets, thrown grenades and
+planted C4 retain their launch/plant settings; Tau uses settings at shot acceptance.
 
 Force uses physical body height and the existing blast cover checks. Existing
 movement collision handles walls, ceilings, ground and swimming after the velocity

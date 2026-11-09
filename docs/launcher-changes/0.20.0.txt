@@ -1,0 +1,15 @@
+- Added Surf Flow, a connected time trial with 40 banked ramp sections and four turning decks.
+- Added a configurable twofold surf acceleration multiplier while retaining ordinary Bunnyhop steering.
+- Added RPG, HE, C4 and Half-Life blast jumps and primary or charged Tau recoil jumps.
+- Changed ordinary RPG self damage to five percent of its distance-attenuated blast damage.
+- Fixed airborne FPS actors snapping down during nearby native pathing corrections.
+- Fixed invisible airborne walls from ground-only pathing cells and added solid rock doodad collision.
+- Fixed the mismatched shadow and pathing grids in the original weapon-jump test arena.
+- Fixed Player installation when Windows marks the launcher as downloaded.
+- Added the launcher INI editor and organized the English configuration into 16 categories.
+- Added the P228 and Five-SeveN with owned CS models, audio and shop entries.
+- Added the Half-Life hand grenade and remote Satchel Charge with owner-safe blast jumps.
+- Fixed the Half-Life grenade throw animation and made Satchel throws immediate and non-bouncing.
+- Changed HE and Half-Life hand grenade damage and radius with linear three-dimensional falloff.
+- Changed the default carry limit to three of each CS grenade type.
+- Fixed the hero XP HUD showing MAX one level early.
