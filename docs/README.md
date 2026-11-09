@@ -10,12 +10,12 @@
 | [Requirements](../REQUIREMENTS.md) | Supported host, owned game files and build dependencies |
 | [Controls](CONTROLS.md) | Movement, view modes, buying, spells, inventory and squads |
 | [Settings](CONFIGURATION.md) | INI location, live reload and configuration by topic |
-| [In-game settings](INGAME-SETTINGS.md) | F2 mouse sensitivity, audio, physics, view distance, sky and local development FOV controls |
+| [In-game settings](INGAME-SETTINGS.md) | F2 mouse sensitivity, audio, physics, view distance, sky and field of view |
 | [Compatibility](COMPATIBILITY.md) | Supported versions, map limits and missing features |
 | [Direct3D for 1.26a](DIRECT3D-126A-PREVIEW.md) | Renderer selection, automatic private components and local verification |
 | [Troubleshooting](../TROUBLESHOOTING.md) | Installation, graphics, audio and reporting a problem |
 
-Current release: [0.18.0 — downloads, upgrade and complete changes](RELEASE-0.18.0.md). Earlier local preview notes are retained as implementation history; the release notes describe final behavior.
+Current release: [0.19.0 — downloads, upgrade and complete changes](RELEASE-0.19.0.md). Earlier local preview notes are retained as implementation history; the release notes describe final behavior.
 
 ## Gameplay guides
 
@@ -24,6 +24,8 @@ Current release: [0.18.0 — downloads, upgrade and complete changes](RELEASE-0.
 | [Movement](MOVEMENT.md) | Air strafing, bunnyhopping, speed and collision settings |
 | [Surf practice map](SURF-PRACTICE.md) | Three training slopes, FPS chat commands, automatic return and original map builder |
 | [Surf Skyline time trial](SURF-SKYLINE.md) | Floating solid ramps, gaps, ordered checkpoints, timer and session records |
+| [Connected Surf Flow](SURF-FLOW.md) | Development course with joined ramps/decks and independent surf acceleration |
+| [Explosion and Tau jumps](WEAPON-JUMPS.md) | Development-build propulsion, 5-percent RPG self damage and editable impulse settings |
 | [Surface swimming](SWIMMING.md) | Deep water, buoyancy, shallow banks, canal exits and editable water tuning |
 | [Portals and heavy weapons](PORTALS-HEAVY-WEAPONS.md) | Development-build portal interaction, heavy damage, starting Crowbar and native exploded deaths |
 | [Weapon selection](WEAPON-SELECTION.md) | Carried groups, wheel preview and item-number mode |

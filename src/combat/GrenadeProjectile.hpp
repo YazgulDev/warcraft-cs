@@ -12,9 +12,10 @@ public:
     GrenadePoint position{},velocity{};
     GrenadeSettings settings;
     double age=0;
-    bool bounced=false;
+    bool bounced=false,settleOnGround=false,settled=false;
     template<class Ground> void Advance(double elapsed,const std::vector<Bounds3>& obstacles,Ground ground) {
         double target=std::min(elapsed,double(settings.fuse));bounced=false;
+        if(settled)return;
         while(age+1e-8<target) {
             float dt=float(std::min(1.0/120,target-age));age+=dt;
             GrenadePoint next=position;velocity[2]-=settings.gravity*dt;
@@ -38,10 +39,24 @@ public:
             }
             if(axis>=0) {
                 for(int i=0;i<3;++i)next[i]=position[i]+(next[i]-position[i])*std::max(0.f,fraction-.001f);
-                next[axis]+=sign*.1f;velocity[axis]*=-settings.bounce;bounced=true;
+                next[axis]+=sign*.1f;
+                if(settleOnGround) {
+                    // A satchel lands on a top face. Walls and ceilings stop normal motion but let it fall.
+                    if(axis==2 && sign>0){Settle(next);return;}
+                    velocity[axis]=0;
+                } else {velocity[axis]*=-settings.bounce;bounced=true;}
             }
             float floor=ground(next[0],next[1])+4;
             if(next[2]<floor) {
+                if(settleOnGround) {
+                    // At a steep terrain edge, keep the pouch on its original side and drop straight down.
+                    if(floor>position[2]+12) {
+                        next[0]=position[0];next[1]=position[1];velocity[0]=velocity[1]=0;
+                        floor=ground(next[0],next[1])+4;
+                    }
+                    if(next[2]<=floor){next[2]=floor;Settle(next);return;}
+                    position=next;continue;
+                }
                 bool impact=std::abs(velocity[2])>=50 || std::hypot(velocity[0],velocity[1])>=35;
                 if(floor>position[2]+12) {next[0]=position[0];next[1]=position[1];velocity[0]*=-settings.bounce;velocity[1]*=-settings.bounce;}
                 else {next[2]=floor;velocity[2]=std::abs(velocity[2])<50 ? 0 : std::abs(velocity[2])*settings.bounce;velocity[0]*=.8f;velocity[1]*=.8f;}
@@ -50,11 +65,16 @@ public:
             position=next;
         }
     }
+    // Native blast damage uses 3D distance: half strength halfway out, zero at the radius.
     static float Falloff(float distance,float radius) {return radius>0 ? std::clamp(1-distance/radius,0.f,1.f) : 0;}
     // Turning away reduces flash exposure; distance and facing both matter, without applying HP damage.
     static float Exposure(const GrenadePoint& from,const GrenadePoint& eye,const GrenadePoint& direction,float radius) {
         float distance=0,dot=0;for(int i=0;i<3;++i){float v=from[i]-eye[i];distance+=v*v;dot+=v*direction[i];}
         distance=std::sqrt(distance);float facing=distance>1 ? std::max(0.f,dot/distance) : 1;
         return Falloff(distance,radius)*(.2f+.8f*facing);
+    }
+private:
+    void Settle(const GrenadePoint& landing) {
+        position=landing;velocity={};settled=true;
     }
 };

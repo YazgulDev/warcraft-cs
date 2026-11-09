@@ -1,13 +1,13 @@
 # Install and play Warcraft CS
 
-Release 0.15.0: [Direct3D for 1.26a](docs/DIRECT3D-126A-PREVIEW.md) adds
+The [Direct3D path for 1.26a](docs/DIRECT3D-126A-PREVIEW.md) provides
 **Graphics → Auto / OpenGL / Direct3D** beside the launch controls. Run Install
 once with this release to prepare both renderers, then choose a mode before Play.
 The saved choice applies on the next launch; Auto preserves previous defaults.
 
 [Project home](README.md) · [Documentation](docs/README.md) · [Requirements](REQUIREMENTS.md)
 
-Release **0.15.0** retains support for experimental Warcraft III **1.27a
+Release **0.19.0** retains support for experimental Warcraft III **1.27a
 (Game.dll 1.27.0.52240)** through Player or Developer setup, selecting D3D9 at launch.
 Published 0.11.0 Player modules cannot be reused across host versions. Read
 [port limits and verification status](docs/PORT-1.27.md) before using that host.
@@ -17,8 +17,12 @@ or the experimental 1.27a host above, and, for CS weapons, Counter-Strike 1.6. R
 This offline, single-player prototype does not download games or redistribute their content.
 Full campaign/custom-map compatibility has not been verified.
 See [REQUIREMENTS.md](REQUIREMENTS.md) for the complete system, owned-file and dependency checklist.
-Current release: **0.15.0**; [all changes and direct downloads](docs/RELEASE-0.15.0.md).
+Current release: **0.19.0**; [all changes and direct downloads](docs/RELEASE-0.19.0.md).
 Antivirus can block the unsigned hook module; see the [short explanation and checks](TROUBLESHOOTING.md#antivirus).
+
+## Optional surf maps
+
+Download Surf Practice or Surf Skyline separately from [release 0.19.0](https://github.com/YazgulDev/warcraft-cs/releases/tag/v0.19.0). Copy the `.w3m` into `<mod installation>/Game/Maps/Download`, then choose **Single Player → Custom Game**. Skyline needs 0.19.0 model surfing; press **F6** for FPS and **P** for speed. See the [timed course guide](docs/SURF-SKYLINE.md) and [practice guide](docs/SURF-PRACTICE.md). Maps contain original authored content, not retail maps.
 
 ## Windows EXE: recommended for clients
 

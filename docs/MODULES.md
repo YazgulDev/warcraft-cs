@@ -156,6 +156,12 @@ into the mod is preserved to avoid a recursive chain. Final destruction forwards
 discarding the record. The adapter logs attachment, recovery failures and destruction. Its hidden-window
 regression uses actual Win32 message forwarding without game files or a visible test window.
 
+`MovementImpulse` computes radial blast velocity; `NativeMovementImpulse` applies
+native liveness/status/cover checks before submitting it to the existing motor.
+Copied `BlastJumpEvent` values carry launch/plant tuning out of RPG/HE/C4 callbacks;
+the controller rejects events after actor/map replacement or scripted relocation.
+Tau supplies the accepted shot direction directly. Impulses never own placement.
+
 `MovementPhysics` integrates momentum, jumping and gravity without engine calls. `WarcraftCollision`
 sweeps the player footprint against terrain, native bridge decks and solid model volumes supplied by
 `MovementObstacles`. The obstacle adapter owns model/type caches and clears them on map changes.

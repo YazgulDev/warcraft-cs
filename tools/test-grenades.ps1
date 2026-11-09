@@ -7,7 +7,7 @@ $environment=Join-Path $vs 'VC/Auxiliary/Build/vcvars32.bat'
 # Synthetic trajectories and throw clocks require neither game assets nor interactive input.
 # Signed native abort/crash statuses must stop the suite too; ERRORLEVEL 1 misses negative exit codes.
 $script=Join-Path $build 'test-grenades.cmd'
-$blastSources=@('tests/NativeGrenadeTests.cpp','src/platform/NativeGrenades.cpp','src/platform/NativeBlast.cpp','src/platform/NativeRockets.cpp','src/platform/NativeExplosiveDeath.cpp','src/platform/NativeRegistry.cpp','src/input/ShortcutBindings.cpp') | ForEach-Object {'"'+(Join-Path $root $_)+'"'}
+$blastSources=@('tests/NativeGrenadeTests.cpp','src/platform/NativeGrenades.cpp','src/platform/NativeBlast.cpp','src/platform/NativeRockets.cpp','src/platform/NativeExplosiveDeath.cpp','src/platform/NativeRegistry.cpp','src/combat/PlantedBomb.cpp','src/movement/MovementPhysics.cpp','src/input/ShortcutBindings.cpp') | ForEach-Object {'"'+(Join-Path $root $_)+'"'}
 @('@echo off',('call "'+$environment+'" >nul'),
     ('cl /nologo /std:c++17 /EHsc /O2 /W4 /DNOMINMAX "'+(Join-Path $root 'tests/GrenadeTests.cpp')+'" /Fe:grenade-tests.exe'),
     'if not "%errorlevel%"=="0" exit /b 1','grenade-tests.exe','if not "%errorlevel%"=="0" exit /b 1',

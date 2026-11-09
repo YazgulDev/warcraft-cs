@@ -19,7 +19,7 @@ bool NativeBlast::Covered(const GrenadePoint& from,const GrenadePoint& to,const 
     return false;
 }
 bool NativeBlast::Apply(wc3::Handle actor,int type,const GrenadePoint& from,float peak,float radius,float friendly,
-    const std::vector<Bounds3>& obstacles,const std::function<bool()>& valid,const char* label,const KillReward::Sink& onKill,bool explosiveDeaths) {
+    const std::vector<Bounds3>& obstacles,const std::function<bool()>& valid,const char* label,const KillReward::Sink& onKill,bool explosiveDeaths,float selfDamagePercent,const TargetPoint* physicalTarget) {
     if(!valid() || wc3::GetUnitTypeId(actor)!=type)return false;
     auto owner=wc3::GetOwningPlayer(actor),group=wc3::CreateGroup();if(!group)return false;
     float x=from[0],y=from[1];wc3::GroupEnumUnitsInRange(group,&x,&y,&radius,0);std::vector<wc3::Handle> targets;
@@ -32,8 +32,13 @@ bool NativeBlast::Apply(wc3::Handle actor,int type,const GrenadePoint& from,floa
         if(!wc3::GetUnitTypeId(target) || wc3::IsUnitHidden(target) || wc3::IsUnitLoaded(target))continue;
         float before=wc3::Real(wc3::GetUnitState(target,0));if(before<=.405f)continue;
         GrenadePoint point={wc3::Real(wc3::GetUnitX(target)),wc3::Real(wc3::GetUnitY(target)),0};point[2]=wc3::Ground(point[0],point[1])+wc3::Real(wc3::GetUnitFlyHeight(target))+32;
+        if(physicalTarget && physicalTarget->unit==target &&
+            std::hypot(point[0]-physicalTarget->center[0],point[1]-physicalTarget->center[1])<1)
+            point=physicalTarget->center; // A callback relocation invalidates the earlier physical-height override.
         float falloff=GrenadeProjectile::Falloff(Distance(from,point),radius);if(falloff<=0 || Covered(from,point,obstacles))continue;
         float damage=CombatDamage::Amount(peak*falloff,wc3::IsUnitAlly(target,owner)!=FALSE,false,before,friendly);
+        // RPG self damage has its own explicit percentage; HE and legacy callers keep allied policy.
+        if(target==actor && selfDamagePercent>=0)damage=peak*falloff*std::clamp(selfDamagePercent,0.f,100.f)/100;
         // One report per lethal contact, with hostility/position captured before native death callbacks.
         auto reward=KillReward::Capture(actor,target,onKill);
         // Only this rocket's captured death policy affects enemy creatures; HE/other callers retain their policy.

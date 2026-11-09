@@ -84,7 +84,7 @@ bool MovementObstacles::Bounds(const std::string& path, bool destructable, uintp
     }
     return true;
 }
-std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle actor, float x, float y, float radius,bool nativeUnitCollision,bool detailed,bool retainPlatforms,MeshSurfaceRange surf) {
+std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle actor, float x, float y, float radius,bool nativeUnitCollision,bool detailed,bool retainPlatforms,MeshSurfaceRange surf,bool includeRocks) {
     std::vector<Bounds3> result;
     details_.clear();
     if (!base_) return result;
@@ -131,5 +131,8 @@ std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle actor, float x, flo
             if (!wc3::WalkableSurface(cx, cy, deck) || (detailed && mesh && (retainPlatforms || mesh->HasSurface(surf)))) {result.push_back(bounds);details_.push_back(std::move(mesh));}
         }
     }
+    // The JASS group/destructable enumeration omits solid map decoration. Only the movement sweeps add it.
+    rockStart_ = result.size();
+    if (includeRocks) mapRocks_.Append(x, y, radius, result, details_);
     return result;
 }

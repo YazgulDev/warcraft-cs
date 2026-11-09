@@ -3,6 +3,7 @@
 // Warcraft-scaled Half-Life-style rocket tuning; every flight retains its launch snapshot across F8.
 struct RpgSettings {
     bool enabled=true,available=false,guidance=true;
+    float selfDamagePercent=5; // Independent of allied friendly fire; retained by each launched rocket.
     // Wider default blast; launched rockets retain their configured radius across reloads.
     float radius=1000,launchSpeed=375,maximumSpeed=3000,acceleration=6000;
     float ignition=.4f,boostSeconds=1,gravity=600,lifetime=12,inheritedVelocity=1;

@@ -1,6 +1,8 @@
 #include "../src/movement/MovementPhysics.hpp"
 #include <algorithm>
 #include "MovementStrafeInput.hpp"
+#include "../src/movement/MovementImpulse.hpp"
+#include "../src/movement/MovementRelocation.hpp"
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -173,6 +175,58 @@ int main() {
         Require(!surf.ResolveSurf(face),"surf opt-out applies live");
         disabled.surf.enabled=true;surf.Configure(disabled);face.normal[0]=1;face.normal[2]=0;
         Require(!surf.ResolveSurf(face),"vertical walls are not surf floors");
+    }
+    // The independent surf gain changes tangent steering after real contact, not ordinary
+    // free-air motion. Re-querying a swept face cannot stack the gain within one frame.
+    for(int fps:{30,60,144}) {
+        float sideways[2]={};
+        for(int variant=0;variant<2;++variant) {
+            MovementSettings setting;setting.surf.accelerationMultiplier=variant ? 2.f : 1.f;
+            MovementPhysics rider;rider.Configure(setting);rider.Reset(100);rider.BeginFall();
+            MovementSurface face;face.height=100;face.normal[0]=.8660254f;face.normal[2]=.5f;
+            rider.Step({},1.f/fps,250);face.height=rider.FeetZ();Require(rider.ResolveSurf(face),"prepare actual surf contact");
+            auto repeated=rider;
+            for(int query=0;query<30;++query)repeated.ResolveSurf(face);
+            MoveInput strafe;strafe.right=1;
+            rider.Step(strafe,1.f/fps,250);repeated.Step(strafe,1.f/fps,250);
+            Require(std::abs(rider.VelocityY()-repeated.VelocityY())<.001f,"swept queries do not stack input acceleration");
+            sideways[variant]=-rider.VelocityY();
+            MovementPhysics free;free.Configure(setting);free.Reset(100);free.BeginFall();free.Step(strafe,1.f/fps,250);
+            Require(std::abs(free.VelocityY()+45)<.01f,"surf setting cannot alter ordinary free-air steering");
+        }
+        Require(sideways[1]>sideways[0]*1.9f,"default surf steering must accelerate more than the legacy gain");
+    }
+    // Explosion impulses have true radial falloff, including a defined coincident-center direction.
+    auto nearBlast=MovementImpulse::Explosion({0,0,0},{0,0,100},1000,975);
+    auto farBlast=MovementImpulse::Explosion({0,0,0},{0,0,500},1000,975);
+    Require(nearBlast[2]>farBlast[2] && std::abs(farBlast[2]-487.5f)<.01f,"blast impulse fades with three-dimensional distance");
+    Require(MovementImpulse::Explosion({0,0,0},{0,0,1000},1000,975)==MovementImpulse::Vector{},"blast edge has no impulse");
+    Require(MovementImpulse::Explosion({0,0,0},{0,0,0},1000,975)[2]==975,"coincident blast stays finite and upward");
+    for(int fps:{30,60,144}) {
+        MovementPhysics launched;launched.Reset(100);
+        Require(launched.AddImpulse(450,0,900,2250) && !launched.Grounded() && launched.FeetZ()==100,"impulse detaches support without teleporting feet");
+        MoveInput held;held.jump=true;float peak=100;
+        for(int frame=0;frame<fps*2;++frame){launched.Step(held,1.f/fps,250);launched.FinishMove();peak=std::max(peak,launched.FeetZ());}
+        Require(peak>430 && peak<440,"external ascent remains ballistic without a stacked Space bonus");
+        Require(std::abs(launched.VelocityX()-450)<.01f,"no-input impulse keeps horizontal momentum");
+        launched.Reset(100);for(int blast=0;blast<30;++blast)launched.AddImpulse(500,0,900,2250);
+        Require(launched.Speed()<=4500.01f && launched.VerticalVelocity()<=2250.01f,"overlapping blasts obey horizontal and upward limits");
+    }
+    // Local native XY correction must not collapse a rocket/Tau flight; real destination changes still rebase.
+    for(int fps:{30,60,144}) {
+        MovementPhysics flight;flight.Reset(0);flight.AddImpulse(450,0,900,2250);
+        for(int frame=0;frame<fps/3;++frame)flight.Step({},1.f/fps,250);
+        float feet=flight.FeetZ(),vertical=flight.VerticalVelocity(),speed=flight.Speed();
+        Require(MovementRelocation::Rebase(flight,0,80) && flight.FeetZ()==feet && flight.VerticalVelocity()==vertical &&
+            flight.Speed()==speed && !flight.Grounded(),"native local correction retains ballistic height and all momentum");
+        Require(MovementRelocation::Rebase(flight,0,220,100),"local correction accounts for the already budgeted motor step");
+        Require(!MovementRelocation::Rebase(flight,0,2000) && flight.FeetZ()==0 && flight.Grounded() &&
+            flight.VerticalVelocity()==0 && flight.Speed()==0,"distant native teleport still resets old flight");
+        flight.AddImpulse(0,0,900,2250);flight.Step({},1.f/fps,250);
+        Require(!MovementRelocation::Rebase(flight,0),"confirmed waygate travel always discards the previous flight");
+        flight.AddImpulse(0,0,900,2250);flight.Step({},1.f/fps,250);
+        Require(!MovementRelocation::Rebase(flight,500,80) && flight.FeetZ()==500,"a raised destination cannot preserve buried feet");
+        Require(!MovementRelocation::Rebase(flight,510,80) && flight.FeetZ()==510,"grounded native relocation retains normal floor rebasing");
     }
     // The new default must be reachable yet bounded at common frame rates, without changing acceleration tuning.
     for(int fps:{30,60,144}) {

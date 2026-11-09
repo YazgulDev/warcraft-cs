@@ -17,10 +17,15 @@ std::string Text(uintptr_t at) {
 void NativeUnitHud::Configure(uintptr_t base) {
     base_=base;
     std::array<unsigned char,8> code={};uintptr_t key=0;
-    // Native level lookup clamps against this map's MaxHeroLevel and uses its already resolved XP table.
+    // Both calls read the same map-resolved constants. The final XP row repeats the previous row.
     const std::array<unsigned char,8> experience={0x56,0x8B,0x74,0x24,0x08,0x6A,0x00,0xBA};
-    experienceVerified_=base && Load(base + wc3::Rva(0x207760),code) && code==experience &&
-        Load(base + wc3::Rva(0x207768),key) && key==base + wc3::Rva(0x876208);
+    const std::array<unsigned char,7> constant={0x51,0x53,0x55,0x56,0x8B,0xD9,0x57};
+    std::array<unsigned char,7> constantCode={};uintptr_t table=0;
+    experienceVerified_=base && wc3::RvaAvailable({0x207760,0x876208,0x875DE0,0x009F90}) &&
+        Load(base + wc3::Rva(0x207760),code) && code==experience &&
+        Load(base + wc3::Rva(0x207760)+8,key) && key==base + wc3::Rva(0x876208) &&
+        Load(base + wc3::Rva(0x207760)+13,table) && table==base + wc3::Rva(0x875DE0) &&
+        Load(base + wc3::Rva(0x009F90),constantCode) && constantCode==constant;
     const std::array<unsigned char,4> art={0x56,0x8B,0xF2,0xBA};std::array<unsigned char,4> artCode={};
     artVerified_=base && Load(base + wc3::Rva(0x32DCB0),artCode) && artCode==art &&
         Load(base + wc3::Rva(0x32DCB4),key) && key==base + wc3::Rva(0x938FE0);
@@ -35,12 +40,19 @@ UnitHudSnapshot NativeUnitHud::Read(wc3::Handle actor,bool inventory) const {
         result.level=wc3::GetHeroLevel(actor);result.experience=wc3::GetHeroXP(actor);
         if(experienceVerified_ && result.level>0 && result.level<100000) {
             using Threshold=int (__stdcall*)(int);
+            using MapConstant=int (__fastcall*)(const char*,const char*,int);
             auto threshold=reinterpret_cast<Threshold>(base_ + wc3::Rva(0x207760));
+            auto constant=reinterpret_cast<MapConstant>(base_ + wc3::Rva(0x009F90));
+            int maxLevel=constant(reinterpret_cast<const char*>(base_ + wc3::Rva(0x875DE0)),
+                reinterpret_cast<const char*>(base_ + wc3::Rva(0x876208)),0);
             // This native table is indexed by the level being completed: entry 1 is XP for level 2.
-            result.levelExperience=result.level>1 ? threshold(result.level-1) : 0;
-            result.nextExperience=threshold(result.level);
-            if(threshold(result.level+1)==result.nextExperience)result.nextExperience=result.levelExperience;
-            result.experienceKnown=result.levelExperience>=0 && result.nextExperience>=result.levelExperience;
+            if(maxLevel>0 && maxLevel<100000) {
+                int level=std::min(result.level,maxLevel);
+                bool capped=result.level>=maxLevel;
+                result.levelExperience=level>1 ? threshold(level-1) : 0;
+                result.nextExperience=capped ? result.levelExperience : threshold(level);
+                result.experienceKnown=result.levelExperience>=0 && (capped || result.nextExperience>result.levelExperience);
+            }
         }
     }
     if(inventory) {

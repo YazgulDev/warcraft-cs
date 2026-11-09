@@ -173,8 +173,10 @@ void FpsCombatGuard::CancelAttacks(wc3::Handle unit) {
     // Move orders suppress retaliation natively and must survive passive squad travel.
     if (wc3::GetUnitCurrentOrder(unit)!=851986) CancelOrders(unit);
 }
-void FpsCombatGuard::CancelOrders(wc3::Handle unit) {
-    if (!targetVerified) return;
+void FpsCombatGuard::CancelOrders(wc3::Handle unit, bool allowStop) {
+    // Dispatch and motor hooks still suppress pursuit while Stop is deferred. Do not
+    // consume an acquisition until we can actually issue Stop on stable ground.
+    if (!targetVerified || !allowStop) return;
     int order=wc3::GetUnitCurrentOrder(unit);
     uintptr_t object=wc3::UnitObject(unit),attack=object ? *reinterpret_cast<uintptr_t*>(object+0x1E8) : 0;
     uintptr_t target=attack ? nativeTarget(attack) : 0;

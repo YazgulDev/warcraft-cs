@@ -22,10 +22,10 @@ inline const std::array<Weapon,WeaponSlots::Count> Weapons={{
     {"M249", "m249-1.wav", 100, 200, 32, .08f, 4.7f, 3000, true},
     {"M3", "m3-1.wav", 8, 32, 104, .875f, 4.5f, 1200, false},
     {"XM1014", "xm1014-1.wav", 7, 32, 80, .25f, 3.5f, 1200, true},
-    // Fixed blast metadata matches the configurable damage snapshot used by native explosions.
-    {"HE GRENADE","hegrenade-1.wav",1,0,1200,0,0,350,false},
-    {"FLASHBANG","flashbang-1.wav",2,0,0,0,0,1000,false},
-    {"SMOKE GRENADE","sg_explode.wav",1,0,0,0,0,300,false},
+    // Each CS grenade slot carries three individual purchases by default.
+    {"HE GRENADE","hegrenade-1.wav",3,0,1800,0,0,600,false},
+    {"FLASHBANG","flashbang-1.wav",3,0,0,0,0,1000,false},
+    {"SMOKE GRENADE","sg_explode.wav",3,0,0,0,0,300,false},
     {"RPG","hl_rpg_fire.wav",1,5,1800,1.5f,2,30000,false},
     // Energy cells feed the weapon directly: these two guns never use magazine reloads.
     {"CROWBAR","hl_cbar_miss1.wav",0,0,10,.5f,0,150,true},
@@ -36,6 +36,11 @@ inline const std::array<Weapon,WeaponSlots::Count> Weapons={{
     {"UMP45","ump45-1.wav",25,100,30,.1f,3.5f,2500,true},
     {"FAMAS","famas-1.wav",25,90,30,.0825f,3.3f,3000,true},
     {"GALIL","galil-1.wav",35,90,30,.0875f,2.45f,3000,true},
-    {"G3SG1","g3sg1-1.wav",20,90,160,.25f,4.7f,4000,true}
+    {"G3SG1","g3sg1-1.wav",20,90,160,.25f,4.7f,4000,true},
+    {"P228","p228-1.wav",13,52,40,.15f,2.7f,2500,false},
+    {"FIVE-SEVEN","fiveseven-1.wav",20,100,30,.15f,2.7f,2500,false},
+    // These are inventory counts, with a separate snapshotted native blast per accepted throw.
+    {"HAND GRENADE","hl_explode3.wav",3,0,1250,0,0,700,false},
+    {"SATCHEL CHARGE","hl_explode5.wav",3,0,1200,0,0,650,false}
 }};
 }

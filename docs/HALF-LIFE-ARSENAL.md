@@ -7,12 +7,12 @@ hides only that weapon. Only Warcraft installations exclude these weapons.
 
 ## Buying and selection
 
-**B → 9 HALF-LIFE → 1 Crowbar / 2 Tau Cannon / 3 Gluon Gun / 4 RPG**. Defaults cost
-$200 / $5000 / $6000 / $4000 with the default dollar economy. RPG moves out of Equipment. Rejected/duplicate purchases
+**B → 9 HALF-LIFE → 1 Crowbar / 2 Tau Cannon / 3 Gluon Gun / 4 RPG / 5 Hand Grenade / 6 Satchel Charge**. Defaults cost
+$200 / $5000 / $6000 / $4000 / $450 / $750 with the default dollar economy. Rejected/duplicate purchases
 never spend money. All carried Half-Life weapons appear in group **6 HALF-LIFE**, in
 this order, and in sequential wheel selection. Click to confirm. Turn Tab item numbers
 off to use 1–6 for weapons. Custom bindings and the optional legacy direct-slot mode
-remain available. The local [portal/heavy-weapon development build](PORTALS-HEAVY-WEAPONS.md)
+remain available. The [0.19.0 portal/heavy-weapon update](PORTALS-HEAVY-WEAPONS.md)
 adds an installed Crowbar to the initial kit by default; `[Loadout] Crowbar=false` keeps the
 purchase-only kit. F8 grants no inventory. F12 grants every available weapon; F11 refills owned ones. Existing IDs stay stable.
 
@@ -39,6 +39,13 @@ purchase-only kit. F8 grants no inventory. F12 grants every available weapon; F1
   cell. Release, exhaustion or loss of attack ownership stops its sound and beam.
   Native target/wall tests update the beam every game frame, including between damage ticks.
   Damage is fixed at 70 per tick by default (about 700/second at the default cadence).
+- **Hand Grenade** holds the primed pose while LMB is down. Release LMB to throw and start the 2.5-second fuse.
+- **Satchel Charge** throws as soon as you press LMB and settles without bouncing. Press RMB to detonate your deployed charges. Use Y to switch RMB from squad orders to weapon controls if necessary.
+
+Both explosives use their own `[HalfLifeGrenade]` or `[Satchel]` tuning and the shared
+`[BlastJump]` impulse. Enemy damage falls off with distance and cover. The owner
+receives knockback with zero HP damage from their own charge. Rerun setup to convert
+the owned first-person models, world props and explosion sounds.
 
 Tau and Gluon use **separate** cell pools, capacity 100 each. Their ammo packs cost
 $300 by default and add 20 usable cells directly, capped at capacity. R does nothing; full

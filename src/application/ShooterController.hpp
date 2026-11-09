@@ -16,6 +16,7 @@
 #include "../combat/GrenadeThrow.hpp"
 #include "../platform/NativeGrenades.hpp"
 #include "../platform/NativeRockets.hpp"
+#include "../platform/NativeMovementImpulse.hpp"
 #include "../platform/NativePortals.hpp"
 #include "../combat/Weapon.hpp"
 #include "../combat/WeaponSlots.hpp"
@@ -119,6 +120,12 @@ public:
     bool SquadPassive() const { return squad_.Passive(); }
     // Explicit spell approach/channeling may use the native motor; idle FPS never does.
     bool NativeCastMovement() const { return Visible() && Casting(); }
+    wc3::Handle NativeAirborneActor() const {
+        // Script-owned motion and liquid support stay outside the airborne ground-repair guard.
+        if(!Visible() || cinematicRequested_ || paused_ || Casting() || status_.hidden || status_.contained ||
+            movement_.Grounded() || movement_.Swimming())return 0;
+        return unit_;
+    }
     void RequestSettingsReload() { settingsRequested_=true; }
     void RequestPositionRecovery() {positionRecoveryRequested_=true;}
     // Queue the display switch for the simulation thread, like the other FPS controls.
@@ -293,6 +300,7 @@ public:
     void TestEquip(int slot) {SwitchWeapon(slot);}
     void TestReload() {Reload();}
     void TestSecondary() {keys_[VK_RBUTTON]=false;testSecondaryUntil_=GetTickCount()+100;}
+    void TestHoldSecondary(DWORD duration) {keys_[VK_RBUTTON]=false;testSecondaryUntil_=GetTickCount()+std::min(duration,DWORD(8000));}
     void TestSmoke(float x,float y,float z) {
         grenades_.Throw(unit_,WeaponSlots::Smoke,{x,y,z},{1,0,0},{},settings_);
     }
@@ -380,13 +388,15 @@ private:
     bool shotgunReloadPerShell_=true,shotgunReloadInterrupt_=true;
     void SwitchWeapon(int slot);
     void PlantC4(float dt);
-    void ThrowGrenade(bool pressed);
+    void ThrowGrenade(bool pressed,bool secondaryPressed);
+    bool LaunchGrenade();
     GrenadeThrow grenadeThrow_;
     NativeGrenades grenades_;
     NativeRockets rockets_;
+    NativeMovementImpulse movementImpulse_;
     NativePortals portals_;
     bool rpgLaser_=true;
-    float grenadePullSeconds_=1;
+    float grenadePullSeconds_=1,grenadeRecoverySeconds_=0;
     void CancelPlant();
     void RefillAmmo(bool grantAll=false);
     void PickupItem();
@@ -400,7 +410,8 @@ private:
     void ApplyMenuSettings();
     void ToggleHealthBars();
     void ResetLoadout();
-    void RebaseAfterTeleport();
+    void CancelNativeOrders();
+    void RebaseAfterRelocation(float distance=-1,float motorDistance=0);
     void Buy(int slot,bool ammunition);
     void UpdateBuyMenu();
     void UpdateWeaponSelection(DWORD now);

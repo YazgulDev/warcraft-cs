@@ -2,7 +2,7 @@
 
 [Project home](../README.md) | [Controls](CONTROLS.md) | [Settings](CONFIGURATION.md)
 
-The local development build supports active native waygates during direct first-person,
+Release 0.19.0 supports active native waygates during direct first-person,
 third-person and unit-view control. Approach the portal to travel to its map-authored
 destination. Inactive, hidden or dead waygates do not activate. Native placement keeps the
 destination pathing behavior; the camera, physical floor, velocity and recovery history

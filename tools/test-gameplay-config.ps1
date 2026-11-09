@@ -4,6 +4,31 @@ $root=Split-Path -Parent $PSScriptRoot
 $folder=Join-Path $root ('.local/config-merge-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $folder -Force | Out-Null
 $template=Join-Path $root 'config/WarcraftCS.ini'
+# Upgrade old layouts once, keeping comments, unknown keys/sections and non-ASCII text.
+$layout=Join-Path $folder 'layout.ini'
+$utf8=[Text.UTF8Encoding]::new($false)
+$customComment='; Personal setting '+[char]0x0410
+[IO.File]::WriteAllLines($layout,@('[HEGrenade]',$customComment,'Damage=777','FutureKey=custom','[Custom]','Keep=1','[Mouse]','Sensitivity=1.7','[CustomExtra]','Keep=2'),$utf8)
+Update-GameplayConfig $template $layout
+$organized=[IO.File]::ReadAllText($layout,$utf8)
+if($organized -notmatch '(?s)01\. Controls and input ====.+\[Mouse\].+Sensitivity=1\.7.+13\. Counter-Strike grenades and C4 ====.+\[HEGrenade\].+FutureKey=custom.+99\. Custom sections ====.+\[Custom\].+Keep=1.+\[CustomExtra\].+Keep=2' -or
+    !$organized.Contains($customComment) -or ([regex]::Matches($organized,'(?m)^\[HEGrenade\]')).Count -ne 1) {
+    throw 'INI layout lost saved content or failed to group sections.'
+}
+$layoutHash=(Get-FileHash $layout).Hash;Update-GameplayConfig $template $layout
+if((Get-FileHash $layout).Hash -ne $layoutHash){throw 'INI layout must remain stable on reinstall.'}
+# The launcher uses Windows PowerShell, where the installed file may be encoded in the local ANSI page.
+$ansi=[Text.Encoding]::Default
+if($ansi.CodePage -ne 65001) {
+    $legacyLayout=Join-Path $folder 'layout-ansi.ini'
+    $legacyComment='; Personal setting '+$ansi.GetString([byte[]](0xC0,0xC0))
+    [IO.File]::WriteAllLines($legacyLayout,@('[Mouse]','Sensitivity=1.6',$legacyComment),$ansi)
+    Update-GameplayConfig $template $legacyLayout
+    $legacyText=[IO.File]::ReadAllText($legacyLayout,$ansi)
+    if(!$legacyText.Contains($legacyComment) -or !$legacyText.Contains('Sensitivity=1.6')){
+        throw 'Windows PowerShell failed to preserve the ANSI INI.'
+    }
+}
 # Surface swimming fills old clients while retaining explicit opt-outs and custom water tuning on repeat updates.
 $waterFile=Join-Path $folder 'swimming.ini'
 @('[Movement]','Mode=classic','[Swimming]','Enabled=false','MinimumDepth=144','SpeedPercent=42','FloatSeconds=0.4','ExitHeight=0','[Mouse]','Sensitivity=1.7') | Set-Content $waterFile
@@ -572,12 +597,12 @@ foreach($bloodCase in @(@('1','16','48'),@('2','16','16'),@('1','7','7'))) {
 }
 
 # Only former unversioned stock HE upgrades. Later returns to 100 and custom damage/flash opt-outs survive.
-foreach($case in @(@('100','','1200'),@('100','1','1200'),@('300','2','1200'),@('300','3','300'),@('100','2','100'),@('0','','0'),@('777','','777'),@('600','4','600'))) {
+foreach($case in @(@('100','','1800'),@('100','1','1800'),@('300','2','1800'),@('300','3','300'),@('100','2','100'),@('0','','0'),@('777','','777'),@('600','4','600'))) {
     $heConfig=Join-Path $folder ('he-damage-'+[guid]::NewGuid().ToString('N')+'.ini')
     @('[HEGrenade]',('Damage='+$case[0]),$(if($case[1]){'DamageVersion='+$case[1]}),'[Flashbang]','StunAllUnits=false','StunDistanceFalloff=true','UnitStunSeconds=4','[Movement]','Mode=classic') | Set-Content -LiteralPath $heConfig -Encoding ascii
     Update-GameplayConfig $template $heConfig
     $heText=Get-Content $heConfig -Raw
-    foreach($expected in @(('Damage='+$case[2]),'DamageVersion=4','StunAllUnits=false','StunDistanceFalloff=true','UnitStunSeconds=4','Mode=classic')) {
+    foreach($expected in @(('Damage='+$case[2]),'DamageVersion=5','StunAllUnits=false','StunDistanceFalloff=true','UnitStunSeconds=4','Mode=classic')) {
         if(!$heText.Contains($expected)){throw ('HE/flash migration lost '+$expected)}
     }
     $heHash=(Get-FileHash $heConfig).Hash;Update-GameplayConfig $template $heConfig
@@ -588,7 +613,13 @@ foreach($case in @(@('100','','1200'),@('100','1','1200'),@('300','2','1200'),@(
 foreach($spec in @(
     @('RPG','Damage','DamageVersion',2,'100','1800'),
     @('RPG','Radius','BlastVersion',4,'600','1000'),
-    @('HEGrenade','Damage','DamageVersion',4,'600','1200'),
+    @('HEGrenade','Damage','DamageVersion',5,'1200','1800'),
+    @('HEGrenade','Radius','BlastVersion',2,'350','600'),
+    @('HalfLifeGrenade','Damage','DamageVersion',2,'850','1250'),
+    @('HalfLifeGrenade','Radius','BlastVersion',2,'500','700'),
+    @('HEGrenade','Capacity','CapacityVersion',2,'1','3'),
+    @('Flashbang','Capacity','CapacityVersion',2,'2','3'),
+    @('SmokeGrenade','Capacity','CapacityVersion',2,'1','3'),
     @('AWP','Damage','DamageVersion',2,'115','230'),
     @('AWP','HeroMultiplier','MultiplierVersion',2,'3','6'),
     @('G3SG1','Damage','DamageVersion',2,'80','160'),
@@ -748,10 +779,31 @@ Write-Output 'PASS 3000 stock speed cap, custom caps, explicit legacy opt-back a
 
 # New surf controls fill missing keys and retain saved opt-outs/angles on repeated installs.
 $surfFile=Join-Path $folder 'surf.ini'
-@('[Movement]','Mode=classic','[Surfing]','Enabled=false','MaximumAngle=70','ContactDistance=4','ModelContacts=false') | Set-Content $surfFile
+@('[Movement]','Mode=classic','[Surfing]','Enabled=false','MaximumAngle=70','ContactDistance=4','ModelContacts=false','AccelerationMultiplier=1.25') | Set-Content $surfFile
 Update-GameplayConfig $template $surfFile
 $surfText=Get-Content $surfFile -Raw
-foreach($value in @('Mode=classic','[Surfing]','Enabled=false','MaximumAngle=70','ContactDistance=4','ModelContacts=false')){if(!$surfText.Contains($value)){throw "Lost surf choice: $value"}}
+foreach($value in @('Mode=classic','[Surfing]','Enabled=false','MaximumAngle=70','ContactDistance=4','ModelContacts=false','AccelerationMultiplier=1.25')){if(!$surfText.Contains($value)){throw "Lost surf choice: $value"}}
 $surfHash=(Get-FileHash $surfFile).Hash;Update-GameplayConfig $template $surfFile
 if((Get-FileHash $surfFile).Hash -ne $surfHash){throw 'Surf configuration merge repeats.'}
 Write-Output 'PASS surf defaults insertion, custom tuning, opt-out and idempotence.'
+# Older terrain/model surf profiles gain the new response knob without resetting their other choices.
+$surfLegacy=Join-Path $folder 'surf-legacy.ini'
+@('[Surfing]','Enabled=true','MaximumAngle=72') | Set-Content $surfLegacy
+Update-GameplayConfig $template $surfLegacy
+$surfLegacyText=Get-Content $surfLegacy -Raw
+if(!$surfLegacyText.Contains('AccelerationMultiplier=2') -or !$surfLegacyText.Contains('MaximumAngle=72')){throw 'Independent surf acceleration default was not merged safely.'}
+Write-Output 'PASS missing surf acceleration insertion and existing profile preservation.'
+# New weapon impulses add missing defaults without replacing explicit damage/response opt-outs.
+$jumpFile=Join-Path $folder 'weapon-jumps.ini'
+@('[BlastJump]','Enabled=false','Speed=777','MaximumUpSpeed=999','[RPG]','SelfDamagePercent=1.5','[TauCannon]','JumpRecoil=false','PrimaryJumpSpeed=0','ChargedJumpSpeed=432') | Set-Content $jumpFile
+Update-GameplayConfig $template $jumpFile
+$jumpText=Get-Content $jumpFile -Raw
+foreach($value in @('Enabled=false','Speed=777','MaximumUpSpeed=999','SelfDamagePercent=1.5','JumpRecoil=false','PrimaryJumpSpeed=0','ChargedJumpSpeed=432')){if(!$jumpText.Contains($value)){throw "Lost impulse preference: $value"}}
+$jumpHash=(Get-FileHash $jumpFile).Hash;Update-GameplayConfig $template $jumpFile
+if((Get-FileHash $jumpFile).Hash -ne $jumpHash){throw 'Impulse merge is not idempotent.'}
+$jumpFresh=Join-Path $folder 'weapon-jumps-fresh.ini'
+@('[Movement]','Mode=classic','[Combat]','FriendlyFirePercent=0') | Set-Content $jumpFresh
+Update-GameplayConfig $template $jumpFresh
+$jumpFreshText=Get-Content $jumpFresh -Raw
+foreach($value in @('[BlastJump]','Speed=650','MaximumUpSpeed=1500','SelfDamagePercent=5','JumpRecoil=true','PrimaryJumpSpeed=120','ChargedJumpSpeed=800','FriendlyFirePercent=0')){if(!$jumpFreshText.Contains($value)){throw "Missing impulse default: $value"}}
+Write-Output 'PASS RPG self damage, impulse/Tau custom choices, missing defaults and repeated upgrade preservation.'

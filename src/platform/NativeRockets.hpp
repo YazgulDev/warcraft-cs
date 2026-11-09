@@ -3,9 +3,11 @@
 #include "KillReward.hpp"
 #include "../combat/RocketProjectile.hpp"
 #include "../combat/RocketVisual.hpp"
+#include "../combat/BlastJumpEvent.hpp"
 #include "../config/GameplaySettings.hpp"
 #include "../audio/GameAudio.hpp"
 #include <deque>
+namespace NativeBlast {struct TargetPoint;}
 
 // Warcraft timer/target adapter owns launched rockets independently of the selected weapon and render context.
 class NativeRockets {
@@ -16,7 +18,7 @@ public:
     void Configure(uintptr_t base){obstacles_.Configure(base);}
     void Reset();
     bool Launch(wc3::Handle actor,const GrenadePoint& eye,const GrenadePoint& direction,const GrenadePoint& motion,const GameplaySettings& settings,ImpactSink payload={});
-    bool Tick(GameAudio& audio,wc3::Handle viewer,bool guide,const GrenadePoint& eye,const GrenadePoint& direction,float guideRange);
+    bool Tick(GameAudio& audio,wc3::Handle viewer,bool guide,const GrenadePoint& eye,const GrenadePoint& direction,float guideRange,BlastJumpEvents* jumps=nullptr,const NativeBlast::TargetPoint* physicalTarget=nullptr);
     bool Active(wc3::Handle actor) const;
     const std::vector<RocketVisual>& Visuals() const {return visuals_;}
     bool LaserVisible() const {return laserVisible_;}
@@ -24,7 +26,7 @@ public:
 private:
     KillReward::Sink onKill_;
     struct Trail {float time;GrenadePoint position;};
-    struct Charge {RocketProjectile flight;wc3::Handle actor=0;int type=0;float born=0,damage=0,friendly=0;bool explosiveDeaths=false;std::deque<Trail> trail;ImpactSink payload;};
+    struct Charge {RocketProjectile flight;wc3::Handle actor=0;int type=0;float born=0,damage=0,friendly=0;bool explosiveDeaths=false;BlastJumpSettings jump;std::deque<Trail> trail;ImpactSink payload;};
     struct Burst {GrenadePoint position;float born,size;};
     bool Clock();
     float Time() const;

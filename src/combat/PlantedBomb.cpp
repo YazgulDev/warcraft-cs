@@ -4,7 +4,7 @@
 #include <cmath>
 #include <vector>
 
-bool PlantedBomb::Plant(wc3::Handle attacker, float x, float y, GameAudio& audio,float damage,float friendlyFirePercent) {
+bool PlantedBomb::Plant(wc3::Handle attacker, float x, float y, GameAudio& audio,float damage,float friendlyFirePercent,const BlastJumpSettings& jump) {
     if (timer_) return false;
     // Effects have no unit footprint or autonomous abilities, so planting cannot trap the character.
     std::string model = wc3::UnitModelPath(0x6E676C6D); // nglm: read the owner's native mine model
@@ -18,12 +18,14 @@ bool PlantedBomb::Plant(wc3::Handle attacker, float x, float y, GameAudio& audio
     attacker_ = attacker; x_ = x; y_ = y; remaining_ = 35; nextBeep_ = 0; exploded_ = false;
     damage_=damage; // The fixed configured explosion is independent of hero attack and later reloads.
     friendlyFirePercent_=friendlyFirePercent; // Reloads affect future charges, keeping an active charge consistent.
+    jump_=jump;
     audio.Play("c4_plant.wav");
     wc3::Log("C4 planted marker=%08X model=%s at=%.1f,%.1f fuse=35", marker_, model.c_str(), x_, y_);
     return true;
 }
-bool PlantedBomb::Tick(GameAudio& audio,const KillReward::Sink& onKill) {
-    if (!timer_) return false;
+bool PlantedBomb::Tick(GameAudio& audio,const KillReward::Sink& onKill,BlastJumpEvents* jumps,const std::function<bool()>& valid) {
+    auto live=[&]{return !valid || valid();};
+    if (!timer_ || !live()) return false;
     // JASS timers follow Warcraft simulation time, so pause/Alt-Tab never skip the fuse.
     float elapsed = wc3::Real(wc3::TimerGetElapsed(timer_));
     remaining_ = std::max(0.0f, 35 - elapsed);
@@ -50,6 +52,8 @@ bool PlantedBomb::Tick(GameAudio& audio,const KillReward::Sink& onKill) {
     if (explosion) wc3::DestroyEffect(explosion);
     bool damaged = false;
     float radius = 800, z = wc3::Ground(x_, y_);
+    // A single copied detonation event is independent of the planter's allied damage policy.
+    if(jumps)jumps->push_back({{x_,y_,z+8},radius,jump_,"C4"});
     wc3::Handle group = wc3::CreateGroup(), target = 0;
     std::vector<wc3::Handle> victims;
     wc3::GroupEnumUnitsInRange(group, &x_, &y_, &radius, 0);
@@ -66,6 +70,7 @@ bool PlantedBomb::Tick(GameAudio& audio,const KillReward::Sink& onKill) {
         return a != attacker_ && b == attacker_;
     });
     for (wc3::Handle victim : victims) {
+        if(!live())return damaged; // Native damage/reward callbacks may have replaced the map.
         if (!wc3::GetUnitTypeId(victim)) continue;
         float before = wc3::Real(wc3::GetUnitState(victim, 0));
         if (before <= .405f) continue;
@@ -77,7 +82,9 @@ bool PlantedBomb::Tick(GameAudio& audio,const KillReward::Sink& onKill) {
         // Snapshot hostile creature eligibility before map death scripts mutate ownership or remove the corpse.
         auto reward=KillReward::Capture(attacker_,victim,onKill);
         if (damage>0 && wc3::GetUnitTypeId(attacker_)) wc3::UnitDamageTarget(attacker_, victim, &damage, FALSE, TRUE, 5, 26, 0);
+        if(!live())return damaged;
         if(damage>0)reward.Confirm(onKill);
+        if(!live())return damaged;
         float after = wc3::Real(wc3::GetUnitState(victim, 0)); damaged |= after < before;
         wc3::Log("C4 blast target=%08X owner=%08X damage=%.1f hpBefore=%.1f hpAfter=%.1f", victim, wc3::GetOwningPlayer(victim), damage, before, after);
     }

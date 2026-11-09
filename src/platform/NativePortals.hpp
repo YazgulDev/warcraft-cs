@@ -8,7 +8,8 @@ class NativePortals {
 public:
     void Configure(uintptr_t module);
     void Reset();
-    bool Observe(wc3::Handle actor,float tolerance);
+    // Report displacement separately from the trigger threshold so movement can retain local airborne motion.
+    bool Observe(wc3::Handle actor,float tolerance,float* distance=nullptr);
     void Commit(wc3::Handle actor);
     bool Travel(wc3::Handle actor,float feet,const PortalSettings& settings,bool canMove,const std::function<bool()>& valid);
 private:

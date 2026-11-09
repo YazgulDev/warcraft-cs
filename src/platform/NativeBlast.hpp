@@ -6,7 +6,9 @@
 
 // Shared HE/rocket damage adapter preserves map callbacks, cover and native quest immunity.
 namespace NativeBlast {
+// Controlled FPS height is physical, unlike the hidden native actor's terrain-only base.
+struct TargetPoint {wc3::Handle unit=0;GrenadePoint center{};};
 bool Covered(const GrenadePoint& from,const GrenadePoint& to,const std::vector<Bounds3>& obstacles);
 bool Apply(wc3::Handle actor,int type,const GrenadePoint& from,float damage,float radius,float friendly,
-    const std::vector<Bounds3>& obstacles,const std::function<bool()>& valid,const char* label,const KillReward::Sink& onKill={},bool explosiveDeaths=false);
+    const std::vector<Bounds3>& obstacles,const std::function<bool()>& valid,const char* label,const KillReward::Sink& onKill={},bool explosiveDeaths=false,float selfDamagePercent=-1,const TargetPoint* physicalTarget=nullptr);
 }

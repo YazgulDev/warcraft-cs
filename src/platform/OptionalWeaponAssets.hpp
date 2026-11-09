@@ -33,4 +33,10 @@ inline bool HalfLife(const std::filesystem::path& root,int index) {
     return index==0 ? Sealed(root,"crowbar.ready","WHL1",crowbar) : index==1 ? Sealed(root,"gauss.ready","WHL1",tau) :
         index==2 && Sealed(root,"egon.ready","WHL1",gluon);
 }
+inline bool HalfLifeExplosive(const std::filesystem::path& root,bool satchel) {
+    // Require the held and world models along with the exact explosion samples before offering a charge.
+    const char* hand[]={"grenade.wcg","grenade.wca","buy/grenade.wcg","world/grenade.wcg","sounds/hl_explode3.wav"};
+    const char* remote[]={"satchel.wcg","satchel.wca","buy/satchel.wcg","world/satchel.wcg","sounds/hl_explode5.wav"};
+    return satchel ? Sealed(root,"satchel.ready","WHL1",remote) : Sealed(root,"grenade.ready","WHL1",hand);
+}
 }

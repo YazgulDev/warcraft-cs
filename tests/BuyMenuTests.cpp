@@ -128,15 +128,15 @@ int main() {
     }
     // Consumables charge once per grenade, obey their carry limit and never create magazine reserves.
     for(int slot=WeaponSlots::HE;slot<=WeaponSlots::Smoke;++slot) {
-        assert(!WeaponSlots::Firearm(slot));BuyInventory fresh;int loaded=0,spare=0,wallet=10000;
+        assert(!WeaponSlots::Firearm(slot) && magazines[slot]==3);BuyInventory fresh;int loaded=0,spare=0,wallet=10000;
         for(int i=0;i<magazines[slot];++i)assert(fresh.Buy(slot,false,settings,wallet,loaded,spare,magazines[slot],0)==BuyInventory::Result::Bought);
-        int saved=wallet;assert(loaded==magazines[slot] && spare==0);
+        int saved=wallet;assert(loaded==magazines[slot] && spare==0 && saved==10000-3*settings.weaponPrice[slot]);
         assert(fresh.Buy(slot,true,settings,wallet,loaded,spare,magazines[slot],0)==BuyInventory::Result::Full && wallet==saved);
         --loaded;assert(fresh.Buy(slot,true,settings,wallet,loaded,spare,magazines[slot],0)==BuyInventory::Result::Bought && loaded==magazines[slot] && spare==0);
         assert(wallet==saved-settings.ammoPrice[slot]);
         settings.grenades.enabled=false;assert(fresh.Buy(slot,false,settings,wallet,loaded,spare,magazines[slot],0)==BuyInventory::Result::Invalid);settings.grenades.enabled=true;
     }
-    for(int slot=WeaponSlots::TMP;slot<=WeaponSlots::G3SG1;++slot) {
+    for(int slot=WeaponSlots::TMP;slot<=WeaponSlots::FiveSeven;++slot) {
         BuyInventory fresh;int wallet=settings.weaponPrice[slot],loaded=0,spare=0;
         assert(fresh.Buy(slot,false,settings,wallet,loaded,spare,settings.weapons[slot].magazine,settings.maxReserve[slot])==BuyInventory::Result::Bought);
         assert(wallet==0 && loaded==settings.weapons[slot].magazine && fresh.owned[slot]);
@@ -144,6 +144,15 @@ int main() {
         assert(fresh.Buy(slot,true,settings,wallet,loaded,spare,settings.weapons[slot].magazine,settings.maxReserve[slot])==BuyInventory::Result::Bought);
         assert(wallet==0 && spare==settings.maxReserve[slot]);
         assert(CombatVisuals::UsesCases(slot));
+    }
+    // Independent optional resources gate both guest consumables and their mouse rows.
+    settings.halfLife.grenade.available=settings.halfLife.satchel.available=true;
+    assert(BuyMenuLayout::Keys(BuyMenu::Page::HalfLife,&settings)==std::vector<int>({4,5,6}));
+    for(int slot:{WeaponSlots::HandGrenade,WeaponSlots::Satchel}) {
+        BuyInventory fresh;int wallet=10000,loaded=0,spare=0,capacity=settings.weapons[slot].magazine;
+        for(int i=0;i<capacity;++i)assert(fresh.Buy(slot,false,settings,wallet,loaded,spare,capacity,0)==BuyInventory::Result::Bought);
+        assert(loaded==capacity && spare==0 && !CombatVisuals::UsesCases(slot));
+        assert(fresh.Buy(slot,false,settings,wallet,loaded,spare,capacity,0)==BuyInventory::Result::Full);
     }
     BuyMenu menu;menu.Toggle();menu.Select(9,2);assert(menu.Current()==BuyMenu::Page::HalfLife);menu.Select(0,2);
     assert(menu.Select(6,2).primaryAmmo && menu.Select(7,2).secondaryAmmo);

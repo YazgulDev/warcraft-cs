@@ -15,6 +15,10 @@ Save and press **F8** in a controlled view. Most settings apply immediately;
 starting kits apply on the next map, and live explosives retain their launch/plant
 settings. Installation updates add missing keys and preserve custom values.
 
+The launcher can open the installed file with **Edit INI**. The numbered English
+categories group related sections while keeping the existing section and key names.
+Updates organize existing files and keep saved comments and custom sections.
+
 The [annotated INI](../config/WarcraftCS.ini) is the complete list of keys, defaults,
 units, bounds and reload rules. Values below describe the published release;
 an older installation may retain different saved choices.
@@ -161,13 +165,13 @@ automated. Existing native autocast settings may still act independently.
 native limiter. `DrawDistance=5000` accepts 3000–20000 world units. Actual performance
 depends on hardware and map load; farther rendering does not reveal fog-hidden units.
 
-The local development build adds `[Rendering] FieldOfView=85`: horizontal world-camera
+Release 0.19.0 adds `[Rendering] FieldOfView=85`: horizontal world-camera
 degrees, clamped to 60–120. Edit **F2 → Field of view → Apply & Save** or reload a manual
 INI edit with F8. FPS, F9 and third person share the preference; existing scope zoom stays
 independent. Missing/invalid/non-finite values use 85. Updates preserve custom angles.
 
 `[Sky] WarcraftEnabled=true` supplies the native sky on maps without one.
-The local development build adds `WarcraftPreset=auto`: auto / summer / fall / winter /
+Release 0.19.0 adds `WarcraftPreset=auto`: auto / summer / fall / winter /
 felwood / dalaran. With Warcraft type selected, the F2 preset row chooses these stock models.
 Auto preserves authored map skies; other choices override only controlled views. F2 Apply
 and F8 take effect immediately. Leaving FPS, selecting CS or hiding/revealing the sky restores
@@ -247,14 +251,25 @@ Only camera/aim height receives the bounded correction. Horizontal position, col
 
 The [arsenal/smoke preview](ARSENAL-SMOKE-PREVIEW.md) documents the new TMP, UMP45, FAMAS, Galil and G3SG1 sections and `[SmokeGrenade] VisibilityDistance=96` / `BlocksAI=true`. Existing opacity and weapon tuning are preserved during updates.
 
-The [F2 in-game settings panel](INGAME-SETTINGS.md) edits mouse sensitivity, CS volume, movement physics, view distance and sky; the local development build also exposes field of view. `[Mouse] Sensitivity=1` and `ScopeSensitivity=1` preserve previous aiming; `[Sky] Visible=true` adds explicit controlled-view sky visibility. Apply saves only changed keys; F8 still reloads manual edits.
+The [F2 in-game settings panel](INGAME-SETTINGS.md) edits mouse sensitivity, CS volume, movement physics, view distance and sky; release 0.19.0 also exposes field of view. `[Mouse] Sensitivity=1` and `ScopeSensitivity=1` preserve previous aiming; `[Sky] Visible=true` adds explicit controlled-view sky visibility. Apply saves only changed keys; F8 still reloads manual edits.
 
 The [nuclear bomb and chat preview](NUCLEAR-CHAT-PREVIEW.md) documents `[Chat]` and `[NuclearBomb]` keys, ranges and next-launch F8 snapshots.
 
 [Release 0.17.0](RELEASE-0.17.0.md) collects all new weapon, smoke, mouse, sky, chat and nuclear defaults/ranges. Nuclear gameplay settings apply to future launches on F8; `[NuclearAudio]` layer edits require Install/asset reconversion. Existing custom codes survive; the former stock nuclear code upgrades to `warneverchanges`.
 
 
-## Terrain and model surfing (development preview)
+## Weapon impulses (development build)
+
+The [weapon-jump development build](WEAPON-JUMPS.md) documents RPG/HE/C4 propulsion,
+Tau recoil, 5-percent RPG self damage and all new keys, units, bounds and reload timing.
+
+## Terrain and model surfing (0.19.0)
+
+The [connected Surf Flow development build](SURF-FLOW.md) adds
+`AccelerationMultiplier=2` (0.1–4; 1 restores the 0.19.0 response). It scales air-input
+acceleration and the wish-direction allowance only after confirmed surf contact,
+once per physics step. No-input gravity, ordinary free-air Bunnyhop and the saved
+speed cap remain independent. Startup/F8 applies it and updates preserve custom values.
 
 `[Surfing] Enabled=true` enables airborne sliding on continuous, native-walkable terrain slopes
 steeper than `[Movement] MaxWalkSlope` (46 degrees by default). Gravity accelerates along the

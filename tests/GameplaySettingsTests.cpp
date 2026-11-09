@@ -15,12 +15,31 @@ int main() {
     // Headless regressions report assertion details to the captured journal instead of a desktop dialog.
     _set_error_mode(_OUT_TO_STDERR);
     GameplaySettings settings;
+    // Impulse/self-damage keys share the normal startup/F8 loader, independent of owned asset seals.
+    const auto impulsePath=(std::filesystem::current_path()/"impulse-validation.ini").string();
+    assert(settings.rpg.selfDamagePercent==5 && settings.blastJump.enabled && settings.blastJump.speed==650 &&
+        settings.blastJump.maximumUpSpeed==1500 && settings.halfLife.tauJumpRecoil && settings.halfLife.tauChargedJumpSpeed==800);
+    {std::ofstream f(impulsePath);f<<"[BlastJump]\nEnabled=false\nSpeed=777\nMaximumUpSpeed=999\n[RPG]\nSelfDamagePercent=2.5\n[TauCannon]\nJumpRecoil=false\nPrimaryJumpSpeed=0\nChargedJumpSpeed=432\n";}
+    auto impulseConfig=GameplaySettings::Load(impulsePath);
+    assert(!impulseConfig.blastJump.enabled && impulseConfig.blastJump.speed==777 && impulseConfig.blastJump.maximumUpSpeed==999 &&
+        impulseConfig.rpg.selfDamagePercent==2.5f && !impulseConfig.halfLife.tauJumpRecoil && impulseConfig.halfLife.tauPrimaryJumpSpeed==0 && impulseConfig.halfLife.tauChargedJumpSpeed==432);
+    {std::ofstream f(impulsePath);f<<"[BlastJump]\nSpeed=inf\nMaximumUpSpeed=-5\n[RPG]\nSelfDamagePercent=500\n[TauCannon]\nPrimaryJumpSpeed=nan\nChargedJumpSpeed=9000\n";}
+    impulseConfig=GameplaySettings::Load(impulsePath);
+    assert(impulseConfig.blastJump.speed==650 && impulseConfig.blastJump.maximumUpSpeed==100 && impulseConfig.rpg.selfDamagePercent==100 &&
+        impulseConfig.halfLife.tauPrimaryJumpSpeed==120 && impulseConfig.halfLife.tauChargedJumpSpeed==3000);
+    std::filesystem::remove(impulsePath);
     // Startup and F8 share finite surf bounds and retain an explicit disabled preference.
     const auto surfPath=(std::filesystem::current_path()/"surf-validation.ini").string();
-    assert(settings.movement.surf.enabled && settings.movement.surf.modelContacts && settings.movement.surf.maximumAngle==80 && settings.movement.surf.contactDistance==8);
-    {std::ofstream f(surfPath);f<<"[Surfing]\nEnabled=false\nModelContacts=false\nMaximumAngle=70\nContactDistance=4\n";}
+    assert(settings.movement.surf.enabled && settings.movement.surf.modelContacts && settings.movement.surf.accelerationMultiplier==2 && settings.movement.surf.maximumAngle==80 && settings.movement.surf.contactDistance==8);
+    {std::ofstream f(surfPath);f<<"[Surfing]\nEnabled=false\nModelContacts=false\nAccelerationMultiplier=1.5\nMaximumAngle=70\nContactDistance=4\n";}
     auto surf=GameplaySettings::Load(surfPath).movement.surf;
-    assert(!surf.enabled && !surf.modelContacts && surf.maximumAngle==70 && surf.contactDistance==4);
+    assert(!surf.enabled && !surf.modelContacts && surf.accelerationMultiplier==1.5f && surf.maximumAngle==70 && surf.contactDistance==4);
+    // Startup/F8 share finite defaults and bounds for the independent contact input gain.
+    for(auto value:{"nan","inf","bad","","-5","8"}) {
+        {std::ofstream f(surfPath);f<<"[Surfing]\nAccelerationMultiplier="<<value<<"\n";}
+        float gain=GameplaySettings::Load(surfPath).movement.surf.accelerationMultiplier;
+        assert(gain==(std::string(value)=="-5" ? .1f : std::string(value)=="8" ? 4.f : 2.f));
+    }
     {std::ofstream f(surfPath);f<<"[Surfing]\nEnabled=bad\nMaximumAngle=nan\nContactDistance=inf\n";}
     surf=GameplaySettings::Load(surfPath).movement.surf;
     assert(surf.enabled && surf.maximumAngle==80 && surf.contactDistance==8);
@@ -98,9 +117,10 @@ int main() {
     assert(settings.economy.killReward==200 && settings.economy.maximumMoney==16000);
     assert(settings.weaponDrops.enabled && settings.weaponDrops.chancePercent==.5f);
     assert(settings.rpg.radius==1000 && settings.damage[WeaponSlots::RPG]==1800);
-    assert(settings.damage[WeaponSlots::HE]==1200 && settings.heroMultiplier[WeaponSlots::M3]==6 && settings.heroMultiplier[WeaponSlots::XM1014]==4.8f);
+    assert(settings.damage[WeaponSlots::HE]==1800 && settings.heroMultiplier[WeaponSlots::M3]==6 && settings.heroMultiplier[WeaponSlots::XM1014]==4.8f);
+    assert(settings.grenades.heRadius==600 && settings.halfLife.grenade.radius==700 && settings.damage[WeaponSlots::HandGrenade]==1250);
     assert(settings.ContactDamage(WeaponSlots::M3,false,100)==600 && std::abs(settings.ContactDamage(WeaponSlots::XM1014,false,100)-480)<.001f);
-    assert(settings.ContactDamage(WeaponSlots::RPG,false,100)==1800 && settings.ContactDamage(WeaponSlots::HE,false,100)==1200);
+    assert(settings.ContactDamage(WeaponSlots::RPG,false,100)==1800 && settings.ContactDamage(WeaponSlots::HE,false,100)==1800);
     auto economyPath=(std::filesystem::current_path()/"economy-reload-test.ini").string();
     {std::ofstream f(economyPath);f<<"[Economy]\nCurrency=gold\nStartingMoney=99999\nMaximumMoney=2000\nKillReward=nan\n[WeaponDrops]\nEnabled=false\nChancePercent=999\nLifetimeSeconds=-2\nPickupRadius=nan\nMaximumDrops=0\n[RPG]\nRadius=nan\nDamage=nan\n";}
     auto economyReload=GameplaySettings::Load(economyPath);
@@ -888,7 +908,8 @@ int main() {
     for(const auto& tuning:std::vector<std::tuple<const char*,const char*,const char*,int,int,float,float>>{
         {"RPG","Damage","DamageVersion",2,WeaponSlots::RPG,100,1800},
         {"RPG","Radius","BlastVersion",4,-1,600,1000},
-        {"HEGrenade","Damage","DamageVersion",4,WeaponSlots::HE,600,1200},
+        {"HEGrenade","Damage","DamageVersion",5,WeaponSlots::HE,1200,1800},
+        {"HalfLifeGrenade","Damage","DamageVersion",2,WeaponSlots::HandGrenade,850,1250},
         {"AWP","Damage","DamageVersion",2,WeaponSlots::AWP,115,230},
         {"G3SG1","Damage","DamageVersion",2,WeaponSlots::G3SG1,80,160},
         {"TauCannon","Damage","DamageVersion",3,WeaponSlots::Tau,100,200},
@@ -915,12 +936,26 @@ int main() {
     }
     // Stock HE migrates once in the actual startup/F8 loader; custom, zero and versioned 100 remain intentional.
     for(const char* config:{"", "[HEGrenade]\nDamage=100\n", "[HEGrenade]\nDamage=100.0\nDamageVersion=1\n"}) {
-        {std::ofstream f(path);f<<config;}assert(GameplaySettings::Load(path).damage[WeaponSlots::HE]==1200);
+        {std::ofstream f(path);f<<config;}assert(GameplaySettings::Load(path).damage[WeaponSlots::HE]==1800);
     }
     for(int damage:{0,100,777}) {
         {std::ofstream f(path);f<<"[HEGrenade]\nDamage="<<damage<<"\nDamageVersion=2\n[Flashbang]\nStunAllUnits=false\nStunDistanceFalloff=true\n";}
         auto explosive=GameplaySettings::Load(path);assert(explosive.damage[WeaponSlots::HE]==damage);
         assert(!explosive.grenades.flashStunAllUnits && explosive.grenades.flashStunDistanceFalloff);
+    }
+    // Direct F8 loads upgrade the former capacities and radii without requiring an installer run.
+    for(int version:{1,2}) {
+        {std::ofstream f(path);
+            f<<"[HEGrenade]\nRadius=350\nCapacity=1\nBlastVersion="<<version<<"\nCapacityVersion="<<version
+             <<"\n[SmokeGrenade]\nCapacity=1\nCapacityVersion="<<version<<"\n[Flashbang]\nCapacity=2\nCapacityVersion="<<version
+             <<"\n[HalfLifeGrenade]\nRadius=500\nBlastVersion="<<version<<"\n";
+        }
+        auto explosive=GameplaySettings::Load(path);
+        assert(explosive.grenades.heRadius==(version==1 ? 600 : 350));
+        assert(explosive.halfLife.grenade.radius==(version==1 ? 700 : 500));
+        assert(explosive.weapons[WeaponSlots::HE].magazine==(version==1 ? 3 : 1));
+        assert(explosive.weapons[WeaponSlots::Smoke].magazine==(version==1 ? 3 : 1));
+        assert(explosive.weapons[WeaponSlots::Flashbang].magazine==(version==1 ? 3 : 2));
     }
     for(const char* value:{"", "broken", "true", "false", "0", "1"}) {
         {std::ofstream f(path);f<<"[Flashbang]\nStunAllUnits="<<value<<"\nStunDistanceFalloff="<<value<<"\n";}

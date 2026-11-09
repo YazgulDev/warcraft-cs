@@ -31,15 +31,15 @@ int main() {
     // The wheel must visit the visible primary rows before crossing into the pistol group.
     menu.Close();menu.Cycle(2,0,available,19);
     assert(menu.Pending()==WeaponSlots::AWP);
-    menu.Close();menu.Cycle(-1,0,available,20);assert(menu.Pending()==WeaponSlots::RPG);
+    menu.Close();menu.Cycle(-1,0,available,20);assert(menu.Pending()==WeaponSlots::Satchel);
     menu.Cycle(1,0,available,21);assert(menu.Pending()==0);
     menu.Cycle(4,0,available,22);assert(menu.Pending()==WeaponSlots::P90);
     assert(menu.Confirm(available)==WeaponSlots::P90 && !menu.Open());
     // Expected visible rows, including every category boundary; reversing retraces each individual step.
     const int ordered[]={0,1,WeaponSlots::AWP,WeaponSlots::MP5,WeaponSlots::P90,WeaponSlots::M249,
-        WeaponSlots::M3,WeaponSlots::XM1014,WeaponSlots::TMP,WeaponSlots::UMP45,WeaponSlots::FAMAS,WeaponSlots::Galil,WeaponSlots::G3SG1,WeaponSlots::Pistol,WeaponSlots::Deagle,WeaponSlots::Glock,
+        WeaponSlots::M3,WeaponSlots::XM1014,WeaponSlots::TMP,WeaponSlots::UMP45,WeaponSlots::FAMAS,WeaponSlots::Galil,WeaponSlots::G3SG1,WeaponSlots::Pistol,WeaponSlots::Deagle,WeaponSlots::Glock,WeaponSlots::P228,WeaponSlots::FiveSeven,
         WeaponSlots::Knife,WeaponSlots::Sword,WeaponSlots::C4,WeaponSlots::HE,WeaponSlots::Flashbang,WeaponSlots::Smoke,
-        WeaponSlots::Crowbar,WeaponSlots::Tau,WeaponSlots::Gluon,WeaponSlots::RPG};
+        WeaponSlots::Crowbar,WeaponSlots::Tau,WeaponSlots::Gluon,WeaponSlots::RPG,WeaponSlots::HandGrenade,WeaponSlots::Satchel};
     for(int i=0;i<WeaponSlots::Count;++i) {
         menu.Close();menu.Cycle(1,ordered[i],available,23);
         assert(menu.Pending()==ordered[(i+1)%WeaponSlots::Count]);

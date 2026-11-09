@@ -112,6 +112,8 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
         else if(BackgroundGameplay::Enabled() && command=="wheel") {int delta=0;input>>delta;controller.RequestMouseWheel(delta);}
         else if(BackgroundGameplay::Enabled() && command=="heroattack")controller.TestHeroAttack();
         else if(BackgroundGameplay::Enabled() && command=="holdattack") {DWORD duration=0;input>>duration;controller.TestHoldAttack(duration);}
+        // Bounded RMB exercises the real Tau charge/release path without desktop input.
+        else if(BackgroundGameplay::Enabled() && command=="holdsecondary") {DWORD duration=0;input>>duration;controller.TestHoldSecondary(duration);}
         else if(BackgroundGameplay::Enabled() && command=="targetstats")controller.TestLogTarget();
         else if(BackgroundGameplay::Enabled() && (command=="aimhead" || command=="headstrike") && enemy) {
             // Verification uses the same named-head ray and shooter damage as real inputs; no forced kill or body flag.

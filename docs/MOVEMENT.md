@@ -13,12 +13,12 @@ press for every takeoff. Keeping W pressed or turning against the strafe directi
 Takeoffs skip ground friction and use air acceleration on their first frame. Air acceleration limits only
 velocity along the input direction, retaining perpendicular momentum; changing that direction with the
 mouse accumulates speed above the weapon's running speed. With zero takeoff boost, straight jumps
-preserve existing speed without creating a bonus. The local development build defaults to a 15%
+preserve existing speed without creating a bonus. Release 0.19.0 defaults to a 15%
 moving-takeoff bonus and air acceleration 30 (previously 0% / 10). Release Space or stop jumping to let ground friction brake.
 Shift/Ctrl suppress the extra takeoff boost. Warcraft roots/stuns still stop horizontal movement and
 block takeoff; release Space after recovery. Existing slows still cap movement speed.
 
-The local development build fixes a classic-mode crest landing that could erase horizontal
+Release 0.19.0 fixes a classic-mode crest landing that could erase horizontal
 momentum. The existing classic floor resolver now runs before the first swept step and after
 each step, so an accepted descending landing is available to the next collision check.
 Previously it could stay airborne until the frame ended and hit an otherwise clear ramp.
@@ -41,8 +41,10 @@ current height initially, then gravity accelerates the fall until landing. No fa
 Landing uses the player's full collision footprint: a foot reaching the top catches the lip before
 the center crosses, and support ends after the trailing foot leaves. Native cliff rims include the
 lower-bank pathing cell; validated movement there avoids Warcraft's nearest-cell relocation.
-Map bounds and unsupported flat pathing cells remain blocked. Unknown custom models cannot grant
-permission to cross blocked pathing. Native cliff levels distinguish cliff faces from ordinary hills.
+Map bounds remain blocked. When a cell blocks walking, high airborne movement can cross it
+if Warcraft allows flying there and the feet clear the terrain by at least the current body height.
+This check follows the terrain and solid-object sweeps. Native cliff levels distinguish cliff faces
+from ordinary hills.
 With `[Swimming] Enabled=true`, shallow water uses its actual terrain bed and deep water switches to surface swimming. Move toward a reachable bank and press Space once to leave a canal. Bridges and native flight retain separate support. See [swimming and its editable settings](SWIMMING.md); disabling swimming restores the previous water-support movement.
 
 World boundaries include the actor radius in every mode. An actor already outside is clamped
@@ -94,10 +96,10 @@ simulation step applies the new speed cap. Jump speed applies to the next takeof
 | UseNativeUnitCollision | true | true/false; live Warcraft actor/creature footprints. Ignore Locust/pathing-disabled helpers; buildings/trees retain solid model volumes. false restores visual creature boxes and the 24-unit actor footprint |
 | BunnyHop | true | true/false; preserves excess takeoff momentum and enables the optional boost and air speed cap. false clips excess speed to the current weapon's running speed at each takeoff |
 | AutoJump | true | true/false; false requires a new Space press per jump |
-| ClassicRampContacts | true (local development) | Classic only; bounded airborne foot contact on verified walkable native ramps, including rising contact. Startup/F8 |
-| JumpBoostPercent | 15 (local development) | 0–100 percent per moving takeoff; arcade bonus, separate from air strafe acceleration |
-| MaxBunnySpeed | 3000 (local development) | 250–3000 GoldSrc units/s; horizontal cap, independent of air acceleration |
-| AirAcceleration | 30 (local development) | 0–100 wish-direction acceleration multiplier |
+| ClassicRampContacts | true (0.19.0) | Classic only; bounded airborne foot contact on verified walkable native ramps, including rising contact. Startup/F8 |
+| JumpBoostPercent | 15 (0.19.0) | 0–100 percent per moving takeoff; arcade bonus, separate from air strafe acceleration |
+| MaxBunnySpeed | 3000 (0.19.0) | 250–3000 GoldSrc units/s; horizontal cap, independent of air acceleration |
+| AirAcceleration | 30 (0.19.0) | 0–100 wish-direction acceleration multiplier |
 | JumpSpeed | 268.328 | 1–800 GoldSrc units/s upwards |
 | Gravity | 800 | 100–3000 GoldSrc units/s² downwards |
 | StepHeight | 27 | 0–64 Warcraft units; automatic rise/drop limit, larger drops fall |
@@ -111,13 +113,12 @@ One GoldSrc unit corresponds to 1.5 Warcraft units. The default jump rises about
 Finite out-of-range numbers are clamped; missing/empty/malformed/non-finite values use the defaults.
 Boolean values accept true/false case-insensitively; invalid values use their default.
 
-Older test configs with `JumpBoostPercent=8` keep that value during an update. The local development
-build upgrades former stock 0/10 once through independent `JumpBoostVersion=2` and
+Older test configs with `JumpBoostPercent=8` keep that value during an update. Release 0.19.0 upgrades former stock 0/10 once through independent `JumpBoostVersion=2` and
 `AirAccelerationVersion=2` markers. Keep those markers at 2 when choosing a deliberate old value.
 For strafe-only behavior, set `JumpBoostPercent=0`, `JumpBoostVersion=2` and press **F8**.
 For the former air response also set `AirAcceleration=10`, `AirAccelerationVersion=2`.
 Set `AirAcceleration=0` to disable air strafe gain. Jump height, gravity, collision and the cap remain unchanged.
-The local development default and supported maximum cap are 3000 GoldSrc units/s (4500 Warcraft units/s).
+The 0.19.0 default and supported maximum cap are 3000 GoldSrc units/s (4500 Warcraft units/s).
 Air acceleration stays 30 and the moving-takeoff bonus stays 15 percent. Stock 1000 upgrades once through
 `MaxBunnySpeedVersion=2`; keep this marker at 2 for an explicit 1000 or another custom cap. Missing/invalid
 values use 3000, finite values clamp to 250–3000, and startup/F8 apply it. Swept collision still checks eight-unit segments.
@@ -227,3 +228,13 @@ platforms, a rising deck versus an underpass, buried feet, low headroom, automat
 rescue, rejected stale destinations and preserved ordinary falls/hop metrics. Owned ElevatorPuzzle
 and InvisiblePlatform decode to 202 and 2 triangles respectively; no retail model is distributed.
 The reported Ancient One campaign traversal with the corrected DLL has not yet been driven in game.
+
+## Surfing
+
+Release 0.19.0 adds configurable gravity-driven sliding on steep native-walkable terrain and verified stationary model faces in classic/hull/recovery. It remains airborne, uses existing air strafing and does not earn ground-jump bonuses. Model bounds alone never grant a surf plane; walls, undersides and headroom still block. See [settings and opt-outs](CONFIGURATION.md#terrain-and-model-surfing-0190), [Surf Practice](SURF-PRACTICE.md) and the [Surf Skyline time trial](SURF-SKYLINE.md).
+
+## Weapon jumps (development build)
+
+RPG, HE and C4 can propel the controlled player; Tau recoil pushes opposite the shot
+and grows with charge. Aim down to jump upward. Existing collision and the horizontal
+speed cap resolve the resulting trajectory. See [defaults, self damage and opt-outs](WEAPON-JUMPS.md).

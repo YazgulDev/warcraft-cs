@@ -82,6 +82,7 @@ $sources += '"' + (Join-Path $modRoot 'src/platform/NativeCommandCard.cpp') + '"
 # Keyboard metadata and native spell targeting/order ownership are separate from the application coordinator.
 $sources += @('input/ShortcutBindings.cpp','config/HeroSpellSlots.cpp','platform/NativeSpellSlots.cpp','platform/SpellAim.cpp','platform/SpellCaster.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 $sources += '"' + (Join-Path $modRoot 'src/platform/MovementObstacles.cpp') + '"'
+$sources += '"' + (Join-Path $modRoot 'src/platform/MapRockObstacles.cpp') + '"'
 $sources += '"' + (Join-Path $modRoot 'src/platform/NativeGrenades.cpp') + '"'
 # Local CS drops own their native markers independently of Warcraft inventory items.
 $sources += '"' + (Join-Path $modRoot 'src/platform/DroppedWeapons.cpp') + '"'

@@ -1,4 +1,6 @@
 #include "../src/platform/NativeRockets.hpp"
+#include "../src/platform/NativeMovementImpulse.hpp"
+#include "../src/combat/BombField.hpp"
 #include "../src/platform/NativeGrenades.hpp"
 #include "../src/platform/NativeBlast.hpp"
 #include "../src/platform/NativeExplosiveDeath.hpp"
@@ -31,18 +33,21 @@ float Real(Bits value){float result;std::memcpy(&result,&value,4);return result;
 float Ground(float,float){return 0;}
 uintptr_t UnitObject(Handle unit){return GetUnitTypeId(unit) ? reinterpret_cast<uintptr_t>(nativeObjects[unit].data()) : 0;}
 float AttackSurface(float,float,bool){return 0;}
+std::string UnitModelPath(int){return "AuthoredFixture.mdl";}
 void Log(const char*,...) {}
 void Trace(const char*,...) {}
 Handle Effect(const char*,float,float){return 42;}
 std::vector<Handle> NearbyDestructables(float,float,float){return {10};}
 }
+namespace {UnitStatus impulseStatus;}
+UnitStatus UnitStatus::Read(wc3::Handle,uintptr_t){return impulseStatus;}
 namespace SpriteTransform {
 bool Read(uintptr_t sprite,ModelTransform& transform){transform.position[0]=sprite==1 ? -400.f : 400.f;return sprite!=0;}
 }
 void GameAudio::Play(const char*,float){++sounds;}
 void GameAudio::SetLoop(const char*,bool,float){}
 // Combat must retain coarse cover snapshots when movement opts into static mesh detail.
-std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,bool nativeCollision,bool detailed,bool,MeshSurfaceRange){assert(!detailed);collisionFilters.push_back(nativeCollision);return cover;}
+std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float,bool nativeCollision,bool detailed,bool,MeshSurfaceRange,bool includeRocks){assert(!detailed && !includeRocks);collisionFilters.push_back(nativeCollision);return cover;}
 int main() {
     _set_error_mode(_OUT_TO_STDERR);
     wc3::CreateTimer=[]()->wc3::Handle{return 1;};wc3::TimerStart=[](wc3::Handle,float*,BOOL,wc3::Handle){};
@@ -71,7 +76,14 @@ int main() {
     assert(field.Throw(1,WeaponSlots::HE,{0,0,100},{1,0,0},{0,0,0},settings));
     settings.damage[WeaponSlots::HE]=9999; // A later F8 snapshot cannot change the launched charge.
     field.Tick(audio,1,{0,0,100},{1,0,0});assert(damages==0);
-    clockSeconds=.3f;assert(field.Tick(audio,1,{0,0,100},{1,0,0}));assert(hp[1]==1000 && hp[2]>-200 && hp[2]<400 && hp[10]<1000);
+    // Measure the launched stock blast at the actual detonation point after the live settings changed.
+    BlastJumpEvents heJumps;
+    clockSeconds=.3f;assert(field.Tick(audio,1,{0,0,100},{1,0,0},&heJumps));
+    assert(heJumps.size()==1 && heJumps.front().radius==600);
+    const auto& blast=heJumps.front().position;
+    float nearDistance=std::hypot(blast[0]-20,blast[2]-100);
+    float expectedDamage=1800*(1-nearDistance/600);
+    assert(hp[1]==1000 && std::abs(hp[2]-(1000-expectedDamage))<.01f && hp[10]<1000);
     unsigned saved=damages;clockSeconds=1;field.Tick(audio,1,{0,0,100},{1,0,0});assert(damages==saved);
     field.Reset();Scene();assert(field.Throw(1,WeaponSlots::Flashbang,{0,0,100},{1,0,0},{},settings));
     // F8 changes after release cannot rewrite the already flying grenade's eligibility/duration snapshot.
@@ -138,6 +150,27 @@ int main() {
         assert(std::abs(field.Visuals()[0].position[2]-expected.position[2])<.01f);
     }
     field.Reset();assert(field.Visuals().empty() && field.FlashOpacity()==0);
+    // Timed and remote guest charges preserve owner HP even with full friendly fire, but still publish pressure.
+    for(int slot:{WeaponSlots::HandGrenade,WeaponSlots::Satchel}) {
+        field.Reset();Scene();GameplaySettings guest;guest.friendlyFirePercent=100;
+        guest.halfLife.grenade.available=guest.halfLife.satchel.available=true;
+        guest.halfLife.grenade.throwSpeed=guest.halfLife.satchel.throwSpeed=50;
+        guest.halfLife.handGrenadeFuse=.2f;
+        BlastJumpEvents jumps;
+        assert(field.Throw(1,slot,{0,0,96},{1,0,0},{},guest));
+        clockSeconds=.1f;field.Tick(audio,1,{0,0,96},{1,0,0},&jumps);
+        assert(jumps.empty() && damages==0);
+        clockSeconds=.3f;
+        if(slot==WeaponSlots::Satchel) {
+            clockSeconds=12;
+            field.Tick(audio,1,{0,0,96},{1,0,0},&jumps);
+            assert(jumps.empty() && damages==0 && field.HasSatchel(1) && !field.RequestSatchel(2));
+            assert(field.RequestSatchel(1) && !field.RequestSatchel(1));
+        }
+        assert(field.Tick(audio,1,{0,0,96},{1,0,0},&jumps));
+        assert(hp[1]==1000 && hp[2]<1000 && jumps.size()==1 && !field.HasSatchel(1));
+        field.Tick(audio,1,{0,0,96},{1,0,0},&jumps);assert(jumps.size()==1);
+    }
     // RPG shares native blast policy but owns pause-aware swept flight and one impact event.
     NativeRockets rockets;GameplaySettings rpg;rpg.rpg.available=true;rpg.friendlyFirePercent=0;rpg.rpg.maxActive=1;
     Scene();collisionFilters.clear();cover={Bounds3{{60,-100,0},{62,100,300}}};
@@ -145,7 +178,7 @@ int main() {
     // Later F8 damage/radius edits cannot alter the already launched 1800/1000 blast snapshot.
     assert(rpg.damage[WeaponSlots::RPG]==1800 && rpg.rpg.radius==1000);
     rpg.damage[WeaponSlots::RPG]=9999;rpg.rpg.radius=32;clockSeconds=.3f;assert(rockets.Tick(audio,1,false,{0,0,96},{1,0,0},3000));
-    assert(hp[1]==1000 && hp[2]<1000 && hp[2]>-800 && hp[2]<100 && hp[10]<1000 && !rockets.Active(1));
+    assert(hp[1]>900 && hp[1]<1000 && hp[2]<1000 && hp[2]>-800 && hp[2]<100 && hp[10]<1000 && !rockets.Active(1));
     // Pathing-texture buildings may have zero native unit radius; rocket queries must still retain their model.
     assert(!collisionFilters.empty() && std::none_of(collisionFilters.begin(),collisionFilters.end(),[](bool value){return value;}));
     saved=damages;clockSeconds=2;rockets.Tick(audio,1,false,{0,0,96},{1,0,0},3000);assert(damages==saved);
@@ -191,5 +224,37 @@ int main() {
         bool flagged=(*reinterpret_cast<uint32_t*>(nativeObjects[2].data()+0x5C)&0x2000)!=0;
         assert(flagged==(test.enabled && hp[2]<=.405f));
     }
-    std::puts("PASS native clock, single detonation, damage/friendly/cover/gate policy, F8/death-policy snapshots, flash leases and smoke expiry.");
+    // Explicit RPG self percentage bypasses allied FF but keeps distance, physical height and cover.
+    for(float friendly:{0.f,100.f}) {
+        Scene();enumerated={1,4};hp[4]=1000;
+        NativeBlast::Apply(1,101,{0,0,100},1800,1000,friendly,{},[]{return true;},"RPG",{},false,5);
+        assert(std::abs(hp[1]-910)<.01f);if(!friendly)assert(hp[4]==1000);
+    }
+    Scene();enumerated={1};NativeBlast::TargetPoint airborne{1,{0,0,600}};
+    NativeBlast::Apply(1,101,{0,0,100},1800,1000,0,{},[]{return true;},"RPG",{},false,5,&airborne);
+    assert(std::abs(hp[1]-955)<.01f);
+    Scene();enumerated={1};NativeBlast::Apply(1,101,{0,0,100},1800,1000,100,{},[]{return true;},"RPG",{},false,0);
+    assert(hp[1]==1000);
+    // Events retain launch tuning, publish once and exist independently of zero damage.
+    rockets.Reset();Scene();rpg=GameplaySettings{};rpg.rpg.available=true;rpg.damage[WeaponSlots::RPG]=0;
+    cover={Bounds3{{60,-100,0},{62,100,300}}};BlastJumpEvents jumps;
+    assert(rockets.Launch(1,{0,0,96},{1,0,0},{},rpg));rpg.blastJump.speed=1;
+    clockSeconds=.3f;rockets.Tick(audio,1,false,{0,0,96},{1,0,0},3000,&jumps);
+    assert(jumps.size()==1 && jumps[0].settings.speed==650 && hp[1]==1000);
+    clockSeconds=1;rockets.Tick(audio,1,false,{0,0,96},{1,0,0},3000,&jumps);assert(jumps.size()==1);
+    // The real native movement adapter respects living control/status and solid cover.
+    NativeMovementImpulse impulse;impulse.Configure(1);MovementPhysics motion;
+    Scene();motion.Reset(0);BlastJumpEvent pressure{{0,0,8},1000,{},"fixture"};
+    assert(impulse.Blast(1,motion,pressure) && motion.VerticalVelocity()>800 && motion.FeetZ()==0);
+    motion.Reset(0);impulseStatus.immobilized=true;assert(!impulse.Blast(1,motion,pressure));impulseStatus={};
+    cover={Bounds3{{-8,-8,40},{8,8,60}}};assert(!impulse.Blast(1,motion,pressure));cover.clear();
+    assert(impulse.Recoil(1,motion,{0,0,-1},800,1500) && motion.VerticalVelocity()==1200);
+    // C4 snapshots pressure and emits once; callback Reset cannot invalidate the field's iterator.
+    wc3::DestroyTimer=[](wc3::Handle){};Scene();BombField bombs;BlastJumpSettings custom;custom.speed=777;jumps.clear();
+    assert(bombs.Plant(1,0,0,audio,0,0,custom));clockSeconds=35;bombs.Tick(audio,{},&jumps);
+    assert(jumps.size()==1 && jumps[0].settings.speed==777 && jumps[0].radius==800);
+    bombs.Tick(audio,{},&jumps);assert(jumps.size()==1);
+    bombs.Reset();Scene();hp[2]=1;hp[3]=1;assert(bombs.Plant(1,0,0,audio,100,0));clockSeconds=35;
+    bombs.Tick(audio,[&](const KillReward&){bombs.Reset();},&jumps);assert(bombs.Count()==0);
+    std::puts("PASS native blast damage, 5-percent RPG self policy, physical height, copied pressure, cover/status, Tau recoil and callback-safe C4.");
 }

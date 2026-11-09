@@ -30,7 +30,12 @@ $source=Join-Path $work $SourceRevision
 New-Item -ItemType Directory -Path $source -Force | Out-Null
 Set-Content -LiteralPath (Join-Path $source 'VERSION') -Value $version
 $destination=Join-Path $work 'modules'
-Expand-LauncherRuntime $Launcher $source $destination
+# Windows PowerShell must also extract the real bundled EXE after a browser marks it as downloaded.
+$download=Join-Path $work 'Downloaded Player launcher.exe'
+Copy-Item -LiteralPath $Launcher -Destination $download
+Set-Content -LiteralPath $download -Stream Zone.Identifier -Encoding ascii -Value @('[ZoneTransfer]','ZoneId=3')
+Expand-LauncherRuntime $download $source $destination
+if ('ZoneId=3' -notin (Get-Content -LiteralPath $download -Stream Zone.Identifier)) { throw 'Installer removed the download zone marker.' }
 foreach ($name in @('WarcraftCS.mix','Mss32.dll')) {
     if ((Get-FileHash -LiteralPath (Join-Path $destination $name) -Algorithm SHA256).Hash.ToLowerInvariant() -ne (Get-RuntimeHash $files[$name])) { throw 'Embedded runtime differs from packaged module.' }
 }
